@@ -1,0 +1,732 @@
+{
+  "clauses": [
+    {
+      "differences": [
+        {
+          "text": "心脏脉冲电场消融仪输出波形图和波形参数心脏脉冲电场消融仪的输出波形图见图 1,波形参数应满足表 6的要求。图 1",
+          "type": "same"
+        },
+        {
+          "text": "是",
+          "type": "added"
+        },
+        {
+          "text": "心脏脉冲电场消融仪",
+          "type": "same"
+        },
+        {
+          "text": " PULSE3预设",
+          "type": "removed"
+        },
+        {
+          "text": "输出波形图",
+          "type": "same"
+        },
+        {
+          "text": "表",
+          "type": "removed"
+        },
+        {
+          "text": "。/",
+          "type": "added"
+        },
+        {
+          "text": " ",
+          "type": "same"
+        },
+        {
+          "text": "6波形参数参数",
+          "type": "removed"
+        },
+        {
+          "text": "/",
+          "type": "added"
+        },
+        {
+          "text": " ",
+          "type": "same"
+        },
+        {
+          "text": "PULSE3预设",
+          "type": "removed"
+        },
+        {
+          "text": "/",
+          "type": "added"
+        },
+        {
+          "text": " ",
+          "type": "same"
+        },
+        {
+          "text": "PF",
+          "type": "removed"
+        },
+        {
+          "text": "/",
+          "type": "added"
+        },
+        {
+          "text": " ",
+          "type": "same"
+        },
+        {
+          "text": "Reversible预设脉冲个数",
+          "type": "removed"
+        },
+        {
+          "text": "/",
+          "type": "added"
+        }
+      ],
+      "match_reason": "text_mismatch",
+      "ptr_number": "2.2.2",
+      "ptr_text": "心脏脉冲电场消融仪输出波形图和波形参数\n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满足表 6 的要求。\n图 1 心脏脉冲电场消融仪 PULSE 3 预设输出波形图\n表 6 波形参数\n参数\nPULSE 3 预设\nPF Reversible 预设\n脉冲个数",
+      "report_text": "心脏脉冲电场消融仪输出波形图和波形参数 \n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满\n足表 6 的要求。 \n图 1 是心脏脉冲电场消融仪输出波形图。\n/\n/\n/\n/\n/",
+      "result": "differ",
+      "similarity": 0.747475,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 0.0,
+          "matches": 0,
+          "parameters": [
+            {
+              "matches": false,
+              "name": "1500",
+              "ptr_value": "1500",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "12",
+              "ptr_value": "12",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "210±1 msec",
+              "ptr_value": "210±1 msec",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "1.12msec±4μsec",
+              "ptr_value": "1.12msec±4μsec",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "0.9μsec±20%",
+              "ptr_value": "0.9μsec±20%",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "1μsec±20%",
+              "ptr_value": "1μsec±20%",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "三相",
+              "ptr_value": "三相",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "5\n±\n20%",
+              "ptr_value": "5\n±\n20%",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "1-100%",
+              "ptr_value": "1-100%",
+              "report_value": ""
+            }
+          ],
+          "table_number": 6,
+          "total_parameters": 9
+        }
+      ]
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.2.3",
+      "ptr_text": "脉冲上升时间\n脉冲上升时间应不超过 700ns。",
+      "report_text": "脉冲上升时间 \n脉冲上升时间应不超过 700ns。 \n单位：ns",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.2.4",
+      "ptr_text": "脉冲下降时间\n脉冲下降时间应不超过 700ns。",
+      "report_text": "脉冲下降时间 \n脉冲下降时间应不超过 700ns。 \n单位：ns",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.2.5",
+      "ptr_text": "脉冲衰减\n稳定输出后（第一个脉冲组之后），每个脉冲组开始时的电压相比\n前一组脉冲组结束时电压衰减应在 10%内。",
+      "report_text": "脉冲衰减 \n稳定输出后（第一个脉冲组之后），每个脉冲\n组开始时的电压相比前一组脉冲组结束时电压\n衰减应在 10%内。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "differences": [
+        {
+          "text": "最大输出能量",
+          "type": "same"
+        },
+        {
+          "text": "单个",
+          "type": "added"
+        },
+        {
+          "text": "脉冲",
+          "type": "same"
+        },
+        {
+          "text": "宽度",
+          "type": "removed"
+        },
+        {
+          "text": "最大输出能量应小于 258mJ。",
+          "type": "added"
+        }
+      ],
+      "match_reason": "text_mismatch",
+      "ptr_number": "2.2.6",
+      "ptr_text": "最大输出能量\n脉冲宽度",
+      "report_text": "最大输出能量 \n单个脉冲最大输出能量应小于 258mJ。 \n单位：mJ",
+      "result": "differ",
+      "similarity": 0.444444
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.2.7",
+      "ptr_text": "保护功能",
+      "report_text": "保护功能",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.2.7.1",
+      "ptr_text": "温度超限保护\n心脏脉冲电场消融仪应具有温度超限报警功能并自动切断脉冲电场能量输\n出。",
+      "report_text": "温度超限保护 \n心脏脉冲电场消融仪应具有温度超限报警功能\n并自动切断脉冲电场能量输出。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.2.7.2",
+      "ptr_text": "过流保护\n如果测量的脉冲电场输出电流高于“最大限值”超过 50 ms 时，则应生成错\n误提示。",
+      "report_text": "过流保护 \n如果测量的脉冲电场输出电流高于“最大限\n值”超过 50ms 时，则应生成错误提示。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.3",
+      "ptr_text": "灌注泵",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.3.1",
+      "ptr_text": "流量\n流量为 0-55 ml/min，准确度应为：\na) 当流量为 2-5 ml/min 时，准确度应为±1 ml/min。\nb) 当流量为 6-30 ml/min 时，准确度应为-5%/+15%。\nc) 当流量为 31-55 ml/min 时，准确度应为±25%。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.4",
+      "ptr_text": "生物性能",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.4.1",
+      "ptr_text": "无菌性：泵管应无菌。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.4.2",
+      "ptr_text": "环氧乙烷残留量：泵管的环氧乙烷残留量应＜ 4 mg/器械。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.4.3",
+      "ptr_text": "细菌内毒素：泵管细菌内毒素应不超过 20 EU/件。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "short_heading_equivalent",
+      "ptr_number": "2.5",
+      "ptr_text": "电气安全",
+      "report_text": "电气安全 1 射频消融仪",
+      "result": "match",
+      "similarity": 0.95
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5.1",
+      "ptr_text": "射频消融仪",
+      "report_text": "射频消融仪",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5.1.1",
+      "ptr_text": "射频消融仪的电气安全应符合 GB9706.1-2020 和 GB 9706.202-2021\n的要求。",
+      "report_text": "射频消融仪的电气安全应符合\nGB9706.1-2020 和 GB9706.202-2021 的要求。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "differences": [
+        {
+          "text": "射频消融仪的电磁兼容性能应符合 YY9706.102-2021及 GB",
+          "type": "same"
+        },
+        {
+          "text": "9706.202-2021第 202条的要求。",
+          "type": "added"
+        }
+      ],
+      "match_reason": "text_mismatch",
+      "ptr_number": "2.5.1.2",
+      "ptr_text": "射频消融仪的电磁兼容性能应符合 YY 9706.102-2021 及 GB",
+      "report_text": "射频消融仪的电磁兼容性能应符合\nYY9706.102-2021 及 GB9706.202-2021 第 202\n条的要求。",
+      "result": "differ",
+      "similarity": 0.752688
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5.2",
+      "ptr_text": "心脏脉冲电场消融仪",
+      "report_text": "心脏脉冲电场消融仪",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "differences": [
+        {
+          "text": "心脏脉冲电场消融仪的电气安全应符合 GB9706.1-2020和 GB",
+          "type": "same"
+        },
+        {
+          "text": "9706.202-2021的要求。",
+          "type": "added"
+        }
+      ],
+      "match_reason": "text_mismatch",
+      "ptr_number": "2.5.2.1",
+      "ptr_text": "心脏脉冲电场消融仪的电气安全应符合 GB9706.1-2020 和 GB",
+      "report_text": "心脏脉冲电场消融仪的电气安全应符\n合 GB9706.1-2020\n和 GB9706.202-2021 的要求。",
+      "result": "differ",
+      "similarity": 0.804598
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5.2.2",
+      "ptr_text": "心脏脉冲电场消融仪的电磁兼容性能应符合 YY 9706.102-2021 及\nGB 9706.202-2021 第 202 条的要求。",
+      "report_text": "心脏脉冲电场消融仪的电磁兼容性能\n应符合 YY9706.102-2021 及 GB9706.202-2021\n第 202 条的要求。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5.3",
+      "ptr_text": "灌注泵",
+      "report_text": "灌注泵",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5.3.1",
+      "ptr_text": "灌注泵的电气安全应符合 GB9706.1-2020 的要求。",
+      "report_text": "灌注泵的电气安全应符合 GB9706.1-\n2020 的要求。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5.3.2",
+      "ptr_text": "灌注泵的电磁兼容性能应符合 YY 9706.102-2021 的要求。",
+      "report_text": "灌注泵的电磁兼容性能应符合\nYY9706.102-2021 的要求。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "differences": [
+        {
+          "text": "软件功能射频脉冲电场消融系统软件应具备以下功能: 表 6软件功能",
+          "type": "same"
+        },
+        {
+          "text": "组件功能",
+          "type": "removed"
+        },
+        {
+          "text": "射频消融仪",
+          "type": "same"
+        },
+        {
+          "text": "  功率监测  阻抗监测  温度监测  控制射频消融或脉冲电场消融应用的启动和停止  灌注泵流量监测  射频消融或脉冲电场消融模式选择  接触质量监测  ",
+          "type": "removed"
+        },
+        {
+          "text": "与脉冲电场消融仪、导管接口单元",
+          "type": "same"
+        },
+        {
+          "text": " ",
+          "type": "added"
+        },
+        {
+          "text": "CIU、灌注泵、控制器和电生理三维导航系统通信",
+          "type": "same"
+        },
+        {
+          "text": "  ",
+          "type": "removed"
+        },
+        {
+          "text": "参数显示与控制,包括阻抗、流量、功率、时间、能量、",
+          "type": "same"
+        },
+        {
+          "text": " ",
+          "type": "removed"
+        },
+        {
+          "text": "温度和电流水平",
+          "type": "same"
+        },
+        {
+          "text": "  显示能量输送状态  显示消融图  预设选择",
+          "type": "removed"
+        },
+        {
+          "text": "心脏脉冲电场消融仪",
+          "type": "same"
+        },
+        {
+          "text": "  阻抗监测  温度监测  ",
+          "type": "removed"
+        },
+        {
+          "text": "与射频消融仪、导管接口单元",
+          "type": "same"
+        },
+        {
+          "text": " ",
+          "type": "added"
+        },
+        {
+          "text": "CIU通信",
+          "type": "same"
+        },
+        {
+          "text": "控制器  参数显示与控制,包括阻抗、流量、功率、时间、能量、 温度和电流水平  显示能量输送状态  显示消融图  预设选择脚踏开关  允许用户启用双击以切换消融预设的开关  开始和停止能量输送灌注泵  气泡检测  显示和控制流量  ",
+          "type": "removed"
+        },
+        {
+          "text": "声音提示、视觉提示和信息应能显示在触摸屏面板上",
+          "type": "same"
+        },
+        {
+          "text": "  ",
+          "type": "removed"
+        },
+        {
+          "text": "警告管路中有空气、泵头门打开或其他操作",
+          "type": "same"
+        }
+      ],
+      "match_reason": "text_mismatch",
+      "ptr_number": "2.6",
+      "ptr_text": "软件功能\n射频脉冲电场消融系统软件应具备以下功能：\n表 6 软件功能\n组件\n功能\n射频消融仪\n\n功率监测\n\n阻抗监测\n\n温度监测\n\n控制射频消融或脉冲电场消融应用的启动和停止\n\n灌注泵流量监测\n\n射频消融或脉冲电场消融模式选择\n\n接触质量监测\n\n与脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器和\n电生理三维导航系统通信\n\n参数显示与控制，包括阻抗、流量、功率、时间、能量、\n温度和电流水平\n\n显示能量输送状态\n\n显示消融图\n\n预设选择\n心脏脉冲电场消融仪\n\n阻抗监测\n\n温度监测\n\n与射频消融仪、导管接口单元CIU通信\n控制器\n\n参数显示与控制，包括阻抗、流量、功率、时间、能量、\n温度和电流水平\n\n显示能量输送状态\n\n显示消融图\n\n预设选择\n脚踏开关\n\n允许用户启用双击以切换消融预设的开关\n\n开始和停止能量输送\n灌注泵\n\n气泡检测\n\n显示和控制流量\n\n声音提示、视觉提示和信息应能显示在触摸屏面板上\n\n警告管路中有空气、泵头门打开或其他操作",
+      "report_text": "软件功能 射频脉冲电场消融系统软件应具备以下功能： \n表 6 软件功能\n射频消\n融仪\n与脉冲电场消融仪、导管接口单元\nCIU、灌注泵、控制器和电生理三维\n导航系统通信\n参数显示与控制，包括阻抗、流\n量、功率、时间、能量、温度和电\n流水平\n心脏脉\n冲电场\n消融仪\n与射频消融仪、导管接口单元 CIU\n通信\n声音提示、视觉提示和信息应能显\n示在触摸屏面板上\n警告管路中有空气、泵头门打开或\n其他操作",
+      "result": "differ",
+      "similarity": 0.569579,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 0.0,
+          "matches": 0,
+          "parameters": [
+            {
+              "matches": false,
+              "name": "1500",
+              "ptr_value": "1500",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "12",
+              "ptr_value": "12",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "210±1 msec",
+              "ptr_value": "210±1 msec",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "1.12msec±4μsec",
+              "ptr_value": "1.12msec±4μsec",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "0.9μsec±20%",
+              "ptr_value": "0.9μsec±20%",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "1μsec±20%",
+              "ptr_value": "1μsec±20%",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "三相",
+              "ptr_value": "三相",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "5\n±\n20%",
+              "ptr_value": "5\n±\n20%",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "1-100%",
+              "ptr_value": "1-100%",
+              "report_value": ""
+            }
+          ],
+          "table_number": 6,
+          "total_parameters": 9
+        }
+      ]
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.7",
+      "ptr_text": "用户访问控制\n 射频消融仪的最终用户访问系统应使用 4 位数字的 PIN 码。\n 射频消融仪所有以太网端口应受防火墙保护且所有不必要的端口均\n关闭，并且打开端口需要身份验证。\n 灌注泵上的服务端口应由物理外壳保护，仅供授权的现场人员访问。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.8",
+      "ptr_text": "脚踏开关\n脚踏开关应符合 YY/T 1057-2016 的要求。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.1.8",
+      "ptr_text": "的要求。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    }
+  ],
+  "ptr_info": {
+    "total_clauses": 29,
+    "total_tables": 20
+  },
+  "report_info": {
+    "total_inspection_items": 1094
+  },
+  "summary": {
+    "differs": 5,
+    "evaluated_clauses": 19,
+    "excluded": 9,
+    "match_rate": 0.736842,
+    "matches": 14,
+    "missing": 0,
+    "total_clauses": 28
+  },
+  "tables": [
+    {
+      "clause_number": "2.2.2",
+      "found": true,
+      "match_rate": 0.0,
+      "matches": 0,
+      "parameters": [
+        {
+          "matches": false,
+          "name": "1500",
+          "ptr_value": "1500",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "12",
+          "ptr_value": "12",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "210±1 msec",
+          "ptr_value": "210±1 msec",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "1.12msec±4μsec",
+          "ptr_value": "1.12msec±4μsec",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "0.9μsec±20%",
+          "ptr_value": "0.9μsec±20%",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "1μsec±20%",
+          "ptr_value": "1μsec±20%",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "三相",
+          "ptr_value": "三相",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "5\n±\n20%",
+          "ptr_value": "5\n±\n20%",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "1-100%",
+          "ptr_value": "1-100%",
+          "report_value": ""
+        }
+      ],
+      "table_number": 6,
+      "total_parameters": 9
+    },
+    {
+      "clause_number": "2.6",
+      "found": true,
+      "match_rate": 0.0,
+      "matches": 0,
+      "parameters": [
+        {
+          "matches": false,
+          "name": "1500",
+          "ptr_value": "1500",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "12",
+          "ptr_value": "12",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "210±1 msec",
+          "ptr_value": "210±1 msec",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "1.12msec±4μsec",
+          "ptr_value": "1.12msec±4μsec",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "0.9μsec±20%",
+          "ptr_value": "0.9μsec±20%",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "1μsec±20%",
+          "ptr_value": "1μsec±20%",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "三相",
+          "ptr_value": "三相",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "5\n±\n20%",
+          "ptr_value": "5\n±\n20%",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "1-100%",
+          "ptr_value": "1-100%",
+          "report_value": ""
+        }
+      ],
+      "table_number": 6,
+      "total_parameters": 9
+    }
+  ],
+  "warnings": {
+    "missing_in_scope": {
+      "clauses": [],
+      "count": 0,
+      "message": "以下条款在第三页检验项目范围内，但未在报告正文检验表中提取到对应条款。"
+    },
+    "out_of_scope": {
+      "clauses": [
+        "2.3",
+        "2.3.1",
+        "2.4",
+        "2.4.1",
+        "2.4.2",
+        "2.4.3",
+        "2.7",
+        "2.8",
+        "2.1.8"
+      ],
+      "count": 9,
+      "message": "以下条款不在第三页检验项目范围内，已从正文一致性判定中排除。"
+    }
+  }
+}

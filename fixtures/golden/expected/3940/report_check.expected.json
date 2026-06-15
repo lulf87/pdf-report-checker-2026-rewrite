@@ -1,0 +1,311 @@
+{
+  "checks": {
+    "C01": {
+      "name": "首页与第三页一致性",
+      "results": [
+        {
+          "field_name": "委托方",
+          "message": "委托方一致: 百多力（北京）医疗器械有限公司",
+          "source_a": "百多力（北京）医疗器械有限公司",
+          "source_b": "百多力（北京）医疗器械有限公司",
+          "status": "pass"
+        },
+        {
+          "field_name": "样品名称",
+          "message": "样品名称一致: 植入式心脏起搏器",
+          "source_a": "植入式心脏起搏器",
+          "source_b": "植入式心脏起搏器",
+          "status": "pass"
+        },
+        {
+          "field_name": "型号规格",
+          "message": "型号规格一致: Edora 8 DR-T",
+          "source_a": "Edora 8 DR-T",
+          "source_b": "Edora 8 DR-T",
+          "status": "pass"
+        }
+      ],
+      "status": "pass"
+    },
+    "C02": {
+      "name": "第三页扩展字段",
+      "results": [
+        {
+          "field_name": "型号规格",
+          "message": "未找到与样品名称'植入式心脏起搏器'匹配的中文标签",
+          "source_a": "",
+          "source_b": "",
+          "status": "warning"
+        },
+        {
+          "field_name": "生产日期",
+          "message": "未找到与样品名称'植入式心脏起搏器'匹配的中文标签",
+          "source_a": "",
+          "source_b": "",
+          "status": "warning"
+        },
+        {
+          "field_name": "产品编号/批号",
+          "message": "未找到与样品名称'植入式心脏起搏器'匹配的中文标签",
+          "source_a": "",
+          "source_b": "",
+          "status": "warning"
+        },
+        {
+          "field_name": "委托方",
+          "message": "未找到与样品名称'植入式心脏起搏器'匹配的中文标签",
+          "source_a": "",
+          "source_b": "",
+          "status": "warning"
+        },
+        {
+          "field_name": "委托方地址",
+          "message": "未找到与样品名称'植入式心脏起搏器'匹配的中文标签",
+          "source_a": "",
+          "source_b": "",
+          "status": "warning"
+        }
+      ],
+      "status": "pass"
+    },
+    "C03": {
+      "message": "未找到与样品名称'植入式心脏起搏器'匹配的中文标签，无法核对格式",
+      "name": "生产日期格式与值",
+      "status": "warning"
+    },
+    "C04": {
+      "field_results": [],
+      "message": "",
+      "name": "样品描述表格核对",
+      "status": "warning"
+    },
+    "C05": {
+      "name": "照片覆盖性核对",
+      "results": [],
+      "status": "pass"
+    },
+    "C06": {
+      "name": "中文标签覆盖核对",
+      "results": [],
+      "status": "pass"
+    },
+    "C07": {
+      "error_count": 10,
+      "name": "单项结论核对",
+      "results": [
+        {
+          "actual_conclusion": "/",
+          "expected_conclusion": "符合",
+          "inspection_project": "脉冲幅度\n(V)",
+          "message": "序号38 '脉冲幅度\n(V)': 结论不一致 - 期望'符合'，实际'/'",
+          "sequence_number": "38",
+          "status": "error"
+        },
+        {
+          "actual_conclusion": "/",
+          "expected_conclusion": "符合",
+          "inspection_project": "脉冲宽度\n(ms)",
+          "message": "序号39 '脉冲宽度\n(ms)': 结论不一致 - 期望'符合'，实际'/'",
+          "sequence_number": "39",
+          "status": "error"
+        },
+        {
+          "actual_conclusion": "/",
+          "expected_conclusion": "符合",
+          "inspection_project": "基础频率\n(bpm)",
+          "message": "序号40 '基础频率\n(bpm)': 结论不一致 - 期望'符合'，实际'/'",
+          "sequence_number": "40",
+          "status": "error"
+        },
+        {
+          "actual_conclusion": "/",
+          "expected_conclusion": "符合",
+          "inspection_project": "磁铁频率",
+          "message": "序号41 '磁铁频率': 结论不一致 - 期望'符合'，实际'/'",
+          "sequence_number": "41",
+          "status": "error"
+        },
+        {
+          "actual_conclusion": "/",
+          "expected_conclusion": "符合",
+          "inspection_project": "灵敏度\n(mV)",
+          "message": "序号42 '灵敏度\n(mV)': 结论不一致 - 期望'符合'，实际'/'",
+          "sequence_number": "42",
+          "status": "error"
+        },
+        {
+          "actual_conclusion": "/",
+          "expected_conclusion": "符合",
+          "inspection_project": "起搏/感\n知不应期\n(ms)",
+          "message": "序号43 '起搏/感\n知不应期\n(ms)': 结论不一致 - 期望'符合'，实际'/'",
+          "sequence_number": "43",
+          "status": "error"
+        },
+        {
+          "actual_conclusion": "/",
+          "expected_conclusion": "符合",
+          "inspection_project": "逸搏间期\n(ms)",
+          "message": "序号44 '逸搏间期\n(ms)': 结论不一致 - 期望'符合'，实际'/'",
+          "sequence_number": "44",
+          "status": "error"
+        },
+        {
+          "actual_conclusion": "/",
+          "expected_conclusion": "符合",
+          "inspection_project": "房室间期\n(ms)",
+          "message": "序号45 '房室间期\n(ms)': 结论不一致 - 期望'符合'，实际'/'",
+          "sequence_number": "45",
+          "status": "error"
+        },
+        {
+          "actual_conclusion": "/",
+          "expected_conclusion": "符合",
+          "inspection_project": "心室后心\n房不应期\n（PVARP）",
+          "message": "序号46 '心室后心\n房不应期\n（PVARP）': 结论不一致 - 期望'符合'，实际'/'",
+          "sequence_number": "46",
+          "status": "error"
+        },
+        {
+          "actual_conclusion": "/",
+          "expected_conclusion": "符合",
+          "inspection_project": "感知后房\n室间期",
+          "message": "序号47 '感知后房\n室间期': 结论不一致 - 期望'符合'，实际'/'",
+          "sequence_number": "47",
+          "status": "error"
+        }
+      ],
+      "status": "error"
+    },
+    "C08": {
+      "error_count": 9,
+      "name": "非空字段核对",
+      "results": [
+        {
+          "empty_fields": [
+            "检验结果"
+          ],
+          "inspection_project": "有源植入\n式医疗器\n械由外部\n除颤器造\n成损坏的\n防护",
+          "message": "序号16 '有源植入\n式医疗器\n械由外部\n除颤器造\n成损坏的\n防护': 字段为空 - 检验结果",
+          "sequence_number": "16",
+          "status": "error"
+        },
+        {
+          "empty_fields": [
+            "检验结果"
+          ],
+          "inspection_project": "有源植入\n式医疗器\n械对非电\n离电磁辐\n射的防护",
+          "message": "序号23 '有源植入\n式医疗器\n械对非电\n离电磁辐\n射的防护': 字段为空 - 检验结果",
+          "sequence_number": "23",
+          "status": "error"
+        },
+        {
+          "empty_fields": [
+            "备注"
+          ],
+          "inspection_project": "脉冲宽度\n(ms)",
+          "message": "序号39 '脉冲宽度\n(ms)': 字段为空 - 备注",
+          "sequence_number": "39",
+          "status": "error"
+        },
+        {
+          "empty_fields": [
+            "备注"
+          ],
+          "inspection_project": "磁铁频率",
+          "message": "序号41 '磁铁频率': 字段为空 - 备注",
+          "sequence_number": "41",
+          "status": "error"
+        },
+        {
+          "empty_fields": [
+            "备注"
+          ],
+          "inspection_project": "灵敏度\n(mV)",
+          "message": "序号42 '灵敏度\n(mV)': 字段为空 - 备注",
+          "sequence_number": "42",
+          "status": "error"
+        },
+        {
+          "empty_fields": [
+            "备注"
+          ],
+          "inspection_project": "逸搏间期\n(ms)",
+          "message": "序号44 '逸搏间期\n(ms)': 字段为空 - 备注",
+          "sequence_number": "44",
+          "status": "error"
+        },
+        {
+          "empty_fields": [
+            "备注"
+          ],
+          "inspection_project": "房室间期\n(ms)",
+          "message": "序号45 '房室间期\n(ms)': 字段为空 - 备注",
+          "sequence_number": "45",
+          "status": "error"
+        },
+        {
+          "empty_fields": [
+            "备注"
+          ],
+          "inspection_project": "心室后心\n房不应期\n（PVARP）",
+          "message": "序号46 '心室后心\n房不应期\n（PVARP）': 字段为空 - 备注",
+          "sequence_number": "46",
+          "status": "error"
+        },
+        {
+          "empty_fields": [
+            "备注"
+          ],
+          "inspection_project": "感知后房\n室间期",
+          "message": "序号47 '感知后房\n室间期': 字段为空 - 备注",
+          "sequence_number": "47",
+          "status": "error"
+        }
+      ],
+      "status": "error"
+    },
+    "C09": {
+      "details": {
+        "duplicate_numbers": [],
+        "first_number": 1,
+        "last_number": 49,
+        "missing_numbers": []
+      },
+      "message": "存在空白序号(位置): [2, 3, 4, 5, 6, 7, 8, 10, 13, 15, 17, 18, 19, 20, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 35, 36, 37, 38, 39, 40, 41, 42, 44, 45, 47, 48, 49, 51, 52, 54, 56, 58, 59, 61, 63, 64, 66, 67, 68, 70, 72, 74, 75, 77, 80, 81, 82, 83, 84, 86, 88, 90, 92, 94, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 119, 120, 121, 122, 123, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 150, 151, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 181, 182, 183, 186, 187, 190, 193, 194, 195, 196, 199, 201, 202, 203, 204, 205, 206, 207, 208, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 245, 246, 247, 248, 249, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 263, 264, 265, 266, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 282, 283, 286, 287, 288, 289, 291, 292, 294, 295, 296, 297, 298, 299, 300, 301, 302, 305, 306, 307, 308, 309, 310, 311, 312, 314, 316, 317, 318, 319, 320, 322, 323, 325, 326, 327, 328, 329]",
+      "name": "序号连续性核对",
+      "status": "error"
+    },
+    "C10": {
+      "details": {
+        "extra_markers": [],
+        "missing_markers": []
+      },
+      "message": "续表标记全部正确",
+      "name": "续表标记核对",
+      "status": "pass"
+    },
+    "C11": {
+      "details": {
+        "duplicate_pages": [],
+        "final_page_mismatch": false,
+        "missing_pages": [],
+        "total_inconsistent": false,
+        "total_pages_checked": 32
+      },
+      "message": "页码连续完整: 第1页 ~ 第32页，共32页",
+      "name": "页码连续性核对",
+      "status": "pass"
+    }
+  },
+  "report_info": {
+    "has_third_page": true,
+    "total_inspection_items": 332
+  },
+  "summary": {
+    "errors": 3,
+    "overall_status": "error",
+    "passed": 5,
+    "total_checks": 11,
+    "warnings": 3
+  }
+}

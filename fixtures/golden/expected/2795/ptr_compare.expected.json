@@ -1,0 +1,137 @@
+{
+  "clauses": [
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.3.2",
+      "ptr_text": "LivePoint\n该功能可以为用户提供一次性使用磁电定位压力监测球囊脉冲电场消融\n导管上各电极的组织接近状态。",
+      "report_text": "LivePoint \n该功能可以为用户提供一次性使用磁电定位压\n力监测球囊脉冲电场消融导管上各电极的组织\n接近状态。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.3.3",
+      "ptr_text": "R 波检测\n该功能允许消融仪接收和显示 ECG 测量值以及指示检测到的 R 波的标\n记。",
+      "report_text": "R 波检测 \n该功能允许消融仪接收和显示 ECG 测量值以及\n指示检测到的 R 波的标记。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "short_heading_equivalent",
+      "ptr_number": "2.4",
+      "ptr_text": "网络安全",
+      "report_text": "网络安全 1 访问和使用限制",
+      "result": "match",
+      "similarity": 0.95
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.4.1",
+      "ptr_text": "访问和使用限制",
+      "report_text": "访问和使用限制",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.4.1.1",
+      "ptr_text": "心脏脉冲电场消融仪应该验证授权用户和临床用户的访问权限；",
+      "report_text": "心脏脉冲电场消融仪应该验证授权用\n户和临床用户的访问权限；",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.4.1.2",
+      "ptr_text": "心脏脉冲电场消融仪应该在允许访问之前验证连接设备的身份。",
+      "report_text": "心脏脉冲电场消融仪应该在允许访问\n之前验证连接设备的身份。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.4.2",
+      "ptr_text": "接口\n      心脏脉冲电场消融仪应有一个通过 USB 2.0 协议传输数据的 USB 接口。",
+      "report_text": "接口 \n心脏脉冲电场消融仪应有一个通过 USB 2.0 协\n议传输数据的 USB 接口。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.4.3",
+      "ptr_text": "存储\n      心脏脉冲电场消融仪可以在非治疗模式下将病历文件和审计日志导出到\n外部介质。",
+      "report_text": "存储 \n心脏脉冲电场消融仪可以在非治疗模式下将病\n历文件和审计日志导出到外部介质。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5",
+      "ptr_text": "连接电缆绝缘电阻\n      连接电缆任意两芯脚之间的绝缘电阻应不小于 5MΩ.",
+      "report_text": "连接电缆绝缘电阻 连接电缆任意两芯脚之间的绝缘电阻应不小于\n5MΩ. \n单位：GΩ",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "short_heading_equivalent",
+      "ptr_number": "2.6",
+      "ptr_text": "安全要求",
+      "report_text": "安全要求 1\n 通用安全要求应符合\n GB 9706.1-2020\n 的\n相关要求。电气安全特征见附录\n A\n。",
+      "result": "match",
+      "similarity": 0.95
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.6.1",
+      "ptr_text": "通用安全要求应符合 GB 9706.1-2020 的相关要求。电气安全特征见附录\nA。",
+      "report_text": "通用安全要求应符合\n GB 9706.1-2020\n 的\n相关要求。电气安全特征见附录\n A\n。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.6.2",
+      "ptr_text": "专用安全要求应符合 GB 9706.202-2021 的相关要求。",
+      "report_text": "专用安全要求应符合\n GB 9706.202-2021\n的相关要求。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.7",
+      "ptr_text": "电磁兼容性\n应符合 YY 9706.102-2021 及 GB 9706.202-2021 中 202 的要求。",
+      "report_text": "电磁兼容性 应符合\n YY 9706.102-2021\n 及\n GB 9706.202-\n2021\n 中\n 202\n 的要求。",
+      "result": "match",
+      "similarity": 1.0
+    }
+  ],
+  "ptr_info": {
+    "total_clauses": 13,
+    "total_tables": 5
+  },
+  "report_info": {
+    "total_inspection_items": 1052
+  },
+  "summary": {
+    "differs": 0,
+    "evaluated_clauses": 13,
+    "excluded": 0,
+    "match_rate": 1.0,
+    "matches": 13,
+    "missing": 0,
+    "total_clauses": 13
+  },
+  "tables": [],
+  "warnings": {
+    "missing_in_scope": {
+      "clauses": [],
+      "count": 0,
+      "message": "以下条款在第三页检验项目范围内，但未在报告正文检验表中提取到对应条款。"
+    },
+    "out_of_scope": {
+      "clauses": [],
+      "count": 0,
+      "message": "以下条款不在第三页检验项目范围内，已从正文一致性判定中排除。"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+# macOS
+**/.DS_Store
+
+# Python caches and local environments
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.venv/
+.venv/
+.coverage
+htmlcov/
+
+# Node / Vite dependencies and build outputs
+*.tsbuildinfo
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# Local env files
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env.local
+
+# Runtime artifacts. These are never source assets.
+uploads/
+**/uploads/
+temp/
+**/temp/
+tmp/
+**/tmp/
+logs/
+**/logs/
+output/
+**/output/
+*.log
+.playwright-cli/
+
+# Controlled test fixtures are source assets.
+!fixtures/
+!fixtures/golden/
+!fixtures/golden/expected/
+!fixtures/golden/expected/**

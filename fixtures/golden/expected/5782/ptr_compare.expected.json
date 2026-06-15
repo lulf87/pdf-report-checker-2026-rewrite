@@ -1,0 +1,368 @@
+{
+  "clauses": [
+    {
+      "match_reason": "short_heading_equivalent",
+      "ptr_number": "2.1",
+      "ptr_text": "物理性能",
+      "report_text": "物理性能 1. 外观",
+      "result": "match",
+      "similarity": 0.95
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.1.1",
+      "ptr_text": "外观",
+      "report_text": "外观",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.1.1.1",
+      "ptr_text": "导管外观\n有效长度的外表面应清洁无杂质；有效长度外表面，包括末端，不应有加工和表\n面缺陷；导管的尖端构型应圆滑处理；电极表面应完整无断裂。",
+      "report_text": "导管外观 \n有效长度的外表面应清洁无杂质；有效长度外\n表面，包括末端，不应有加工和表面缺陷；导\n管的尖端构型应圆滑处理；电极表面应完整无\n断裂。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.1.1.2",
+      "ptr_text": "导丝外观\n导丝外表面洁净、表面平整、无缺陷、边缘圆润，无毛刺；有效长度外表面，包\n括末端，不应有加工和表面缺陷。",
+      "report_text": "导丝外观 \n导丝外表面洁净、表面平整、无缺陷、边缘圆\n润，无毛刺；有效长度外表面，包括末端，不\n应有加工和表面缺陷 。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "table_reference_equivalent",
+      "ptr_number": "2.1.2",
+      "ptr_text": "尺寸\n尺寸具体要求见表1。\n组件\n项目\n接收标准\n导管有效长度L",
+      "report_text": "尺寸 \n尺寸具体要求见表 1。 \n表 1 尺寸\n+2\n电极长\n度 L1\n电极打\n开外径\nD1\n+1\n导丝直\n径 D2",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": false,
+          "match_rate": 0.0,
+          "matches": 0,
+          "parameters": [],
+          "table_number": 1,
+          "total_parameters": 0
+        }
+      ]
+    },
+    {
+      "match_reason": "table_reference_equivalent",
+      "ptr_number": "2.1.3",
+      "ptr_text": "断裂力\n导管每一试验段的断裂力应符合YY0285.1-2017中4.6项的规定，导丝断裂力\n应符合YY0450.1-2020中8.6项的规定，具体要求见表2。",
+      "report_text": "断裂力 \n导管每一试验段的断裂力应符合 YY 0285.1-2017 中 4.6\n项的规定，导丝断裂力应符合 YY 0450.1-2020 中 8.6 项\n的规定，具体要求见表 2。 \n表 2 断裂力 \n单位：N\n177\n导管组\n件与手\n柄组件\n之间\n手柄组\n件与延\n长管之\n间\n延长管\n与连接\n器之间\n22",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": false,
+          "match_rate": 0.0,
+          "matches": 0,
+          "parameters": [],
+          "table_number": 2,
+          "total_parameters": 0
+        }
+      ]
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.1.4",
+      "ptr_text": "调节机构的操纵性\n调节手柄时，电极可顺畅地被打开和收缩，无卡滞。",
+      "report_text": "调节机构的操纵性 \n调节手柄时，电极可顺畅地被打开和收缩，无\n卡滞。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.1.5",
+      "ptr_text": "导丝其他性能",
+      "report_text": "导丝其他性能",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.1.5.1",
+      "ptr_text": "破裂试验\n导丝应无以下形式的破裂、松动或失效：\na）绕丝的任意部分的自由伸展；\nb）暴露出锋利的，或可能造成创伤的破裂的表面；\nc）该器械任何部分出现分离，致使其使用后回撤不能移动。",
+      "report_text": "破裂试验 \n导丝应无以下形式的破裂、松动或失效： \na） 绕丝的任意部分的自由伸展； \nb） 暴露出锋利的，或可能造成创伤的破裂的\n表面； \nc） 该器械任何部分出现分离，致使其使用后\n回撤不能移动。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "differences": [
+        {
+          "text": "弯曲试验导丝应无以下形式的破裂、松动或失效: a)绕丝的任意部分的自由伸展; b)",
+          "type": "same"
+        },
+        {
+          "text": "券",
+          "type": "removed"
+        },
+        {
+          "text": "暴露出锋利的,或可能造成创伤的破裂的表面; c)该器械任何部分出现分离,致使其使用后回撤不能移动; d)带有涂层的导丝出现涂层剥落。",
+          "type": "same"
+        }
+      ],
+      "match_reason": "text_mismatch",
+      "ptr_number": "2.1.5.2",
+      "ptr_text": "弯曲试验\n导丝应无以下形式的破裂、松动或失效：\na）绕丝的任意部分的自由伸展；\nb）券\n暴露出锋利的，或可能造成创伤的破裂的表面；\nc）该器械任何部分出现分离，致使其使用后回撤不能移动；\nd）带有涂层的导丝出现涂层剥落。",
+      "report_text": "弯曲试验 \n导丝应无以下形式的破裂、松动或失效： \na） 绕丝的任意部分的自由伸展； \nb） 暴露出锋利的，或可能造成创伤的破裂的\n表面； \nc） 该器械任何部分出现分离，致使其使用后\n回撤不能移动； \nd） 带有涂层的导丝出现涂层剥落。",
+      "result": "differ",
+      "similarity": 0.995349
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.1.5.3",
+      "ptr_text": "导丝兼容性\n可兼容0.038\"导丝。",
+      "report_text": "导丝兼容性 \n可兼容 0.038''导丝。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.2",
+      "ptr_text": "匹配性能\n导管连接器与消化道脉冲电场消融仪（苏州元科医疗器械有限公司生产，型号：\nRMD01）连接后，设备应能正常识别导管。",
+      "report_text": "匹配性能 导管连接器与消化道脉冲电场消融仪（苏州元\n科医疗器械有限公司生产，型号：RMD01）连\n接后，设备应能正常识别导管。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "short_heading_equivalent",
+      "ptr_number": "2.3",
+      "ptr_text": "化学性能",
+      "report_text": "化学性能 1. 耐腐蚀性 \n经腐蚀试验后，导管的金属部件不应有腐蚀痕\n迹。",
+      "result": "match",
+      "similarity": 0.95
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.3.1",
+      "ptr_text": "耐腐蚀性\n经腐蚀试验后，导管的金属部件不应有腐蚀痕迹。",
+      "report_text": "耐腐蚀性 \n经腐蚀试验后，导管的金属部件不应有腐蚀痕\n迹。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.3.2",
+      "ptr_text": "还原物质\n检验液与同体积的同批空白对照液相比，高锰酸钾溶液[c(KMnO4)=0.002mol/L]\n的消耗量之差不超过2.0ml。",
+      "report_text": "还原物质 \n检验液与同体积的同批空白对照液相比，高锰\n酸钾溶液[c(KMnO\n4\n)=0.002mol/L]的消耗量之\n差不超过 2.0ml。 \n单位：mL",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.3.3",
+      "ptr_text": "重金属\n试验液呈现的颜色应不超过质量浓度为p（Pb²+）=1μg/mL的标准对照液。",
+      "report_text": "重金属 \n试验液呈现的颜色应不超过质量浓度为ρ\n（Pb\n2+\n ）=1 µg/mL 的标准对照液。 \n单位：μg/mL",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.3.4",
+      "ptr_text": "酸碱度\n检验液pH与同批空白对照液对照，pH之差应不超过1.5。",
+      "report_text": "酸碱度 \n检验液 pH 与同批空白对照液对照，pH 之差应\n不超过 1.5。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.3.5",
+      "ptr_text": "蒸发残渣\n在50mL检验液中，不挥发物总质量应不超过2mg。",
+      "report_text": "蒸发残渣 \n在 50 mL 检验液中，不挥发物总质量应不超过\n2 mg。 \n单位：mg",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "differences": [
+        {
+          "text": "环氧乙烷残留量环氧乙烷灭菌残留量应不大于",
+          "type": "same"
+        },
+        {
+          "text": " ",
+          "type": "added"
+        },
+        {
+          "text": "10",
+          "type": "same"
+        },
+        {
+          "text": "u",
+          "type": "removed"
+        },
+        {
+          "text": "μ",
+          "type": "added"
+        },
+        {
+          "text": "g/g。",
+          "type": "same"
+        }
+      ],
+      "match_reason": "text_mismatch",
+      "ptr_number": "2.3.6",
+      "ptr_text": "环氧乙烷残留量\n环氧乙烷灭菌残留量应不大于10ug/g。",
+      "report_text": "环氧乙烷残留量 \n环氧乙烷灭菌残留量应不大于 10μg/g。 \n单位：μg/g",
+      "result": "differ",
+      "similarity": 0.945455
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.3.7",
+      "ptr_text": "紫外吸光度\n检验液在波长范围250nm~320nm内，吸光度应不大于0.1。",
+      "report_text": "紫外吸光度 \n检验液在波长范围 250 nm~320 nm 内，吸光\n度应不大于 0.1。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.4",
+      "ptr_text": "无菌\n产品应无菌。",
+      "report_text": "无菌 产品应无菌。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "short_heading_equivalent",
+      "ptr_number": "2.5",
+      "ptr_text": "电学性能",
+      "report_text": "电学性能 1. 直流电阻 \n各电极与连接器对应芯脚之间的导线的直流电\n阻值≤20Ω。 \n单位：Ω",
+      "result": "match",
+      "similarity": 0.95
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5.1",
+      "ptr_text": "直流电阻\n各电极与连接器对应芯脚之间的导线的直流电阻值≤20Ω。",
+      "report_text": "直流电阻 \n各电极与连接器对应芯脚之间的导线的直流电\n阻值≤20Ω。 \n单位：Ω",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5.2",
+      "ptr_text": "导管绝缘电阻",
+      "report_text": "导管绝缘电阻",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5.2.1",
+      "ptr_text": "电极间绝缘电阻\n多芯导管任一电极与其他电极对应连接器芯脚之间的绝缘电阻应大于5MQ。",
+      "report_text": "电极间绝缘电阻 \n多芯导管任一电极与其他电极对应连接器芯脚\n之间的绝缘电阻应大于 5MΩ。 \n单位：MΩ",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.5.2.2",
+      "ptr_text": "电极与外管间绝缘电阻\n导管外管与连接器芯脚之间的绝缘电阻应大于500MQ。",
+      "report_text": "电极与外管间绝缘电阻 \n导管外管与连接器芯脚之间的绝缘电阻应大于\n500MΩ。 \n单位：MΩ",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.6",
+      "ptr_text": "电气安全性能\n应符合GB9706.1-2020和GB9706.202-2021标准的要求。",
+      "report_text": "电气安全性能 应符合 GB 9706.1-2020\n和 GB 9706.202-2021 标准的要求。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "differences": [
+        {
+          "text": "电磁兼容",
+          "type": "removed"
+        },
+        {
+          "text": "应符合",
+          "type": "same"
+        },
+        {
+          "text": " ",
+          "type": "added"
+        },
+        {
+          "text": "YY9706.102-2021标准以及",
+          "type": "same"
+        },
+        {
+          "text": " ",
+          "type": "added"
+        },
+        {
+          "text": "GB9706.202-2021标准第",
+          "type": "same"
+        },
+        {
+          "text": " ",
+          "type": "added"
+        },
+        {
+          "text": "202章节的要求。",
+          "type": "same"
+        }
+      ],
+      "match_reason": "text_mismatch",
+      "ptr_number": "2.7",
+      "ptr_text": "电磁兼容\n应符合YY9706.102-2021标准以及GB9706.202-2021标准第202章节的要求。",
+      "report_text": "应符合 YY 9706.102-2021 标准以及 GB \n9706.202-2021 标准第 202 章节的要求。",
+      "result": "differ",
+      "similarity": 0.933333
+    }
+  ],
+  "ptr_info": {
+    "total_clauses": 29,
+    "total_tables": 0
+  },
+  "report_info": {
+    "total_inspection_items": 1064
+  },
+  "summary": {
+    "differs": 3,
+    "evaluated_clauses": 28,
+    "excluded": 0,
+    "match_rate": 0.892857,
+    "matches": 25,
+    "missing": 0,
+    "total_clauses": 28
+  },
+  "tables": [
+    {
+      "clause_number": "2.1.2",
+      "found": false,
+      "match_rate": 0.0,
+      "matches": 0,
+      "table_number": 1,
+      "total_parameters": 0
+    },
+    {
+      "clause_number": "2.1.3",
+      "found": false,
+      "match_rate": 0.0,
+      "matches": 0,
+      "table_number": 2,
+      "total_parameters": 0
+    }
+  ],
+  "warnings": {
+    "missing_in_scope": {
+      "clauses": [],
+      "count": 0,
+      "message": "以下条款在第三页检验项目范围内，但未在报告正文检验表中提取到对应条款。"
+    },
+    "out_of_scope": {
+      "clauses": [],
+      "count": 0,
+      "message": "以下条款不在第三页检验项目范围内，已从正文一致性判定中排除。"
+    }
+  }
+}

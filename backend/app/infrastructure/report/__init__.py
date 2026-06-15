@@ -1,0 +1,2 @@
+"""Report extraction infrastructure adapters."""
+

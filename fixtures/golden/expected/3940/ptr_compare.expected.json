@@ -1,0 +1,1434 @@
+{
+  "clauses": [
+    {
+      "match_reason": "",
+      "ptr_number": "2.1",
+      "ptr_text": "基本电性能指标及允许误差\n表 1：Edora 8 SR(-T)/DR(-T)参数表\n参数\n型号\n常规数值\n标准设置\n允许误差\n起搏模式\nEdora 8 SR\nEdora 8\nSR-T\nVVI-CLS, VVIR, VOOR, AAIR,\nAOOR, VVI, VVT, VOO, AAI,\nAAT, AOO, OFF\nVVIR\n/\nEdora 8 DR\nEdora 8\nDR-T\nVVI-CLS, DDD-CLS,\nDDD-ADI, DDDR-ADIR,\nDDDR, DDIR, DVIR, DOOR,\nVDDR, VDIR\nVVIR, VOOR, AAIR, AOOR,\nDDD, DDT, DDI, DVI, DOO,\nVDD, VDI, VVI, VVT, VOO,\nAAI, AAT, AOO, OFF\nDDDR\n/\n脉冲幅度(V)③\n全部型号",
+      "report_text": "",
+      "result": "missing",
+      "similarity": 0.0,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 0.0,
+          "matches": 0,
+          "parameters": [
+            {
+              "matches": false,
+              "name": "起搏模式",
+              "ptr_value": "VVIR",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "起搏模式",
+              "ptr_value": "DDDR",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "脉冲幅度(V)③",
+              "ptr_value": "3.0",
+              "report_value": ""
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 3
+        }
+      ]
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.1.1",
+      "ptr_text": "起搏模式：产品应符合表 1 中模式的要求。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 0.0,
+          "matches": 0,
+          "parameters": [
+            {
+              "matches": false,
+              "name": "起搏模式",
+              "ptr_value": "VVIR",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "起搏模式",
+              "ptr_value": "DDDR",
+              "report_value": ""
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 2
+        }
+      ]
+    },
+    {
+      "match_reason": "table_parameter_equivalent",
+      "ptr_number": "2.1.2",
+      "ptr_text": "脉冲幅度(V)：脉冲幅度应符合表 1 中的数值。\nEdora 8\nDR-T\nVs 后远 场保 护\n(ms)\nEdora 8 SR\nEdora\n8\nSR-T\n不适用\nEdora 8 DR\nEdora 8\nDR-T",
+      "report_text": "脉冲幅度应符合表 1 中的数值。 \n③脉冲幅度： \n计算公式：\n脉冲幅度(V) ③（心房） \n常规数值：0.2 ... (0.2) ... 6.0 ... \n(0.5) ... 7.5 \n标准设置：3.0\n0.4V～7.5V：+20 %/-25%\n0.4V～7.5V：+20 %/-25%\n0.4V～7.5V：+20 %/-25%\n脉冲幅度(V) ③（右室） \n常规数值：0.2 ... (0.2) ... 6.0 ... \n(0.5) ... 7.5 \n标准设置：3.0\n@240Ω\n0.4V～7.5V：+20 %/-25%\n0.4V～7.5V：+20 %/-25%",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 1.0,
+          "matches": 1,
+          "parameters": [
+            {
+              "matches": true,
+              "name": "脉冲幅度(V)③",
+              "ptr_value": "3.0",
+              "report_value": "常规数值:0.2 ... (0.2) ... 6.0 ..."
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 1
+        }
+      ]
+    },
+    {
+      "match_reason": "table_parameter_equivalent",
+      "ptr_number": "2.1.3",
+      "ptr_text": "脉冲宽度(ms)：脉冲宽度应符合表 1 中的数值。",
+      "report_text": "脉冲宽度应符合表 1 中的数值。\n脉冲宽度(ms) （心房） \n常规数值：0.1 ...(0.1) ... 0.5 ... \n(0.25) ... 1.5 \n标准设置：0.4\n0.2ms～1.5ms：±10%\n0.2ms～1.5ms：±10%\n0.2ms～1.5ms：±10%\n脉冲宽度(ms) （右室） \n常规数值：0.1 ...(0.1) ... 0.5 ... \n(0.25) ... 1.5 \n标准设置：0.4\n0.2ms～1.5ms：±10%\n0.2ms～1.5ms：±10%\n0.2ms～1.5ms：±10%",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 1.0,
+          "matches": 1,
+          "parameters": [
+            {
+              "matches": true,
+              "name": "脉冲宽度(ms)",
+              "ptr_value": "0.4",
+              "report_value": "(心房)"
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 1
+        }
+      ]
+    },
+    {
+      "match_reason": "table_parameter_equivalent",
+      "ptr_number": "2.1.4",
+      "ptr_text": "基础频率(bpm)：基础频率应符合表 1 中的数值。",
+      "report_text": "基础频率应符合表 1 中的数值。\n基础频率(bpm) \n常规数值：30...(5)...100...(10)...200 \n标准设置：60\n允许误差：± 20ms \n单位：ms",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 1.0,
+          "matches": 1,
+          "parameters": [
+            {
+              "matches": true,
+              "name": "基础频率(bpm)",
+              "ptr_value": "60",
+              "report_value": "常规数值:30...(5)...100...(10)...200"
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 1
+        }
+      ]
+    },
+    {
+      "match_reason": "table_parameter_equivalent",
+      "ptr_number": "2.1.5",
+      "ptr_text": "磁铁频率：磁频率应符合表 1 中的数值。",
+      "report_text": "磁铁频率 磁频率应符合表 1 中的数值\n磁铁频率(bpm) \n常规数值：90 \n标准设置：/\n允许误差：± 20ms \n单位：ms",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 1.0,
+          "matches": 1,
+          "parameters": [
+            {
+              "matches": true,
+              "name": "磁铁频率(bpm)",
+              "ptr_value": "/",
+              "report_value": "常规数值:90"
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 1
+        }
+      ]
+    },
+    {
+      "match_reason": "",
+      "ptr_number": "2.1.6",
+      "ptr_text": "干扰转复频率：干扰转复频率应符合表 1 中的数值。",
+      "report_text": "",
+      "result": "missing",
+      "similarity": 0.0,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 1.0,
+          "matches": 1,
+          "parameters": [
+            {
+              "matches": true,
+              "name": "干 扰 转 复 频 率\n(ppm)②",
+              "ptr_value": "/",
+              "report_value": ""
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 1
+        }
+      ]
+    },
+    {
+      "match_reason": "table_parameter_equivalent",
+      "ptr_number": "2.1.7",
+      "ptr_text": "灵敏度(mV)：心房感知灵敏度和心室感知灵敏度应符合表 1 中的数值。",
+      "report_text": "心房感知灵敏度和心室感知灵敏度应符合表 1 中的数值。\n心房感知灵敏度(mV) \n常规数值：AUTO; 0.1 ... (0.1) ... \n1.5 ... (0.5) ... 7.5 \n标准设置：AUTO\n允许误差：±0.1mV 或±20%取较大值\n0.1mV\n～\n0.5mV\n：±\n0.1mV\n负向 \n单位：mV\n0.6mV\n～\n7.5mV\n：±\n20%\n右心室感知灵敏度(mV) \n常规数值：AUTO; 0.5 ... (0.5) ... 7.5 \n标准设置：AUTO\n允许误\n差：±\n20%",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 1.0,
+          "matches": 4,
+          "parameters": [
+            {
+              "matches": true,
+              "name": "心房感知灵敏度\n(mV)",
+              "ptr_value": "AUTO",
+              "report_value": "常规数值:AUTO; 0.1 ... (0.1) ..."
+            },
+            {
+              "matches": true,
+              "name": "心房感知灵敏度\n(mV)",
+              "ptr_value": "AUTO",
+              "report_value": "常规数值:AUTO; 0.1 ... (0.1) ..."
+            },
+            {
+              "matches": true,
+              "name": "右心室感知灵敏\n度(mV)",
+              "ptr_value": "AUTO",
+              "report_value": "常规数值:AUTO; 0.5 ... (0.5) ... 7.5"
+            },
+            {
+              "matches": true,
+              "name": "右心室感知灵敏\n度(mV)",
+              "ptr_value": "AUTO",
+              "report_value": "常规数值:AUTO; 0.5 ... (0.5) ... 7.5"
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 4
+        }
+      ]
+    },
+    {
+      "match_reason": "table_parameter_equivalent",
+      "ptr_number": "2.1.8",
+      "ptr_text": "起搏/感知不应期(ms)：心房不应期、心室不应期应符合表 1 中的数值。",
+      "report_text": "心房不应期、心室不应期应符合表 1 中的数值。\n心房不应期(ms) \n常规数值：AUTO \n标准设置：AUTO \n允许误差：/\nAAI(R) 、 AAT(R) 、 DDT 模式的心房不应期\n(ms) \n常规数值：300...(25)...775 \n标准设置：350\n允许误差：± 20ms \n单位：ms\n右室不应期(ms) \n常规数值：200 ... (25) … 500 \n标准设置：250\n允许误差：± 20ms \n单位：ms",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 1.0,
+          "matches": 3,
+          "parameters": [
+            {
+              "matches": true,
+              "name": "心房不应期(ms)",
+              "ptr_value": "AUTO",
+              "report_value": "常规数值:AUTO"
+            },
+            {
+              "matches": true,
+              "name": "AAI(R)、AAT(R)、\nDDT 模式的心房\n不应期(ms)",
+              "ptr_value": "350",
+              "report_value": "常规数值:300...(25)...775标准设置:350允许误差:±20ms-"
+            },
+            {
+              "matches": true,
+              "name": "不应期(ms)",
+              "ptr_value": "250",
+              "report_value": "常规数值:AUTO"
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 3
+        }
+      ]
+    },
+    {
+      "match_reason": "table_parameter_equivalent",
+      "ptr_number": "2.1.9",
+      "ptr_text": "逸搏间期(ms)：逸搏间期应符合表 1 中的数值。",
+      "report_text": "逸搏间期应符合表 1 中的数值。 \n逸搏间期(ms) ① \n①逸博间期：300-2000ms，不可直接程控，跟随基础频率\n的变化而变化，公式：60000ms/基础频率。\n允许误差：± 20ms \n单位：ms",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 1.0,
+          "matches": 1,
+          "parameters": [
+            {
+              "matches": true,
+              "name": "逸搏间期(ms)①",
+              "ptr_value": "± 20",
+              "report_value": "①逸博间期:300-2000ms,不可直接程控,跟随基础频率"
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 1
+        }
+      ]
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.1.10",
+      "ptr_text": "输入阻抗(KΩ)：输入阻抗应符合表 1 中的数值。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 1.0,
+          "matches": 1,
+          "parameters": [
+            {
+              "matches": true,
+              "name": "输入阻抗",
+              "ptr_value": "/",
+              "report_value": ""
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 1
+        }
+      ]
+    },
+    {
+      "match_reason": "table_parameter_equivalent",
+      "ptr_number": "2.1.11",
+      "ptr_text": "房室间期(ms)：房室间期应符合表 1 中的数值。",
+      "report_text": "房室间期应符合表 1 中的数值。\n房室间期(ms) \n常规数值：低，中，高，固定，自定义 \n标准设置：低 \n允许误差：/\n房室间期(ms) \n常规数值：20 ... (5) ... 350 \n标准设置：180-170-160-150- 140\n允许误差：±20ms \n单位：ms\n房室间期(ms) \n常规数值：CLS 模式下：20 ... (5) ... 350 \n标准设置：150-140-130-120- 120\n允许误差：±20ms \n单位：ms",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 0.0,
+          "matches": 0,
+          "parameters": [
+            {
+              "matches": false,
+              "name": "房室间期(ms)\n感知后的房室间\n期(ms)",
+              "ptr_value": "不适用",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "房室间期(ms)\n感知后的房室间\n期(ms)",
+              "ptr_value": "低",
+              "report_value": ""
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 2
+        }
+      ]
+    },
+    {
+      "match_reason": "table_parameter_equivalent",
+      "ptr_number": "2.1.12",
+      "ptr_text": "心室后心房不应期（PVARP）：心室后心房不应期应符合表 1 中的数值。",
+      "report_text": "心室后心房不应期应符合表 1 中的数值。\nPVARP(ms) \n常规数值：175 ... (25) ... 600 \n标准设置：225\n允许误差：±20ms \n单位：ms",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 0.0,
+          "matches": 0,
+          "parameters": [
+            {
+              "matches": false,
+              "name": "心房不应期(ms)",
+              "ptr_value": "AUTO",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "不应期(ms)",
+              "ptr_value": "250",
+              "report_value": ""
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 2
+        }
+      ]
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.1.13",
+      "ptr_text": "空白期：通过程控仪程控的 Vs 后远场保护，Vp 后远场保护，Ap 后心室\n空白期参数应符合表 1 中的数值。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 0.0,
+          "matches": 0,
+          "parameters": [
+            {
+              "matches": false,
+              "name": "Vs 后远 场保 护\n(ms)",
+              "ptr_value": "不适用",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "Vs 后远 场保 护\n(ms)",
+              "ptr_value": "100",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "Vp 后远场保护\n(ms)",
+              "ptr_value": "不适用",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "Vp 后远场保护\n(ms)",
+              "ptr_value": "150",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "Ap 后心室空白\n期 (ms)",
+              "ptr_value": "不适用",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "Ap 后心室空白\n期 (ms)",
+              "ptr_value": "30",
+              "report_value": ""
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 6
+        }
+      ]
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.1.14",
+      "ptr_text": "上限跟踪频率：上限跟踪频率应符合表 1 中的数值。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 0.0,
+          "matches": 0,
+          "parameters": [
+            {
+              "matches": false,
+              "name": "上 限 跟 踪 频 率\n(bpm)\n（SR-T:在 VVT\n模式下）",
+              "ptr_value": "130",
+              "report_value": ""
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 1
+        }
+      ]
+    },
+    {
+      "match_reason": "table_parameter_equivalent",
+      "ptr_number": "2.1.15",
+      "ptr_text": "感知后房室间期：感知后房室间期应符合表 1 中的数值。",
+      "report_text": "感知后房室间期应符合表 1 中的数值。\n感知后的房室间期(ms) \n常规数值：低，中，高，固定，自定义 \n标准设置：低 \n允许误差：/\n感知后的房室间期(ms) \n常规数值：20 ... (5) ... 350 \n标准设置：180-170-160-150- 140\n允许误差：±20ms \n单位：ms\n感知后的房室间期(ms) \n常规数值：CLS 模式下：20 ... (5) ... 350 \n标准设置：150-140-130-120- 120\n允许误差：±20ms \n单位：ms",
+      "result": "match",
+      "similarity": 0.9,
+      "table_expansions": [
+        {
+          "found": true,
+          "match_rate": 0.225806,
+          "matches": 7,
+          "parameters": [
+            {
+              "matches": false,
+              "name": "起搏模式",
+              "ptr_value": "VVIR",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "起搏模式",
+              "ptr_value": "DDDR",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "脉冲幅度(V)③",
+              "ptr_value": "3.0",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "脉冲宽度(ms)",
+              "ptr_value": "0.4",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "基础频率(bpm)",
+              "ptr_value": "60",
+              "report_value": ""
+            },
+            {
+              "matches": true,
+              "name": "磁铁频率(bpm)",
+              "ptr_value": "/",
+              "report_value": ""
+            },
+            {
+              "matches": true,
+              "name": "干 扰 转 复 频 率\n(ppm)②",
+              "ptr_value": "/",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "心房感知灵敏度\n(mV)",
+              "ptr_value": "AUTO",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "心房感知灵敏度\n(mV)",
+              "ptr_value": "AUTO",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "右心室感知灵敏\n度(mV)",
+              "ptr_value": "AUTO",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "右心室感知灵敏\n度(mV)",
+              "ptr_value": "AUTO",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "逸搏间期(ms)①",
+              "ptr_value": "± 20",
+              "report_value": ""
+            },
+            {
+              "matches": true,
+              "name": "输入阻抗",
+              "ptr_value": "/",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "房室间期(ms)\n感知后的房室间\n期(ms)",
+              "ptr_value": "不适用",
+              "report_value": ""
+            },
+            {
+              "matches": true,
+              "name": "房室间期(ms)\n感知后的房室间\n期(ms)",
+              "ptr_value": "低",
+              "report_value": "已覆盖"
+            },
+            {
+              "matches": true,
+              "name": "20 ... (5) ... 350",
+              "ptr_value": "± 20",
+              "report_value": "标准设置:180-170-160-150- 140"
+            },
+            {
+              "matches": true,
+              "name": "CLS 模式下：20 ... (5) ... 350",
+              "ptr_value": "150-140-\n130-120-\n120",
+              "report_value": "标准设置:150-140-130-120- 120"
+            },
+            {
+              "matches": false,
+              "name": "心房不应期(ms)",
+              "ptr_value": "AUTO",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "AAI(R)、AAT(R)、\nDDT 模式的心房\n不应期(ms)",
+              "ptr_value": "350",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "右室不应期(ms)",
+              "ptr_value": "250",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "不应期(ms)",
+              "ptr_value": "250",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "PVARP(ms)",
+              "ptr_value": "不适用",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "PVARP(ms)",
+              "ptr_value": "225",
+              "report_value": ""
+            },
+            {
+              "matches": true,
+              "name": "PVARP(ms)",
+              "ptr_value": "",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "Vs 后远 场保 护\n(ms)",
+              "ptr_value": "不适用",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "Vs 后远 场保 护\n(ms)",
+              "ptr_value": "100",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "Vp 后远场保护\n(ms)",
+              "ptr_value": "不适用",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "Vp 后远场保护\n(ms)",
+              "ptr_value": "150",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "Ap 后心室空白\n期 (ms)",
+              "ptr_value": "不适用",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "Ap 后心室空白\n期 (ms)",
+              "ptr_value": "30",
+              "report_value": ""
+            },
+            {
+              "matches": false,
+              "name": "上 限 跟 踪 频 率\n(bpm)\n（SR-T:在 VVT\n模式下）",
+              "ptr_value": "130",
+              "report_value": ""
+            }
+          ],
+          "table_number": 1,
+          "total_parameters": 31
+        }
+      ]
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.2",
+      "ptr_text": "功能指标",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.2.1",
+      "ptr_text": "电池余量指示：用程控仪程控时，程控仪应能显示出设备的电池余量。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.2.2",
+      "ptr_text": "磁铁反应：百多力起搏器的磁铁反应在标准程序中设置如下：\n• 非同步：放上磁铁期间 DOO（也可能是 VOO/AOO）模式无频率适应性；\n磁铁频率：90 bpm\n• 自动：10 个周期 - DOO 模式然后是无频率适应性的 DDDR 模式；\n磁铁频率：前 10 个周期为 90 bpm，之后为设定的基础频率\n• 同步：无频率适应性的 DDDR（必要时 VVIR）模式；\n磁铁频率：已设置的基础频率。\n其中磁铁频率和基础频率允差±20ms。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.2.3",
+      "ptr_text": "安全起搏功能：设备应具有安全起搏功能，在紧急情况下可以通过一键程\n控的方式进入安全起搏模式，参数如下：\n参数名称\n数值\n自动初始化后的模式\nVVI\n磁铁频率\nAuto\n基础频率",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.5",
+      "ptr_text": "细菌内毒素：细菌内毒素应不超过20EU/件。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.2.4",
+      "ptr_text": "程控与遥测：设备应能被百多力公司的程控仪 ICS 3000 或 Renamic 程控与\n询问。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.2.5",
+      "ptr_text": "PMT 预防和抑制：起搏器应具有 PMT 预防和抑制功能。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.2.6",
+      "ptr_text": "植入式心脏起搏器应具有 1.9 的功能。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.3",
+      "ptr_text": "连接器内腔（IS-1）：符合 YY/T 0491-2004 中 4.3 的要求。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.4",
+      "ptr_text": "化学性能",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.4.1",
+      "ptr_text": "无菌：产品及附件应无菌。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.4.2",
+      "ptr_text": "环氧乙烷残留量：经环氧乙烷灭菌，其残留量应不超过 10μg/g。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.6",
+      "ptr_text": "附件（扭矩扳手）",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.6.1",
+      "ptr_text": "扭矩扳手外观：扭矩扳手的外观形状应如下图所示，表面清洁无杂质。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.6.2",
+      "ptr_text": "扭矩扳手尺寸：扭矩扳手尺寸如下表所示.\n部件编号\nA\nB\nC\nD\nE1\n尺 寸 及 误 差\n(mm)",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.6.3",
+      "ptr_text": "耐腐蚀试验：将扳手浸泡在去离子水中在室内温度下持续 24 小时，扳手的\n表面不应该有任何生锈现象。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.6.4",
+      "ptr_text": "扭力试验：保持 6-12Ncm 的起始扭力进行扭转时，扭矩扳手的 6 角型切面\n应无磨损。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.6.5",
+      "ptr_text": "拉拔力测试：当用小于 25N 的拉拔力时，扭矩扳手的金属部分不会从扭矩\n扳手的底座中拔出。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.7",
+      "ptr_text": "通用要求：应符合 GB 16174.1-2024 的要求。",
+      "report_text": "通用要求 应符合 GB 16174.1-2024 的要求。",
+      "result": "match",
+      "similarity": 1.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.8",
+      "ptr_text": "磁共振环境的产品特殊运行模式\n磁共振环境的产品特殊运行模式及其参数信息（表中简称 MR 模式），详见下表：\n参数名称\n设置范围\n默认值\nSR\nSR-T\nDR\nDR-T\nMR 模式的启\n停控制\nON：开启\nOFF：关闭\nAUTO：自动识别并进\n入 MR 运行模式\nOFF\n√\n√\n√\n√\nMR 模式的持\n续时间",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "out_of_scope_third_page",
+      "ptr_number": "2.9",
+      "ptr_text": "电磁兼容\n应符合 YY/T 1874-2023 的要求。",
+      "report_text": "",
+      "result": "excluded",
+      "similarity": 0.0
+    },
+    {
+      "match_reason": "exact_normalized_match",
+      "ptr_number": "2.10",
+      "ptr_text": "专用要求：应符合 GB 16174.2-2024 的要求。",
+      "report_text": "专用要求 应符合 GB 16174.2-2024 的要求。",
+      "result": "match",
+      "similarity": 1.0
+    }
+  ],
+  "ptr_info": {
+    "total_clauses": 39,
+    "total_tables": 12
+  },
+  "report_info": {
+    "total_inspection_items": 332
+  },
+  "summary": {
+    "differs": 0,
+    "evaluated_clauses": 14,
+    "excluded": 24,
+    "match_rate": 0.857143,
+    "matches": 12,
+    "missing": 2,
+    "total_clauses": 38
+  },
+  "tables": [
+    {
+      "clause_number": "2.1",
+      "found": true,
+      "match_rate": 0.0,
+      "matches": 0,
+      "parameters": [
+        {
+          "matches": false,
+          "name": "起搏模式",
+          "ptr_value": "VVIR",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "起搏模式",
+          "ptr_value": "DDDR",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "脉冲幅度(V)③",
+          "ptr_value": "3.0",
+          "report_value": ""
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 3
+    },
+    {
+      "clause_number": "2.1.1",
+      "found": true,
+      "match_rate": 0.0,
+      "matches": 0,
+      "parameters": [
+        {
+          "matches": false,
+          "name": "起搏模式",
+          "ptr_value": "VVIR",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "起搏模式",
+          "ptr_value": "DDDR",
+          "report_value": ""
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 2
+    },
+    {
+      "clause_number": "2.1.2",
+      "found": true,
+      "match_rate": 1.0,
+      "matches": 1,
+      "parameters": [
+        {
+          "matches": true,
+          "name": "脉冲幅度(V)③",
+          "ptr_value": "3.0",
+          "report_value": "常规数值:0.2 ... (0.2) ... 6.0 ..."
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 1
+    },
+    {
+      "clause_number": "2.1.3",
+      "found": true,
+      "match_rate": 1.0,
+      "matches": 1,
+      "parameters": [
+        {
+          "matches": true,
+          "name": "脉冲宽度(ms)",
+          "ptr_value": "0.4",
+          "report_value": "(心房)"
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 1
+    },
+    {
+      "clause_number": "2.1.4",
+      "found": true,
+      "match_rate": 1.0,
+      "matches": 1,
+      "parameters": [
+        {
+          "matches": true,
+          "name": "基础频率(bpm)",
+          "ptr_value": "60",
+          "report_value": "常规数值:30...(5)...100...(10)...200"
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 1
+    },
+    {
+      "clause_number": "2.1.5",
+      "found": true,
+      "match_rate": 1.0,
+      "matches": 1,
+      "parameters": [
+        {
+          "matches": true,
+          "name": "磁铁频率(bpm)",
+          "ptr_value": "/",
+          "report_value": "常规数值:90"
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 1
+    },
+    {
+      "clause_number": "2.1.6",
+      "found": true,
+      "match_rate": 1.0,
+      "matches": 1,
+      "parameters": [
+        {
+          "matches": true,
+          "name": "干 扰 转 复 频 率\n(ppm)②",
+          "ptr_value": "/",
+          "report_value": ""
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 1
+    },
+    {
+      "clause_number": "2.1.7",
+      "found": true,
+      "match_rate": 1.0,
+      "matches": 4,
+      "parameters": [
+        {
+          "matches": true,
+          "name": "心房感知灵敏度\n(mV)",
+          "ptr_value": "AUTO",
+          "report_value": "常规数值:AUTO; 0.1 ... (0.1) ..."
+        },
+        {
+          "matches": true,
+          "name": "心房感知灵敏度\n(mV)",
+          "ptr_value": "AUTO",
+          "report_value": "常规数值:AUTO; 0.1 ... (0.1) ..."
+        },
+        {
+          "matches": true,
+          "name": "右心室感知灵敏\n度(mV)",
+          "ptr_value": "AUTO",
+          "report_value": "常规数值:AUTO; 0.5 ... (0.5) ... 7.5"
+        },
+        {
+          "matches": true,
+          "name": "右心室感知灵敏\n度(mV)",
+          "ptr_value": "AUTO",
+          "report_value": "常规数值:AUTO; 0.5 ... (0.5) ... 7.5"
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 4
+    },
+    {
+      "clause_number": "2.1.8",
+      "found": true,
+      "match_rate": 1.0,
+      "matches": 3,
+      "parameters": [
+        {
+          "matches": true,
+          "name": "心房不应期(ms)",
+          "ptr_value": "AUTO",
+          "report_value": "常规数值:AUTO"
+        },
+        {
+          "matches": true,
+          "name": "AAI(R)、AAT(R)、\nDDT 模式的心房\n不应期(ms)",
+          "ptr_value": "350",
+          "report_value": "常规数值:300...(25)...775标准设置:350允许误差:±20ms-"
+        },
+        {
+          "matches": true,
+          "name": "不应期(ms)",
+          "ptr_value": "250",
+          "report_value": "常规数值:AUTO"
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 3
+    },
+    {
+      "clause_number": "2.1.9",
+      "found": true,
+      "match_rate": 1.0,
+      "matches": 1,
+      "parameters": [
+        {
+          "matches": true,
+          "name": "逸搏间期(ms)①",
+          "ptr_value": "± 20",
+          "report_value": "①逸博间期:300-2000ms,不可直接程控,跟随基础频率"
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 1
+    },
+    {
+      "clause_number": "2.1.10",
+      "found": true,
+      "match_rate": 1.0,
+      "matches": 1,
+      "parameters": [
+        {
+          "matches": true,
+          "name": "输入阻抗",
+          "ptr_value": "/",
+          "report_value": ""
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 1
+    },
+    {
+      "clause_number": "2.1.11",
+      "found": true,
+      "match_rate": 0.0,
+      "matches": 0,
+      "parameters": [
+        {
+          "matches": false,
+          "name": "房室间期(ms)\n感知后的房室间\n期(ms)",
+          "ptr_value": "不适用",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "房室间期(ms)\n感知后的房室间\n期(ms)",
+          "ptr_value": "低",
+          "report_value": ""
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 2
+    },
+    {
+      "clause_number": "2.1.12",
+      "found": true,
+      "match_rate": 0.0,
+      "matches": 0,
+      "parameters": [
+        {
+          "matches": false,
+          "name": "心房不应期(ms)",
+          "ptr_value": "AUTO",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "不应期(ms)",
+          "ptr_value": "250",
+          "report_value": ""
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 2
+    },
+    {
+      "clause_number": "2.1.13",
+      "found": true,
+      "match_rate": 0.0,
+      "matches": 0,
+      "parameters": [
+        {
+          "matches": false,
+          "name": "Vs 后远 场保 护\n(ms)",
+          "ptr_value": "不适用",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "Vs 后远 场保 护\n(ms)",
+          "ptr_value": "100",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "Vp 后远场保护\n(ms)",
+          "ptr_value": "不适用",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "Vp 后远场保护\n(ms)",
+          "ptr_value": "150",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "Ap 后心室空白\n期 (ms)",
+          "ptr_value": "不适用",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "Ap 后心室空白\n期 (ms)",
+          "ptr_value": "30",
+          "report_value": ""
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 6
+    },
+    {
+      "clause_number": "2.1.14",
+      "found": true,
+      "match_rate": 0.0,
+      "matches": 0,
+      "parameters": [
+        {
+          "matches": false,
+          "name": "上 限 跟 踪 频 率\n(bpm)\n（SR-T:在 VVT\n模式下）",
+          "ptr_value": "130",
+          "report_value": ""
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 1
+    },
+    {
+      "clause_number": "2.1.15",
+      "found": true,
+      "match_rate": 0.225806,
+      "matches": 7,
+      "parameters": [
+        {
+          "matches": false,
+          "name": "起搏模式",
+          "ptr_value": "VVIR",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "起搏模式",
+          "ptr_value": "DDDR",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "脉冲幅度(V)③",
+          "ptr_value": "3.0",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "脉冲宽度(ms)",
+          "ptr_value": "0.4",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "基础频率(bpm)",
+          "ptr_value": "60",
+          "report_value": ""
+        },
+        {
+          "matches": true,
+          "name": "磁铁频率(bpm)",
+          "ptr_value": "/",
+          "report_value": ""
+        },
+        {
+          "matches": true,
+          "name": "干 扰 转 复 频 率\n(ppm)②",
+          "ptr_value": "/",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "心房感知灵敏度\n(mV)",
+          "ptr_value": "AUTO",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "心房感知灵敏度\n(mV)",
+          "ptr_value": "AUTO",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "右心室感知灵敏\n度(mV)",
+          "ptr_value": "AUTO",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "右心室感知灵敏\n度(mV)",
+          "ptr_value": "AUTO",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "逸搏间期(ms)①",
+          "ptr_value": "± 20",
+          "report_value": ""
+        },
+        {
+          "matches": true,
+          "name": "输入阻抗",
+          "ptr_value": "/",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "房室间期(ms)\n感知后的房室间\n期(ms)",
+          "ptr_value": "不适用",
+          "report_value": ""
+        },
+        {
+          "matches": true,
+          "name": "房室间期(ms)\n感知后的房室间\n期(ms)",
+          "ptr_value": "低",
+          "report_value": "已覆盖"
+        },
+        {
+          "matches": true,
+          "name": "20 ... (5) ... 350",
+          "ptr_value": "± 20",
+          "report_value": "标准设置:180-170-160-150- 140"
+        },
+        {
+          "matches": true,
+          "name": "CLS 模式下：20 ... (5) ... 350",
+          "ptr_value": "150-140-\n130-120-\n120",
+          "report_value": "标准设置:150-140-130-120- 120"
+        },
+        {
+          "matches": false,
+          "name": "心房不应期(ms)",
+          "ptr_value": "AUTO",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "AAI(R)、AAT(R)、\nDDT 模式的心房\n不应期(ms)",
+          "ptr_value": "350",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "右室不应期(ms)",
+          "ptr_value": "250",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "不应期(ms)",
+          "ptr_value": "250",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "PVARP(ms)",
+          "ptr_value": "不适用",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "PVARP(ms)",
+          "ptr_value": "225",
+          "report_value": ""
+        },
+        {
+          "matches": true,
+          "name": "PVARP(ms)",
+          "ptr_value": "",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "Vs 后远 场保 护\n(ms)",
+          "ptr_value": "不适用",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "Vs 后远 场保 护\n(ms)",
+          "ptr_value": "100",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "Vp 后远场保护\n(ms)",
+          "ptr_value": "不适用",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "Vp 后远场保护\n(ms)",
+          "ptr_value": "150",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "Ap 后心室空白\n期 (ms)",
+          "ptr_value": "不适用",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "Ap 后心室空白\n期 (ms)",
+          "ptr_value": "30",
+          "report_value": ""
+        },
+        {
+          "matches": false,
+          "name": "上 限 跟 踪 频 率\n(bpm)\n（SR-T:在 VVT\n模式下）",
+          "ptr_value": "130",
+          "report_value": ""
+        }
+      ],
+      "table_number": 1,
+      "total_parameters": 31
+    }
+  ],
+  "warnings": {
+    "missing_in_scope": {
+      "clauses": [
+        "2.1",
+        "2.1.6"
+      ],
+      "count": 2,
+      "message": "以下条款在第三页检验项目范围内，但未在报告正文检验表中提取到对应条款。"
+    },
+    "out_of_scope": {
+      "clauses": [
+        "2.1.1",
+        "2.1.10",
+        "2.1.13",
+        "2.1.14",
+        "2.2",
+        "2.2.1",
+        "2.2.2",
+        "2.2.3",
+        "2.5",
+        "2.2.4",
+        "2.2.5",
+        "2.2.6",
+        "2.3",
+        "2.4",
+        "2.4.1",
+        "2.4.2",
+        "2.6",
+        "2.6.1",
+        "2.6.2",
+        "2.6.3",
+        "2.6.4",
+        "2.6.5",
+        "2.8",
+        "2.9"
+      ],
+      "count": 24,
+      "message": "以下条款不在第三页检验项目范围内，已从正文一致性判定中排除。"
+    }
+  }
+}
