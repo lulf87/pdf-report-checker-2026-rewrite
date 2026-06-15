@@ -1,5 +1,6 @@
 import pytest
 
+from app.application.task_repository import InMemoryTaskRepository
 from app.application.task_service import (
     TaskNotFoundError,
     TaskResultNotFoundError,
@@ -73,6 +74,18 @@ def test_task_service_returns_deep_copies_of_task_state() -> None:
     returned.logs.append("mutated outside service")
 
     assert service.get_task(task.task_id).logs == ["first log"]
+
+
+def test_task_service_uses_injected_repository_for_shared_task_state() -> None:
+    repository = InMemoryTaskRepository()
+    writer = TaskService(repository=repository)
+    reader = TaskService(repository=repository)
+
+    task = writer.create_task(TaskType.REPORT_CHECK)
+    writer.start_task(task.task_id, current_step="processing", progress=25)
+
+    assert reader.get_task(task.task_id).status == TaskState.PROCESSING
+    assert reader.get_task(task.task_id).progress == 25
 
 
 def test_task_service_records_error_state_without_result() -> None:

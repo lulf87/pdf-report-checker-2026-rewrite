@@ -35,6 +35,7 @@ def test_double_header_generates_column_paths_and_legacy_headers() -> None:
         "心室 / 常规数值",
         "心室 / 标准设置",
     ]
+    assert canonical.table_number == "1"
     assert canonical.metadata["table_number"] == "1"
     assert canonical.caption == "表 1 起搏参数"
 

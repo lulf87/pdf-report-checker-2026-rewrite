@@ -1,0 +1,17 @@
+{
+  "finding_code_count": 5,
+  "finding_codes": [
+    "PTR_CLAUSE_TEXT_MISMATCH",
+    "PTR_TABLE_MISSING",
+    "PTR_TABLE_PARAM_MISSING",
+    "PTR_TABLE_UNIT_MISMATCH",
+    "PTR_TABLE_VALUE_MISMATCH"
+  ],
+  "finding_count_by_severity": {
+    "error": 5
+  },
+  "has_ptr_table_param_missing": true,
+  "has_ptr_table_unit_mismatch": true,
+  "has_ptr_table_value_mismatch": true,
+  "task_type": "ptr_compare"
+}

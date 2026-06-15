@@ -19,7 +19,7 @@
 - 不允许做：不创建或删除旧项目文件；不移动旧素材；不把未检出的旧文件写成已确认事实；不开始迁移代码。
 - 测试要求：运行 `test -f docs/rewrite-branch-notes.md`；运行 `rg "只读|测试失败|Electron|python_backend" docs/rewrite-branch-notes.md`。
 - 验收标准：Done when 文档存在，清楚说明旧项目只读、当前重写边界、废弃主线和失败停止规则。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T02：生成 AGENTS.md
 - 目标：在当前项目根目录生成项目级 `AGENTS.md`，约束后续 Codex 执行。
@@ -30,7 +30,7 @@
 - 不允许做：不覆盖用户已有更具体的子目录规则；不加入与当前项目无关的团队流程；不要求一次性重写全部。
 - 测试要求：运行 `test -f AGENTS.md`；运行 `rg "旧项目只读|raw|测试失败|前端不得" AGENTS.md`。
 - 验收标准：Done when `AGENTS.md` 存在，并能指导后续所有 T03-T42 任务。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T03：初始化新后端目录结构
 - 目标：创建新 FastAPI 后端骨架和分层目录。
@@ -41,7 +41,7 @@
 - 不允许做：不迁移业务规则；不复制旧 service 大文件；不保留旧 `/api/report-self-check` 作为主路由；不引入数据库。
 - 测试要求：运行 `cd backend && python -m pytest`；若尚无测试，应至少有一个 app import smoke test。
 - 验收标准：Done when 后端包可 import，pytest 可运行，目录符合 `docs/migration-plan.md` 的分层结构。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T04：初始化新前端目录结构
 - 目标：创建新 React + TypeScript + Vite 前端骨架。
@@ -52,7 +52,7 @@
 - 不允许做：不把旧大页面直接复制进来；不在前端实现业务规则；不做营销落地页；不接真实 API。
 - 测试要求：运行 `cd frontend && npm run build`；如果配置了类型检查，运行 `cd frontend && npm run typecheck`。
 - 验收标准：Done when 前端能构建，目录按 feature 拆分，首屏是可运行工作台入口。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T05：定义统一领域模型和 Finding
 - 目标：建立 `Location`、`Evidence`、`Finding`、`CheckResult`、`TaskStatus` 等统一模型。
@@ -63,7 +63,7 @@
 - 不允许做：不使用裸 dict 作为模型；不允许 FAIL/REVIEW finding 缺少证据或缺失证据说明；不把 Codex schema 作为领域模型直接复用。
 - 测试要求：运行 `cd backend && python -m pytest tests/domain/test_finding_models.py`，覆盖序列化、必填字段、缺失证据、summary 计数。
 - 验收标准：Done when 模型测试通过，后续 API、规则、导出都能复用同一结果契约。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T06：实现统一任务模型和内存 TaskRepository
 - 目标：实现可替换的任务仓储接口和初版内存实现。
@@ -74,7 +74,7 @@
 - 不允许做：不把仓储放在 FastAPI router；不直接存上传文件 bytes；不引入数据库；不吞掉错误信息。
 - 测试要求：运行 `cd backend && python -m pytest tests/application/test_task_repository.py`，覆盖 pending、processing、completed、error、not found。
 - 验收标准：Done when 任务状态可独立测试，router 尚不存在也能使用 task service。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T07：实现文件存储 LocalFileStore
 - 目标：建立上传文件、任务结果和导出文件的本地存储 adapter。
@@ -85,7 +85,7 @@
 - 不允许做：不写入 raw/original/source_data；不使用用户本机旧项目路径作为运行目录；不保留原始文件名作为唯一路径；不删除非本 adapter 创建的文件。
 - 测试要求：运行 `cd backend && python -m pytest tests/infrastructure/test_local_file_store.py`，覆盖保存读取、路径穿越拒绝、文件名保留为 metadata。
 - 验收标准：Done when 文件存储可独立使用，所有路径都在受控 runtime 根目录下。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T08：实现 GET /api/health
 - 目标：提供新后端健康检查接口。
@@ -96,7 +96,7 @@
 - 不允许做：不挂旧 `/api/report-self-check/health` 作为主接口；不在 health 中执行耗时 PDF/OCR 检查；不返回临时 dict 中的业务状态。
 - 测试要求：运行 `cd backend && python -m pytest tests/api/test_health.py`，断言 200、JSON schema 和路径。
 - 验收标准：Done when `GET /api/health` 可测且不依赖业务规则。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T09：实现统一任务 API 骨架
 - 目标：建立任务创建、查询、结果和导出的 API skeleton。
@@ -107,7 +107,7 @@
 - 不允许做：不实现同步检查接口；不在 router 中解析 PDF；不把旧 task dict 暴露给前端；不接入 C01-C11。
 - 测试要求：运行 `cd backend && python -m pytest tests/api/test_tasks_api.py`，覆盖 PDF 文件类型校验、缺少文件、任务不存在、导出格式非法。
 - 验收标准：Done when 新 API 路径和状态契约稳定，业务 usecase 可后续接入。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T10：迁移 PDF parser 到 infrastructure/pdf
 - 目标：把旧 PyMuPDF 解析经验迁移为 `ParsedPdf` adapter。
@@ -118,7 +118,7 @@
 - 不允许做：不在 PDF parser 中判断 C 规则；不识别照片覆盖是否通过；不调用 OCR；不修改输入 PDF。
 - 测试要求：运行 `cd backend && python -m pytest tests/infrastructure/test_pdf_document_loader.py`，使用小 fixture 覆盖有效 PDF、损坏 PDF、页文本、words、textless 诊断。
 - 验收标准：Done when parser 可独立输出 `ParsedPdf`，业务规则完全不在该模块内。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T11：迁移 OCR parser / OCR service 到 infrastructure/ocr
 - 目标：建立 OCR adapter 和标签字段标准化输出。
@@ -129,7 +129,7 @@
 - 不允许做：不让 OCR 直接决定 PASS/FAIL；不把 OCR 空字段当成标签不存在；不依赖 live OCR 做稳定单元测试。
 - 测试要求：运行 `cd backend && python -m pytest tests/infrastructure/test_ocr_service.py`，覆盖字段别名、低置信、无字段、中文冒号、英文冒号、fake adapter。
 - 验收标准：Done when OCR 输出可作为证据输入规则，但规则判定仍在 rules 层。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T12：迁移 ReportExtractor，但拆成 page_locator、field_extractor、inspection_table_extractor、sample_description_extractor
 - 目标：构建 `ReportDocument`，并把旧 report evidence builder 拆为多个 extractor。
@@ -140,7 +140,7 @@
 - 不允许做：不实现任何 C01-C11 判定；不调用 Codex；不输出临时 dict；不把字段缺失写成业务错误。
 - 测试要求：运行 `cd backend && python -m pytest tests/application/test_report_extraction.py`，覆盖字段、样品组件、检验项目、caption、缺失页面诊断。
 - 验收标准：Done when report extractor 可由 `ParsedPdf` 和 `LabelOCR` 构建 `ReportDocument`，规则任务可独立消费。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T13：迁移 C01 规则
 - 目标：实现新 C01 首页与第三页一致性。
@@ -151,7 +151,7 @@
 - 不允许做：不迁入旧 C01 报告编号规则；不比较检验类别，除非后续业务确认；不调用 OCR/LLM 直接裁决。
 - 测试要求：运行 `cd backend && python -m pytest tests/rules/report/test_c01_home_vs_third.py`，覆盖三字段一致、不一致、缺失、空白归一。
 - 验收标准：Done when C01 可单独运行，registry 中编号为 `C01`，失败只输出 C01 findings。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T14：迁移 C02 规则
 - 目标：实现新 C02 第三页扩展字段核对。
@@ -184,7 +184,7 @@
 - 不允许做：不实现照片覆盖；不实现中文标签覆盖；不把 `/` 与空白做全局等价；不忽略失效日期。
 - 测试要求：运行 `cd backend && python -m pytest tests/rules/report/test_c04_sample_description.py`，覆盖失效日期、同名多行、`/`、空白、标签有值但表格无值、未使用备注。
 - 验收标准：Done when C04 只负责样品描述字段一致性，覆盖性规则留给 C05/C06。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T17：迁移 C05 规则
 - 目标：实现新 C05 照片覆盖性。
@@ -206,7 +206,7 @@
 - 不允许做：不比较标签字段值，字段一致性归 C04；不因标签 OCR 空字段直接判无标签；不调用前端逻辑。
 - 测试要求：运行 `cd backend && python -m pytest tests/rules/report/test_c06_label_coverage.py`，覆盖中文标签存在、英文标签、包装标签、同名多行、OCR 低置信、未使用跳过。
 - 验收标准：Done when C06 独立判断中文标签覆盖并输出统一 Finding。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T19：迁移 C07 规则
 - 目标：实现新 C07 检验项目单项结论逻辑。
@@ -228,7 +228,7 @@
 - 不允许做：不检查首页、签字栏或日期栏；不推导单项结论；不把不可定位单元格直接写成 ERROR。
 - 测试要求：运行 `cd backend && python -m pytest tests/rules/report/test_c08_non_empty.py`，覆盖空字符串、空格、换行、`/`、`——`、合并单元格、缺 location。
 - 验收标准：Done when C08 只输出必填单元格空缺或不确定 findings。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T21：迁移 C09 规则
 - 目标：实现新 C09 序号连续性。
@@ -239,7 +239,7 @@
 - 不允许做：不判断续表位置，归 C10；不读取 PDF 文件；不靠 Codex 推断序号。
 - 测试要求：运行 `cd backend && python -m pytest tests/rules/report/test_c09_sequence.py`，覆盖正常、从 0 开始、跳号、重复、空白、`续5`、`续 5`。
 - 验收标准：Done when C09 只输出序号连续性 findings。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T22：迁移 C10 规则
 - 目标：实现新 C10 续表标记规则。
@@ -261,7 +261,7 @@
 - 不允许做：不核对检验项目序号；不把全文任意数字当页码；不在无法定位时编造页码。
 - 测试要求：运行 `cd backend && python -m pytest tests/rules/report/test_c11_page_number.py`，覆盖正常、缺页码、重复页码、总页数不一致、末页不等于总页数、扫描页需 WARN。
 - 验收标准：Done when C11 能独立输出页码 findings。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T24：实现 ReportRuleRunner
 - 目标：统一运行 C01-C11 并聚合规则结果。
@@ -272,7 +272,7 @@
 - 不允许做：不解析 PDF；不调用 OCR；不把单条规则失败升级为任务 error；不跳过失败测试继续开发。
 - 测试要求：运行 `cd backend && python -m pytest tests/application/test_report_rule_runner.py`，覆盖顺序、summary、单规则异常、空 findings pass。
 - 验收标准：Done when C01-C11 可通过 runner 一次运行，仍能定位单条规则失败。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T25：实现 ReportCheckUseCase
 - 目标：实现报告自检从上传文件到任务结果的 application 用例。
@@ -294,7 +294,7 @@
 - 不允许做：不依赖固定标题“性能指标”作为唯一定位；不比较报告内容；不伪造 textless 页条款。
 - 测试要求：运行 `cd backend && python -m pytest tests/application/test_ptr_extractor.py`，覆盖章节截止、父子层级、leaf clause、注释/方法排除诊断、textless 页。
 - 验收标准：Done when PTRExtractor 可独立输出 `PTRDocument`。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T27：迁移 ClauseComparator
 - 目标：实现 PTR 条款文本比对和首页范围过滤。
@@ -316,7 +316,7 @@
 - 不允许做：不直接用裸二维数组跨模块传递；不在 normalizer 中判断 PTR 参数是否一致；不把不可解析表格静默丢弃。
 - 测试要求：运行 `cd backend && python -m pytest tests/domain/test_canonical_table.py tests/rules/ptr/test_table_normalizer.py`，覆盖表头归一、单位列、条件列、续表、候选不唯一 WARN。
 - 验收标准：Done when 表格可归一为 `CanonicalTable` 并保留原始证据位置。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ## T29：迁移 TableComparator
 - 目标：实现 PTR 表格参数比对。

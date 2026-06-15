@@ -61,6 +61,7 @@ class TableNormalizer:
             table_id=f"canonical:{table.table_id}",
             source_table_id=table.table_id,
             caption=table.caption,
+            table_number=self._table_number(table),
             columns=columns,
             rows=row_models,
             headers=[TableHeader(rows=header_rows, column_paths=column_paths)] if header_rows else [],
@@ -234,6 +235,16 @@ class TableNormalizer:
         elif table.metadata.get("continuation_of"):
             metadata["continuation_of"] = table.metadata["continuation_of"]
         return metadata
+
+    def _table_number(self, table: PdfTable) -> str | None:
+        raw = table.metadata.get("table_number") if table.metadata else None
+        if raw is not None and str(raw).strip():
+            return str(raw).strip()
+        for text in (table.caption, table.title):
+            match = re.search(r"表\s*([A-Za-z]?\d+)", text or "")
+            if match:
+                return match.group(1)
+        return None
 
     def _is_numeric_like(self, value: str) -> bool:
         return bool(re.fullmatch(r"[-+]?[\d.]+(?:%|ms|mV|V|A|Ω|KΩ|ppm|μs|us)?", value, re.IGNORECASE))

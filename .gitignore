@@ -27,6 +27,8 @@ backend/.env
 frontend/.env.local
 
 # Runtime artifacts. These are never source assets.
+runtime/
+**/runtime/
 uploads/
 **/uploads/
 temp/

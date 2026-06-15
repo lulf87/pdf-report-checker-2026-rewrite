@@ -20,10 +20,12 @@
 
 ## 旧项目资产原则
 
+- 旧项目只读：`/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.4.13` 只能读取、分析和对照，禁止直接修改、移动、删除或生成文件。
+- 当前新项目目录为 `/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3`，所有新增代码、测试、文档和 fixture 必须写入当前新项目目录。
 - `README.md`、`REPORT_CHECKER_SPEC.md`、`CLAUDE.md`、`backend/tests` 是业务依据。
 - 旧 `services` 中的算法经验可以迁移，但迁移时必须放入新架构的合适层级。
 - 旧 `router` 结构不直接迁移。
-- 旧 Electron、`python_backend`、`src/renderer` 不进入新主线。
+- 旧 Electron、`python_backend`、`src/main`、`src/renderer` 不进入新主线。
 - `uploads`、`temp`、`logs` 不作为源码资产。
 - 不要直接复制旧混乱架构。
 - 不要删除旧代码，除非任务明确要求。
@@ -33,11 +35,12 @@
 ## 后端架构规则
 
 - 后端分层职责必须清晰：
-  - `api` 层只处理 HTTP 请求/响应、参数解析、状态码和序列化。
+  - `api` 层只处理 HTTP 请求和响应、参数解析、状态码和序列化。
   - `application` 层负责编排 usecase、事务边界、任务流程和跨服务调用。
   - `domain` 层定义稳定业务模型、业务概念、枚举和值对象。
   - `rules` 层实现 C01-C11 和 PTR 规则。
   - `infrastructure` 层处理 PDF、OCR、LLM、文件、导出、外部系统适配。
+- `domain` 层不依赖 `infrastructure`，不得 import PDF/OCR/LLM/文件系统 adapter、FastAPI 或前端结构。
 - 不允许在 router 中写业务规则。
 - 不允许在 PDF parser 中写核对规则。
 - 不允许在 OCR、文件解析、导出适配器中混入 C01-C11 或 PTR 判断。
@@ -66,6 +69,9 @@
 
 实现 C01-C11 时必须遵守：
 
+- C01-C11 必须独立文件，不能把多条规则合并进一个模块或写入 runner/usecase/router。
+- 每条规则必须有独立 pytest，并覆盖通过、失败、缺证据或需复核路径。
+- 每条规则必须输出可追溯 evidence/location，至少能定位来源页、字段、表格行、caption 或缺失证据说明。
 - 每个规则保持独立，可单独启用、单独测试、单独定位失败原因。
 - 不要在前端组件中实现 C01-C11 判断。
 - 不要在 PDF parser 或 OCR parser 中直接返回最终核对结论。
@@ -75,6 +81,7 @@
 ## PTR 核对规则
 
 - PTR 第 2 章为主核对范围。
+- PTR 必须拆分为 scope filter、clause compare、table compare 等独立规则或 helper，不能混在 router、extractor 或单个大 service 中。
 - 条款层级必须保留。
 - 检验方法、附录、说明、图等不进入主一致性统计。
 - 条款正文严格匹配。
@@ -82,6 +89,7 @@
 - 标准条款范围排除逻辑必须保留。
 - PTR extractor 必须保留章节、条款、表格、排除范围、正文证据之间的可追溯关系。
 - 条款匹配失败时，应输出可定位的 `Finding`，包含来源、目标、差异和证据。
+- PTR 差异也必须输出统一 `Finding`，不得使用临时 diff dict 替代规则问题输出。
 - 不要把 PTR 主一致性统计与辅助说明、附录、图示、检验方法混在同一口径中。
 
 ## 测试规则
@@ -106,11 +114,13 @@ cd frontend && npm run build
 
 - 如果项目中接入 Playwright，则前端联调任务必须浏览器实测。
 - 不要跳过测试。若测试因环境、依赖、样本文件或外部服务无法运行，必须在最终报告中明确说明原因和未验证风险。
+- 测试失败时必须停止当前迁移任务，记录失败命令、失败原因和受影响范围；不得继续下一个任务。
 - 不得声称规则、API、构建或联调已完成，除非已经实际运行对应验证。
 
 ## 前端规则
 
 - 前端只展示后端结果，不实现 C01-C11 判断。
+- 前端不得实现 C01-C11 或 PTR 判断，不得重新计算字段一致性、条款差异、表格参数差异、照片覆盖、标签覆盖、序号或页码连续性。
 - 类型定义必须与后端 API 对齐。
 - 使用 React + TypeScript + Vite。
 - UI 保留旧项目深色玻璃拟态方向。
@@ -184,6 +194,8 @@ cd frontend && npm run build
 
 - 不要直接复制旧混乱架构。
 - 不要引入 Electron 作为主线。
+- 不要引入 `python_backend` 作为主线。
+- 不要引入 `src/main` 或 `src/renderer` 作为主线。
 - 不要删除旧代码，除非任务明确要求。
 - 不要修改 Golden expected，除非任务明确要求并说明原因。
 - 不要跳过测试。
