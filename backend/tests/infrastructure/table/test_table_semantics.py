@@ -16,6 +16,13 @@ def test_column_role_synonyms_match_legacy_vocabulary() -> None:
         ("范围",): "value",
         ("检验结果",): "value",
         ("允许误差",): "tolerance",
+        ("允差",): "tolerance",
+        ("允许偏差",): "tolerance",
+        ("限值",): "tolerance",
+        ("阈值",): "tolerance",
+        ("试验条件",): "condition",
+        ("检测条件",): "condition",
+        ("环境条件",): "condition",
         ("备注",): "remark",
     }
 

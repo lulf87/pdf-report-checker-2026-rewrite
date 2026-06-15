@@ -6,7 +6,7 @@ from app.domain.common import BoundingBox, Location
 
 CellSource = Literal["native", "inferred", "vlm"]
 CellRole = Literal["header", "body", "stub", "value", "unknown"]
-ColumnRole = Literal["parameter", "model", "group", "value", "default", "tolerance", "remark", "unknown"]
+ColumnRole = Literal["parameter", "model", "group", "condition", "value", "default", "tolerance", "remark", "unknown"]
 
 
 class TableColumn(BaseModel):

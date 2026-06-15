@@ -33,7 +33,7 @@ python -m pytest tests/rules/report tests/rules/ptr tests/infrastructure/table t
 2. C01-C11 均输出统一 `Finding` / `CheckResult` 模型；领域模型要求 ERROR/WARN finding 必须包含 `evidence` 或 `missing_evidence`。
 3. 多数 C 规则已经覆盖 known requirements 的核心语义，但 C02、C03、C05、C07、C10 仍有业务口径或真实样本覆盖不足，建议不要一次性全量打勾。
 4. PTR 已存在 scope filter、clause text compare、table reference compare、parameter compare、PTR extractor、CanonicalTable 和 TableNormalizer。
-5. PTR 原最大漂移点已在 2026-06-15 修复：`parameter_compare.py` 已接入 `PTRCompareUseCase`，参数值、单位和缺失参数 finding 可进入最终 `PTR_TABLE` CheckResult。报告侧 canonical 表来源也已由 `ReportParameterTableExtractor` 从 `ParsedPdf` 表格生成，并写入推荐主 key `ReportDocument.metadata["canonical_tables"]`。PTR 双文件上传 API 已补受控 fixture/golden 端到端保护，剩余风险是真实样本候选选择、diff 结构和旧 PTR 表格深层语义仍需补强。
+5. PTR 原最大漂移点已在 2026-06-15 修复：`parameter_compare.py` 已接入 `PTRCompareUseCase`，参数值、单位和缺失参数 finding 可进入最终 `PTR_TABLE` CheckResult。报告侧 canonical 表来源也已由 `ReportParameterTableExtractor` 从 `ParsedPdf` 表格生成，并写入推荐主 key `ReportDocument.metadata["canonical_tables"]`。PTR 双文件上传 API 已补受控 fixture/golden 端到端保护；报告侧候选表选择、条件/允许误差 Finding、基础 numeric semantic 和 segment-safe matching 已补强。剩余风险是真实样本复杂表格、diff 结构、scope finding 暴露和旧 PTR 复杂数学满足语义仍需补强。
 6. `backend/app/rules/ptr/__init__.py` 中仍写着复杂 PTR 逻辑未迁移的旧注释，和当前已有 PTR rule 文件状态不一致；这是文档/注释漂移，不影响测试，但后续应清理。
 
 ## C01-C11 审计
@@ -78,10 +78,11 @@ python -m pytest tests/rules/report tests/rules/ptr tests/infrastructure/table t
 | PTR extractor | `backend/app/infrastructure/ptr/ptr_extractor.py` | `backend/tests/infrastructure/ptr/test_ptr_extractor.py`、`test_ptr_extractor_multidim.py` | 可标记完成 | 按编号定位第 2 章，不依赖固定标题；抽取层级、表引用、scope_type；支持跨页续表合并和拒绝。实现位置在 infrastructure，而不是 docs/tasks.md 中写的 application 路径，符合当前架构分层。 |
 | Scope filter | `backend/app/rules/ptr/scope_filter.py` | `backend/tests/rules/ptr/test_scope_filter.py` | 部分完成 | 已支持范围、exact selector、括号排除、scope_type 排除、外部标准排除、report clause present 兜底。它返回 `ScopeFilterResult` 和 decisions，不直接输出 `Finding`；usecase 包装为 `PTR_SCOPE` CheckResult 且当前总是 PASS。若要求 scope 差异也以 Finding 暴露，还需补实现。 |
 | Clause compare | `backend/app/rules/ptr/clause_text_compare.py` | `backend/tests/rules/ptr/test_clause_text_compare.py` | 部分完成 | 已输出 `PTR_CLAUSE` Finding，支持缺失、正文 mismatch、diff fragments、`≥/≤` 与 `>/<` 差异。缺口：额外条款、2.4 特定 warning suppression 的审计化、旧 comparator 中 numeric/bundle 语义仍在 `test-migration-matrix.md` 标为待补齐。 |
-| Table reference compare | `backend/app/rules/ptr/table_reference_compare.py` | `backend/tests/rules/ptr/test_table_reference_compare.py` | 部分完成 | 已覆盖 `见表 X` 的缺表和重复候选 WARN，并输出统一 Finding。缺口：仅检查 PTR 文档内引用表存在性/歧义，未负责 PTR 表与报告表的参数差异。 |
-| Parameter table compare | `backend/app/rules/ptr/parameter_compare.py` | `backend/tests/rules/ptr/test_parameter_compare.py`、`backend/tests/application/test_ptr_compare_usecase.py` | 部分完成，已接入 usecase | 已有参数缺失、值不一致、单位不一致逻辑，输出 `PTR_TABLE` Finding；多维 sibling 记录有测试。2026-06-15 已接入 `PTRCompareUseCase`，参数 finding 会进入最终 `PTR_TABLE` CheckResult。报告侧 `CanonicalTable` 已可由 `ReportParameterTableExtractor` 从 `ParsedPdf` 表格生成。剩余缺口：候选表选择、条件/允许误差差异、diff 结构和旧 PTR 表格深层语义仍需补强。 |
+| Table reference compare | `backend/app/rules/ptr/table_reference_compare.py` | `backend/tests/rules/ptr/test_table_reference_compare.py` | 部分完成 | 已覆盖 `见表 X` 的缺表和 PTR 重复候选 WARN，并输出统一 Finding。报告侧候选表选择已拆到 `table_candidate_selector.py`。 |
+| Table candidate selector | `backend/app/rules/ptr/table_candidate_selector.py` | `backend/tests/rules/ptr/test_table_candidate_selector.py`、`backend/tests/application/test_ptr_compare_usecase.py` | 部分完成，受控策略已接入 usecase | 已实现报告侧候选表选择：先按引用表号精确匹配，再按归一化 caption/title、caption 候选内参数签名 overlap、合并表 metadata/diagnostics 选择；无法唯一确定时输出 `PTR_TABLE_CANDIDATE_AMBIGUOUS`/`WARN` 并跳过 `parameter_compare`。测试覆盖多候选正确选择、误报规避、overlap 接近歧义、caption 候选池不被其他标题抢选和 value mismatch 进入 CheckResult。剩余缺口：真实可公开样本中的复杂候选模式仍需 golden 验收。 |
+| Parameter table compare | `backend/app/rules/ptr/parameter_compare.py`、`backend/app/infrastructure/table/numeric_semantics.py` | `backend/tests/rules/ptr/test_parameter_compare.py`、`backend/tests/infrastructure/table/test_numeric_semantics.py`、`backend/tests/application/test_ptr_compare_usecase.py` | 部分完成，已接入 usecase | 已有参数缺失、值不一致、单位不一致、条件不一致、允许误差/阈值不一致、基础 numeric semantic 等价和 segment-safe matching 逻辑，输出 `PTR_TABLE` Finding；多维 sibling 和条件 segment 记录有测试。2026-06-15 已接入 `PTRCompareUseCase`，参数 finding 会进入最终 `PTR_TABLE` CheckResult。报告侧 `CanonicalTable` 已可由 `ReportParameterTableExtractor` 从 `ParsedPdf` 表格生成，且报告侧候选表选择已补受控策略。剩余缺口：diff 结构、复杂数学满足判断、旧 measurement/segmented threshold bundle 展示语义和真实可公开样本复杂表格。 |
 | CanonicalTable / TableNormalizer | `backend/app/domain/table.py`、`backend/app/infrastructure/table/table_normalizer.py`、`table_semantics.py` | `backend/tests/domain/test_table_models.py`、`backend/tests/infrastructure/table/test_table_normalizer.py`、`test_table_semantics.py` | 可标记完成 | 已有 CanonicalTable、ParameterRecord、TableCell、ColumnPath、表头路径、角色识别、维度 fill-down、续表诊断、参数记录构建。 |
-| PTRCompareUseCase | `backend/app/application/ptr_compare_usecase.py` | `backend/tests/application/test_ptr_compare_usecase.py`、`backend/tests/api/test_api_ptr_compare_e2e.py` | 部分完成，参数表链路和受控 API e2e 已接入 | 已完成双文件保存、PDF parse、PTR/report extraction、scope filter、clause compare、table reference compare、parameter compare、任务结果聚合。新增测试覆盖值不一致、单位不一致、缺失参数、缺表/歧义跳过参数比对、一致表无 ERROR，以及报告 `ParsedPdf` 表格经 `ReportParameterTableExtractor` 进入 `ReportDocument.metadata["canonical_tables"]` 后参与参数比对。API 级受控 fixture/golden 已覆盖 multipart 上传、任务状态、任务结果、JSON export、条款差异、表引用缺失和三类 parameter finding。剩余缺口：真实可公开样本端到端验收、scope finding 暴露和 diff 结构。 |
+| PTRCompareUseCase | `backend/app/application/ptr_compare_usecase.py` | `backend/tests/application/test_ptr_compare_usecase.py`、`backend/tests/api/test_api_ptr_compare_e2e.py` | 部分完成，参数表链路和受控 API e2e 已接入 | 已完成双文件保存、PDF parse、PTR/report extraction、scope filter、clause compare、table reference compare、table candidate selector、parameter compare、任务结果聚合。新增测试覆盖值不一致、单位不一致、缺失参数、缺表/歧义跳过参数比对、一致表无 ERROR，以及报告 `ParsedPdf` 表格经 `ReportParameterTableExtractor` 进入 `ReportDocument.metadata["canonical_tables"]` 后参与参数比对。API 级受控 fixture/golden 已覆盖 multipart 上传、任务状态、任务结果、JSON export、条款差异、表引用缺失和三类 parameter finding。剩余缺口：真实可公开样本端到端验收、scope finding 暴露和 diff 结构。 |
 
 ## PTR 任务状态建议
 
@@ -90,7 +91,7 @@ python -m pytest tests/rules/report tests/rules/ptr tests/infrastructure/table t
 | T26 PTRExtractor | 可标记完成 | 第 2 章编号定位、层级、表引用、分类和续表已有实现与测试。 |
 | T27 ClauseComparator | 部分完成 | scope 和 clause text 已有核心能力；额外条款、2.4 suppression 审计化、旧 comparator 深水区仍需补。 |
 | T28 TableNormalizer / CanonicalTable | 可标记完成 | domain 和 infrastructure 实现及测试较完整。 |
-| T29 TableComparator | 部分完成 | table reference 与 parameter compare 均存在，参数比对已进入 usecase，报告侧 canonical 表已由 extractor 生成；候选表选择、条件/允许误差差异、diff 结构和旧 PTR 表格深层语义仍未完全闭环。 |
+| T29 TableComparator | 部分完成 | table reference、table candidate selector 与 parameter compare 均存在，参数比对已进入 usecase，报告侧 canonical 表已由 extractor 生成；条件/允许误差 Finding、基础 numeric semantic 和 segment-safe matching 已补强；diff 结构、真实样本复杂候选、复杂数学满足判断和旧 measurement/segmented threshold bundle 展示语义仍未完全闭环。 |
 | T30 PTRCompareUseCase | 部分完成/需真实样本与深层语义验收 | 双文件任务闭环存在，PTR 表格参数比对已进入结果，报告 `ParsedPdf` 表格可进入参数比对；受控 API fixture/golden 已证明上传、结果和 JSON export 可携带条款、表引用和参数 finding。scope finding 暴露、真实可公开样本端到端和 diff 结构仍需补强。 |
 
 ## 旧项目语义覆盖情况
@@ -98,7 +99,7 @@ python -m pytest tests/rules/report tests/rules/ptr tests/infrastructure/table t
 根据 `docs/test-migration-matrix.md`：
 
 - 报告规则测试多数为“重写”，不是旧测试原样迁移；这符合新架构边界，但真实旧样本 Golden 覆盖仍需补强。
-- PTR comparator 和 table comparator 明确标为“重写 / 待补齐”；高级 numeric semantic、segmented threshold、real-report table patterns 尚未完整迁移。
+- PTR comparator 和 table comparator 明确标为“重写 / 待补齐”；基础 numeric semantic 与 segment-safe matching 已补强，但复杂数学满足判断、旧 measurement/segmented threshold bundle 展示和 real-report table patterns 尚未完整迁移。
 - 旧 Codex/LLM 作为最终 judge 的断言已废弃；新规则以确定性 Finding 为主，这符合 AGENTS.md，但也意味着部分旧语义需要通过新 fixture/golden 重新证明。
 
 ## 风险清单
@@ -109,13 +110,13 @@ python -m pytest tests/rules/report tests/rules/ptr tests/infrastructure/table t
 4. C07 “无菌生长”等语义未进入确定性规则。
 5. C10 依赖 page/row 和重复序号推断跨页续表，缺少显式“上一页未完成”模型字段。
 6. C11 未校验右上角坐标来源，未校验 XXX 与 PDF 剩余页数一致。
-7. PTR parameter compare 已接入 `PTRCompareUseCase`，报告侧 canonical 表也已由 extractor 接入，双文件上传 API 已有受控 fixture/golden 保护；候选选择、diff 结构和真实可公开样本端到端覆盖仍需补强。
-8. `backend/app/rules/ptr/__init__.py` 注释陈旧，容易误导后续迁移状态判断。
+7. PTR parameter compare 已接入 `PTRCompareUseCase`，报告侧 canonical 表也已由 extractor 接入，双文件上传 API、报告侧候选表选择、条件/允许误差 Finding、基础 numeric semantic 和 segment-safe matching 已有受控 fixture/golden/pytest 保护；diff 结构、真实可公开样本端到端覆盖、复杂数学满足判断和旧 measurement bundle 展示语义仍需补强。
+8. `backend/app/rules/ptr/__init__.py` 的旧注释已清理；后续仍需继续避免规则包说明与实际迁移状态漂移。
 
 ## 推荐下一任务
 
 推荐下一步不要批量勾选 `docs/tasks.md`，而是拆成小任务继续收敛剩余风险：
 
-1. 继续补 T27/T29 的旧 PTR 深层语义：numeric semantic、segmented threshold、条件差异、允许误差差异、diff 结构和真实报告表候选选择。
+1. 继续补 T27/T29 的旧 PTR 深层语义：复杂 numeric satisfaction、measurement bundle / segmented threshold 展示结构、diff 结构和真实报告表复杂候选验证。
 2. 在受控 API fixture/golden 之外，补真实可公开样本或更接近生产 PDF 的端到端验收，继续证明双文件上传路径能稳定产出 PTR 表格参数 finding。
 3. 继续处理 C02/C03/C05/C07/C10 的业务口径确认，不要在未裁决前批量标记完成。

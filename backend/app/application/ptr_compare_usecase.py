@@ -22,6 +22,7 @@ from app.infrastructure.storage.local_file_store import LocalFileStore
 from app.rules.ptr.clause_text_compare import compare_clause_texts
 from app.rules.ptr.parameter_compare import compare_parameter_tables
 from app.rules.ptr.scope_filter import ScopeFilterResult, filter_ptr_scope
+from app.rules.ptr.table_candidate_selector import TableCandidateSelection, select_report_table_candidate
 from app.rules.ptr.table_reference_compare import check_table_references
 
 
@@ -99,6 +100,19 @@ class ParameterTableCompare(Protocol):
         ...
 
 
+class TableCandidateSelector(Protocol):
+    def __call__(
+        self,
+        expected_table: CanonicalTable,
+        report_tables: list[CanonicalTable],
+        *,
+        table_number: str,
+        task_id: str,
+        clause_number: str = "",
+    ) -> TableCandidateSelection:
+        ...
+
+
 class PTRCompareUseCase:
     """Application orchestration for PTR-vs-report comparison tasks."""
 
@@ -115,6 +129,7 @@ class PTRCompareUseCase:
         scope_filter: ScopeFilter = filter_ptr_scope,
         clause_text_compare: ClauseTextCompare = compare_clause_texts,
         table_reference_compare: TableReferenceCompare = check_table_references,
+        table_candidate_selector: TableCandidateSelector = select_report_table_candidate,
         parameter_compare: ParameterTableCompare = compare_parameter_tables,
     ) -> None:
         self.task_service = task_service
@@ -127,6 +142,7 @@ class PTRCompareUseCase:
         self.scope_filter = scope_filter
         self.clause_text_compare = clause_text_compare
         self.table_reference_compare = table_reference_compare
+        self.table_candidate_selector = table_candidate_selector
         self.parameter_compare = parameter_compare
 
     def run(
@@ -300,14 +316,20 @@ class PTRCompareUseCase:
                 if expected_table is None:
                     continue
 
-                report_candidates = self._matching_report_tables(report_tables, table_number)
-                if len(report_candidates) > 1:
+                selection = self.table_candidate_selector(
+                    expected_table,
+                    report_tables,
+                    table_number=table_number,
+                    task_id=task_id,
+                    clause_number=str(clause.number),
+                )
+                if selection.findings:
+                    findings.extend(selection.findings)
                     continue
-                actual_table = report_candidates[0] if report_candidates else None
                 findings.extend(
                     self.parameter_compare(
                         expected_table,
-                        actual_table,
+                        selection.selected_table,
                         task_id=task_id,
                         clause_number=str(clause.number),
                         table_number=table_number,
@@ -325,9 +347,6 @@ class PTRCompareUseCase:
         for key in ("canonical_tables", "parameter_tables", "ptr_compare_tables"):
             tables.extend(_coerce_canonical_tables(report_doc.metadata.get(key)))
         return tables
-
-    def _matching_report_tables(self, report_tables: list[CanonicalTable], table_number: str) -> list[CanonicalTable]:
-        return [table for table in report_tables if table.table_number == str(table_number)]
 
     def _scope_check_result(
         self,

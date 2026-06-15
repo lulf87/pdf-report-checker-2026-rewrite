@@ -70,7 +70,7 @@ class TableNormalizer:
             parameter_name_column=self._first_column_name(columns, roles, {"parameter"}),
             unit_column=self._first_column_name(columns, roles, {"unit"}),
             value_columns=[columns[index].name for index, role in enumerate(roles) if role in {"value", "default", "tolerance", "remark"}],
-            condition_columns=[columns[index].name for index, role in enumerate(roles) if role in {"model", "group"}],
+            condition_columns=[columns[index].name for index, role in enumerate(roles) if role in {"model", "group", "condition"}],
             source_locations=[Location(page_number=page) for page in table.page_numbers],
             confidence="high" if header_rows and not self.semantics.unknown_role_count else "medium",
             normalization_profile="pymupdf-table-v1",
@@ -151,7 +151,7 @@ class TableNormalizer:
         roles: list[str],
         diagnostics: list[str],
     ) -> list[list[str]]:
-        dimension_cols = [index for index, role in enumerate(roles) if role in {"parameter", "model", "group"}]
+        dimension_cols = [index for index, role in enumerate(roles) if role in {"parameter", "model", "group", "condition"}]
         value_cols = [index for index, role in enumerate(roles) if role in {"value", "default", "tolerance", "remark"}]
         if not dimension_cols and roles:
             dimension_cols = [0]
@@ -183,7 +183,8 @@ class TableNormalizer:
             return []
         parameter_col = self._first_role_index(roles, {"parameter"}, default=0)
         unit_col = self._first_role_index(roles, {"unit"}, default=None)
-        condition_cols = [index for index, role in enumerate(roles) if role in {"model", "group"}]
+        dimension_cols = [index for index, role in enumerate(roles) if role in {"model", "group"}]
+        condition_cols = [index for index, role in enumerate(roles) if role == "condition"]
         value_cols = [index for index, role in enumerate(roles) if role in {"value", "default", "tolerance", "remark"}]
         records: list[ParameterRecord] = []
         paths = canonical.headers[0].column_paths if canonical.headers else [[column.name] for column in columns]
@@ -192,9 +193,13 @@ class TableNormalizer:
             if parameter_col >= len(row) or not row[parameter_col].strip():
                 continue
             dimensions: dict[str, str] = {}
-            for col in condition_cols:
+            for col in dimension_cols:
                 if col < len(row) and row[col].strip():
                     dimensions[columns[col].name] = row[col].strip()
+            conditions = dict(dimensions)
+            for col in condition_cols:
+                if col < len(row) and row[col].strip():
+                    conditions[columns[col].name] = row[col].strip()
             values: dict[str, str] = {}
             for col in value_cols:
                 if col >= len(row) or not row[col].strip():
@@ -211,7 +216,7 @@ class TableNormalizer:
                     parameter_name=row[parameter_col].strip(),
                     unit=row[unit_col].strip() if unit_col is not None and unit_col < len(row) and row[unit_col].strip() else None,
                     dimensions=dimensions,
-                    conditions=dict(dimensions),
+                    conditions=conditions,
                     values=values,
                     source_rows=[row_index],
                 )

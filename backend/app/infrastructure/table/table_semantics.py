@@ -27,8 +27,9 @@ class TableSemantics:
         "unit": ["单位", "计量单位"],
         "model": ["型号", "机型", "规格", "规格型号", "适用型号", "型号规格", "序号型号"],
         "group": ["分组", "类别", "腔室", "部位", "类型", "组别", "适用类型", "型号类型", "部件"],
+        "condition": ["条件", "试验条件", "检测条件", "环境条件", "工况", "负载"],
         "default": ["标准设置", "默认设置", "默认值", "设置值", "目标值", "标准值"],
-        "tolerance": ["允许误差", "容差", "误差", "偏差", "公差", "范围上限", "范围下限"],
+        "tolerance": ["允许误差", "容差", "误差", "允差", "允许偏差", "偏差", "公差", "范围上限", "范围下限", "限值", "阈值", "标准要求"],
         "value": ["常规数值", "数值", "范围", "检验结果", "值", "数值范围", "范围值"],
         "remark": ["备注", "说明", "解释"],
     }
@@ -76,7 +77,7 @@ class TableSemantics:
             if leaf_role == "unknown":
                 leaf_role = "value"
             return normalized[:-1], normalized[-1], leaf_role
-        if leaf_role in {"parameter", "model", "group"}:
+        if leaf_role in {"parameter", "model", "group", "condition"}:
             return normalized, "", leaf_role
         return normalized[:-1], normalized[-1], leaf_role
 

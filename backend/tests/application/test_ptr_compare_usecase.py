@@ -273,6 +273,123 @@ def test_ptr_compare_usecase_includes_parameter_unit_mismatch_in_final_result(tm
     assert ptr_table_result.findings[0].actual == "s"
 
 
+def test_ptr_compare_usecase_includes_parameter_condition_and_tolerance_mismatches(tmp_path: Path) -> None:
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table(
+            "ptr-table-1",
+            "1",
+            [
+                    _record(
+                        "输出幅度",
+                        "3.5",
+                        unit="V",
+                        conditions={"试验条件": "@240Ω"},
+                        values={"标准设置": "3.5", "允许误差": "±10%"},
+                    )
+            ],
+        ),
+        report_tables=[
+            _canonical_table(
+                "report-table-1",
+                "1",
+                [
+                    _record(
+                        "输出幅度",
+                        "3.5",
+                        unit="V",
+                        conditions={"试验条件": "@500Ω"},
+                        values={"标准设置": "3.5", "允许误差": "±20%"},
+                    )
+                ],
+            )
+        ],
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert _finding_codes(ptr_table_result) == [
+        "PTR_TABLE_TOLERANCE_MISMATCH",
+        "PTR_TABLE_CONDITION_MISMATCH",
+    ]
+    assert ptr_table_result.findings[0].expected == "±10%"
+    assert ptr_table_result.findings[0].actual == "±20%"
+    assert ptr_table_result.findings[1].expected == {"试验条件": "@240Ω"}
+    assert ptr_table_result.findings[1].actual == {"试验条件": "@500Ω"}
+
+
+def test_ptr_compare_usecase_suppresses_numeric_semantic_equivalent_values(tmp_path: Path) -> None:
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table(
+            "ptr-table-1",
+            "1",
+            [_record("最小输出", "≥5", unit="V", values={"标准设置": "不小于5"})],
+        ),
+        report_tables=[
+            _canonical_table(
+                "report-table-1",
+                "1",
+                [_record("最小输出", ">=5", unit="V", values={"标准设置": ">=5"})],
+            )
+        ],
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert ptr_table_result.status == CheckStatus.PASS
+    assert ptr_table_result.findings == []
+
+
+def test_ptr_compare_usecase_includes_numeric_semantic_value_mismatch(tmp_path: Path) -> None:
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table(
+            "ptr-table-1",
+            "1",
+            [_record("最小输出", "≥5", unit="V", values={"标准设置": "≥5"})],
+        ),
+        report_tables=[
+            _canonical_table(
+                "report-table-1",
+                "1",
+                [_record("最小输出", "≥6", unit="V", values={"标准设置": "≥6"})],
+            )
+        ],
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert _finding_codes(ptr_table_result) == ["PTR_TABLE_VALUE_MISMATCH"]
+    assert ptr_table_result.findings[0].expected == "≥5"
+    assert ptr_table_result.findings[0].actual == "≥6"
+
+
+def test_ptr_compare_usecase_includes_segmented_threshold_mismatch(tmp_path: Path) -> None:
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table(
+            "ptr-table-1",
+            "1",
+            [
+                _record("阈值", "≥5", unit="V", conditions={"负载": "@240Ω"}, values={"限值": "≥5"}),
+                _record("阈值", "≥5", unit="V", conditions={"负载": "@500Ω"}, values={"限值": "≥5"}),
+            ],
+        ),
+        report_tables=[
+            _canonical_table(
+                "report-table-1",
+                "1",
+                [
+                    _record("阈值", "≥6", unit="V", conditions={"负载": "@240Ω"}, values={"限值": "≥6"}),
+                    _record("阈值", "≥5", unit="V", conditions={"负载": "@500Ω"}, values={"限值": "≥5"}),
+                ],
+            )
+        ],
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert _finding_codes(ptr_table_result) == ["PTR_TABLE_TOLERANCE_MISMATCH"]
+    assert ptr_table_result.findings[0].metadata["conditions"] == {"负载": "@240Ω"}
+
+
 def test_ptr_compare_usecase_includes_missing_parameter_in_final_result(tmp_path: Path) -> None:
     result = _run_parameter_compare_usecase(
         tmp_path,
@@ -358,6 +475,68 @@ def test_ptr_compare_usecase_keeps_report_extra_parameter_behavior_from_paramete
     assert ptr_table_result.findings == []
 
 
+def test_ptr_compare_usecase_selects_report_table_by_caption_before_parameter_compare(tmp_path: Path) -> None:
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table(
+            "ptr-table-1",
+            "1",
+            [_record("脉冲宽度", "0.4")],
+            caption="表 1 脉冲参数",
+        ),
+        report_tables=[
+            _canonical_table("report-table-size", "1", [_record("脉冲宽度", "0.4")], caption="表 1 尺寸参数"),
+            _canonical_table("report-table-pulse", "1", [_record("脉冲宽度", "0.5")], caption="表 1 脉冲参数"),
+        ],
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert ptr_table_result.status == CheckStatus.FAIL
+    assert _finding_codes(ptr_table_result) == ["PTR_TABLE_VALUE_MISMATCH"]
+    assert ptr_table_result.findings[0].actual == "0.5"
+
+
+def test_ptr_compare_usecase_avoids_false_parameter_error_from_wrong_same_number_table(tmp_path: Path) -> None:
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table(
+            "ptr-table-1",
+            "1",
+            [_record("脉冲宽度", "0.4")],
+            caption="表 1 脉冲参数",
+        ),
+        report_tables=[
+            _canonical_table("report-table-size", "1", [_record("脉冲宽度", "9.9")], caption="表 1 尺寸参数"),
+            _canonical_table("report-table-pulse", "1", [_record("脉冲宽度", "0.4")], caption="表 1 脉冲参数"),
+        ],
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert ptr_table_result.status == CheckStatus.PASS
+    assert ptr_table_result.findings == []
+
+
+def test_ptr_compare_usecase_reports_ambiguous_report_table_without_parameter_compare(tmp_path: Path) -> None:
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table(
+            "ptr-table-1",
+            "1",
+            [_record("脉冲宽度", "0.4"), _record("基础频率", "60")],
+            caption="表 1 参数",
+        ),
+        report_tables=[
+            _canonical_table("report-table-left", "1", [_record("脉冲宽度", "0.5"), _record("输出电压", "9")], caption="表 1 参数"),
+            _canonical_table("report-table-right", "1", [_record("基础频率", "50"), _record("输出电压", "9")], caption="表 1 参数"),
+        ],
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert ptr_table_result.status == CheckStatus.REVIEW
+    assert _finding_codes(ptr_table_result) == ["PTR_TABLE_CANDIDATE_AMBIGUOUS"]
+    assert ptr_table_result.findings[0].metadata["matching_strategy"] == "ambiguous"
+
+
 def _run_parameter_compare_usecase(
     tmp_path: Path,
     *,
@@ -432,11 +611,17 @@ def _report_document() -> ReportDocument:
     )
 
 
-def _canonical_table(table_id: str, table_number: str, records: list[ParameterRecord]) -> CanonicalTable:
+def _canonical_table(
+    table_id: str,
+    table_number: str,
+    records: list[ParameterRecord],
+    *,
+    caption: str | None = None,
+) -> CanonicalTable:
     return CanonicalTable(
         table_id=table_id,
         table_number=table_number,
-        caption=f"表 {table_number} 参数",
+        caption=caption or f"表 {table_number} 参数",
         parameter_name_column="参数",
         value_columns=["标准设置"],
         condition_columns=["型号"],
@@ -444,24 +629,34 @@ def _canonical_table(table_id: str, table_number: str, records: list[ParameterRe
     )
 
 
-def _record(name: str, value: str, *, unit: str | None = None) -> ParameterRecord:
+def _record(
+    name: str,
+    value: str,
+    *,
+    unit: str | None = None,
+    conditions: dict[str, str] | None = None,
+    values: dict[str, str] | None = None,
+) -> ParameterRecord:
     return ParameterRecord(
         parameter_name=name,
         dimensions={"型号": "全部型号"},
-        values={"标准设置": value},
+        values=values or {"标准设置": value},
         unit=unit,
+        conditions=conditions or {},
     )
 
 
 def _pdf_table_from_canonical(canonical_table: CanonicalTable) -> PdfTable:
+    condition_keys = _condition_keys(canonical_table.parameter_records)
     value_keys = _value_keys(canonical_table.parameter_records)
-    rows = [["参数", "单位", "型号", *value_keys]]
+    rows = [["参数", "单位", "型号", *condition_keys, *value_keys]]
     for record in canonical_table.parameter_records:
         rows.append(
             [
                 record.parameter_name or "",
                 record.unit or "",
                 record.dimensions.get("型号", ""),
+                *[record.conditions.get(key, "") for key in condition_keys],
                 *[record.values.get(key, "") for key in value_keys],
             ]
         )
@@ -472,6 +667,17 @@ def _pdf_table_from_canonical(canonical_table: CanonicalTable) -> PdfTable:
         table_number=canonical_table.table_number,
         caption=canonical_table.caption,
     )
+
+
+def _condition_keys(records: list[ParameterRecord]) -> list[str]:
+    keys: list[str] = []
+    for record in records:
+        for key in record.conditions:
+            if key in record.dimensions:
+                continue
+            if key not in keys:
+                keys.append(key)
+    return keys
 
 
 def _value_keys(records: list[ParameterRecord]) -> list[str]:

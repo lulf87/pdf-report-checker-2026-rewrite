@@ -62,7 +62,7 @@
 
 ## 需要先修复的问题
 
-1. T29/T30 后续深层语义：报告侧 `canonical_tables` 已由 `ReportParameterTableExtractor` 接入 `PTRCompareUseCase`，PTR 双文件上传 API 已有受控 fixture/golden 端到端保护；但真实报告表候选选择、diff 结构、条件/允许误差差异、scope finding 暴露口径和旧 PTR numeric/segmented threshold 语义仍需后续补强。
+1. T29/T30 后续深层语义：报告侧 `canonical_tables` 已由 `ReportParameterTableExtractor` 接入 `PTRCompareUseCase`，PTR 双文件上传 API 已有受控 fixture/golden 端到端保护，报告侧候选表选择、条件/允许误差 Finding、基础 numeric semantic 和分段阈值防错匹配已补强；但 diff 结构、scope finding 暴露口径、复杂数学满足判断、旧 measurement bundle 展示结构和真实可公开样本 golden 仍需后续补强。
 
 ## 规则与 PTR 状态漂移审计
 
@@ -102,10 +102,10 @@
 | T19 | C07 主逻辑完成，但“无菌生长”等语义和空白检验结果最终口径仍需确认。 |
 | T22 | C10 续表位置规则完成，但缺少显式“上一页末尾未完成”的模型字段，真实 extractor 支撑还需验收。 |
 | T27 | PTR scope 和条款正文比对已有核心能力，但额外条款、2.4 suppression 审计化、旧 comparator 深层语义仍待补齐。 |
-| T29 | table reference 和 parameter compare 均存在，参数 finding 已能进入 usecase 结果，报告侧 canonical 表也已由 extractor 写入主 key；但候选表选择、条件/允许误差差异、diff 结构和更深旧 PTR 表格语义仍未完全闭环。 |
+| T29 | table reference、table candidate selector 和 parameter compare 均存在，参数 finding 已能进入 usecase 结果，报告侧 canonical 表也已由 extractor 写入主 key，条件/允许误差 Finding、基础 numeric semantic 和 segment-safe matching 已补强；但 diff 结构、复杂数学满足判断、旧 measurement/segmented threshold bundle 展示语义和真实样本复杂表格仍未完全闭环。 |
 | T30 | PTRCompareUseCase 已有双文件流程，已调用 `compare_parameter_tables`，并能从报告 `ParsedPdf` 表格抽取 canonical tables；但完整 PTR API 真实样本端到端验收和 scope finding 暴露仍需补强。 |
 
-T29/T30 的最大端到端漂移点已修复：规则层已有的 `parameter_compare.py` 现在会被 `PTRCompareUseCase` 调用，`见表 X` 的参数值、单位或缺失差异可进入最终 `PTR_TABLE` CheckResult。报告侧 canonical 表也已能从 `ParsedPdf` 表格进入 usecase。由于完整任务验收还涉及候选表选择、diff 结构、条件/允许误差差异和旧 PTR 表格语义补强，本次没有把 T29/T30 标记为完成。
+T29/T30 的最大端到端漂移点已修复：规则层已有的 `parameter_compare.py` 现在会被 `PTRCompareUseCase` 调用，`见表 X` 的参数值、单位、条件、允许误差或缺失差异可进入最终 `PTR_TABLE` CheckResult。报告侧 canonical 表也已能从 `ParsedPdf` 表格进入 usecase。基础 numeric semantic 和 segment-safe matching 已补强；由于完整任务验收还涉及 diff 结构、复杂数学满足判断、旧 measurement bundle 展示和真实样本 golden，本次没有把 T29/T30 标记为完成。
 
 ## PTR parameter_compare 接入记录
 
@@ -194,10 +194,121 @@ T29/T30 状态：
 
 - 本次不把 T29/T30 标记完成。
 - 已补强 T30 的双文件上传 API 端到端 fixture/golden 验收。
-- 剩余项仍包括：候选表选择策略、条件/允许误差差异 Finding、diff_builder 展示结构、numeric semantic / segmented threshold 旧语义、scope finding 暴露口径，以及真实可公开样本的完整 golden 验收。
+- 已补强 T29 的受控候选表选择策略：报告侧同表号多候选会按表号、归一化 caption、caption 候选内参数签名 overlap 和合并表优先级选择；无法唯一确定时输出 `PTR_TABLE_CANDIDATE_AMBIGUOUS` 并跳过 `parameter_compare`，避免误报。
+- 剩余项仍包括：diff_builder 展示结构、复杂 numeric satisfaction 语义、旧 measurement/segmented threshold bundle 展示、scope finding 暴露口径，以及真实可公开样本的完整 golden 验收。
+
+## PTR 表候选选择策略补强记录
+
+验收日期：2026-06-15
+
+本次实现：
+
+- 新增 `backend/app/rules/ptr/table_candidate_selector.py`，将报告侧候选表选择放在规则层 helper，不写入 router，也不重写 `parameter_compare`。
+- `PTRCompareUseCase` 仅调用 selector 并按结果编排：候选唯一时进入 `compare_parameter_tables`；selector 返回歧义 finding 时把 finding 合并到 `PTR_TABLE` CheckResult，并跳过参数比对。
+- 候选策略按小步优先级实现：
+  1. `table_number == 见表 X` 精确匹配。
+  2. 同表号多个候选时，用 NFKC、去空白和标点后的 caption/title 精确归一化匹配。
+  3. caption 命中多个候选时，参数名集合 overlap 只在 caption 命中的候选内作为 tie breaker；没有 caption 命中时，再在同表号候选内使用 overlap，且要求 top 分数与次高分数差距达到阈值。
+  4. 仍然并列时，如果唯一候选带有 `merged` / `continuation_merged` 诊断或 metadata，则优先选择合并后的完整表。
+  5. overlap 接近或仍不唯一时输出 `PTR_TABLE_CANDIDATE_AMBIGUOUS`/`WARN`，不强行进入参数比对。
+
+新增/更新测试覆盖：
+
+- 多个报告表中按表号精确匹配选择正确表。
+- 同表号多候选按归一化 caption 选择正确表。
+- 表号和 caption 不足时，按参数签名 overlap 明显更高选择正确表。
+- caption 命中多个候选时，参数签名 tie breaker 不会越过 caption 去选择其他标题候选。
+- overlap 接近时输出 `PTR_TABLE_CANDIDATE_AMBIGUOUS`，且不触发 `parameter_compare`。
+- 合并后的表与片段表并列时优先选择合并表。
+- `PTRCompareUseCase` 选中正确报告表后，`PTR_TABLE_VALUE_MISMATCH` 能进入最终 CheckResult。
+- 选错候选会导致误报的场景已覆盖，正确 caption 候选匹配时不产生错误 finding。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/rules/ptr/test_table_candidate_selector.py tests/application/test_ptr_compare_usecase.py::test_ptr_compare_usecase_selects_report_table_by_caption_before_parameter_compare tests/application/test_ptr_compare_usecase.py::test_ptr_compare_usecase_avoids_false_parameter_error_from_wrong_same_number_table tests/application/test_ptr_compare_usecase.py::test_ptr_compare_usecase_reports_ambiguous_report_table_without_parameter_compare -v` | 通过，`9 passed` |
+| `cd backend && python -m pytest tests/rules/ptr tests/application/test_ptr_compare_usecase.py tests/api/test_api_ptr_compare_e2e.py -v` | 通过，`29 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`309 passed` |
+| `git diff --check` | 通过 |
+
+## PTR 条件/允许误差 Finding 补强记录
+
+验收日期：2026-06-15
+
+本次实现：
+
+- `ParameterRecord.conditions` 现在参与 `parameter_compare`，但比较时会排除与 `dimensions` 完全相同的型号/分组键，避免把同名维度重复报成条件差异。
+- 条件差异输出统一 Finding：`PTR_TABLE_CONDITION_MISMATCH`，包含 expected/actual 条件 dict、evidence、`field_name=conditions` metadata。
+- `允许误差`、`允差`、`允许偏差`、`偏差`、`限值`、`阈值`、`标准要求` 等字段差异输出 `PTR_TABLE_TOLERANCE_MISMATCH`，不再落成 generic `PTR_TABLE_VALUE_MISMATCH`。
+- `TableSemantics` 和 `TableNormalizer` 增加条件/允差同义词识别，报告侧 `PdfTable` 可把 `试验条件` 写入 `ParameterRecord.conditions`，把 `允差`、`限值` 写入 `values`。
+- 本阶段未实现复杂 numeric satisfaction、单位换算、分段阈值 bundle 或容差带数学判断；基础数值表达式等价和 segment-safe matching 已在后续 numeric semantic 阶段补齐。
+
+新增/更新测试覆盖：
+
+- 条件完全一致不产生 condition mismatch。
+- 条件文本不同产生 `PTR_TABLE_CONDITION_MISMATCH`。
+- 条件空值 vs 有值产生 `PTR_TABLE_CONDITION_MISMATCH`。
+- 允许误差完全一致不产生 tolerance mismatch。
+- 允许误差不同产生 `PTR_TABLE_TOLERANCE_MISMATCH`。
+- 表头同义词 `试验条件`、`检测条件`、`环境条件`、`允差`、`允许偏差`、`限值`、`阈值` 可进入语义识别和 `ParameterRecord`。
+- `PTRCompareUseCase` 最终 `PTR_TABLE` CheckResult 能纳入 condition/tolerance findings。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/rules/ptr/test_parameter_compare.py tests/infrastructure/table/test_table_semantics.py tests/infrastructure/table/test_table_normalizer.py tests/application/test_ptr_compare_usecase.py::test_ptr_compare_usecase_includes_parameter_condition_and_tolerance_mismatches -v` | 先按 TDD 红灯失败于 condition 被忽略、允差落入 generic value mismatch、同义词未识别；实现后通过，`17 passed` |
+| `cd backend && python -m pytest tests/rules/ptr tests/infrastructure/table tests/application/test_ptr_compare_usecase.py tests/api/test_api_ptr_compare_e2e.py -v` | 通过，`44 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`316 passed` |
+| `git diff --check` | 通过 |
+
+## PTR numeric semantic / segmented threshold 补强记录
+
+验收日期：2026-06-15
+
+本次实现：
+
+- 新增 `backend/app/infrastructure/table/numeric_semantics.py`，提供 `normalize_numeric_expression` 与 `numeric_expressions_equivalent`，供 PTR 参数表比对复用。
+- `parameter_compare` 在比较参数值、限值、范围、阈值、允许误差等字段前先进行安全 numeric semantic 归一化；语义等价时不输出 ERROR，明确不等价时沿用既有 mismatch Finding。
+- 基础数值归一支持 `1` vs `1.0`、`1,000` vs `1000`、全角数字 vs 半角数字。
+- 比较符号归一支持 `≥`/`>=`、`≤`/`<=`、`不小于`/`不少于`/`大于等于`、`不大于`/`不超过`/`小于等于`、`大于`、`小于`。
+- 范围表达式归一支持 `5~10`、`5～10`、`5-10`、`5至10`、`5到10`，并避免把单个负数误解析为范围。
+- 允许误差字段语境下支持 `±0.5`、`+/-0.5`、`允许误差0.5`、`误差0.5`、`允差0.5` 等表达式等价；不做数学容差带判断。
+- 分段阈值比对按 `parameter_name + dimensions + conditions` 精确匹配 segment；不把 A 条件下的限值拿去和 B 条件比较。
+- PTR 侧存在某个 segment 而报告缺失时复用 `PTR_TABLE_PARAM_MISSING`；PTR segment key 不明确且报告侧存在多个候选时输出 `PTR_TABLE_SEGMENT_AMBIGUOUS`/`WARN` 并跳过该参数比对，避免误报。
+
+新增/复用 Finding code：
+
+- 复用 `PTR_TABLE_VALUE_MISMATCH`：数值语义明确不等价的普通值差异。
+- 复用 `PTR_TABLE_TOLERANCE_MISMATCH`：限值、阈值、范围、允许误差字段差异。
+- 复用 `PTR_TABLE_PARAM_MISSING`：缺失参数或缺失 segment。
+- 新增 `PTR_TABLE_SEGMENT_AMBIGUOUS`：分段条件无法唯一匹配，跳过参数比对。
+
+本次未迁移或暂不支持：
+
+- 不做复杂数学满足判断，例如旧项目中 `≤2.0mL` vs `1.1mL`、`100±20%` vs `120`、`2.5±0.1` vs `+0.03` 这类“报告实测值满足 PTR 约束”的判断。
+- 不做复杂单位换算或量纲推断，例如 mL/ml、Ω/ohm 之外更广泛的单位语义换算。
+- 不实现旧 measurement bundle / segmented threshold 的展示型 diff 结构。
+- `≥/≤` 与 `>/<` 仍按 `known-requirements.md` 的口径视为不同语义，不做等价放宽。
+
+新增/更新测试覆盖：
+
+- 基础数值等价、比较符号等价、范围等价、允许误差表达式等价。
+- `≥5` vs `≥6`、`5~10` vs `5~12` 明确产生 mismatch。
+- 同一参数不同 dimensions/conditions 时按 segment 匹配，只报告差异 segment。
+- PTR 缺失某个 segment 时输出缺失 finding；segment key 不明确时输出 WARN 并跳过强行比对。
+- `PTRCompareUseCase` 中 numeric semantic 等价不会进入最终 findings，numeric mismatch 和 segmented threshold mismatch 会进入最终 `CheckResult`。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/infrastructure/table tests/rules/ptr tests/application/test_ptr_compare_usecase.py tests/api/test_api_ptr_compare_e2e.py -v` | 通过，`57 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`329 passed` |
 
 ## 推荐下一任务
 
-推荐下一任务编号：T29/T30 后续深层语义补强，优先处理 T29 的条件/允许误差差异 Finding 与候选表选择策略；也可先收敛 T27 的 scope finding 暴露口径。
+推荐下一任务编号：T29/T30 后续深层语义补强，优先处理 T29 的 diff_builder 展示结构、复杂 numeric satisfaction 旧语义和 measurement bundle 展示；也可先收敛 T27 的 scope finding 暴露口径。
 
-原因：`parameter_compare.py` 已接入 `PTRCompareUseCase`，报告侧 canonical 表已从 `ParsedPdf` 进入 usecase，PTR 双文件 API 上传与 JSON export 已有受控 fixture/golden 保护；剩余风险集中在候选表选择、diff 结构、条件/允许误差差异、旧 PTR comparator 的 numeric/segmented threshold 等深层语义，以及 T14/T15/T17/T19/T22 的业务口径确认。
+原因：`parameter_compare.py` 已接入 `PTRCompareUseCase`，报告侧 canonical 表已从 `ParsedPdf` 进入 usecase，PTR 双文件 API 上传与 JSON export 已有受控 fixture/golden 保护，报告侧候选表选择、条件/允许误差 Finding、基础 numeric semantic 和 segment-safe matching 已补强；剩余风险集中在 diff 结构、旧 PTR comparator 的复杂数学满足语义、measurement bundle 展示，以及 T14/T15/T17/T19/T22 的业务口径确认。

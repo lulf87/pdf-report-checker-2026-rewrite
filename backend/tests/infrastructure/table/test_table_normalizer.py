@@ -76,6 +76,24 @@ def test_parameter_records_include_dimensions_values_and_units() -> None:
     assert record.values["允许误差"] == "±20μs"
 
 
+def test_parameter_records_include_condition_and_tolerance_synonym_fields() -> None:
+    table = build_pdf_table(
+        rows=[
+            ["参数", "单位", "型号", "试验条件", "标准设置", "允差", "限值"],
+            ["输出幅度", "V", "全部型号", "@240Ω", "3.5", "±10%", ">=2.0"],
+        ],
+    )
+
+    canonical = TableNormalizer().normalize(table)
+    record = canonical.parameter_records[0]
+
+    assert "试验条件" in canonical.condition_columns
+    assert record.dimensions["型号"] == "全部型号"
+    assert record.conditions["试验条件"] == "@240Ω"
+    assert record.values["允差"] == "±10%"
+    assert record.values["限值"] == ">=2.0"
+
+
 def test_continuation_table_preserves_source_and_diagnostics() -> None:
     first = build_pdf_table(
         rows=[["参数", "型号", "标准设置"], ["频率", "全部", "60"]],
