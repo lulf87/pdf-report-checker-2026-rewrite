@@ -307,8 +307,80 @@ T29/T30 状态：
 | `cd backend && python -m pytest tests/infrastructure/table tests/rules/ptr tests/application/test_ptr_compare_usecase.py tests/api/test_api_ptr_compare_e2e.py -v` | 通过，`57 passed` |
 | `cd backend && python -m pytest tests/ -v` | 通过，`329 passed` |
 
+## Codex CLI 运行时审核链路纠偏记录
+
+校准日期：2026-06-15
+
+本次只修改文档，不实现业务代码、不调用真实 Codex、不修改 router、不修改前端、不修改旧项目目录、不继续扩展 numeric semantic。
+
+纠偏结论：
+
+- Codex CLI 明确纳入产品运行时审核链路，定位为受控 auditor / judge。
+- 确定性规则仍负责 evidence package 和 candidate findings。
+- 最终结果必须同时保留 deterministic finding 与 Codex review 两层证据。
+- Codex review 可以 `confirm`、`refute`、`uncertain`、`add_finding`，但不得删除原始 `Finding`。
+- Codex runtime 必须使用临时目录、只读 sandbox、output schema、timeout 和失败 fallback；单元测试使用 `FakeCodexRunner`。
+
+本次更新：
+
+- 新增 `docs/codex-cli-auditor-strategy.md`，记录旧项目事实、新定位、后端模块设计、运行时安全边界、数据模型、`CheckResult` 集成、PTR/报告自检优先接入点和 T-CODEX 任务拆分。
+- 更新 `AGENTS.md`，删除“LLM 不得替代确定性核对规则”的绝对表述，改为“规则初判 + Codex 审核意见”双层证据链，并补充 Codex CLI runtime 受控使用规则。
+- 更新 `docs/tasks.md`，新增 T-CODEX-00 到 T-CODEX-09。
+- 同步修正 `docs/known-requirements.md`、`docs/rewrite-architecture.md` 和 `docs/rule-ptr-implementation-audit.md` 中的 evidence-only / 不调用 Codex judge 历史表述，避免与本次纠偏冲突。
+- 更新 `docs/current-status.md`，将推荐下一任务调整为 T-CODEX-01。
+
+T-CODEX 状态：
+
+| 任务 | 当前状态 | 判断依据 |
+| --- | --- | --- |
+| T-CODEX-00 | 已完成 | 架构策略文档、AGENTS 修正、任务清单和当前状态已更新；本任务只做文档纠偏。 |
+| T-CODEX-01 | 已完成 | `backend/app/domain/codex_review.py` 已新增 CodexReview 领域模型；`CheckResult` 已向后兼容新增 `codex_reviews`；domain 测试和后端全量测试通过。 |
+| T-CODEX-02 | 未开始 | 尚未新增 `EvidencePackage` model 和 writer。 |
+| T-CODEX-03 | 未开始 | 尚未新增 `FakeCodexRunner` / `CodexCliRunner` 接口。 |
+| T-CODEX-04 | 未开始 | 尚未新增 `PromptBuilder` 和 JSON schema。 |
+| T-CODEX-05 | 未开始 | 尚未新增 `OutputParser` 和失败 fallback。 |
+| T-CODEX-06 | 未开始 | `PTRCompareUseCase` 尚未接入 `CodexAuditService`。 |
+| T-CODEX-07 | 未开始 | `ReportCheckUseCase` 尚未接入 `CodexAuditService`。 |
+| T-CODEX-08 | 未开始 | 前端尚未展示 Codex review。 |
+| T-CODEX-09 | 未开始 | 尚未执行真实 Codex CLI 手动验收。 |
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `git diff --check` | 通过 |
+
+## CodexReview domain model 完成记录
+
+完成日期：2026-06-15
+
+本次实现 T-CODEX-01，只新增领域模型和测试，不实现 EvidencePackage writer、CodexCliRunner、FakeCodexRunner、prompt builder、output parser，不调用真实 Codex，不修改 router、application usecase、frontend 或旧项目目录。
+
+本次实现：
+
+- 新增 `backend/app/domain/codex_review.py`。
+- 定义 `CodexReviewVerdict`：`confirm`、`refute`、`uncertain`、`add_finding`。
+- 定义 `CodexReviewStatus`：`pending`、`running`、`succeeded`、`failed`、`skipped`。
+- 定义 `CodexReviewConfidence`：`high`、`medium`、`low`。
+- 定义 `CodexReviewTargetType`，覆盖 PTR、报告规则、标签 OCR、照片 caption、检验项目、样品描述和页码等审核目标。
+- 定义 `CodexEvidenceRef`、`CodexReviewTarget`、`CodexReviewError`、`CodexReviewRequest`、`CodexSuggestedFinding`、`CodexReviewResult`。
+- `CodexReviewResult` 对 `succeeded` 必须带 verdict、`failed` 必须带 error、`add_finding` 必须带 suggested finding 做基础领域校验。
+- `backend/app/domain/result.py` 的 `CheckResult` 已新增 `codex_reviews: list[CodexReviewResult] = []`，默认空列表，不要求现有规则产生 Codex review。
+
+新增测试：
+
+- `backend/tests/domain/test_codex_review_models.py` 覆盖 target/request/result 序列化，confirm/refute/uncertain/add_finding/failed 场景，非法枚举校验，以及 `CheckResult.codex_reviews` 默认空列表和 JSON 序列化。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/domain/test_codex_review_models.py -v` | 先红灯失败于 `ModuleNotFoundError: No module named 'app.domain.codex_review'`；实现后通过，`10 passed` |
+| `cd backend && python -m pytest tests/domain -v` | 通过，`44 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`339 passed` |
+
 ## 推荐下一任务
 
-推荐下一任务编号：T29/T30 后续深层语义补强，优先处理 T29 的 diff_builder 展示结构、复杂 numeric satisfaction 旧语义和 measurement bundle 展示；也可先收敛 T27 的 scope finding 暴露口径。
+推荐下一任务编号：T-CODEX-02。
 
-原因：`parameter_compare.py` 已接入 `PTRCompareUseCase`，报告侧 canonical 表已从 `ParsedPdf` 进入 usecase，PTR 双文件 API 上传与 JSON export 已有受控 fixture/golden 保护，报告侧候选表选择、条件/允许误差 Finding、基础 numeric semantic 和 segment-safe matching 已补强；剩余风险集中在 diff 结构、旧 PTR comparator 的复杂数学满足语义、measurement bundle 展示，以及 T14/T15/T17/T19/T22 的业务口径确认。
+原因：CodexReview 领域模型和 `CheckResult.codex_reviews` 契约已经建立。下一步应实现 `EvidencePackage` model 和 `evidence_package_writer`，为后续 runner、prompt/schema、output parser 和 usecase 接入提供受控输入边界。

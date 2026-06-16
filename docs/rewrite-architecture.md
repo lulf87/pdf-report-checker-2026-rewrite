@@ -53,8 +53,9 @@
 | 后端 OCR | PaddleOCR |
 | 前端 | React + TypeScript + Vite |
 | 结果导出 | 初期支持 JSON/PDF，XLSX 通过导出 adapter 渐进补齐 |
+| 运行时审核 | Codex CLI 作为受控 auditor / judge，基于 evidence package 复核 candidate findings |
 
-LLM/VLM 可以作为 `infrastructure/llm` 下的增强 adapter，但不能成为最终规则裁决器。规则结果必须由 `rules/` 模块基于结构化领域模型输出。
+普通 LLM/VLM 可以作为 `infrastructure/llm` 下的增强 adapter。Codex CLI 另作为产品运行时审核员接入：`rules/` 模块先基于结构化领域模型输出 candidate findings 和 evidence package，Codex review 再在只读 sandbox、timeout 和 JSON schema 下做复核。最终结果必须同时保留 deterministic finding 与 Codex review，不允许静默删除原始 Finding。
 
 ### 1.2 重做职责边界
 
@@ -628,7 +629,7 @@ PTR 结果额外包含：
 | 旧 `pdf_document_loader` | 去掉业务照片/标签判断，输出 `ParsedPdf`、`PdfPage`、`PdfTable`。 |
 | 旧 `report_evidence_builder` | 拆成 report extractor、ReportDocument 构造、C01-C11 规则。 |
 | 旧 `ptr_report_evidence_builder` | 拆成 PTR 条款解析、scope parser、表格解析、报告侧标准要求抽取。 |
-| 旧 Codex judge client | 改为 `llm` adapter，只提供增强证据，不直接返回规则 verdict。 |
+| 旧 Codex judge client | 改为受控运行时 auditor：由 `application/codex_audit_service.py` 编排 evidence package、prompt、runner、output parser 和失败 fallback；最终结果保留规则初判和 Codex review 两层证据。 |
 | 旧前端结果组件 | 改为渲染统一 Finding、CheckResult、diff；删除业务判断。 |
 | 旧 PDF 导出 HTML 结构 | 改为基于新 result schema 的 export formatter。 |
 | 旧 API 测试 | 重写为新 `/api/tasks/*` 契约测试。 |

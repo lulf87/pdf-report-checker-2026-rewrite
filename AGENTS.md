@@ -39,7 +39,7 @@
   - `application` 层负责编排 usecase、事务边界、任务流程和跨服务调用。
   - `domain` 层定义稳定业务模型、业务概念、枚举和值对象。
   - `rules` 层实现 C01-C11 和 PTR 规则。
-  - `infrastructure` 层处理 PDF、OCR、LLM、文件、导出、外部系统适配。
+  - `infrastructure` 层处理 PDF、OCR、LLM/Codex、文件、导出、外部系统适配。
 - `domain` 层不依赖 `infrastructure`，不得 import PDF/OCR/LLM/文件系统 adapter、FastAPI 或前端结构。
 - 不允许在 router 中写业务规则。
 - 不允许在 PDF parser 中写核对规则。
@@ -49,7 +49,26 @@
 - `Finding` 的字段、严重级别、定位信息和证据结构必须由稳定模型定义，不能由各规则自由拼接。
 - 规则输入和输出必须适合单元测试，避免直接依赖 HTTP、文件系统、前端状态或全局变量。
 - 后端新增能力时，优先补齐 model、usecase、rule、infrastructure adapter 的边界，再接入 API。
-- 如需接入 LLM，LLM 只能作为 infrastructure 能力或辅助解释能力，不得替代确定性核对规则。
+- 规则负责候选 `Finding` 和证据构建；Codex CLI 可作为受控产品运行时审核员参与复杂语义、图文证据和歧义判断；最终结果必须保留规则初判和 Codex 审核两层证据。
+
+## Codex CLI 运行时审核规则
+
+- Codex CLI 是产品运行时 auditor / judge，不是普通开发工具描述，也不是前端业务判断入口。
+- 正则、OCR、PDF 解析、表格结构化和 C01-C11 / PTR 规则负责构建 evidence package 和 candidate findings。
+- Codex review 可以 `confirm`、`refute`、`uncertain` 或 `add_finding`，但不得静默删除原始 `Finding`。
+- 被 Codex refute 或标记 uncertain 的 deterministic finding 仍必须保留审计痕迹，可通过 `codex_review_id` 或 `Finding.metadata` 关联审核结果。
+- `CheckResult` 后续应保留 `codex_reviews` 字段；前端展示应呈现“规则初判 + Codex 审核意见”。
+- Codex CLI runtime 必须受控：
+  - 每个任务只在 `runtime/codex_audit/{task_id}/` 创建临时审核目录。
+  - 只向 Codex 提供 evidence package 和必要图片/裁剪图。
+  - 不让 Codex 读取整个项目源码、旧项目目录或无关上传文件。
+  - 不让 Codex 修改旧项目或新项目源码。
+  - `codex exec` 必须使用 read-only sandbox。
+  - 必须使用 output schema 输出 JSON。
+  - 必须设置 timeout。
+  - 失败时 fallback 为 `CodexReviewStatus.failed`，不得阻断主核对流程。
+  - 单元测试和 usecase 测试必须使用 `FakeCodexRunner`，不得调用真实 Codex。
+- 普通 LLM/VLM adapter 仍只能作为 infrastructure 能力；如果要参与裁决，必须走上述 Codex review 模型、schema、sandbox、timeout 和审计链路。
 
 ## 报告自身核对规则
 

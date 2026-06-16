@@ -4,6 +4,7 @@ from typing import Any, Sequence
 from pydantic import BaseModel, Field, model_validator
 
 from app.domain.common import Evidence
+from app.domain.codex_review import CodexReviewResult
 from app.domain.finding import Finding, FindingSeverity, Severity
 
 
@@ -64,6 +65,7 @@ class CheckResult(BaseModel):
     summary: str | None = None
     findings: list[Finding] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
+    codex_reviews: list[CodexReviewResult] = Field(default_factory=list)
     metrics: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
 

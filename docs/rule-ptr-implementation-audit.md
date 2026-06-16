@@ -100,7 +100,7 @@ python -m pytest tests/rules/report tests/rules/ptr tests/infrastructure/table t
 
 - 报告规则测试多数为“重写”，不是旧测试原样迁移；这符合新架构边界，但真实旧样本 Golden 覆盖仍需补强。
 - PTR comparator 和 table comparator 明确标为“重写 / 待补齐”；基础 numeric semantic 与 segment-safe matching 已补强，但复杂数学满足判断、旧 measurement/segmented threshold bundle 展示和 real-report table patterns 尚未完整迁移。
-- 旧 Codex/LLM 作为最终 judge 的断言已废弃；新规则以确定性 Finding 为主，这符合 AGENTS.md，但也意味着部分旧语义需要通过新 fixture/golden 重新证明。
+- 旧 evidence-only 重写假设已被 `docs/codex-cli-auditor-strategy.md` 纠偏；后续应以确定性 Finding 为 candidate findings，并通过 Codex CLI runtime auditor 复核复杂 PTR 语义。部分旧语义仍需要通过新 fixture/golden 和 T-CODEX 链路重新证明。
 
 ## 风险清单
 
