@@ -116,8 +116,18 @@
 - 验收标准：Done when 手动记录证明真实 Codex CLI 能在只读 sandbox 中基于 evidence package 产出 schema JSON，失败时可降级。
 - 子任务状态：
   - T-CODEX-09A：建立 gated/manual harness，默认不调用真实 Codex。完成状态：[x]
-  - T-CODEX-09B：用户显式运行真实 Codex CLI 并记录结果。完成状态：[ ]
-- 完成状态：[ ]
+  - T-CODEX-09B：用户显式运行真实 Codex CLI 并记录结果。完成状态：[x]
+- 完成状态：[x]
+
+### T-CODEX-10：Codex audit 本地运行时配置与依赖装配
+- 目标：让本地运行工具时，可以通过环境变量显式启用 fake 或真实 Codex CLI runtime auditor；默认仍关闭，不影响普通测试和普通 API。
+- 背景：T-CODEX-09 已验证真实 Codex CLI manual smoke；本任务把 `CodexAuditService` 通过配置装配到本地 API usecase 路径中。
+- 新文件位置：`backend/app/application/codex_runtime_factory.py`、`backend/tests/application/test_codex_runtime_factory.py`、`backend/tests/api/test_codex_audit_dependencies.py`，并更新 `backend/app/core/config.py` 和 API 依赖。
+- 需要实现：`CODEX_AUDIT_ENABLED`、`CODEX_AUDIT_BACKEND`、`CODEX_AUDIT_ALLOW_REAL_EXECUTION`、`CODEX_AUDIT_TIMEOUT_SECONDS`、`CODEX_AUDIT_RUNTIME_DIR` 配置；`build_codex_audit_service`、`build_ptr_compare_usecase`、`build_report_check_usecase`；fake backend 使用 `FakeCodexRunner`；codex-cli backend 使用 `CodexCliRunner` 且只有显式允许真实执行时才调用 `codex exec`。
+- 不允许做：不调用 GPT API；不引入 OpenAI Responses/Chat API；不修改旧项目目录；不把 Codex CLI 逻辑写进 router；不让 Codex 读取项目源码；不改变 deterministic findings。
+- 测试要求：运行 `cd backend && python -m pytest tests/ -v`、`cd frontend && npm run build`、`git diff --check`。
+- 验收标准：Done when 默认配置不构建真实 runner、不调用 subprocess；fake 模式可产出 `codex_reviews`；codex-cli 未允许真实执行时返回 skipped 且不调用 subprocess；API 默认路径不启用 Codex；全量测试和前端 build 通过。
+- 完成状态：[x]
 
 ## T01：冻结旧项目并创建 rewrite 分支说明
 - 目标：明确旧项目资产只读，建立本次重写的执行边界和分支说明。

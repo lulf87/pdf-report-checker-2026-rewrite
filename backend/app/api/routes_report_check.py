@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
-from app.api.routes_tasks import get_task_service
+from app.api.routes_tasks import get_app_settings, get_task_service
 from app.api.schemas.task import TaskStatusResponse
+from app.application.codex_runtime_factory import build_report_check_usecase
 from app.application.report_check_usecase import ReportCheckUseCase
 from app.application.task_service import TaskService
+from app.core.config import Settings
 
 
 router = APIRouter(tags=["Report Check"])
@@ -13,8 +15,9 @@ router = APIRouter(tags=["Report Check"])
 
 def get_report_check_usecase(
     task_service: TaskService = Depends(get_task_service),
+    settings: Settings = Depends(get_app_settings),
 ) -> ReportCheckUseCase:
-    return ReportCheckUseCase(task_service=task_service)
+    return build_report_check_usecase(settings, task_service=task_service)
 
 
 @router.post("/api/tasks/report-check", response_model=TaskStatusResponse)

@@ -342,7 +342,8 @@ T-CODEX 状态：
 | T-CODEX-06 | 已完成 | `PTRCompareUseCase` 已支持可选 `CodexAuditService` 接入；`PtrCodexEvidenceBuilder` 已为 PTR clause/table/parameter/scope finding 构建受控 evidence package 和 review request；默认关闭，不调用真实 Codex。 |
 | T-CODEX-07 | 已完成 | `ReportCheckUseCase` 已支持可选 `CodexAuditService` 接入；`ReportCodexEvidenceBuilder` 已为 C02/C03/C04/C05/C06/C07 deterministic findings 构建受控 evidence package 和 review request；默认关闭，不调用真实 Codex。 |
 | T-CODEX-08 | 已完成 | 前端类型已支持 `codex_reviews`；PTR 和报告自检结果页已展示 Codex review 总览、finding 关联意见和未关联审核意见；前端只展示后端结果，不重新计算业务规则。 |
-| T-CODEX-09 | 部分完成 | T-CODEX-09A 已建立 gated/manual harness、默认 skip 的 integration pytest、默认拒绝运行的脚本和手动验收文档；真实 Codex CLI 尚未执行，T-CODEX-09B 未完成。 |
+| T-CODEX-09 | 已完成 | T-CODEX-09A 已建立 gated/manual harness；T-CODEX-09B 已由用户显式运行 gated manual harness 并记录结果。第一次脚本失败为 Python 解释器缺少 pytest，使用 `PYTHON_BIN=python` 后 smoke 脚本通过。 |
+| T-CODEX-10 | 已完成 | 本地 API usecase 构造路径已通过 settings/factory 装配 Codex audit；默认关闭；fake 模式可本地联调；codex-cli 模式必须显式允许真实执行才会调用 `codex exec`。 |
 
 验证命令：
 
@@ -762,11 +763,176 @@ runtime/codex_audit/{task_id}/{package_id}/input/
 任务状态：
 
 - `docs/tasks.md` 已将 T-CODEX-09A 标记为 `[x]`。
-- T-CODEX-09 整体仍保持 `[ ]`，因为真实 Codex CLI 尚未由用户显式运行并记录结果。
-- T-CODEX-09B 未完成。
+- T-CODEX-09 整体后续已在 T-CODEX-09B 手动验收记录后标记为 `[x]`。
+- T-CODEX-09B 后续已由用户显式运行并记录结果。
 
-## 推荐下一任务
+## 后续建议
 
-推荐下一任务编号：T-CODEX-09B。
+推荐后续工作：根据业务优先级进入真实样例审计记录整理或继续既有非 Codex 未完成任务。
 
-原因：09A 已建立受控 harness。下一步由用户手动显式运行 `ENABLE_CODEX_CLI_INTEGRATION=1 bash scripts/run-codex-cli-audit-smoke.sh`，并记录真实 Codex CLI 在 read-only sandbox 下的输出或 failed fallback。
+原因：T-CODEX-09A/09B 已完成，真实 Codex CLI manual harness 已通过用户手动验收；后续不需要继续扩展 T-CODEX-09，除非要增强日志断言或补充更多受控业务样例。
+
+## Codex CLI smoke 脚本 Python 选择修复记录
+
+完成日期：2026-06-18
+
+本次只修复 T-CODEX-09B 前置手动脚本的 Python 解释器选择问题，不调用真实 Codex CLI，不设置 `ENABLE_CODEX_CLI_INTEGRATION=1`，不修改后端业务代码、frontend、runner、prompt builder、output parser 或旧项目目录。
+
+本次修复：
+
+- `scripts/run-codex-cli-audit-smoke.sh` 默认使用当前 shell 的 `python`，并支持通过 `PYTHON_BIN=/path/to/python` 显式指定解释器。
+- 脚本会打印 Python 可执行路径、Python 版本和 pytest 可用性。
+- 如果真实手动验收 gate 已开启但 pytest 不可用，脚本输出明确修复建议：安装 `cd backend && python -m pip install -e ".[dev]"`，或使用 `PYTHON_BIN=/path/to/python ENABLE_CODEX_CLI_INTEGRATION=1 bash scripts/run-codex-cli-audit-smoke.sh`。
+- 保持原有 `ENABLE_CODEX_CLI_INTEGRATION=1` gate；未设置 gate 时仍拒绝运行真实 `codex exec`。
+- `docs/codex-cli-manual-validation.md` 已记录 `PYTHON_BIN` 用法。
+
+任务状态：
+
+- 这是 T-CODEX-09B 前置脚本修复；真实验收结果已在后续记录中收口。
+- T-CODEX-09B 后续已标记为 `[x]`。
+- T-CODEX-09 整体后续已标记为 `[x]`。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `bash scripts/run-codex-cli-audit-smoke.sh` | 未设置 `ENABLE_CODEX_CLI_INTEGRATION`，按预期拒绝运行；打印 Python 路径、版本和 pytest 可用性。 |
+| `PYTHON_BIN=python bash scripts/run-codex-cli-audit-smoke.sh` | 未设置 `ENABLE_CODEX_CLI_INTEGRATION`，按预期拒绝运行；使用当前 shell 的 `python`。 |
+| `cd backend && python -m pytest tests/integration/test_codex_cli_manual.py -v` | 默认 skip，`1 skipped`。 |
+| `git diff --check` | 通过。 |
+
+## Codex CLI 真实手动验收完成记录
+
+完成日期：2026-06-18
+
+本记录收口 T-CODEX-09B。用户已显式开启 gated manual harness 并提供执行结果；本次文档记录不重新运行真实 Codex CLI，不修改后端业务代码、frontend、runner、prompt builder、output parser、router 或旧项目目录。
+
+第一次脚本运行：
+
+```bash
+cd /Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3
+ENABLE_CODEX_CLI_INTEGRATION=1 bash scripts/run-codex-cli-audit-smoke.sh
+```
+
+结果失败：
+
+```text
+/opt/homebrew/opt/python@3.14/bin/python3.14: No module named pytest
+```
+
+原因确认：脚本当时默认使用的 `python3` 指向 Homebrew Python 3.14，该环境没有安装 pytest。这不是 Codex audit 链路失败，而是 Python 解释器选择问题。随后确认当前项目 shell 的 Python 可用：
+
+```bash
+python -m pytest --version
+```
+
+输出：
+
+```text
+pytest 9.0.2
+```
+
+直接运行 gated integration test：
+
+```bash
+cd /Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend
+ENABLE_CODEX_CLI_INTEGRATION=1 python -m pytest tests/integration/test_codex_cli_manual.py -v
+```
+
+结果：
+
+```text
+tests/integration/test_codex_cli_manual.py::test_real_codex_cli_manual_smoke_returns_auditable_result PASSED
+1 passed in 0.42s
+```
+
+使用脚本并显式指定 Python：
+
+```bash
+cd /Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3
+PYTHON_BIN=python ENABLE_CODEX_CLI_INTEGRATION=1 bash scripts/run-codex-cli-audit-smoke.sh
+```
+
+结果：
+
+```text
+Python executable: /Users/lulingfeng/miniforge3/bin/python
+Python version: Python 3.12.12
+pytest: available
+tests/integration/test_codex_cli_manual.py::test_real_codex_cli_manual_smoke_returns_auditable_result PASSED
+1 passed in 0.63s
+```
+
+验收结论：
+
+- T-CODEX-09B 已由用户手动执行并通过。
+- T-CODEX-09 整体完成。
+- `tests/integration/test_codex_cli_manual.py` 在 gate 开启时显式使用 `CodexCliRunner(enabled=True, allow_real_execution=True, sandbox="read-only")` 并调用 `run_review(...)`。
+- `PYTHON_BIN` 是推荐的脚本参数，用于指定带 pytest 的 Python 环境。
+- 普通未设置 `ENABLE_CODEX_CLI_INTEGRATION` 的 integration test 仍默认 skip，不会在普通测试中调用真实 Codex CLI。
+- smoke 使用 pytest `tmp_path` 创建受控临时 evidence workspace。
+- runner 使用 read-only sandbox。
+- 输出使用 `codex_review_output.schema.json`。
+- Codex 输出或运行异常没有冒泡到主流程；验收测试返回可审计结果。
+- 未修改旧项目目录。
+- API 默认不启用真实 Codex，也不会因本次 harness 验收改变默认运行行为。
+
+## Codex audit 本地运行时配置与依赖装配完成记录
+
+完成日期：2026-06-18
+
+本次实现 T-CODEX-10，把 `CodexAuditService` 通过配置和 application factory 装配到本地 API usecase 构造路径。默认仍关闭，不调用真实 Codex CLI，不修改旧项目目录，不修改前端业务判断，不把 Codex CLI 执行逻辑写进 router，不引入 GPT API、OpenAI Responses API 或 Chat API。
+
+本次实现：
+
+- `backend/app/core/config.py` 新增 Codex audit settings：
+  - `CODEX_AUDIT_ENABLED`
+  - `CODEX_AUDIT_BACKEND`
+  - `CODEX_AUDIT_ALLOW_REAL_EXECUTION`
+  - `CODEX_AUDIT_TIMEOUT_SECONDS`
+  - `CODEX_AUDIT_RUNTIME_DIR`
+- 新增 `backend/app/application/codex_runtime_factory.py`：
+  - `build_codex_audit_service(settings)`
+  - `build_ptr_compare_usecase(settings, task_service=...)`
+  - `build_report_check_usecase(settings, task_service=...)`
+- 默认 settings 下 `build_codex_audit_service(...)` 返回 `None`，PTR/Report usecase 的 `codex_audit_enabled=False`，普通 API 不启用 Codex audit。
+- `CODEX_AUDIT_BACKEND=fake` 且 `CODEX_AUDIT_ENABLED=1` 时使用 `FakeCodexRunner`，可用于本地 UI 联调，写入 `codex_reviews`，不调用真实 Codex。
+- `CODEX_AUDIT_BACKEND=codex-cli` 且 `CODEX_AUDIT_ENABLED=1` 时使用 `CodexCliRunner`；只有 `CODEX_AUDIT_ALLOW_REAL_EXECUTION=1` 才允许真实 `codex exec`。未允许真实执行时返回 skipped review，不调用 subprocess。
+- API route dependency 改为调用 application factory：router 仍只处理 HTTP 输入输出、上传校验和依赖注入，不承载 Codex CLI runner 逻辑。
+- Codex audit workspace 仍由 `EvidencePackageWriter` 写入 `runtime/codex_audit/{task_id}/{package_id}/input/`，runner 仍使用 read-only sandbox、output schema 和 timeout。
+- Codex review 只附加在 `codex_reviews`，不会删除、覆盖或改写 deterministic findings。
+
+新增测试：
+
+- `backend/tests/application/test_codex_runtime_factory.py` 覆盖 settings 默认值/env 读取、默认关闭、fake backend 产出 confirm review、PTR/Report usecase 通过 factory 接收 audit service、codex-cli 未允许真实执行时不调用 subprocess 并返回 skipped、codex-cli 允许真实执行时可 monkeypatch subprocess 写入 schema 合法输出。
+- `backend/tests/api/test_codex_audit_dependencies.py` 覆盖 API 默认依赖构造出的 PTR/Report usecase 不启用 Codex audit，且不会调用 subprocess。
+
+本地 fake 模式：
+
+```bash
+cd backend
+CODEX_AUDIT_ENABLED=1 \
+CODEX_AUDIT_BACKEND=fake \
+python -m uvicorn app.main:app --reload
+```
+
+本地真实 Codex CLI 模式：
+
+```bash
+cd backend
+CODEX_AUDIT_ENABLED=1 \
+CODEX_AUDIT_BACKEND=codex-cli \
+CODEX_AUDIT_ALLOW_REAL_EXECUTION=1 \
+CODEX_AUDIT_RUNTIME_DIR=runtime/codex_audit \
+CODEX_AUDIT_TIMEOUT_SECONDS=120 \
+python -m uvicorn app.main:app --reload
+```
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/application/test_codex_runtime_factory.py tests/api/test_codex_audit_dependencies.py -v` | 先红灯失败于 `ModuleNotFoundError: No module named 'app.application.codex_runtime_factory'`；实现后通过，`6 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`485 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+| `git diff --check` | 通过。 |

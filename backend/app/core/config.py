@@ -68,6 +68,27 @@ class Settings(BaseSettings):
         ge=1,
         description="Maximum PTR table pages sent to one VLM enhancement call.",
     )
+    codex_audit_enabled: bool = Field(
+        default=False,
+        description="Whether controlled Codex CLI runtime audit is enabled.",
+    )
+    codex_audit_backend: Literal["disabled", "fake", "codex-cli"] = Field(
+        default="disabled",
+        description="Codex audit backend: disabled, fake, or codex-cli.",
+    )
+    codex_audit_allow_real_execution: bool = Field(
+        default=False,
+        description="Whether the codex-cli backend may execute the real Codex CLI process.",
+    )
+    codex_audit_timeout_seconds: int = Field(
+        default=120,
+        ge=1,
+        description="Timeout in seconds for real Codex CLI audit execution.",
+    )
+    codex_audit_runtime_dir: str = Field(
+        default="runtime/codex_audit",
+        description="Runtime root for controlled Codex audit evidence workspaces.",
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

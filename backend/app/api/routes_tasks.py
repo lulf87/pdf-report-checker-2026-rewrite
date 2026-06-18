@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 
 from app.api.schemas.task import TaskResultResponse, TaskStatusResponse
@@ -9,6 +9,7 @@ from app.application.task_service import (
     TaskResultNotFoundError,
     TaskService,
 )
+from app.core.config import Settings, get_settings
 from app.domain.task import TaskState
 from app.infrastructure.export.excel_exporter import export_check_results_to_xlsx
 from app.infrastructure.export.json_exporter import export_check_results_to_json
@@ -22,6 +23,10 @@ _TASK_SERVICE = TaskService()
 
 def get_task_service() -> TaskService:
     return _TASK_SERVICE
+
+
+def get_app_settings(request: Request) -> Settings:
+    return getattr(request.app.state, "settings", None) or get_settings()
 
 
 @router.get("/{task_id}", response_model=TaskStatusResponse)
@@ -119,4 +124,4 @@ def export_task_result(
     )
 
 
-__all__ = ["get_task_service", "router"]
+__all__ = ["get_app_settings", "get_task_service", "router"]

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
-from app.api.routes_tasks import get_task_service
+from app.api.routes_tasks import get_app_settings, get_task_service
 from app.api.schemas.task import TaskStatusResponse
+from app.application.codex_runtime_factory import build_ptr_compare_usecase
 from app.application.ptr_compare_usecase import PTRCompareUseCase
 from app.application.task_service import TaskService
+from app.core.config import Settings
 
 
 router = APIRouter(tags=["PTR Compare"])
@@ -13,8 +15,9 @@ router = APIRouter(tags=["PTR Compare"])
 
 def get_ptr_compare_usecase(
     task_service: TaskService = Depends(get_task_service),
+    settings: Settings = Depends(get_app_settings),
 ) -> PTRCompareUseCase:
-    return PTRCompareUseCase(task_service=task_service)
+    return build_ptr_compare_usecase(settings, task_service=task_service)
 
 
 @router.post("/api/tasks/ptr-compare", response_model=TaskStatusResponse)
