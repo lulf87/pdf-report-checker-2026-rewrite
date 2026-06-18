@@ -344,6 +344,7 @@ T-CODEX 状态：
 | T-CODEX-08 | 已完成 | 前端类型已支持 `codex_reviews`；PTR 和报告自检结果页已展示 Codex review 总览、finding 关联意见和未关联审核意见；前端只展示后端结果，不重新计算业务规则。 |
 | T-CODEX-09 | 已完成 | T-CODEX-09A 已建立 gated/manual harness；T-CODEX-09B 已由用户显式运行 gated manual harness 并记录结果。第一次脚本失败为 Python 解释器缺少 pytest，使用 `PYTHON_BIN=python` 后 smoke 脚本通过。 |
 | T-CODEX-10 | 已完成 | 本地 API usecase 构造路径已通过 settings/factory 装配 Codex audit；默认关闭；fake 模式可本地联调；codex-cli 模式必须显式允许真实执行才会调用 `codex exec`。 |
+| T-CODEX-11A | 已完成 | 新增本地业务 E2E 验收文档和脚本；脚本支持 disabled/fake/codex-cli 模式、上传业务样本、轮询结果并统计 `codex_reviews`；本阶段不运行真实 Codex CLI。 |
 
 验证命令：
 
@@ -934,5 +935,71 @@ python -m uvicorn app.main:app --reload
 | --- | --- |
 | `cd backend && python -m pytest tests/application/test_codex_runtime_factory.py tests/api/test_codex_audit_dependencies.py -v` | 先红灯失败于 `ModuleNotFoundError: No module named 'app.application.codex_runtime_factory'`；实现后通过，`6 passed`。 |
 | `cd backend && python -m pytest tests/ -v` | 通过，`485 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+| `git diff --check` | 通过。 |
+
+## Codex audit 本地业务端到端验收脚本和文档完成记录
+
+完成日期：2026-06-18
+
+本次实现 T-CODEX-11A，只新增本地业务端到端验收脚本、文档和脚本/文档 contract test。本阶段不调用真实 Codex CLI，不修改旧项目目录，不修改规则逻辑，不修改 router 业务逻辑，不把 Codex 审核逻辑写进 router，不修改 C01-C11 或 PTR 规则算法。
+
+本次实现：
+
+- 新增 `docs/codex-audit-local-e2e.md`，说明本地 Web 工具在 disabled/fake/codex-cli 模式下如何验收 `codex_reviews`。
+- 新增 `scripts/run-codex-audit-local-e2e.sh`，支持：
+  - `--help`：显示用法，不启动服务，不调用 Codex。
+  - `--print-config`：显示当前模式和 safety gate，不启动服务，不调用 Codex。
+  - `MODE=disabled|fake|codex-cli`。
+  - `TASK_TYPE=ptr-compare|report-check`。
+  - `START_BACKEND=1` 可由脚本代启后端。
+  - `PTR_FILE` / `REPORT_FILE` 上传本地业务样本。
+  - 轮询 `/api/tasks/{task_id}`，下载 `/api/tasks/{task_id}/result`，统计 `check_results[].codex_reviews`。
+  - `EXPECT_CODEX_REVIEWS=auto|empty|nonempty|any` 控制验收口径。
+- codex-cli 模式脚本 gate：
+  - 必须设置 `ENABLE_CODEX_AUDIT_LOCAL_E2E=1`。
+  - 必须设置 `CODEX_AUDIT_ALLOW_REAL_EXECUTION=1`。
+  - 未满足 gate 时脚本拒绝运行，避免误调用真实 Codex CLI。
+- 文档明确前端只展示后端返回的 `codex_reviews`，不重新计算 C01-C11 或 PTR 规则；前端入口为 `CodexReviewPanel`、PTR 结果页和报告自检结果页。
+- 文档明确安全边界：不使用 GPT API client，不调用 OpenAI Responses/Chat API，不让 Codex 读取项目源码，仍使用 `runtime/codex_audit`、read-only sandbox、output schema 和 timeout。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/integration/test_codex_audit_local_e2e_artifacts.py -v` | 先红灯失败于脚本和文档不存在；实现后通过，`3 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`488 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+| `git diff --check` | 通过。 |
+
+## Codex audit 本地 E2E 脚本结果路径修复记录
+
+完成日期：2026-06-18
+
+本次修复 T-CODEX-11B 前置脚本问题，不标记 T-CODEX-11B 完成。本次不调用真实 Codex CLI，不修改后端业务代码、frontend、router、Codex runner/parser/prompt 或旧项目目录。
+
+问题：
+
+- `scripts/run-codex-audit-local-e2e.sh` 的 `poll_result` 被 command substitution 捕获时，任务状态日志和结果 JSON 路径同时写到 stdout。
+- 调用方期望 stdout 只有结果 JSON 路径，实际得到多行字符串，导致 Python 把日志和路径拼成一个不存在的文件路径并抛出 `FileNotFoundError`。
+
+本次修复：
+
+- 脚本新增统一 `log()`，所有进度日志和任务状态输出都写入 stderr。
+- `poll_result` 的 stdout 只输出最终结果 JSON 文件路径。
+- `result_file` 捕获后会校验：非空、不包含换行、文件存在、以 `.json` 结尾。
+- 保留 `PYTHON_BIN` 支持。
+- 保留 codex-cli 安全 gate：必须同时设置 `ENABLE_CODEX_AUDIT_LOCAL_E2E=1` 和 `CODEX_AUDIT_ALLOW_REAL_EXECUTION=1` 才允许真实 Codex CLI。
+- fake 模式仍不调用真实 Codex。
+- `docs/codex-audit-local-e2e.md` 已补充 stdout/stderr 输出边界说明。
+- `backend/tests/integration/test_codex_audit_local_e2e_artifacts.py` 新增 fake `curl` 脚本级测试，覆盖上传、轮询、结果下载、日志走 stderr 和结果路径不被污染。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `bash -n scripts/run-codex-audit-local-e2e.sh` | 通过。 |
+| `cd backend && python -m pytest tests/integration/test_codex_audit_local_e2e_artifacts.py -v` | 先红灯复现 `FileNotFoundError` 多行路径；修复后通过，`5 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`490 passed, 1 skipped`。 |
 | `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
 | `git diff --check` | 通过。 |
