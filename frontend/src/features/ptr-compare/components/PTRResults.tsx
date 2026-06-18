@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import type { PTRFilterMode } from "../../../entities/ptr/types";
 import { toPTRClauseViewModel } from "../../../entities/ptr/types";
 import type { TaskResult, TaskStatus } from "../../../entities/task/types";
+import { normalizeCodexReviews } from "../../../entities/codexReview/types";
+import { CodexReviewOverview } from "../../codex-review/components/CodexReviewPanel";
 import { AnimatedCounter } from "../../../shared/ui/AnimatedCounter";
 import { Badge } from "../../../shared/ui/Badge";
 import { Button } from "../../../shared/ui/Button";
@@ -22,6 +24,10 @@ export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps
   const [exportError, setExportError] = useState<string | null>(null);
   const clauses = useMemo(
     () => result.check_results.map((item, index) => toPTRClauseViewModel(item, index)),
+    [result.check_results],
+  );
+  const codexReviews = useMemo(
+    () => result.check_results.flatMap((item) => normalizeCodexReviews(item.codex_reviews)),
     [result.check_results],
   );
   const issueCount = clauses.filter((item) => item.status !== "pass" && item.status !== "skip").length;
@@ -57,6 +63,8 @@ export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps
           </p>
         </GlassCard>
       </div>
+
+      <CodexReviewOverview reviews={codexReviews} />
 
       <GlassCard className="result-card">
         <div className="row-head">

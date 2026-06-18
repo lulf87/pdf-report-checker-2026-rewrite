@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import re
 import tempfile
 from pathlib import Path
 from typing import Any, Protocol
 
+from app.application.ptr_codex_evidence_builder import PtrCodexEvidenceBuilder
 from app.application.task_service import TaskService
+from app.domain.codex_review import CodexReviewError, CodexReviewRequest, CodexReviewResult, CodexReviewStatus
+from app.domain.evidence_package import EvidencePackage
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.pdf import ParsedPdf
 from app.domain.ptr import PTRClause, PTRDocument
@@ -113,6 +117,15 @@ class TableCandidateSelector(Protocol):
         ...
 
 
+class CodexAuditServiceProtocol(Protocol):
+    def review(
+        self,
+        request: CodexReviewRequest,
+        evidence_package: EvidencePackage,
+    ) -> list[CodexReviewResult]:
+        ...
+
+
 class PTRCompareUseCase:
     """Application orchestration for PTR-vs-report comparison tasks."""
 
@@ -131,6 +144,9 @@ class PTRCompareUseCase:
         table_reference_compare: TableReferenceCompare = check_table_references,
         table_candidate_selector: TableCandidateSelector = select_report_table_candidate,
         parameter_compare: ParameterTableCompare = compare_parameter_tables,
+        codex_audit_service: CodexAuditServiceProtocol | None = None,
+        codex_audit_enabled: bool = False,
+        ptr_codex_evidence_builder: PtrCodexEvidenceBuilder | None = None,
     ) -> None:
         self.task_service = task_service
         self.file_store = file_store or LocalFileStore(Path(tempfile.gettempdir()) / "report-checker-runtime")
@@ -144,6 +160,9 @@ class PTRCompareUseCase:
         self.table_reference_compare = table_reference_compare
         self.table_candidate_selector = table_candidate_selector
         self.parameter_compare = parameter_compare
+        self.codex_audit_service = codex_audit_service
+        self.codex_audit_enabled = codex_audit_enabled
+        self.ptr_codex_evidence_builder = ptr_codex_evidence_builder or PtrCodexEvidenceBuilder()
 
     def run(
         self,
@@ -230,6 +249,12 @@ class PTRCompareUseCase:
                     issue_summary="PTR 表格引用或参数存在差异或需复核",
                 ),
             ]
+            self._attach_codex_reviews(
+                task_id=task.task_id,
+                ptr_doc=ptr_doc,
+                report_doc=report_doc,
+                check_results=check_results,
+            )
             return self.task_service.complete_task(
                 task.task_id,
                 check_results,
@@ -388,6 +413,34 @@ class PTRCompareUseCase:
             evidence=[evidence for finding in findings for evidence in finding.evidence],
         )
 
+    def _attach_codex_reviews(
+        self,
+        *,
+        task_id: str,
+        ptr_doc: PTRDocument,
+        report_doc: ReportDocument,
+        check_results: list[CheckResult],
+    ) -> None:
+        if not self.codex_audit_enabled or self.codex_audit_service is None:
+            return
+
+        bundle = self.ptr_codex_evidence_builder.build(
+            task_id=task_id,
+            task_type=TaskType.PTR_COMPARE.value,
+            ptr_doc=ptr_doc,
+            report_doc=report_doc,
+            check_results=check_results,
+        )
+        if bundle is None:
+            return
+
+        try:
+            reviews = self.codex_audit_service.review(bundle.request, bundle.evidence_package)
+        except Exception as exc:
+            reviews = _failed_codex_reviews_for_request(bundle.request, exc)
+
+        _attach_reviews_to_check_results(check_results, reviews)
+
 
 def _status_for_findings(findings: list[Finding]) -> CheckStatus:
     if any(finding.severity == FindingSeverity.ERROR for finding in findings):
@@ -435,6 +488,49 @@ def _dedupe_tables(tables: list[CanonicalTable]) -> list[CanonicalTable]:
         seen.add(key)
         result.append(table)
     return result
+
+
+def _attach_reviews_to_check_results(
+    check_results: list[CheckResult],
+    reviews: list[CodexReviewResult],
+) -> None:
+    if not reviews:
+        return
+    result_by_check_id = {result.check_id: result for result in check_results}
+    fallback = check_results[0] if check_results else None
+    for review in reviews:
+        check_id = review.target.check_id
+        target_result = result_by_check_id.get(check_id or "") or fallback
+        if target_result is None:
+            continue
+        target_result.codex_reviews.append(review)
+
+
+def _failed_codex_reviews_for_request(
+    request: CodexReviewRequest,
+    exc: Exception,
+) -> list[CodexReviewResult]:
+    now = datetime.now(timezone.utc)
+    error = CodexReviewError(
+        code="CODEX_PTR_AUDIT_SERVICE_FAILED",
+        message="PTR Codex audit service failed inside PTRCompareUseCase.",
+        detail=str(exc),
+        retryable=False,
+    )
+    return [
+        CodexReviewResult(
+            review_id=f"ptr-codex-audit:{request.request_id}:{target.target_id}:failed",
+            request_id=request.request_id,
+            task_id=request.task_id,
+            target=target,
+            status=CodexReviewStatus.FAILED,
+            error=error,
+            created_at=now,
+            completed_at=now,
+            metadata={"source": "ptr_compare_usecase"},
+        )
+        for target in request.targets
+    ]
 
 
 __all__ = ["PTRCompareUseCase"]

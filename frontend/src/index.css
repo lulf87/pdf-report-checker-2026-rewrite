@@ -544,6 +544,108 @@ p {
   line-height: 1.6;
 }
 
+.codex-overview {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.codex-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.codex-summary-item {
+  display: grid;
+  gap: 4px;
+  min-height: 68px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.codex-summary-label {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.codex-review-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.codex-review-list-title {
+  margin-bottom: 0;
+  color: var(--color-accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.codex-review-item {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.codex-review-success {
+  border-color: rgba(143, 208, 170, 0.34);
+}
+
+.codex-review-danger {
+  border-color: rgba(241, 154, 154, 0.38);
+}
+
+.codex-review-warn {
+  border-color: rgba(242, 192, 120, 0.38);
+}
+
+.codex-review-accent {
+  border-color: rgba(116, 215, 200, 0.34);
+}
+
+.codex-review-title {
+  margin-bottom: 4px;
+  color: var(--color-text);
+  font-weight: 800;
+}
+
+.codex-review-target,
+.codex-review-summary,
+.codex-review-refs,
+.codex-review-meta,
+.codex-suggested-finding,
+.codex-error {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.codex-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.codex-suggested-finding {
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(116, 215, 200, 0.08);
+}
+
+.codex-error {
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  color: var(--color-danger);
+  background: rgba(241, 154, 154, 0.1);
+}
+
 .details {
   margin-top: 12px;
   padding-top: 12px;
@@ -612,6 +714,7 @@ p {
   .module-grid,
   .metric-grid,
   .metric-grid.three,
+  .codex-summary-grid,
   .split-grid {
     grid-template-columns: 1fr;
   }

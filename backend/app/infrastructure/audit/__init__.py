@@ -1,0 +1,2 @@
+"""Audit workspace infrastructure adapters."""
+

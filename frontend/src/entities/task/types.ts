@@ -1,3 +1,4 @@
+import type { CodexReviewResult } from "../codexReview/types";
 import type { Evidence, Finding, FindingSeverity } from "../finding/types";
 
 export type TaskType = "report_check" | "ptr_compare";
@@ -46,6 +47,7 @@ export interface CheckResult {
   summary?: string | null;
   findings: Finding[];
   evidence: Evidence[];
+  codex_reviews?: CodexReviewResult[];
   metrics: Record<string, unknown>;
   metadata: Record<string, unknown>;
 }

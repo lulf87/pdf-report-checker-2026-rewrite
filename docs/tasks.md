@@ -39,32 +39,32 @@
 ### T-CODEX-02：EvidencePackage model 和 writer
 - 目标：新增 evidence package 模型和写入器。
 - 背景：Codex 只能接收最小证据包，不能读取整个项目或上传目录。
-- 新文件位置：`backend/app/domain/codex_review.py`、`backend/app/infrastructure/audit/evidence_package_writer.py`、`backend/tests/infrastructure/audit/test_evidence_package_writer.py`。
+- 新文件位置：`backend/app/domain/evidence_package.py`、`backend/app/infrastructure/audit/evidence_package_writer.py`、`backend/tests/domain/test_evidence_package_models.py`、`backend/tests/infrastructure/audit/test_evidence_package_writer.py`。
 - 需要实现：`EvidencePackage`，每个任务写入 `runtime/codex_audit/{task_id}/`，只包含 candidate findings、check result 摘要、evidence、允许的原文片段和必要 asset refs。
 - 不允许做：不写入旧项目目录；不暴露整个源码树；不修改原始上传文件；不把 raw PDF 作为默认 evidence package 交给 Codex。
 - 测试要求：运行 `cd backend && python -m pytest tests/infrastructure/audit/test_evidence_package_writer.py -v`。
 - 验收标准：Done when writer 使用 `tmp_path` 测试通过，路径被限制在 audit runtime 目录，输出 JSON schema 稳定。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ### T-CODEX-03：FakeCodexRunner / CodexCliRunner 接口
 - 目标：建立可替换 runner 接口和 fake/real 两种实现。
 - 背景：单元测试不能调用真实 Codex；真实 CLI 只能在受控运行时和手动验收中启用。
-- 新文件位置：`backend/app/infrastructure/codex/fake_codex_runner.py`、`backend/app/infrastructure/codex/codex_cli_runner.py`、`backend/tests/infrastructure/codex/test_codex_runner.py`。
+- 新文件位置：`backend/app/infrastructure/codex/runner.py`、`backend/app/infrastructure/codex/fake_codex_runner.py`、`backend/app/infrastructure/codex/codex_cli_runner.py`、`backend/tests/infrastructure/codex/test_fake_codex_runner.py`、`backend/tests/infrastructure/codex/test_codex_cli_runner.py`。
 - 需要实现：runner protocol、`FakeCodexRunner` 固定输出、`CodexCliRunner` 命令构造、read-only sandbox、工作目录、timeout、stdout/stderr 保存和 exit code 处理。
 - 不允许做：不在测试中调用真实 Codex；不允许 runner 接收项目根目录作为默认上下文；不允许写源码文件。
-- 测试要求：运行 `cd backend && python -m pytest tests/infrastructure/codex/test_codex_runner.py -v`。
+- 测试要求：运行 `cd backend && python -m pytest tests/infrastructure/codex -v`。
 - 验收标准：Done when fake runner 可注入，real runner 命令参数可测试，timeout/nonzero 能转成错误结果。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ### T-CODEX-04：PromptBuilder 和 JSON schema
 - 目标：为 Codex review 生成受控 prompt 和 output schema。
 - 背景：Codex 只能基于 evidence package 输出 JSON，不得补造标准、字段含义或文件路径。
-- 新文件位置：`backend/app/infrastructure/codex/prompt_builder.py`、`backend/app/infrastructure/codex/schemas/`、`backend/tests/infrastructure/codex/test_prompt_builder.py`。
+- 新文件位置：`backend/app/infrastructure/codex/prompt_builder.py`、`backend/app/infrastructure/codex/schemas/`、`backend/tests/infrastructure/codex/test_prompt_builder.py`、`backend/tests/infrastructure/codex/test_codex_review_output_schema.py`。
 - 需要实现：按 review target 生成 prompt，声明 allowed evidence refs、输出 `confirm/refute/uncertain/add_finding` schema，禁止自由文本作为最终结构。
 - 不允许做：不把整个 CheckResult JSON 原样无限制塞入 prompt；不包含项目源码；不允许 prompt 要求 Codex 修改文件。
-- 测试要求：运行 `cd backend && python -m pytest tests/infrastructure/codex/test_prompt_builder.py -v`。
+- 测试要求：运行 `cd backend && python -m pytest tests/infrastructure/codex/test_prompt_builder.py tests/infrastructure/codex/test_codex_review_output_schema.py -v`。
 - 验收标准：Done when prompt 包含安全边界、schema、target 和 evidence refs，且不包含未授权路径。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ### T-CODEX-05：OutputParser 和失败 fallback
 - 目标：解析 Codex JSON 输出并提供失败降级。
@@ -72,9 +72,9 @@
 - 新文件位置：`backend/app/infrastructure/codex/output_parser.py`、`backend/tests/infrastructure/codex/test_output_parser.py`。
 - 需要实现：解析 stdout/raw JSON，校验 `CodexReviewResult`，处理 invalid JSON、schema invalid、timeout、stderr、非零退出，统一产生 `CodexReviewStatus.failed`。
 - 不允许做：不吞掉失败原因；不把解析失败伪装成 `uncertain`；不删除 deterministic finding。
-- 测试要求：运行 `cd backend && python -m pytest tests/infrastructure/codex/test_output_parser.py -v`。
+- 测试要求：运行 `cd backend && python -m pytest tests/infrastructure/codex/test_output_parser.py tests/infrastructure/codex/test_codex_cli_runner.py -v`。
 - 验收标准：Done when completed/failed/skipped 路径均有测试，错误中保留 stdout/stderr/raw output ref。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ### T-CODEX-06：PTRCompareUseCase 接入 CodexAuditService
 - 目标：在 PTR 比对用例中接入运行时 Codex 审核。
@@ -84,7 +84,7 @@
 - 不允许做：不继续扩展 numeric semantic；不调用真实 Codex；不在 router 中写审核逻辑；不删除原始 PTR findings。
 - 测试要求：运行 `cd backend && python -m pytest tests/application/test_ptr_compare_codex_audit.py -v`，并按影响范围运行 PTR usecase 测试。
 - 验收标准：Done when FakeCodexRunner 可确认/refute/uncertain/add_finding，最终 `CheckResult` 同时保留 deterministic finding 和 Codex review。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ### T-CODEX-07：ReportCheckUseCase 接入 CodexAuditService
 - 目标：在报告自检用例中接入运行时 Codex 审核。
@@ -94,7 +94,7 @@
 - 不允许做：不修改 C01-C11 规则文件职责；不在前端做复核；不调用真实 Codex；不删除原始 finding。
 - 测试要求：运行 `cd backend && python -m pytest tests/application/test_report_check_codex_audit.py -v`，并按影响范围运行报告 usecase 测试。
 - 验收标准：Done when 报告自检结果能展示规则初判和 Codex 审核意见两层证据。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ### T-CODEX-08：前端展示 Codex review
 - 目标：前端展示“规则初判 + Codex 审核意见”。
@@ -104,16 +104,19 @@
 - 不允许做：不在前端调用 Codex；不根据前端字段重新判断 severity；不隐藏 deterministic finding。
 - 测试要求：运行 `cd frontend && npm run build`，并运行相关组件/typecheck 测试。
 - 验收标准：Done when UI 能区分规则初判、Codex confirm/refute/uncertain/add_finding 和 failed review。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ### T-CODEX-09：真实 Codex CLI 手动验收
 - 目标：在受控样例上手动验收真实 Codex CLI runtime auditor。
 - 背景：真实 Codex 不进入单元测试，只能在专门验收任务中启用。
-- 新文件位置：`docs/codex-cli-manual-acceptance.md` 或等价验收记录。
+- 新文件位置：`docs/codex-cli-manual-validation.md`、`scripts/run-codex-cli-audit-smoke.sh`、`backend/tests/integration/test_codex_cli_manual.py` 或等价验收记录。
 - 需要实现：选择受控 fixture，生成 `runtime/codex_audit/{task_id}/`，运行真实 `codex exec` read-only sandbox，保存 evidence package、prompt、JSON 输出、timeout、stdout/stderr 和 fallback 结果。
 - 不允许做：不修改旧项目或新项目源码；不使用未审查原始素材；不把真实 Codex 输出写入稳定 Golden expected；不声称自动化测试已覆盖真实 Codex。
 - 测试要求：手动运行并记录命令、输入、输出和结果；自动化仍只依赖 fake runner。
 - 验收标准：Done when 手动记录证明真实 Codex CLI 能在只读 sandbox 中基于 evidence package 产出 schema JSON，失败时可降级。
+- 子任务状态：
+  - T-CODEX-09A：建立 gated/manual harness，默认不调用真实 Codex。完成状态：[x]
+  - T-CODEX-09B：用户显式运行真实 Codex CLI 并记录结果。完成状态：[ ]
 - 完成状态：[ ]
 
 ## T01：冻结旧项目并创建 rewrite 分支说明

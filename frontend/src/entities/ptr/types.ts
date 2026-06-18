@@ -1,3 +1,5 @@
+import type { CodexReviewResult } from "../codexReview/types";
+import { normalizeCodexReviews } from "../codexReview/types";
 import type { DiffFragment, Finding, FindingSeverity } from "../finding/types";
 import type { CheckResult, TaskResult, TaskStatus } from "../task/types";
 
@@ -12,6 +14,7 @@ export interface PTRClauseViewModel {
   summary?: string | null;
   findings: Finding[];
   diffs: DiffFragment[];
+  codexReviews: CodexReviewResult[];
 }
 
 export interface PTRCompareResultView {
@@ -31,6 +34,7 @@ export function toPTRClauseViewModel(result: CheckResult, index: number): PTRCla
     summary: result.summary,
     findings: result.findings,
     diffs: result.findings.flatMap((finding) => finding.diff_fragments),
+    codexReviews: normalizeCodexReviews(result.codex_reviews),
   };
 }
 

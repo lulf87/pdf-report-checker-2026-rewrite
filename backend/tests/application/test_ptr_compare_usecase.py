@@ -1,8 +1,18 @@
 from pathlib import Path
 
+from app.application.codex_audit_service import CodexAuditService
 from app.application.ptr_compare_usecase import PTRCompareUseCase
 from app.application.task_service import TaskService
+from app.domain.codex_review import (
+    CodexReviewConfidence,
+    CodexReviewError,
+    CodexReviewResult,
+    CodexReviewStatus,
+    CodexReviewVerdict,
+    CodexSuggestedFinding,
+)
 from app.domain.common import Evidence, EvidenceMethod, SourceType
+from app.domain.evidence_package import EvidencePackage
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.pdf import ParsedPdf, PdfPage, PdfTable
 from app.domain.ptr import PTRClause, PTRClauseNumber, PTRDocument, PTRTable, TableReference
@@ -10,6 +20,9 @@ from app.domain.report import InspectionItem, InspectionTable, ReportDocument, R
 from app.domain.result import CheckStatus
 from app.domain.table import CanonicalTable, ParameterRecord
 from app.domain.task import TaskState, TaskType
+from app.infrastructure.audit.evidence_package_writer import EvidencePackageWriter
+from app.infrastructure.codex.fake_codex_runner import FakeCodexRunner
+from app.infrastructure.codex.prompt_builder import PromptBuilder
 from app.infrastructure.storage.local_file_store import LocalFileStore
 from app.rules.ptr.scope_filter import ScopeDecision, ScopeFilterResult
 from tests.fixtures.table_fixture_builder import build_pdf_table
@@ -162,6 +175,68 @@ class TrackingTableCompare:
         return []
 
 
+class FakePtrCodexAuditService:
+    def __init__(
+        self,
+        *,
+        verdict: CodexReviewVerdict = CodexReviewVerdict.CONFIRM,
+        status: CodexReviewStatus = CodexReviewStatus.SUCCEEDED,
+        suggested_finding: CodexSuggestedFinding | None = None,
+        error: CodexReviewError | None = None,
+    ) -> None:
+        self.verdict = verdict
+        self.status = status
+        self.suggested_finding = suggested_finding
+        self.error = error
+        self.calls: list[tuple] = []
+
+    def review(self, request, evidence_package: EvidencePackage) -> list[CodexReviewResult]:
+        self.calls.append((request, evidence_package))
+        results: list[CodexReviewResult] = []
+        for target in request.targets:
+            if self.status is CodexReviewStatus.FAILED:
+                results.append(
+                    CodexReviewResult(
+                        review_id=f"fake-codex:{target.target_id}:failed",
+                        request_id=request.request_id,
+                        task_id=request.task_id,
+                        target=target,
+                        status=CodexReviewStatus.FAILED,
+                        error=self.error
+                        or CodexReviewError(
+                            code="FAKE_CODEX_FAILED",
+                            message="Fake PTR Codex audit failed.",
+                        ),
+                    )
+                )
+                continue
+            results.append(
+                CodexReviewResult(
+                    review_id=f"fake-codex:{target.target_id}",
+                    request_id=request.request_id,
+                    task_id=request.task_id,
+                    target=target,
+                    status=CodexReviewStatus.SUCCEEDED,
+                    verdict=self.verdict,
+                    confidence=CodexReviewConfidence.MEDIUM,
+                    reasoning_summary="Fake PTR Codex audit result.",
+                    suggested_finding=self.suggested_finding,
+                    evidence_refs=[ref.ref_id for ref in target.evidence_refs],
+                )
+            )
+        return results
+
+
+class ExplodingPtrCodexAuditService:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def review(self, request, evidence_package: EvidencePackage) -> list[CodexReviewResult]:
+        del request, evidence_package
+        self.calls += 1
+        raise RuntimeError("codex audit service exploded")
+
+
 def test_ptr_compare_usecase_saves_parses_filters_compares_and_completes_task(tmp_path: Path) -> None:
     task_service = TaskService()
     parser = FakePdfParser()
@@ -209,6 +284,7 @@ def test_ptr_compare_usecase_saves_parses_filters_compares_and_completes_task(tm
     assert result.check_results[0].check_id == "PTR_SCOPE"
     assert result.check_results[1].check_id == "PTR_CLAUSE"
     assert result.check_results[1].status == CheckStatus.REVIEW
+    assert result.check_results[1].codex_reviews == []
     assert {file.file_name for file in result.input_files} == {"ptr.pdf", "report.pdf"}
 
 
@@ -537,12 +613,221 @@ def test_ptr_compare_usecase_reports_ambiguous_report_table_without_parameter_co
     assert ptr_table_result.findings[0].metadata["matching_strategy"] == "ambiguous"
 
 
+def test_ptr_compare_codex_audit_disabled_keeps_codex_reviews_empty(tmp_path: Path) -> None:
+    audit_service = FakePtrCodexAuditService()
+
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+        report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])],
+        codex_audit_enabled=False,
+        codex_audit_service=audit_service,
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert _finding_codes(ptr_table_result) == ["PTR_TABLE_VALUE_MISMATCH"]
+    assert ptr_table_result.codex_reviews == []
+    assert audit_service.calls == []
+
+
+def test_ptr_compare_codex_audit_confirm_review_is_attached_to_check_result(tmp_path: Path) -> None:
+    audit_service = FakePtrCodexAuditService(verdict=CodexReviewVerdict.CONFIRM)
+
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+        report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])],
+        codex_audit_enabled=True,
+        codex_audit_service=audit_service,
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert ptr_table_result.codex_reviews[0].verdict is CodexReviewVerdict.CONFIRM
+    assert audit_service.calls
+
+
+def test_ptr_compare_codex_audit_can_use_codex_audit_service_with_fake_runner(tmp_path: Path) -> None:
+    audit_service = CodexAuditService(
+        evidence_writer=EvidencePackageWriter(tmp_path / "runtime" / "codex_audit"),
+        prompt_builder=PromptBuilder(),
+        runner=FakeCodexRunner(),
+    )
+
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+        report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])],
+        codex_audit_enabled=True,
+        codex_audit_service=audit_service,
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert ptr_table_result.codex_reviews[0].status is CodexReviewStatus.SUCCEEDED
+    assert ptr_table_result.codex_reviews[0].verdict is CodexReviewVerdict.CONFIRM
+    input_dirs = list((tmp_path / "runtime" / "codex_audit" / result.task_id).glob("*/input"))
+    assert input_dirs
+    assert (input_dirs[0] / "prompt.md").is_file()
+
+
+def test_ptr_compare_codex_audit_refute_does_not_delete_deterministic_finding(tmp_path: Path) -> None:
+    audit_service = FakePtrCodexAuditService(verdict=CodexReviewVerdict.REFUTE)
+
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+        report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])],
+        codex_audit_enabled=True,
+        codex_audit_service=audit_service,
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert _finding_codes(ptr_table_result) == ["PTR_TABLE_VALUE_MISMATCH"]
+    assert ptr_table_result.codex_reviews[0].verdict is CodexReviewVerdict.REFUTE
+
+
+def test_ptr_compare_codex_audit_add_finding_does_not_append_to_deterministic_findings(tmp_path: Path) -> None:
+    suggested = CodexSuggestedFinding(
+        check_id="PTR_TABLE",
+        severity="warn",
+        code="PTR_TABLE_SEMANTIC_REVIEW",
+        message="Codex 建议新增一个 PTR 表格语义复核项。",
+        evidence_refs=[],
+    )
+    audit_service = FakePtrCodexAuditService(
+        verdict=CodexReviewVerdict.ADD_FINDING,
+        suggested_finding=suggested,
+    )
+
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+        report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])],
+        codex_audit_enabled=True,
+        codex_audit_service=audit_service,
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert _finding_codes(ptr_table_result) == ["PTR_TABLE_VALUE_MISMATCH"]
+    assert ptr_table_result.codex_reviews[0].verdict is CodexReviewVerdict.ADD_FINDING
+    assert ptr_table_result.codex_reviews[0].suggested_finding == suggested
+
+
+def test_ptr_compare_codex_audit_failed_review_does_not_break_usecase(tmp_path: Path) -> None:
+    audit_service = FakePtrCodexAuditService(status=CodexReviewStatus.FAILED)
+
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+        report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])],
+        codex_audit_enabled=True,
+        codex_audit_service=audit_service,
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert ptr_table_result.codex_reviews[0].status is CodexReviewStatus.FAILED
+    assert _finding_codes(ptr_table_result) == ["PTR_TABLE_VALUE_MISMATCH"]
+
+
+def test_ptr_compare_codex_audit_service_exception_is_converted_to_failed_review(tmp_path: Path) -> None:
+    audit_service = ExplodingPtrCodexAuditService()
+
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+        report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])],
+        codex_audit_enabled=True,
+        codex_audit_service=audit_service,
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert ptr_table_result.codex_reviews[0].status is CodexReviewStatus.FAILED
+    assert ptr_table_result.codex_reviews[0].error.code == "CODEX_PTR_AUDIT_SERVICE_FAILED"
+    assert _finding_codes(ptr_table_result) == ["PTR_TABLE_VALUE_MISMATCH"]
+
+
+def test_ptr_compare_codex_audit_parameter_finding_generates_ptr_parameter_target(tmp_path: Path) -> None:
+    audit_service = FakePtrCodexAuditService()
+
+    _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+        report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])],
+        codex_audit_enabled=True,
+        codex_audit_service=audit_service,
+    )
+
+    request, _ = audit_service.calls[0]
+    assert request.targets[0].target_type.value == "ptr_parameter"
+
+
+def test_ptr_compare_codex_audit_clause_finding_generates_ptr_clause_target(tmp_path: Path) -> None:
+    task_service = TaskService()
+    audit_service = FakePtrCodexAuditService()
+    usecase = PTRCompareUseCase(
+        task_service=task_service,
+        file_store=LocalFileStore(tmp_path),
+        pdf_parser=FakePdfParser(),
+        ptr_extractor=FakePTRExtractor(),
+        report_extractor=FakeReportFieldExtractor(),
+        inspection_table_extractor=ClauseMismatchInspectionTableExtractor(),
+        scope_filter=TrackingScopeFilter(),
+        table_reference_compare=TrackingTableCompare(),
+        codex_audit_enabled=True,
+        codex_audit_service=audit_service,
+    )
+
+    status = usecase.run(
+        ptr_file_name="ptr.pdf",
+        ptr_content=b"%PDF-1.4 ptr",
+        report_file_name="report.pdf",
+        report_content=b"%PDF-1.4 report",
+        content_type="application/pdf",
+    )
+
+    result = task_service.get_result(status.task_id)
+    ptr_clause_result = _check_result(result, "PTR_CLAUSE")
+    assert ptr_clause_result.codex_reviews[0].target.target_type.value == "ptr_clause"
+
+
+def test_ptr_compare_codex_audit_no_findings_does_not_call_audit_service(tmp_path: Path) -> None:
+    audit_service = FakePtrCodexAuditService()
+
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+        report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.4")])],
+        codex_audit_enabled=True,
+        codex_audit_service=audit_service,
+    )
+
+    assert _check_result(result, "PTR_TABLE").codex_reviews == []
+    assert audit_service.calls == []
+
+
+class ClauseMismatchInspectionTableExtractor:
+    def extract_table(self, parsed_pdf: ParsedPdf) -> InspectionTable:
+        return InspectionTable(
+            table_id="report-inspection-table",
+            items=[
+                InspectionItem(
+                    sequence_raw="1",
+                    sequence=1,
+                    standard_clause="2.1",
+                    standard_requirement="外观应粗糙",
+                    source_page=4,
+                )
+            ],
+        )
+
+
 def _run_parameter_compare_usecase(
     tmp_path: Path,
     *,
     ptr_table: CanonicalTable | None,
     report_tables: list[CanonicalTable],
     extra_ptr_tables: list[PTRTable] | None = None,
+    codex_audit_enabled: bool = False,
+    codex_audit_service=None,
 ):
     task_service = TaskService()
     report_pdf_tables = [_pdf_table_from_canonical(table) for table in report_tables]
@@ -561,6 +846,8 @@ def _run_parameter_compare_usecase(
         inspection_table_extractor=FakeInspectionTableExtractor(),
         scope_filter=TrackingScopeFilter(),
         clause_text_compare=NoopClauseCompare(),
+        codex_audit_enabled=codex_audit_enabled,
+        codex_audit_service=codex_audit_service,
     )
 
     status = usecase.run(

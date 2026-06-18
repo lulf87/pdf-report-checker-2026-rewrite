@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 
+import { groupCodexReviewsByFinding, normalizeCodexReviews } from "../../../entities/codexReview/types";
 import { severityLabel, severityTone } from "../../../entities/finding/types";
 import type { Finding, FindingSeverity } from "../../../entities/finding/types";
 import { REPORT_RULE_GROUPS, checkResultSeverity } from "../../../entities/report/types";
@@ -11,6 +12,7 @@ import { Badge } from "../../../shared/ui/Badge";
 import { Button } from "../../../shared/ui/Button";
 import { ExportButtonGroup } from "../../../shared/ui/ExportButton";
 import { GlassCard } from "../../../shared/ui/GlassCard";
+import { CodexReviewList, CodexReviewOverview, FindingCodexReviewSummary } from "../../codex-review/components/CodexReviewPanel";
 
 export interface ReportResultsProps {
   task: TaskStatus;
@@ -24,6 +26,10 @@ export function ReportResults({ task, result, onBack, onReupload }: ReportResult
   const [checkIdFilter, setCheckIdFilter] = useState<string>("all");
   const [exportError, setExportError] = useState<string | null>(null);
   const checkIds = useMemo(() => result.check_results.map((item) => item.check_id), [result.check_results]);
+  const codexReviews = useMemo(
+    () => result.check_results.flatMap((item) => normalizeCodexReviews(item.codex_reviews)),
+    [result.check_results],
+  );
   const filteredChecks = result.check_results.filter((check) => {
     const severity = checkResultSeverity(check);
     return (
@@ -50,6 +56,8 @@ export function ReportResults({ task, result, onBack, onReupload }: ReportResult
         <Metric label="失败" value={result.summary.fail_count} tone="danger" />
         <Metric label="复核" value={result.summary.review_count} tone="warn" />
       </div>
+
+      <CodexReviewOverview reviews={codexReviews} />
 
       <GlassCard className="result-card">
         <div className="row-head">
@@ -140,6 +148,8 @@ function CheckRow({ check }: { check: CheckResult }) {
   const [expanded, setExpanded] = useState(false);
   const severity = checkResultSeverity(check);
   const tone = severityTone(severity);
+  const codexReviews = normalizeCodexReviews(check.codex_reviews);
+  const groupedCodexReviews = groupCodexReviewsByFinding(check.findings, codexReviews);
 
   return (
     <article className={`check-row ${tone === "danger" ? "issue-danger" : tone === "warn" ? "issue-warn" : ""}`}>
@@ -151,6 +161,7 @@ function CheckRow({ check }: { check: CheckResult }) {
           <p className="row-summary">{check.summary || checkStatusLabel(check.status)}</p>
         </div>
         <div className="button-row">
+          {codexReviews.length > 0 ? <Badge variant="accent">Codex {codexReviews.length}</Badge> : null}
           <Badge pulse={severity !== "info"} variant={tone}>
             {severityLabel(severity)}
           </Badge>
@@ -162,17 +173,24 @@ function CheckRow({ check }: { check: CheckResult }) {
       {expanded ? (
         <div className="details">
           {check.findings.length > 0 ? (
-            <FindingList findings={check.findings} />
+            <FindingList findings={check.findings} reviewsByFindingId={groupedCodexReviews.byFindingId} />
           ) : (
             <p className="muted">后端未返回 Finding。</p>
           )}
+          <CodexReviewList reviews={groupedCodexReviews.unassociated} title="其他 Codex 审核意见" />
         </div>
       ) : null}
     </article>
   );
 }
 
-function FindingList({ findings }: { findings: Finding[] }) {
+function FindingList({
+  findings,
+  reviewsByFindingId,
+}: {
+  findings: Finding[];
+  reviewsByFindingId: Record<string, ReturnType<typeof normalizeCodexReviews>>;
+}) {
   return (
     <div className="panel-stack">
       {findings.map((finding) => (
@@ -181,6 +199,7 @@ function FindingList({ findings }: { findings: Finding[] }) {
           {finding.location?.page_number ? `（第 ${finding.location.page_number} 页）` : ""}
           <FindingValue label="期望" value={finding.expected} />
           <FindingValue label="实际" value={finding.actual} />
+          <FindingCodexReviewSummary reviews={reviewsByFindingId[finding.id]} />
         </div>
       ))}
     </div>

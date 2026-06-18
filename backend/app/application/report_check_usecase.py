@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import tempfile
 from pathlib import Path
 from typing import Protocol
 
+from app.application.report_codex_evidence_builder import ReportCodexEvidenceBuilder
 from app.application.task_service import TaskService
+from app.domain.codex_review import CodexReviewError, CodexReviewRequest, CodexReviewResult, CodexReviewStatus
+from app.domain.evidence_package import EvidencePackage
 from app.domain.pdf import ParsedPdf
 from app.domain.report import InspectionTable, ReportDocument
+from app.domain.result import CheckResult
 from app.domain.task import TaskStatus, TaskType
 from app.infrastructure.pdf.pymupdf_parser import PyMuPDFParser
 from app.infrastructure.report.field_extractor import FieldExtractor
@@ -49,6 +54,15 @@ class ReportPhotoLabelExtractor(Protocol):
         ...
 
 
+class CodexAuditServiceProtocol(Protocol):
+    def review(
+        self,
+        request: CodexReviewRequest,
+        evidence_package: EvidencePackage,
+    ) -> list[CodexReviewResult]:
+        ...
+
+
 class ReportCheckUseCase:
     """Application orchestration for report self-check tasks."""
 
@@ -63,6 +77,9 @@ class ReportCheckUseCase:
         sample_description_extractor: ReportSampleDescriptionExtractor | None = None,
         photo_label_extractor: ReportPhotoLabelExtractor | None = None,
         rule_runner: ReportRuleRunner | None = None,
+        codex_audit_service: CodexAuditServiceProtocol | None = None,
+        codex_audit_enabled: bool = False,
+        report_codex_evidence_builder: ReportCodexEvidenceBuilder | None = None,
     ) -> None:
         self.task_service = task_service
         self.file_store = file_store or LocalFileStore(Path(tempfile.gettempdir()) / "report-checker-runtime")
@@ -72,6 +89,9 @@ class ReportCheckUseCase:
         self.sample_description_extractor = sample_description_extractor or SampleDescriptionExtractor()
         self.photo_label_extractor = photo_label_extractor or PhotoLabelExtractor()
         self.rule_runner = rule_runner or ReportRuleRunner()
+        self.codex_audit_service = codex_audit_service
+        self.codex_audit_enabled = codex_audit_enabled
+        self.report_codex_evidence_builder = report_codex_evidence_builder or ReportCodexEvidenceBuilder()
 
     def run(
         self,
@@ -98,6 +118,12 @@ class ReportCheckUseCase:
             self.task_service.update_progress(task.task_id, progress=70, current_step="running report rules")
 
             run_result = self.rule_runner.run(document, CheckContext(task_id=task.task_id))
+            self._attach_codex_reviews(
+                task_id=task.task_id,
+                document=document,
+                parsed_pdf=parsed_pdf,
+                check_results=run_result.results,
+            )
             return self.task_service.complete_task(
                 task.task_id,
                 run_result.results,
@@ -122,6 +148,62 @@ class ReportCheckUseCase:
         document.labels = list(self.photo_label_extractor.extract_labels(parsed_pdf))
         document.diagnostics = list(document.diagnostics)
         return document
+
+    def _attach_codex_reviews(
+        self,
+        *,
+        task_id: str,
+        document: ReportDocument,
+        parsed_pdf: ParsedPdf,
+        check_results: list[CheckResult],
+    ) -> None:
+        if not self.codex_audit_enabled or self.codex_audit_service is None:
+            return
+
+        for result in check_results:
+            bundle = self.report_codex_evidence_builder.build(
+                task_id=task_id,
+                task_type=TaskType.REPORT_CHECK.value,
+                result=result,
+                report=document,
+                parsed_pdf=parsed_pdf,
+            )
+            if bundle is None:
+                continue
+
+            try:
+                reviews = self.codex_audit_service.review(bundle.request, bundle.evidence_package)
+            except Exception as exc:
+                reviews = _failed_codex_reviews_for_request(bundle.request, exc)
+
+            result.codex_reviews.extend(reviews)
+
+
+def _failed_codex_reviews_for_request(
+    request: CodexReviewRequest,
+    exc: Exception,
+) -> list[CodexReviewResult]:
+    now = datetime.now(timezone.utc)
+    error = CodexReviewError(
+        code="CODEX_REPORT_AUDIT_SERVICE_FAILED",
+        message="Report Codex audit service failed inside ReportCheckUseCase.",
+        detail=str(exc),
+        retryable=False,
+    )
+    return [
+        CodexReviewResult(
+            review_id=f"report-codex-audit:{request.request_id}:{target.target_id}:failed",
+            request_id=request.request_id,
+            task_id=request.task_id,
+            target=target,
+            status=CodexReviewStatus.FAILED,
+            error=error,
+            created_at=now,
+            completed_at=now,
+            metadata={"source": "report_check_usecase"},
+        )
+        for target in request.targets
+    ]
 
 
 __all__ = ["ReportCheckUseCase"]

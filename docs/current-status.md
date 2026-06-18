@@ -335,14 +335,14 @@ T-CODEX 状态：
 | --- | --- | --- |
 | T-CODEX-00 | 已完成 | 架构策略文档、AGENTS 修正、任务清单和当前状态已更新；本任务只做文档纠偏。 |
 | T-CODEX-01 | 已完成 | `backend/app/domain/codex_review.py` 已新增 CodexReview 领域模型；`CheckResult` 已向后兼容新增 `codex_reviews`；domain 测试和后端全量测试通过。 |
-| T-CODEX-02 | 未开始 | 尚未新增 `EvidencePackage` model 和 writer。 |
-| T-CODEX-03 | 未开始 | 尚未新增 `FakeCodexRunner` / `CodexCliRunner` 接口。 |
-| T-CODEX-04 | 未开始 | 尚未新增 `PromptBuilder` 和 JSON schema。 |
-| T-CODEX-05 | 未开始 | 尚未新增 `OutputParser` 和失败 fallback。 |
-| T-CODEX-06 | 未开始 | `PTRCompareUseCase` 尚未接入 `CodexAuditService`。 |
-| T-CODEX-07 | 未开始 | `ReportCheckUseCase` 尚未接入 `CodexAuditService`。 |
-| T-CODEX-08 | 未开始 | 前端尚未展示 Codex review。 |
-| T-CODEX-09 | 未开始 | 尚未执行真实 Codex CLI 手动验收。 |
+| T-CODEX-02 | 已完成 | `backend/app/domain/evidence_package.py` 和 `backend/app/infrastructure/audit/evidence_package_writer.py` 已新增；domain/writer 测试和后端全量测试通过。 |
+| T-CODEX-03 | 已完成 | `backend/app/infrastructure/codex/` 已新增 runner protocol、fake runner 和 Codex CLI skeleton；codex infrastructure 测试、相关 domain/audit/codex 测试和后端全量测试通过。 |
+| T-CODEX-04 | 已完成 | `backend/app/infrastructure/codex/prompt_builder.py`、output schema 和 schema helper 已新增；prompt/schema contract 测试、codex infrastructure 测试、相关 domain/audit/codex 测试和后端全量测试通过。 |
+| T-CODEX-05 | 已完成 | `backend/app/infrastructure/codex/output_parser.py` 已新增；`CodexCliRunner` 成功输出路径已接入 parser；output parser、codex infrastructure、相关 domain/audit/codex 测试和后端全量测试通过。 |
+| T-CODEX-06 | 已完成 | `PTRCompareUseCase` 已支持可选 `CodexAuditService` 接入；`PtrCodexEvidenceBuilder` 已为 PTR clause/table/parameter/scope finding 构建受控 evidence package 和 review request；默认关闭，不调用真实 Codex。 |
+| T-CODEX-07 | 已完成 | `ReportCheckUseCase` 已支持可选 `CodexAuditService` 接入；`ReportCodexEvidenceBuilder` 已为 C02/C03/C04/C05/C06/C07 deterministic findings 构建受控 evidence package 和 review request；默认关闭，不调用真实 Codex。 |
+| T-CODEX-08 | 已完成 | 前端类型已支持 `codex_reviews`；PTR 和报告自检结果页已展示 Codex review 总览、finding 关联意见和未关联审核意见；前端只展示后端结果，不重新计算业务规则。 |
+| T-CODEX-09 | 部分完成 | T-CODEX-09A 已建立 gated/manual harness、默认 skip 的 integration pytest、默认拒绝运行的脚本和手动验收文档；真实 Codex CLI 尚未执行，T-CODEX-09B 未完成。 |
 
 验证命令：
 
@@ -379,8 +379,394 @@ T-CODEX 状态：
 | `cd backend && python -m pytest tests/domain -v` | 通过，`44 passed` |
 | `cd backend && python -m pytest tests/ -v` | 通过，`339 passed` |
 
+## EvidencePackage model 和 writer 完成记录
+
+完成日期：2026-06-16
+
+本次实现 T-CODEX-02，只新增 evidence package 领域模型、本地写入器和测试，不实现 CodexCliRunner、FakeCodexRunner、prompt builder、output parser，不接入 PTRCompareUseCase 或 ReportCheckUseCase，不调用真实 Codex，不修改 router、frontend 或旧项目目录。
+
+本次实现：
+
+- 新增 `backend/app/domain/evidence_package.py`，定义 `EvidencePackageKind`、`EvidenceSourceType`、`EvidenceItem`、`EvidenceTarget`、`EvidencePackage` 和 `EvidencePackageManifest`。
+- `EvidencePackage` 要求至少包含一个 target 和一个 evidence item，校验 item `ref_id`、target `target_id` 唯一，并拒绝 target 引用不存在的 evidence ref。
+- `EvidenceItem.file_path` 仅允许 evidence workspace 内的相对路径，拒绝绝对路径和 `..` 路径穿越。
+- 新增轻量 helper：`evidence_item_from_finding`、`evidence_item_from_canonical_table`、`evidence_item_from_text`、`evidence_item_from_structured`；这些 helper 只做序列化包装，不做业务判断。
+- 新增 `backend/app/infrastructure/audit/evidence_package_writer.py`，按 `audit_root/{task_id}/{package_id}/input/` 写入 `evidence_package.json` 和 `manifest.json`。
+- writer 使用安全 `task_id` / `package_id` 校验，并保证所有写入和读取路径都位于 audit root 内。
+- 长文本 evidence item 会写入 `items/{ref_id}.txt`，并在 package JSON 中留下相对 `file_path`；manifest 的 `item_file_paths` 也保存相对路径。
+- `.gitignore` 已在早期任务中忽略 `runtime/` 和 `**/runtime/`，本次无需新增忽略规则。
+
+新增测试：
+
+- `backend/tests/domain/test_evidence_package_models.py` 覆盖 EvidenceItem / EvidencePackage 序列化、Finding 结构化证据、CanonicalTable 结构化证据、非法枚举、空 package、缺失 evidence ref 和 `file_path` 路径安全。
+- `backend/tests/infrastructure/audit/test_evidence_package_writer.py` 使用 `tmp_path` 覆盖 audit workspace 创建、package/manifest 写入、manifest/package JSON 读回、相对 item 文件路径、自动创建目录、路径穿越拒绝、长文本单独文件和不调用 subprocess/Codex CLI。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/domain/test_evidence_package_models.py tests/infrastructure/audit/test_evidence_package_writer.py -v` | 先红灯失败于 `ModuleNotFoundError: No module named 'app.domain.evidence_package'`；实现后通过，`17 passed` |
+| `cd backend && python -m pytest tests/domain tests/infrastructure/audit -v` | 通过，`61 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`356 passed` |
+| `git diff --check` | 通过，详见本次 T-CODEX-02 验证记录。 |
+
+## FakeCodexRunner / CodexCliRunner 接口完成记录
+
+完成日期：2026-06-17
+
+本次实现 T-CODEX-03，只新增 runner contract、FakeCodexRunner、CodexCliRunner skeleton 和测试，不实现 PromptBuilder、完整 OutputParser，不接入 PTRCompareUseCase 或 ReportCheckUseCase，不调用真实 Codex，不修改 router、frontend 或旧项目目录。
+
+本次实现：
+
+- 新增 `backend/app/infrastructure/codex/runner.py`，定义 `CodexRunner` 协议和轻量异常 `CodexRunnerError`、`CodexRunnerTimeout`、`CodexRunnerConfigurationError`。
+- 新增 `backend/app/infrastructure/codex/fake_codex_runner.py`，支持默认 confirm、注入固定 results、按 `target_id` 生成 refute/uncertain/add_finding、模拟 failed result、模拟 timeout 或 runner exception，并校验注入结果与 request targets 对应。
+- 新增 `backend/app/infrastructure/codex/codex_cli_runner.py`，定义 `CodexCliRunnerConfig` 和 `CodexCliRunner`。
+- `CodexCliRunnerConfig` 默认 `enabled=False`、`allow_real_execution=False`、`sandbox="read-only"`、`ephemeral=True`，拒绝 `danger-full-access`、`workspace-write` 或通过 `extra_args` 覆盖 sandbox。
+- `CodexCliRunner` 只接受受控 workspace；拒绝不存在的 workspace、新项目根目录、旧项目目录、后端源码/测试、前端、docs 和 `.git` 等源码上下文。
+- CLI skeleton 组装 `codex exec --cd {workspace} --sandbox read-only --ephemeral ... -o {output}` 命令；测试中全部 monkeypatch `subprocess.run`，不真实调用 Codex。
+- 失败路径会返回 `CodexReviewStatus.failed`，覆盖 workspace missing/forbidden、command not found、timeout、non-zero exit、malformed output；禁用或未允许真实执行时返回 `CodexReviewStatus.skipped`。
+- 本阶段只做最小 JSON loading skeleton，接受 list 或 `{results: [...]}` 并用 `CodexReviewResult` 校验；完整 output schema parser 和更细 fallback 留给 T-CODEX-05。
+
+新增测试：
+
+- `backend/tests/infrastructure/codex/test_fake_codex_runner.py` 覆盖默认 confirm、注入 refute/uncertain/add_finding、按 target 自动生成 verdict、add_finding suggested finding、failed result 和 target mismatch。
+- `backend/tests/infrastructure/codex/test_codex_cli_runner.py` 覆盖 disabled/dry-run 不调用 subprocess、命令构造、workspace missing、项目根目录拒绝、旧项目目录拒绝、timeout、non-zero exit、command not found、malformed output 和 sandbox 安全校验。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/infrastructure/codex -v` | 先红灯失败于 `ModuleNotFoundError: No module named 'app.infrastructure.codex'`；实现后通过，`19 passed` |
+| `cd backend && python -m pytest tests/domain tests/infrastructure/audit tests/infrastructure/codex -v` | 通过，`80 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`375 passed` |
+| `git diff --check` | 通过，详见本次 T-CODEX-03 验证记录。 |
+
+## PromptBuilder 和 JSON schema 完成记录
+
+完成日期：2026-06-17
+
+本次实现 T-CODEX-04，只新增 PromptBuilder、JSON output schema、schema helper 和 contract tests，不实现 OutputParser，不接入 PTRCompareUseCase 或 ReportCheckUseCase，不调用真实 Codex，不修改 router、frontend 或旧项目目录，不继续扩展 PTR numeric semantic / diff_builder。
+
+本次实现：
+
+- 新增 `backend/app/infrastructure/codex/prompt_builder.py`，定义 `PromptBuilder.build_review_prompt(request, evidence_package, max_item_text_chars=4000, max_total_chars=24000)`。
+- Prompt 明确 Codex CLI 是产品运行时受控审核员，只能基于提供的 evidence refs 审核，不能读取项目源码、旧项目目录、新项目目录或未列出文件，不能修改文件，只能输出符合 JSON schema 的 JSON。
+- Prompt 渲染 package summary、targets 和 evidence items；只包含 `CodexReviewRequest.targets[*].evidence_refs` 引用到的 evidence item，不默认泄露未引用证据。
+- PromptBuilder 校验 request 与 evidence package 的 `task_id` / `task_type` 一致，拒绝 target 引用不存在的 evidence ref。
+- PromptBuilder 对 evidence text、structured、metadata 中的本地绝对路径、`/Users/`、`file://`、`../`、源码目录片段做脱敏；对 `EvidenceItem.file_path` 只允许相对 evidence workspace 路径，发现绝对或路径穿越时抛出 `CodexRunnerConfigurationError`。
+- PromptBuilder 支持 item 级文本截断和 total prompt 级截断，并保留 `[truncated]` 标记。
+- 新增 `backend/app/infrastructure/codex/schemas/codex_review_output.schema.json`，定义 Codex 正常输出的最小 JSON schema：顶层只允许 `schema_version` 和 `reviews`，review status 仅允许 `succeeded`，verdict 允许 `confirm`、`refute`、`uncertain`、`add_finding`，confidence 允许 `high`、`medium`、`low`。
+- Schema 要求每个 review 包含 `target_id`、`status`、`verdict`、`confidence`、`reasoning_summary`、`evidence_refs`、`suggested_severity`、`suggested_finding`、`metadata`；`add_finding` 已通过 JSON Schema `if/then` 要求 `suggested_finding` 非空。
+- 新增 `backend/app/infrastructure/codex/schemas/__init__.py`，提供 `get_codex_review_output_schema_path()` 和 `load_codex_review_output_schema()`。
+- `backend/pyproject.toml` 的 dev 依赖新增 `jsonschema>=4.0.0`，用于 schema contract tests。
+
+新增测试：
+
+- `backend/tests/infrastructure/codex/test_prompt_builder.py` 覆盖 package/target/evidence 渲染、安全边界、JSON-only 输出要求、只包含 target 引用 evidence、旧/新项目路径脱敏、绝对 `file_path` 拒绝、长文本/总 prompt 截断、unknown evidence ref 失败、`add_finding` 指令、PTR table/PTR clause/report_rule target 渲染，以及不调用 subprocess/真实 Codex。
+- `backend/tests/infrastructure/codex/test_codex_review_output_schema.py` 覆盖 schema 文件存在和合法 JSON、顶层 required、verdict/confidence/status enum、顶层 additionalProperties=false、合法示例通过、缺少 reviews 失败、非法 verdict 失败、`add_finding` 缺 suggested_finding 失败、schema 不包含本地绝对路径。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/infrastructure/codex/test_prompt_builder.py tests/infrastructure/codex/test_codex_review_output_schema.py -v` | 先红灯失败于 `ModuleNotFoundError: No module named 'app.infrastructure.codex.schemas'`；实现后通过，`22 passed` |
+| `cd backend && python -m pytest tests/infrastructure/codex -v` | 通过，`41 passed` |
+| `cd backend && python -m pytest tests/domain tests/infrastructure/audit tests/infrastructure/codex -v` | 通过，`102 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`397 passed` |
+
+## OutputParser 和失败 fallback 完成记录
+
+完成日期：2026-06-17
+
+本次实现 T-CODEX-05，只新增 OutputParser、输出级 fallback、CodexCliRunner 最小 parser 接入和测试，不接入 PTRCompareUseCase 或 ReportCheckUseCase，不调用真实 Codex，不修改 router、frontend 或旧项目目录，不继续扩展 PTR numeric semantic / diff_builder。
+
+本次实现：
+
+- 新增 `backend/app/infrastructure/codex/output_parser.py`，定义 `CodexReviewOutputParser`。
+- `parse_output(...)` 支持从 Codex CLI 最终 JSON 字符串解析输出，流程为 JSON parse、`codex_review_output.schema.json` schema validation、项目自身 contract validation、成功结果转换。
+- `parse_output_file(...)` 支持读取 Codex 输出文件；文件不存在或读取失败会降级为 failed review。
+- 新增 `build_failed_results_for_request(...)`，统一为 request 中每个 target 构造 `CodexReviewStatus.failed` 的 `CodexReviewResult`，保留 `CodexReviewError.code/message/detail/retryable` 和 `raw_output_path`。
+- 成功转换时，`target` 始终从 `CodexReviewRequest.targets` 中取完整对象，不信任 Codex 输出构造 target，避免伪造 target。
+- 成功结果稳定生成 `review_id=codex-review-{request_id}-{target_id}`，写入 request/task/target/status/verdict/confidence/reasoning_summary/suggested_severity/suggested_finding/evidence_refs/raw_output_path/metadata。
+- Parser contract validation 覆盖：reviews 必须覆盖所有 request targets、不得出现 unknown target、不得重复 target、review evidence refs 必须存在于 `EvidencePackage.items` 且属于该 target 允许 refs、`suggested_finding.evidence_refs` 必须存在于 evidence package。
+- `add_finding` 缺 `suggested_finding` 已在 JSON Schema 层拒绝；parser 会把该 schema 失败映射为更具体的 `CODEX_OUTPUT_ADD_FINDING_MISSING_SUGGESTION`。
+- `CodexCliRunner` 成功执行并写出 output file 后，改为调用 `CodexReviewOutputParser.parse_output_file(...)`；timeout、非零退出、command not found、workspace forbidden 等 runner 级错误仍由 runner 自己转 failed/skipped result。
+- Runner 传给 result 的 `raw_output_path` 使用 `codex_review_output.json` 相对引用，不泄露本地临时 workspace 绝对路径。
+
+失败 fallback code：
+
+- `CODEX_OUTPUT_EMPTY`
+- `CODEX_OUTPUT_INVALID_JSON`
+- `CODEX_OUTPUT_SCHEMA_INVALID`
+- `CODEX_OUTPUT_UNKNOWN_TARGET`
+- `CODEX_OUTPUT_MISSING_TARGET`
+- `CODEX_OUTPUT_DUPLICATE_TARGET`
+- `CODEX_OUTPUT_UNKNOWN_EVIDENCE_REF`
+- `CODEX_OUTPUT_DISALLOWED_EVIDENCE_REF`
+- `CODEX_OUTPUT_ADD_FINDING_MISSING_SUGGESTION`
+- `CODEX_OUTPUT_FILE_NOT_FOUND`
+- `CODEX_OUTPUT_FILE_READ_ERROR`
+
+新增/更新测试：
+
+- 新增 `backend/tests/infrastructure/codex/test_output_parser.py`，覆盖 confirm/refute/uncertain/add_finding、多 target 全覆盖、raw_output_path、空输出、非 JSON、缺 reviews、schema invalid、unknown target、missing target、duplicate target、unknown evidence ref、disallowed evidence ref、add_finding 缺 suggested_finding、suggested_finding unknown evidence ref、output file missing、output file read error 和 failed helper。
+- 更新 `backend/tests/infrastructure/codex/test_codex_cli_runner.py`，让 subprocess 成功输出使用 T-CODEX-04 schema 的 `{schema_version, reviews}` 形态，并覆盖 malformed output、schema invalid output 均由 parser 处理为 failed result。
+- `FakeCodexRunner` 未修改，继续作为 usecase/unit test 的 deterministic fake runner。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/infrastructure/codex/test_output_parser.py tests/infrastructure/codex/test_codex_cli_runner.py -v` | 先红灯失败于 `ModuleNotFoundError: No module named 'app.infrastructure.codex.output_parser'`；实现后通过，`32 passed` |
+| `cd backend && python -m pytest tests/infrastructure/codex -v` | 通过，`62 passed` |
+| `cd backend && python -m pytest tests/domain tests/infrastructure/audit tests/infrastructure/codex -v` | 通过，`123 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`418 passed` |
+
+## CodexAuditService 核心服务第一阶段完成记录
+
+完成日期：2026-06-17
+
+本次实现 T-CODEX-06 的第一阶段，只新增 `CodexAuditService` 核心编排服务和应用层测试，不接入 `PTRCompareUseCase` 或 `ReportCheckUseCase`，不调用真实 Codex，不修改 router、frontend 或旧项目目录，不继续扩展 PTR numeric semantic / diff_builder。
+
+本次实现：
+
+- 新增 `backend/app/application/codex_audit_service.py`，定义 `CodexAuditService.review(request, evidence_package) -> list[CodexReviewResult]`。
+- 服务先校验 `CodexReviewRequest.task_id/task_type` 与 `EvidencePackage.task_id/task_type` 一致；不一致时返回 failed review，不调用 writer、prompt builder 或 runner。
+- 通过 `EvidencePackageWriter.write_package(...)` 将 evidence package 写入受控 workspace。
+- 通过 `PromptBuilder.build_review_prompt(...)` 构建受控 auditor prompt，并写入 workspace 内的 `prompt.md`。
+- 将 `codex_review_output.schema.json` 复制到 workspace 内，再把 workspace 内 schema 路径传给 runner，避免把项目源码路径暴露给运行时 Codex。
+- 调用注入的 `CodexRunner.run_review(...)`；测试使用 `FakeCodexRunner` 和轻量 test runner，不调用真实 Codex CLI 或 subprocess。
+- 捕获 writer、prompt/schema 准备和 runner 异常，统一返回 `CodexReviewStatus.failed`，不让异常冒泡到主核对流程。
+- 校验 runner 结果必须覆盖 request targets 且 target 不重复；空结果或 target 不完整会整体降级为 failed review。
+- 不创建业务 `Finding`，不判断 C01-C11 或 PTR 对错，不覆盖原始 deterministic finding。
+
+workspace 写入结构：
+
+```text
+runtime/codex_audit/{task_id}/{package_id}/input/
+  evidence_package.json
+  manifest.json
+  prompt.md
+  codex_review_output.schema.json
+```
+
+失败 fallback code：
+
+- `CODEX_AUDIT_REQUEST_PACKAGE_MISMATCH`
+- `CODEX_AUDIT_PACKAGE_WRITE_FAILED`
+- `CODEX_AUDIT_PROMPT_BUILD_FAILED`
+- `CODEX_AUDIT_SCHEMA_PREPARE_FAILED`
+- `CODEX_AUDIT_RUNNER_FAILED`
+- `CODEX_AUDIT_RUNNER_EMPTY_RESULT`
+- `CODEX_AUDIT_RESULT_TARGET_MISMATCH`
+
+新增测试：
+
+- 新增 `backend/tests/application/test_codex_audit_service.py`，覆盖正常 confirm 流程、多 target、refute/uncertain/add_finding、task mismatch 不调用 runner、PromptBuilder 失败、EvidencePackageWriter 失败、runner 异常、runner 空结果、runner target 不完整，以及 prompt 不包含旧项目或新项目绝对路径。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/application/test_codex_audit_service.py -v` | 先红灯失败于 `ModuleNotFoundError: No module named 'app.application.codex_audit_service'`；实现后通过，`10 passed` |
+| `cd backend && python -m pytest tests/application/test_codex_audit_service.py tests/domain tests/infrastructure/audit tests/infrastructure/codex -v` | 通过，`133 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`428 passed` |
+
+## PTRCompareUseCase Codex audit 接入完成记录
+
+完成日期：2026-06-17
+
+本次实现 T-CODEX-06 第二阶段，在 `PTRCompareUseCase` 中通过 `CodexAuditService` 接入 PTR clause/table/parameter/scope review。实现仍然默认关闭 Codex audit，测试使用 fake audit service 或 `CodexAuditService + FakeCodexRunner`，不调用真实 Codex CLI，不修改 router、frontend 或旧项目目录，不重写 PTRExtractor、parameter_compare 或 table_reference_compare，不继续扩展 PTR numeric semantic / diff_builder。
+
+本次实现：
+
+- 新增 `backend/app/application/ptr_codex_evidence_builder.py`，定义 `PtrCodexEvidenceBuilder` 和 `PtrCodexAuditBundle`。
+- `PtrCodexEvidenceBuilder` 从 deterministic `CheckResult.findings` 构建 `EvidencePackage` 和 `CodexReviewRequest`，每个可审核 PTR finding 对应一个 review target。
+- target 映射覆盖：
+  - `PTR_CLAUSE_TEXT_MISMATCH` / `PTR_CLAUSE_MISSING` -> `ptr_clause`。
+  - `PTR_TABLE_MISSING` / `PTR_TABLE_CANDIDATE_AMBIGUOUS` -> `ptr_table`。
+  - `PTR_TABLE_VALUE_MISMATCH` / `PTR_TABLE_UNIT_MISMATCH` / `PTR_TABLE_PARAM_MISSING` / `PTR_TABLE_CONDITION_MISMATCH` / `PTR_TABLE_TOLERANCE_MISMATCH` / `PTR_TABLE_SEGMENT_AMBIGUOUS` -> `ptr_parameter`。
+  - `PTR_SCOPE` finding -> `ptr_clause` target；当前 scope filter 仍不主动生成 finding，因此 pass-only scope 不会强行调用 Codex audit。
+- evidence package 最小包含 finding evidence、rule context、相关 PTR clause、PTR canonical table summary、report canonical table summary；表格证据只保留 compact parameter record summary，避免塞入整表无限结构或整份 PDF 文本。
+- evidence package 和 request 会脱敏旧项目、新项目和 `/Users/` 绝对路径。
+- `PTRCompareUseCase` 新增可选依赖：
+  - `codex_audit_service: CodexAuditServiceProtocol | None = None`
+  - `codex_audit_enabled: bool = False`
+  - `ptr_codex_evidence_builder: PtrCodexEvidenceBuilder | None = None`
+- 默认关闭 Codex audit；API 默认构造 `PTRCompareUseCase(task_service=...)`，不会创建真实 `CodexCliRunner`，不会读取环境变量启动真实 Codex。
+- Codex audit 启用且存在可审核 finding 时，usecase 调用 builder 和 `CodexAuditService.review(...)`，并按 `review.target.check_id` 把 `CodexReviewResult` 附加到对应 `CheckResult.codex_reviews`。
+- Codex review 不删除、不覆盖 deterministic `Finding`；`add_finding` 只保留在 `CodexReviewResult.suggested_finding`，不会自动追加为 deterministic finding。
+- `CodexAuditService` 返回 failed review 或抛异常时，PTR usecase 不崩溃；service 抛异常会转换为 `CODEX_PTR_AUDIT_SERVICE_FAILED` 的 failed review。
+- 没有 findings 或没有可审核 findings 时，不调用 audit service，`codex_reviews` 保持默认空列表。
+
+新增/更新测试：
+
+- 新增 `backend/tests/application/test_ptr_codex_evidence_builder.py`，覆盖 clause target、parameter target、scope finding target、finding evidence、PTR clause/table/report table evidence、target refs 完整性、旧/新项目路径脱敏、无 finding 返回 `None`、重复 evidence ref 去重、大表格 compact summary。
+- 更新 `backend/tests/application/test_ptr_compare_usecase.py`，覆盖默认关闭时 `codex_reviews=[]`、fake service confirm/refute/add_finding/failed、`CodexAuditService + FakeCodexRunner` 正常链路、service exception fallback、parameter finding 生成 `ptr_parameter` target、clause finding 生成 `ptr_clause` target、无 finding 不调用 audit service。
+- `backend/tests/api/test_api_ptr_compare_e2e.py` 未修改；默认 API 不启用真实 Codex，现有 API e2e 和 compact golden 继续通过。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/application/test_ptr_codex_evidence_builder.py tests/application/test_ptr_compare_usecase.py tests/application/test_codex_audit_service.py -v` | 先红灯失败于 `ModuleNotFoundError: No module named 'app.application.ptr_codex_evidence_builder'`；实现后通过，`46 passed` |
+| `cd backend && python -m pytest tests/api/test_api_ptr_compare_e2e.py tests/infrastructure/codex tests/infrastructure/audit tests/domain -v` | 通过，`124 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`447 passed` |
+| `git diff --check` | 通过 |
+
+任务状态：
+
+- `docs/tasks.md` 已将 T-CODEX-06 标记为 `[x]`。
+- T-CODEX-07 当时保持未开始；现已完成第一阶段 `ReportCodexEvidenceBuilder`，但 `ReportCheckUseCase` 尚未接入，任务整体仍未完成。
+
+## ReportCodexEvidenceBuilder 第一阶段完成记录
+
+完成日期：2026-06-17
+
+本次实现 T-CODEX-07 第一阶段，只新增 `ReportCodexEvidenceBuilder` 和应用层测试，不接入 `ReportCheckUseCase`，不调用 `CodexAuditService`，不调用真实 Codex CLI，不修改 router、frontend 或旧项目目录，不重写 C01-C11 规则，不改变 deterministic findings，也不把 Codex review 自动写入 `CheckResult`。
+
+本次实现：
+
+- 新增 `backend/app/application/report_codex_evidence_builder.py`，定义 `ReportCodexEvidenceBuilder` 和 `ReportCodexAuditBundle`。
+- `ReportCodexEvidenceBuilder.build(...)` 从单个报告自检 `CheckResult.findings` 中筛选可审核 finding，并构建 `EvidencePackage` 与 `CodexReviewRequest`。
+- 支持的 target 映射：
+  - `C02` -> `label_ocr`
+  - `C03` -> `label_ocr`
+  - `C04` -> `sample_description`
+  - `C05` -> `photo_caption`
+  - `C06` -> `label_ocr`
+  - `C07` -> `inspection_item`
+- 默认跳过 `C01`、`C08`、`C09`、`C10`、`C11`，没有可审核 findings 时返回 `None`。
+- 每个 target 至少包含 finding evidence 与 rule context evidence；在 `ReportDocument` / `ParsedPdf` 可用时补充第三页字段、标签 OCR、样品描述部件、照片 caption、中文标签 caption、检验项目行和相关页文本片段。
+- evidence package 使用 `report_rule_review`，只包含与 finding 相关的最小证据，不读取旧项目目录，不读取项目源码，不塞入整份 PDF 文本。
+- evidence package 和 request 会脱敏旧项目、新项目和 `/Users/` 绝对路径；长文本和大结构中的字符串按 `max_text_chars` 截断并标记 `[truncated]`。
+- `request.targets` 与 `package.targets` 一一对齐，所有 target evidence refs 均指向已存在的 `EvidenceItem.ref_id`。
+
+新增测试：
+
+- 新增 `backend/tests/application/test_report_codex_evidence_builder.py`，覆盖 C02-C07 target type 映射、C01/C08/C09/C10/C11 跳过、无可审核 finding 返回 `None`、target refs 完整性、finding/rule context evidence、C02/C03 字段和 OCR 上下文、C04 样品描述和标签上下文、C05/C06 部件和 caption 上下文、C07 检验结果/实际单项结论/期望单项结论、路径脱敏、多 finding ref_id 去重、长文本截断、request/package task 对齐。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/application/test_report_codex_evidence_builder.py -v` | 先红灯失败于 `ModuleNotFoundError: No module named 'app.application.report_codex_evidence_builder'`；实现后通过，`20 passed` |
+| `cd backend && python -m pytest tests/application/test_report_codex_evidence_builder.py tests/domain tests/infrastructure/audit tests/infrastructure/codex -v` | 通过，`143 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`467 passed` |
+| `git diff --check` | 通过 |
+
+任务状态：
+
+- 第一阶段时 `docs/tasks.md` 未将 T-CODEX-07 标记为 `[x]`；第二阶段接入完成后已标记。
+- T-CODEX-08 当时保持未开始；现已在前端展示任务中完成。
+
+## ReportCheckUseCase Codex audit 接入完成记录
+
+完成日期：2026-06-17
+
+本次实现 T-CODEX-07 第二阶段，在 `ReportCheckUseCase` 中通过可选依赖接入 `CodexAuditService`。实现默认关闭 Codex audit，测试使用 fake audit service，不调用真实 Codex CLI，不修改 router、frontend 或旧项目目录，不重写 C01-C11 规则，不改变 deterministic findings，不把 `add_finding` 自动追加为 deterministic finding。
+
+本次实现：
+
+- `ReportCheckUseCase` 新增可选依赖：
+  - `codex_audit_service: CodexAuditServiceProtocol | None = None`
+  - `codex_audit_enabled: bool = False`
+  - `report_codex_evidence_builder: ReportCodexEvidenceBuilder | None = None`
+- 默认 `codex_audit_enabled=False`，API 默认构造 `ReportCheckUseCase(task_service=...)`，不会创建真实 `CodexCliRunner`，不会读取环境变量启动真实 Codex。
+- deterministic C01-C11 流程保持不变：PDF 解析、ReportDocument 构建、规则 runner 运行、`CheckResult` 聚合路径不变。
+- 规则结果生成后，启用 Codex audit 且存在可审核 finding 时，usecase 调用 `ReportCodexEvidenceBuilder.build(...)` 构建 request/package，再调用 `CodexAuditService.review(...)`。
+- `CodexReviewResult` 直接附加到对应 `CheckResult.codex_reviews`；`CheckResult.summary` 和任务级 summary 仍基于 deterministic findings。
+- 支持的运行时审核范围仍仅为 `C02/C03/C04/C05/C06/C07`；`C01/C08/C09/C10/C11` 默认不进入 Codex audit。
+- Codex service 返回 `confirm/refute/uncertain/add_finding/failed` 都保留在 `codex_reviews`；原始 finding 不删除、不覆盖。
+- Codex service 抛异常时，usecase 不崩溃，会基于已构建 request 为每个 target 生成 `CODEX_REPORT_AUDIT_SERVICE_FAILED` 的 failed review。
+- 没有可审核 findings 或 builder 返回 `None` 时，不调用 audit service，`codex_reviews` 保持空列表。
+- 报告 API 回归固定默认序列化 `codex_reviews: []`，默认路径不启用真实 Codex。
+
+新增/更新测试：
+
+- 更新 `backend/tests/application/test_report_check_usecase.py`，覆盖默认关闭不调用 audit service、confirm/refute/uncertain/add_finding/failed 附加、service exception fallback、无可审核 findings 不调用 audit service、C02 生成 `label_ocr` target、C07 生成 `inspection_item` target。
+- 更新 `backend/tests/api/test_report_check_api.py`，确认默认报告自检 API 结果中 `codex_reviews` 为空列表。
+- `backend/tests/application/test_report_codex_evidence_builder.py` 和 `backend/tests/application/test_codex_audit_service.py` 保持回归通过。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/application/test_report_check_usecase.py -v` | 先红灯失败于 `TypeError: ReportCheckUseCase.__init__() got an unexpected keyword argument 'codex_audit_service'`；实现后通过，`12 passed` |
+| `cd backend && python -m pytest tests/application/test_report_check_usecase.py tests/application/test_report_codex_evidence_builder.py tests/application/test_codex_audit_service.py -v` | 通过，`42 passed` |
+| `cd backend && python -m pytest tests/api -v` | 通过，`13 passed` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`477 passed` |
+| `git diff --check` | 通过 |
+
+任务状态：
+
+- `docs/tasks.md` 已将 T-CODEX-07 标记为 `[x]`。
+- T-CODEX-08 已在后续前端展示任务中完成。
+
+## 前端 Codex review 展示完成记录
+
+完成日期：2026-06-17
+
+本次实现 T-CODEX-08，只做前端展示和类型对齐，不修改后端业务逻辑，不调用真实 Codex CLI，不修改旧项目目录，不让前端重新计算 C01-C11 或 PTR 规则，也不根据 Codex review 删除、覆盖 deterministic finding。
+
+本次实现：
+
+- 新增前端 Codex review contract，覆盖 `CodexReviewVerdict`、`CodexReviewStatus`、`CodexReviewConfidence`、`CodexReviewTargetType`、`CodexEvidenceRef`、`CodexReviewTarget`、`CodexReviewError`、`CodexSuggestedFinding` 和 `CodexReviewResult`。
+- `CheckResult` 前端类型新增可选 `codex_reviews?: CodexReviewResult[]`，旧 API 响应缺失该字段时通过 `normalizeCodexReviews(...)` 按空数组处理。
+- 新增 `summarizeCodexReviews(...)` 和 `groupCodexReviewsByFinding(...)`，仅用于展示层统计和关联，不改变后端结果。
+- 关联规则为：优先 `review.target.finding_id == finding.id`；其次读取 target metadata 中的 `finding_id` / `deterministic_finding_id`；再按 `finding_code` + `check_id` 弱关联；仅当同一 `check_id` 下只有一个 finding 时使用 `check_id` 弱关联；无法关联的 review 显示在“其他 Codex 审核意见”区域。
+- 新增 Codex review 展示组件，展示 verdict/status/confidence/reasoning_summary/suggested_severity/suggested_finding/evidence_refs/error。
+- PTR 结果页展示 Codex review 总览，并在展开的条款 finding 下显示关联 review；未关联 review 单独显示。
+- 报告自检结果页展示 Codex review 总览，并在展开的规则 finding 下显示关联 review；`add_finding` 仅作为 Codex 建议显示，不进入 deterministic findings。
+- JSON export/download 仍调用后端导出，不在前端丢弃 `codex_reviews`。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd frontend && npm run build` | 先红灯失败于缺少 `entities/codexReview/types`、`CheckResult.codex_reviews` 和 `PTRClauseViewModel.codexReviews`；实现后通过。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`477 passed` |
+| `git diff --check` | 通过 |
+
+任务状态：
+
+- `docs/tasks.md` 已将 T-CODEX-08 标记为 `[x]`。
+- T-CODEX-09 当时保持未开始；现已完成 T-CODEX-09A harness，真实 CLI 验收仍未执行。
+
+## Codex CLI 手动验收 harness 完成记录
+
+完成日期：2026-06-18
+
+本次实现 T-CODEX-09A，只建立真实 Codex CLI 手动验收 harness，默认不调用真实 Codex CLI，不修改 router、frontend、旧项目目录或 C01-C11 / PTR 业务规则，不把真实 Codex 集成加入普通 pytest。
+
+本次实现：
+
+- 新增受控 smoke fixture，构造一个最小 PTR 表格参数值 mismatch evidence package 和 `CodexReviewRequest`。
+- 新增 `backend/tests/integration/test_codex_cli_manual.py`，通过 `ENABLE_CODEX_CLI_INTEGRATION=1` gate 控制；默认普通测试只 skip，不调用 `codex exec`。
+- 新增 `scripts/run-codex-cli-audit-smoke.sh`，默认拒绝运行；只有显式设置 `ENABLE_CODEX_CLI_INTEGRATION=1` 时才运行 gated integration pytest。
+- 新增 `docs/codex-cli-manual-validation.md`，记录目的、默认不运行原因、前置条件、安全边界、运行命令、成功标准、失败排查和禁止事项。
+- 新增普通 harness contract 测试，确认 smoke fixture 写入 tmp evidence workspace、prompt 不包含旧项目/新项目绝对路径，脚本默认拒绝真实 Codex。
+- `CodexCliRunner` 检查结果：现有实现已满足 `enabled=True` + `allow_real_execution=True` 双开关、默认双 false、read-only sandbox、ephemeral、`-o` 输出文件、schema、timeout、unsafe workspace 拒绝和 danger/workspace-write 拒绝；本次未重构 runner。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/infrastructure/codex/test_codex_cli_manual_harness.py -v` | 先红灯失败于缺少 `tests.fixtures.codex_cli_manual_smoke`；实现后通过，`2 passed` |
+| `cd backend && python -m pytest tests/integration/test_codex_cli_manual.py -v` | 未设置 `ENABLE_CODEX_CLI_INTEGRATION` 时通过收集并 skip，`1 skipped` |
+| `cd backend && python -m pytest tests/infrastructure/codex tests/integration/test_codex_cli_manual.py -v` | 通过，`64 passed, 1 skipped` |
+| `cd backend && python -m pytest tests/ -v` | 通过，`479 passed, 1 skipped` |
+| `cd frontend && npm run build` | 通过 |
+| `git diff --check` | 通过 |
+
+任务状态：
+
+- `docs/tasks.md` 已将 T-CODEX-09A 标记为 `[x]`。
+- T-CODEX-09 整体仍保持 `[ ]`，因为真实 Codex CLI 尚未由用户显式运行并记录结果。
+- T-CODEX-09B 未完成。
+
 ## 推荐下一任务
 
-推荐下一任务编号：T-CODEX-02。
+推荐下一任务编号：T-CODEX-09B。
 
-原因：CodexReview 领域模型和 `CheckResult.codex_reviews` 契约已经建立。下一步应实现 `EvidencePackage` model 和 `evidence_package_writer`，为后续 runner、prompt/schema、output parser 和 usecase 接入提供受控输入边界。
+原因：09A 已建立受控 harness。下一步由用户手动显式运行 `ENABLE_CODEX_CLI_INTEGRATION=1 bash scripts/run-codex-cli-audit-smoke.sh`，并记录真实 Codex CLI 在 read-only sandbox 下的输出或 failed fallback。

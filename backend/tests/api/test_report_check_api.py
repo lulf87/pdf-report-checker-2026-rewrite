@@ -85,6 +85,7 @@ def test_report_check_upload_creates_task_through_usecase_and_exposes_result() -
     assert result_payload["task_id"] == task_id
     assert result_payload["summary"]["pass_count"] == 1
     assert result_payload["check_results"][0]["check_id"] == "C01"
+    assert result_payload["check_results"][0]["codex_reviews"] == []
 
     export_response = client.get(f"/api/tasks/{task_id}/export", params={"format": "json"})
     assert export_response.status_code == 200
