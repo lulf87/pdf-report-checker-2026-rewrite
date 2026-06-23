@@ -189,13 +189,31 @@
 - 目标：让 C08 消费 `InspectionItemGroup`，从 physical row-level 空字段报错收敛为 group-level effective field finding。
 - 背景：T-QUALITY-02 已提供 group builder；C08 当前仍逐 physical row、逐字段输出 finding。
 - 不允许做：不修改 C07/C10；不让前端重新计算 C08；不删除原始诊断明细。
-- 完成状态：[ ]
+- 完成状态：[x]
+
+### T-QUALITY-03B：C08 item_no 污染和表类型过滤修复
+- 目标：修复 C08 group-level 后剩余误报中“标准要求正文被当作 item_no”的污染问题。
+- 背景：真实样本 T-QUALITY-03 后 `C08=140`，剩余示例中 `item_no` 出现“——所有其他 ME 设备和 ME 系统，500V。”、“当外壳的分类为 IPX0 时……”等标准要求正文，说明 extractor/builder 需要强化序号合法性。
+- 需要实现：`InspectionItemGroupBuilder` 只接受纯数字序号和 `续 + 数字`；非法 `sequence_raw` 不创建新 group，有 active group 时作为 payload row 归入 active group，无 active group 时进入 diagnostics/ungrouped；`parse_sequence` 不再从正文或标准条款号中抓数字。
+- 不允许做：不修改 C07/C10；不修改 C04/C05/C06；不修改 `ReportCheckUseCase`、router、frontend；不调用真实 Codex；不修改旧项目目录。
+- 验收标准：Done when 标准要求文本、a)/b)/c) 子项、标准条款号和长中文正文不会作为 C08 item_no 生成主 finding，C07/C10/C08 回归和全量测试通过。
+- 完成状态：[x]
+
+### T-QUALITY-03C：C08 item 126 备注占位符误报修复
+- 目标：修复真实样本 QW2025-2795 Draft.pdf 中序号 126 的 C08 `remark` 空值误报。
+- 背景：T-QUALITY-03B 后真实样本 C08 剩余为 `remark` 字段 2 条重复统计，按 `finding.id` 去重后实际只有 item 126 一条；结构化证据显示右侧 `符合 /` 被解析成 `test_result="符合"`、`single_conclusion="/"`、`remark=""`，导致备注占位符丢失。
+- 需要实现：在 `InspectionItemGroupBuilder` 的 effective field 标准化层，处理 `single_conclusion="符合 /"`、`不符合 /`、`/ /`、`—— /`，以及 `test_result="符合"` + `single_conclusion="/"` + `remark=""` 这类右侧字段错位；只使用右侧结构化字段证据，不把 `standard_requirement` 中的 `/` 当作备注。
+- 本地 e2e 统计应按 `finding.id` / `review_id` 去重，避免 top-level `findings` 和 `check_results[].findings` 被重复计数。
+- 真实样本验收：QW2025-2795 Draft.pdf 最新 `C08 count=0`；C08 已完成从 4894 -> 140 -> 2 -> 0 的 group-level 降噪闭环。
+- 不允许做：不修改 C07/C10；不修改 router/frontend；不调用真实 Codex；不修改旧项目目录。
+- 验收标准：Done when item 126 的 effective fields 为 `effective_single_conclusion="符合"`、`effective_remark="/"`，C08 不再产生 remark empty finding；无 slash 证据的空备注仍然报错；C07/C10/C08 回归、后端全量、前端 build、脚本语法和 `git diff --check` 通过。
+- 完成状态：[x]
 
 ### T-QUALITY-04：C10 page-boundary 重构
 - 目标：让 C10 基于 `InspectionItemGroup` 的跨页边界检查续表标记，避免同一 page boundary 重复报错。
 - 背景：T-QUALITY-02 已提供 group builder；C10 当前仍以页内 physical row 为主要判断单位。
 - 不允许做：不修改 C07/C08；不改变 C09 序号连续性职责。
-- 完成状态：[ ]
+- 完成状态：[x]
 
 ### T-QUALITY-05：C07 group-level 重构
 - 目标：让 C07 消费 `InspectionItemGroup` 的 effective results/conclusion，并为 Codex audit 提供 group evidence。

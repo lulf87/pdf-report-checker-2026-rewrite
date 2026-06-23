@@ -1207,5 +1207,243 @@ Deterministic finding 结果仍保留：
 任务状态：
 
 - T-QUALITY-02 已完成。
-- T-QUALITY-03 / T-QUALITY-04 / T-QUALITY-05 仍未开始。
-- C08/C10/C07 降噪尚未完成；现有规则仍保持原输出。
+- T-QUALITY-03 已完成。
+- T-QUALITY-04 已完成。
+- T-QUALITY-05 仍未开始。
+- C08 已切换为 group-level effective field 判断；C10 已切换为 group page-boundary 判断；C07 降噪尚未完成，现有 C07 规则仍保持原输出。
+
+## C08 group-level 重构完成记录
+
+完成日期：2026-06-23
+
+本次实现 T-QUALITY-03，将 C08 从逐 physical row 的空字段判断改为消费 `InspectionItemGroup` 的 group-level effective fields。本阶段不修改 C07/C10，不修改 C04/C05/C06，不修改 `ReportCheckUseCase`、router 或 frontend，不调用真实 Codex，不修改旧项目目录，也不新增 `FindingGroup`。
+
+背景：
+
+- T-QUALITY-01 确认 QW2025-2795 Draft.pdf 中 `C08=4894` 的主要噪声来自合并单元格、续表行、空序号 payload 行和同一序号多 physical rows 被逐行报空。
+- T-QUALITY-02 已提供 `InspectionItemGroupBuilder`，可输出 `effective_test_results`、`effective_single_conclusion`、`effective_remark`、pages、continuation markers、source evidence 和 diagnostics。
+
+本次实现：
+
+- `backend/app/rules/report/c08_non_empty.py` 现在先调用 `build_inspection_item_groups(document.inspection_items)`。
+- C08 必填字段仍为“检验结果 / 单项结论 / 备注”，但判断对象改为：
+  - `group.effective_test_results`
+  - `group.effective_single_conclusion`
+  - `group.effective_remark`
+- `/` 和 `——` 继续作为有效占位符，不被判断为空。
+- 每个 item group / field 最多输出 1 条 `INSPECTION_FIELD_EMPTY` finding；group 内空 physical rows 不再重复展开为主 findings。
+- 纯空白 ungrouped row 不产生 C08 finding；builder diagnostics 和 ungrouped row count 写入 `CheckResult.metadata`。
+- 原 physical row 明细进入 `Finding.metadata`，包括 `item_no`、`normalized_item_no`、`field_key`、`field_name`、`group_row_count`、`pages`、`source_rows`、`empty_physical_rows`、`inherited_fields`、`suppressed_physical_row_count`、`group_diagnostics` 和 `continuation_markers`。
+
+测试覆盖：
+
+- 多 physical rows 中只有部分行字段为空，但 group effective value 非空时不报 C08。
+- 单项结论或备注只在 group 内某一行出现时，按 group-level 通过。
+- group 全部检验结果 / 单项结论 / 备注为空时，每个字段只报 1 条 finding。
+- 一个 group 三个必填字段都缺失时最多 3 条 findings。
+- `/` 和 `——` 作为有效占位。
+- `续3` / `续 3` 行归入原 group，不产生续表子行噪声。
+- 空序号 payload 行归入 active group，不产生额外 row-level finding。
+- ungrouped 纯空白行不产生 C08 finding。
+- QW2025-2795 类似跨 page 14/15 的 mini fixture 不因子行空白产生 C08 噪声。
+- `backend/app/rules/report/c08_non_empty_fields.py` 兼容入口仍复用新 C08 口径。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/rules/report/test_c08_non_empty.py tests/rules/report/test_c08_non_empty_fields.py -v` | TDD 红灯先失败于旧 row-level 行为；实现后通过，`24 passed`。 |
+| `cd backend && python -m pytest tests/infrastructure/report/test_inspection_item_group_builder.py tests/rules/report/test_c07_item_conclusion.py tests/rules/report/test_c10_continuation.py tests/rules/report/test_c08_non_empty.py -v` | 通过，`59 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`530 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+
+任务状态：
+
+- T-QUALITY-03 已完成。
+- T-QUALITY-04 已完成。
+- T-QUALITY-05 / T-QUALITY-06 / T-QUALITY-07 未完成。
+- 未在本阶段直接跑完整 QW2025-2795 Draft.pdf；真实 PDF 的 C08 数量下降需要后续本地 e2e 或 T-QUALITY-03B 重新确认。
+
+## C10 page-boundary 重构完成记录
+
+完成日期：2026-06-23
+
+本次实现 T-QUALITY-04，将 C10 从全局 page first / previous page tail 的弱判断改为消费 `InspectionItemGroup` 的 group page-boundary 检查。本阶段不修改 C07/C08，不修改 C04/C05/C06，不修改 `ReportCheckUseCase`、router 或 frontend，不调用真实 Codex，不修改旧项目目录，也不新增 `FindingGroup`。
+
+背景：
+
+- T-QUALITY-03 完成后，真实样本重新验收摘要显示 deterministic findings 从 5194 降到 440，其中 `C08=140`、`C10=130`、`C07=72`。
+- C08 降噪证明 group-level 方案有效；C10 的 130 条仍提示续表标记可能按 page/row 维度重复报错。
+
+本次实现：
+
+- `backend/app/rules/report/c10_continuation.py` 现在先调用 `build_inspection_item_groups(document.inspection_items)`。
+- C10 只对 group 内相邻 page boundary 做续表检查：
+  - 当前页第一条相关行是 `续 X` 且 `X == group.item_no` 时通过。
+  - 当前页第一条相关行不是续表 marker 且本页没有后续 marker 时，输出缺失续表标记 finding。
+  - `续 X` 出现在当前页非第一条相关行时，输出位置错误 finding。
+  - 页面第一行 marker 与上一页末尾序号不一致时，保留 `CONTINUATION_MARK_MISMATCH`。
+- 每个 `item_no/current_page` boundary 最多输出 1 条 finding；同页多个空序号 payload 行、续表子行和结构行不重复展开为主 findings。
+- 缺 page 或 row context 时仍只输出单条 `CONTINUATION_CONTEXT_MISSING` WARN，并在 `CheckResult.metadata.boundary_uncertain` 标记不确定。
+- 保持旧 code 兼容：
+  - `CONTINUATION_MARK_ERROR_001`
+  - `CONTINUATION_MARK_ERROR_002`
+  - `CONTINUATION_MARK_MISMATCH`
+  - `CONTINUATION_CONTEXT_MISSING`
+
+Finding metadata：
+
+- `item_no`
+- `previous_page`
+- `current_page`
+- `expected_marker`
+- `actual_marker`
+- `boundary_key`
+- `first_related_row_index`
+- `marker_row_index`
+- `group_row_count`
+- `group_pages`
+- `continuation_markers`
+- `duplicate_suppressed_count`
+- `source_rows`
+- `group_diagnostics`
+
+测试覆盖：
+
+- 跨页 group 当前页第一条相关行为 `续3` 时不报错。
+- 跨页 group 当前页第一条相关行没有 `续3` 时只报 1 条 missing finding。
+- 页面第一行 `续4` 但上一页末尾为 3 时输出 mismatch。
+- `续3` 出现在 current page 第二条相关行时只报 1 条 misplaced finding。
+- 同一 group 跨 3 页时分别按 page boundary 检查，不对页内子行重复检查。
+- 空序号 payload 行和续表子行归入 active group，不导致重复 C10 finding。
+- 缺 page/row context 只产生 WARN / diagnostics。
+- QW2025-2795 类似 page 14/15 的 mini fixture：page 15 首行为 `续 3` 时通过；改成普通 `3` 时只报 1 条。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/rules/report/test_c10_continuation.py -v` | TDD 红灯先失败于旧 row/page-level 行为；实现后通过，`14 passed`。 |
+| `cd backend && python -m pytest tests/infrastructure/report/test_inspection_item_group_builder.py tests/rules/report/test_c07_item_conclusion.py tests/rules/report/test_c08_non_empty.py tests/rules/report/test_c10_continuation.py -v` | 通过，`64 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`535 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+
+任务状态：
+
+- T-QUALITY-04 已完成。
+- T-QUALITY-05 / T-QUALITY-06 / T-QUALITY-07 未完成。
+- 未在本阶段直接跑完整 QW2025-2795 Draft.pdf；真实 PDF 的 C10 数量下降需要后续本地 e2e 或 T-QUALITY-04B 重新确认。
+
+## C08 item_no 污染修复完成记录
+
+完成日期：2026-06-23
+
+本次实现 T-QUALITY-03B，修复 T-QUALITY-03 后 C08 剩余误报中的 `item_no` 污染问题。本阶段不修改 C07/C10，不修改 C04/C05/C06，不修改 `ReportCheckUseCase`、router 或 frontend，不调用真实 Codex，不修改旧项目目录。
+
+背景：
+
+- T-QUALITY-03 后真实样本重新统计为 `deterministic_findings_count=440`、`C08=140`。
+- C08 剩余示例中 `item_no` 被污染为标准要求正文，例如：
+  - `——所有其他 ME 设备和 ME 系统，500V。`
+  - `当外壳的分类为 IPX0 时，保持 ME 设备和其部件在潮湿箱里 48h。`
+  - `预期一次性使用的任何材料，元器件，附件或 ME 设备……`
+  - `对于 SI 单位，单位的倍数和某些其他单位……`
+- 这些文本属于“标准要求”列或其子行，不应作为检验项目序号创建新 group。
+
+本次实现：
+
+- `InspectionItemGroupBuilder` 强化序号合法性：
+  - 合法序号只接受纯数字，例如 `1`、`10`、`118`。
+  - 合法续表序号只接受 `续 + 数字`，例如 `续3`、`续 3`、`续\n3`。
+  - `sequence_raw` 非空时优先校验 raw 文本；即使上游误填了 `InspectionItem.sequence`，非法 raw 也不会创建新 group。
+- 非法 `sequence_raw` 处理：
+  - 看起来像标准要求正文、`a)` / `b)` / `c)` 子项、标准条款号或长中文正文，且存在 active numeric group 时，作为 payload row 归入 active group。
+  - 没有 active group 时进入 `ungrouped_rows`，并记录 `UNGROUPED_PAYLOAD_WITH_INVALID_SEQUENCE`。
+  - 普通不可解析序号仍记录 `UNPARSEABLE_ITEM_NO`。
+- `inspection_table_extractor.parse_sequence` 收紧为只接受纯数字或 `续 + 数字`，不再从 `500V`、`IPX0 ... 48h` 或 `4.10.2` 中抓取数字。
+- C08 继续只消费 group-level effective fields；非法 item_no 行进入 diagnostics 或 active group 明细，不展开为 3 条主 ERROR。
+
+测试覆盖：
+
+- `sequence_raw="——所有其他 ME 设备和 ME 系统，500V。"` 且 `sequence=500` 时，不创建 `500` group，归入前一个合法 `10` group。
+- `sequence_raw="当外壳的分类为 IPX0 时，保持 ME 设备和其部件在潮湿箱里 48h。"` 且 `sequence=48` 时，不创建 `48` group，归入前一个合法 `15` group。
+- `a) 子项要求`、`4.10.2` 不创建新 group，有 active group 时归入 active group。
+- 无 active group 的长中文非法序号进入 ungrouped diagnostics，不产生 C08 三字段 ERROR。
+- 合法数字和 `续 118` 仍正常归组。
+- C08 mini fixture 验证上述长文本不会作为 finding metadata 中的 `item_no` 产生主 finding。
+- `parse_sequence` 验证不再从标准要求正文或标准条款号中抽取数字。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/infrastructure/report/test_inspection_item_group_builder.py tests/rules/report/test_c08_non_empty.py -v` | TDD 红灯先失败于旧 builder 误建 `500/48/4/1` group；实现后通过。 |
+| `cd backend && python -m pytest tests/infrastructure/report/test_inspection_item_group_builder.py tests/infrastructure/report/test_inspection_table_extractor.py tests/rules/report/test_c08_non_empty.py -v` | 通过，`47 passed`。 |
+| `cd backend && python -m pytest tests/rules/report/test_c07_item_conclusion.py tests/rules/report/test_c10_continuation.py tests/rules/report/test_c08_non_empty.py -v` | 通过，`52 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`543 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+
+任务状态：
+
+- T-QUALITY-03B 已完成。
+- T-QUALITY-05 / T-QUALITY-06 / T-QUALITY-07 未完成。
+- 未在本阶段直接跑完整 QW2025-2795 Draft.pdf；真实 PDF 的 C08 数量需要后续本地验收重新确认。
+
+## C08 item 126 备注占位符误报修复完成记录
+
+完成日期：2026-06-23
+
+本次实现 T-QUALITY-03C，修复真实样本 QW2025-2795 Draft.pdf 中序号 126 的 C08 `remark` 空值误报。本阶段不修改 C07/C10，不修改 C04/C05/C06，不修改 `ReportCheckUseCase`、router 或 frontend，不调用真实 Codex，不修改旧项目目录。
+
+背景：
+
+- T-QUALITY-03 将真实样本 C08 从 4894 降到 140。
+- T-QUALITY-03B 修复 `item_no` 污染后，真实样本 C08 统计变为 `C08 count=2`、`by_field={"remark": 2}`、`top_item_no={"126": 2}`。
+- 两条 C08 finding 的 `id` 完全相同：`55ae8140-7108-4ea6-a015-f5648ce1be99-c08-group-125-remark-empty`，说明用户统计脚本递归遍历时同时收集了 top-level `findings` 和 `check_results[].findings`；按 `finding.id` 去重后 unique C08 实际为 1。
+- 该 unique finding 的结构化证据显示 item 126 源行被解析为 `test_result="符合"`、`single_conclusion="/"`、`remark=""`，而真实报告右侧可见 `符合 /`；首页说明 `/` 表示空白占位符，应视为有效备注。
+
+本次实现：
+
+- `InspectionItemGroupBuilder` 在 group effective field 标准化层恢复右侧结论/备注组合：
+  - `single_conclusion="符合 /"`、`不符合 /`、`/ /`、`—— /` 且 `remark` 为空时，拆分为前半部分的 `effective_single_conclusion` 和 `effective_remark="/"`。
+  - 上游把组合值放进 `test_result="符合 /"`，且 `single_conclusion` / `remark` 为空时，也恢复为 `effective_single_conclusion="符合"`、`effective_remark="/"`。
+  - 真实样本 item 126 的错位形态 `test_result="符合"`、`single_conclusion="/"`、`remark=""` 被恢复为 `effective_single_conclusion="符合"`、`effective_remark="/"`。
+- 修复只读取右侧结构化字段 `test_result` / `conclusion` / `remark`，不从 `standard_requirement` 或正文里继承 `/`，避免把标准要求中的斜杠误判为备注。
+- C08 继续消费 group-level effective fields；无任何 combined slash 证据时，`remark=""` 仍产生 `INSPECTION_FIELD_EMPTY`。
+- `scripts/run-codex-audit-local-e2e.sh` 的本地统计 helper 改为递归收集并按 `review_id` 去重 `codex_reviews`，同时新增 `unique findings count`，按 `finding.id` 去重，避免同一个 finding 在多个结果层级重复计数。
+
+新增/更新测试覆盖：
+
+- builder：item 126，`single_conclusion="符合 /"`、`不符合 /`、`/ /`、`—— /` 且 `remark=""` 时，拆出 `effective_remark="/"`。
+- builder：item 126，真实错位形态 `test_result="符合"`、`single_conclusion="/"`、`remark=""` 时，恢复为 `effective_single_conclusion="符合"`、`effective_remark="/"`。
+- C08：combined conclusion/remark 为 `符合 /` 时不再产生 remark empty finding。
+- C08：combined 值落在 `test_result="符合 /"` 且右侧字段为空时不产生 remark empty finding。
+- C08：真实错位形态 `test_result="符合"`、`single_conclusion="/"`、`remark=""` 时不产生 remark empty finding。
+- C08：`single_conclusion="符合"`、`remark=""` 且没有 combined slash 证据时仍产生 remark empty finding。
+- C08：`standard_requirement` 中包含 `/`，但右侧 `remark` 为空时，仍产生 remark empty finding。
+- local e2e artifact：同一 `finding.id` 和 `review_id` 重复出现时，脚本统计 unique count 为 1。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/infrastructure/report/test_inspection_item_group_builder.py tests/rules/report/test_c08_non_empty.py -v` | 通过，`49 passed`；新增测试先红灯失败于旧实现未拆分/恢复 item 126 右侧字段。 |
+| `cd backend && python -m pytest tests/rules/report/test_c07_item_conclusion.py tests/rules/report/test_c10_continuation.py tests/rules/report/test_c08_non_empty.py -v` | 通过，`57 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`551 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+| `bash -n scripts/run-codex-audit-local-e2e.sh` | 通过。 |
+| `git diff --check` | 通过。 |
+
+真实样本验收：
+
+- 用户已重新对 `/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.4.13/素材/report/2795/QW2025-2795 Draft.pdf` 运行本地 report-check 验收，最新结果为 `C08 count: 0`。
+- C08 降噪路径已闭环：T-QUALITY-03 将 C08 从 4894 降到 140；T-QUALITY-03B 修复 `item_no` 污染后降到 2；T-QUALITY-03C 修复 item 126 备注 `/` 占位符后降到 0。
+- C08 group-level 降噪闭环完成。
+- 统计真实样本结果时应按 `finding.id` 去重，避免递归遍历 top-level `findings` 和 `check_results[].findings` 造成重复计数。
+
+任务状态：
+
+- T-QUALITY-03C 已完成。
+- T-QUALITY-05 / T-QUALITY-06 / T-QUALITY-07 未完成。
+- T-QUALITY-04 本次未修改、未推进。
+- 下一推荐任务：T-QUALITY-04：C10 page-boundary 重构。
