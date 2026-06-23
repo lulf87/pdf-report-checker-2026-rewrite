@@ -7,6 +7,12 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from app.application.codex_audit_targeting import (
+    CodexAuditTargetSelection,
+    DEFAULT_CODEX_AUDIT_MAX_TARGETS,
+    DEFAULT_REPORT_PRIORITY_CHECK_IDS,
+    priority_index,
+)
 from app.domain.codex_review import (
     CodexEvidenceRef,
     CodexReviewRequest,
@@ -21,9 +27,11 @@ from app.domain.evidence_package import (
     EvidenceTarget,
 )
 from app.domain.finding import Finding
+from app.domain.inspection_group import InspectionItemGroup
 from app.domain.pdf import ParsedPdf
 from app.domain.report import InspectionItem, LabelOCRResult, PhotoCaption, ReportDocument, ReportField, SampleComponent
 from app.domain.result import CheckResult
+from app.infrastructure.report.inspection_item_group_builder import build_inspection_item_groups
 
 
 OLD_PROJECT_ROOT = "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.4.13"
@@ -58,10 +66,28 @@ class ReportCodexAuditBundle:
 class ReportCodexEvidenceBuilder:
     """Build minimal report self-check evidence packages for controlled Codex review."""
 
-    def __init__(self, *, max_text_chars: int = 1200) -> None:
+    def __init__(
+        self,
+        *,
+        max_text_chars: int = 1200,
+        max_targets_per_task: int = DEFAULT_CODEX_AUDIT_MAX_TARGETS,
+        max_targets_per_batch: int = DEFAULT_CODEX_AUDIT_MAX_TARGETS,
+        included_check_ids: str | list[str] | tuple[str, ...] | None = None,
+        included_finding_codes: str | list[str] | tuple[str, ...] | None = None,
+        excluded_check_ids: str | list[str] | tuple[str, ...] | None = None,
+        priority_check_ids: str | list[str] | tuple[str, ...] | None = DEFAULT_REPORT_PRIORITY_CHECK_IDS,
+    ) -> None:
         if max_text_chars <= 0:
             raise ValueError("max_text_chars must be greater than zero")
         self.max_text_chars = max_text_chars
+        self.target_selection = CodexAuditTargetSelection.from_raw(
+            max_targets_per_task=max_targets_per_task,
+            max_targets_per_batch=max_targets_per_batch,
+            included_check_ids=included_check_ids,
+            included_finding_codes=included_finding_codes,
+            excluded_check_ids=excluded_check_ids,
+            priority_check_ids=priority_check_ids,
+        )
 
     def build(
         self,
@@ -71,11 +97,29 @@ class ReportCodexEvidenceBuilder:
         result: CheckResult,
         report: ReportDocument | None = None,
         parsed_pdf: ParsedPdf | None = None,
+        target_limit: int | None = None,
+        target_offset: int = 0,
     ) -> ReportCodexAuditBundle | None:
-        findings = [finding for finding in result.findings if finding.check_id in REVIEWABLE_TARGET_TYPES]
+        findings = self._select_findings(
+            result.findings,
+            target_limit=target_limit,
+            target_offset=target_offset,
+        )
         if not findings:
-            return None
+            if target_offset > 0 or self.target_selection.effective_limit(override=target_limit) <= 0:
+                return None
+            return self._build_summary_bundle(
+                task_id=task_id,
+                task_type=task_type,
+                result=result,
+            )
 
+        total_candidate_targets = self._total_candidate_targets(result.findings)
+        selection_metadata = self.target_selection.selection_metadata(
+            total_candidate_targets=total_candidate_targets,
+            emitted_targets=len(findings),
+            target_offset=target_offset,
+        )
         items_by_ref: dict[str, EvidenceItem] = {}
         targets: list[EvidenceTarget] = []
         review_targets: list[CodexReviewTarget] = []
@@ -127,7 +171,7 @@ class ReportCodexEvidenceBuilder:
             )
 
         package = EvidencePackage(
-            package_id=f"codex-report-{task_id}-{self._safe_id(result.check_id)}",
+            package_id=f"codex-report-{task_id}-{self._safe_id(result.check_id)}-batch-{selection_metadata['batch_index']}",
             task_id=task_id,
             task_type=task_type,
             kind=EvidencePackageKind.REPORT_RULE_REVIEW,
@@ -140,10 +184,11 @@ class ReportCodexEvidenceBuilder:
                 "check_id": result.check_id,
                 "deterministic_finding_count": len(result.findings),
                 "target_count": len(review_targets),
+                **selection_metadata,
             },
         )
         request = CodexReviewRequest(
-            request_id=f"codex-request-{task_id}-report-{self._safe_id(result.check_id)}",
+            request_id=f"codex-request-{task_id}-report-{self._safe_id(result.check_id)}-batch-{selection_metadata['batch_index']}",
             task_id=task_id,
             task_type=task_type,
             mode="verify",
@@ -156,9 +201,151 @@ class ReportCodexEvidenceBuilder:
                 "check_id": result.check_id,
                 "deterministic_finding_count": len(result.findings),
                 "target_count": len(review_targets),
+                **selection_metadata,
             },
         )
         return ReportCodexAuditBundle(request=request, evidence_package=package)
+
+    def _build_summary_bundle(
+        self,
+        *,
+        task_id: str,
+        task_type: str,
+        result: CheckResult,
+    ) -> ReportCodexAuditBundle:
+        ref_id = f"check_result:{self._safe_id(result.check_id)}"
+        target_id = f"report-codex-check-summary-{self._safe_id(result.check_id)}"
+        item = EvidenceItem(
+            ref_id=ref_id,
+            source_type=EvidenceSourceType.RULE_CONTEXT,
+            title=f"{result.check_id} deterministic check summary",
+            text=self._sanitize_text(RULE_CONTEXT_SUMMARY.get(result.check_id, "报告自检规则初判汇总上下文。")),
+            structured=self._safe_payload(
+                {
+                    "check_id": result.check_id,
+                    "check_name": result.check_name,
+                    "status": result.status.value,
+                    "summary": result.summary,
+                    "deterministic_finding_count": len(result.findings),
+                    "finding_codes": [finding.code for finding in result.findings],
+                    "rule_output_role": "candidate_summary_not_final_conclusion",
+                    "audit_reason": "review deterministic report check summary and decide whether evidence is sufficient",
+                }
+            ),
+            section=result.check_id,
+            metadata={"check_id": result.check_id, "target_kind": "check_result_summary"},
+        )
+        selection_metadata = self.target_selection.selection_metadata(
+            total_candidate_targets=1,
+            emitted_targets=1,
+            target_offset=0,
+        )
+        target = EvidenceTarget(
+            target_id=target_id,
+            target_type=CodexReviewTargetType.CHECK_RESULT.value,
+            check_id=result.check_id,
+            summary=self._sanitize_text(result.summary or f"{result.check_id} deterministic check summary"),
+            evidence_refs=[ref_id],
+            metadata={"source": "report_codex_evidence_builder", "target_kind": "check_result_summary"},
+        )
+        review_target = CodexReviewTarget(
+            target_id=target_id,
+            target_type=CodexReviewTargetType.CHECK_RESULT,
+            check_id=result.check_id,
+            title=self._sanitize_text(result.check_name),
+            summary=self._sanitize_text(result.summary or f"{result.check_id} deterministic check summary"),
+            evidence_refs=[
+                CodexEvidenceRef(
+                    ref_id=ref_id,
+                    source_type=item.source_type.value,
+                    section=item.section,
+                    description=item.title,
+                )
+            ],
+            metadata={"source": "report_codex_evidence_builder", "target_kind": "check_result_summary"},
+        )
+        package = EvidencePackage(
+            package_id=f"codex-report-{task_id}-{self._safe_id(result.check_id)}-summary",
+            task_id=task_id,
+            task_type=task_type,
+            kind=EvidencePackageKind.REPORT_RULE_REVIEW,
+            schema_version="evidence-package-v1",
+            created_at=_utc_now(),
+            targets=[target],
+            items=[item],
+            metadata={
+                "source": "report_codex_evidence_builder",
+                "check_id": result.check_id,
+                "deterministic_finding_count": len(result.findings),
+                "target_count": 1,
+                "summary_target": True,
+                **selection_metadata,
+            },
+        )
+        request = CodexReviewRequest(
+            request_id=f"codex-request-{task_id}-report-{self._safe_id(result.check_id)}-summary",
+            task_id=task_id,
+            task_type=task_type,
+            mode="verify",
+            targets=[review_target],
+            prompt_version="report-review-v1",
+            schema_version="codex-review-output-v1",
+            created_at=_utc_now(),
+            metadata={
+                "source": "report_codex_evidence_builder",
+                "check_id": result.check_id,
+                "deterministic_finding_count": len(result.findings),
+                "target_count": 1,
+                "summary_target": True,
+                **selection_metadata,
+            },
+        )
+        return ReportCodexAuditBundle(request=request, evidence_package=package)
+
+    def remaining_target_budget(self, emitted_targets: int) -> int:
+        task_limit = self.target_selection.max_targets_per_task
+        batch_limit = self.target_selection.max_targets_per_batch
+        if task_limit <= 0 or batch_limit <= 0:
+            return 0
+        return max(0, min(task_limit - emitted_targets, batch_limit))
+
+    def _select_findings(
+        self,
+        findings: list[Finding],
+        *,
+        target_limit: int | None,
+        target_offset: int,
+    ) -> list[Finding]:
+        candidates = [
+            finding
+            for finding in findings
+            if finding.check_id in REVIEWABLE_TARGET_TYPES and self.target_selection.allows(finding)
+        ]
+        candidates = self._sort_findings(candidates)
+        limit = self.target_selection.effective_limit(override=target_limit)
+        if limit <= 0:
+            return []
+        return candidates[target_offset : target_offset + limit]
+
+    def _total_candidate_targets(self, findings: list[Finding]) -> int:
+        return len(
+            [
+                finding
+                for finding in findings
+                if finding.check_id in REVIEWABLE_TARGET_TYPES and self.target_selection.allows(finding)
+            ]
+        )
+
+    def _sort_findings(self, findings: list[Finding]) -> list[Finding]:
+        priority = priority_index(self.target_selection.priority_check_ids)
+        fallback = len(priority)
+        return [
+            item
+            for _, item in sorted(
+                enumerate(findings),
+                key=lambda pair: (priority.get(pair[1].check_id, fallback), pair[0]),
+            )
+        ]
 
     def _evidence_refs_for_finding(
         self,
@@ -397,6 +584,28 @@ class ReportCodexEvidenceBuilder:
         )
 
     def _inspection_item(self, finding: Finding, report: ReportDocument | None) -> EvidenceItem | None:
+        group = self._inspection_item_group_for_finding(finding, report)
+        if group is not None:
+            structured = {
+                "inspection_item_group": self._inspection_group_summary(group, finding=finding),
+                "finding_metadata": finding.metadata,
+            }
+            return EvidenceItem(
+                ref_id=f"inspection_item:{finding.id}",
+                source_type=EvidenceSourceType.TABLE,
+                title=f"{finding.check_id} 检验项目 group evidence",
+                structured=self._safe_payload(structured),
+                page_number=group.pages[0] if group.pages else self._page_number_for_finding(finding),
+                section="inspection_item_group",
+                location=self._safe_payload(group.rows[0].row_location) if group.rows and group.rows[0].row_location else None,
+                metadata={
+                    "finding_id": finding.id,
+                    "check_id": finding.check_id,
+                    "item_no": group.item_no,
+                    "evidence_level": "inspection_item_group",
+                },
+            )
+
         item = self._inspection_item_for_finding(finding, report)
         if item is None:
             return None
@@ -541,6 +750,40 @@ class ReportCodexEvidenceBuilder:
                 if str(item.sequence or item.sequence_raw or "") == item_no:
                     return item
         return report.inspection_items[0]
+
+    def _inspection_item_group_for_finding(
+        self,
+        finding: Finding,
+        report: ReportDocument | None,
+    ) -> InspectionItemGroup | None:
+        if report is None or not report.inspection_items:
+            return None
+        item_no = self._metadata_str(finding, "normalized_item_no") or self._metadata_str(finding, "item_no")
+        group_result = build_inspection_item_groups(list(report.inspection_items))
+        if item_no:
+            for group in group_result.groups:
+                if group.item_no == item_no or group.display_item_no == item_no:
+                    return group
+        return group_result.groups[0] if group_result.groups else None
+
+    def _inspection_group_summary(self, group: InspectionItemGroup, *, finding: Finding) -> dict[str, Any]:
+        return {
+            "item_no": group.item_no,
+            "display_item_no": group.display_item_no,
+            "effective_test_results": list(group.effective_test_results),
+            "actual_conclusion": finding.metadata.get("actual_conclusion") or finding.actual or group.effective_single_conclusion,
+            "expected_conclusion": finding.expected or finding.metadata.get("expected_conclusion"),
+            "effective_single_conclusion": group.effective_single_conclusion,
+            "effective_remark": group.effective_remark,
+            "pages": list(group.pages),
+            "continuation_markers": [marker.model_dump(mode="json") for marker in group.continuation_markers],
+            "group_row_count": len(group.rows),
+            "source_rows": list(group.source_evidence),
+            "result_summary": finding.metadata.get("result_summary"),
+            "reasoning_basis": finding.metadata.get("reasoning_basis") or finding.metadata.get("decision_reason"),
+            "suppressed_physical_row_count": finding.metadata.get("suppressed_physical_row_count"),
+            "group_diagnostics": group.diagnostics,
+        }
 
     def _component_summary(self, component: SampleComponent, *, finding: Finding) -> dict[str, Any]:
         return {

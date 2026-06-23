@@ -1,6 +1,13 @@
 import { useState } from "react";
 
-import { groupCodexReviewsByFinding } from "../../../entities/codexReview/types";
+import {
+  codexFinalStatusLabel,
+  codexFinalStatusTone,
+  findingCodexFinalStatus,
+  groupCodexReviewsByFinding,
+} from "../../../entities/codexReview/types";
+import type { CodexReviewResult } from "../../../entities/codexReview/types";
+import type { Finding } from "../../../entities/finding/types";
 import { severityLabel, severityTone } from "../../../entities/finding/types";
 import type { PTRClauseViewModel } from "../../../entities/ptr/types";
 import { checkStatusLabel } from "../../../entities/task/types";
@@ -46,11 +53,11 @@ export function ClauseCard({ clause }: ClauseCardProps) {
           {clause.findings.length > 0 ? (
             <div className="panel-stack">
               {clause.findings.map((finding) => (
-                <div className="evidence-text" key={finding.id}>
-                  <strong>{finding.code}</strong>: {finding.message}
-                  {finding.location?.page_number ? `（第 ${finding.location.page_number} 页）` : ""}
-                  <FindingCodexReviewSummary reviews={groupedCodexReviews.byFindingId[finding.id]} />
-                </div>
+                <ClauseFindingItem
+                  finding={finding}
+                  key={finding.id}
+                  reviews={groupedCodexReviews.byFindingId[finding.id] ?? []}
+                />
               ))}
               <CodexReviewList reviews={groupedCodexReviews.unassociated} title="其他 Codex 审核意见" />
             </div>
@@ -60,5 +67,22 @@ export function ClauseCard({ clause }: ClauseCardProps) {
         </div>
       ) : null}
     </article>
+  );
+}
+
+function ClauseFindingItem({ finding, reviews }: { finding: Finding; reviews: CodexReviewResult[] }) {
+  const finalStatus = findingCodexFinalStatus(finding, reviews);
+
+  return (
+    <div className="evidence-text">
+      <div className="button-row">
+        <Badge variant={codexFinalStatusTone(finalStatus)}>{codexFinalStatusLabel(finalStatus)}</Badge>
+        <span>
+          <strong>{finding.code}</strong>: {finding.message}
+          {finding.location?.page_number ? `（第 ${finding.location.page_number} 页）` : ""}
+        </span>
+      </div>
+      <FindingCodexReviewSummary reviews={reviews} />
+    </div>
   );
 }

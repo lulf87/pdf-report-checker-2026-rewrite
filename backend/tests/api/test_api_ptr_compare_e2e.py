@@ -9,6 +9,7 @@ from app.api.routes_ptr_compare import get_ptr_compare_usecase
 from app.api.routes_tasks import get_task_service
 from app.application.ptr_compare_usecase import PTRCompareUseCase
 from app.application.task_service import TaskService
+from app.domain.codex_review import CodexReviewConfidence, CodexReviewResult, CodexReviewStatus, CodexReviewVerdict
 from app.domain.pdf import ParsedPdf, PdfPage
 from app.domain.ptr import PTRClause, PTRClauseNumber, PTRDocument, PTRTable, TableReference
 from app.domain.report import InspectionItem, InspectionTable, ReportDocument, ReportField, ThirdPageInfo
@@ -84,6 +85,25 @@ class FixtureInspectionTableExtractor:
                 ),
             ],
         )
+
+
+class FakeMandatoryCodexAuditService:
+    def review(self, request, evidence_package):  # noqa: ANN001
+        del evidence_package
+        return [
+            CodexReviewResult(
+                review_id=f"api-fixture-codex:{target.target_id}",
+                request_id=request.request_id,
+                task_id=request.task_id,
+                target=target,
+                status=CodexReviewStatus.SUCCEEDED,
+                verdict=CodexReviewVerdict.CONFIRM,
+                confidence=CodexReviewConfidence.MEDIUM,
+                reasoning_summary="API fixture Codex audit confirm.",
+                evidence_refs=[ref.ref_id for ref in target.evidence_refs],
+            )
+            for target in request.targets
+        ]
 
 
 def test_ptr_compare_upload_result_and_json_export_include_clause_table_and_parameter_findings(tmp_path: Path) -> None:
@@ -170,6 +190,7 @@ def _client_with_fixture_usecase(tmp_path: Path) -> TestClient:
         ptr_extractor=FixturePTRExtractor(),
         report_extractor=FixtureReportExtractor(),
         inspection_table_extractor=FixtureInspectionTableExtractor(),
+        codex_audit_service=FakeMandatoryCodexAuditService(),
     )
     return TestClient(app)
 

@@ -126,6 +126,23 @@ def test_prompt_contains_auditor_role_safety_and_json_only_requirements() -> Non
     assert "不要臆测" in prompt
 
 
+def test_prompt_declares_codex_as_mandatory_final_auditor_and_rules_as_candidates() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    prompt = PromptBuilder().build_review_prompt(_request(), _package())
+
+    assert "最终审核员" in prompt
+    assert "必须完成审核" in prompt
+    assert "规则初判" in prompt
+    assert "候选" in prompt
+    assert "不是最终事实" in prompt
+    assert "证据与 rule_context 冲突" in prompt
+    assert "应 refute" in prompt
+    assert "证据不足" in prompt
+    assert "应 uncertain" in prompt
+    assert "不要因为 rule_context" in prompt
+
+
 def test_prompt_only_includes_target_referenced_evidence() -> None:
     from app.infrastructure.codex.prompt_builder import PromptBuilder
 

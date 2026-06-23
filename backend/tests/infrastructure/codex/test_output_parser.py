@@ -90,7 +90,7 @@ def _review_payload(target_id: str = "target-1", **overrides) -> dict:
         "evidence_refs": ["ev-1"],
         "suggested_severity": None,
         "suggested_finding": None,
-        "metadata": {"source": "unit-test"},
+        "metadata": {},
     }
     payload.update(overrides)
     return payload
@@ -132,8 +132,8 @@ def test_parse_confirm_output_returns_codex_review_result() -> None:
     assert result.reasoning_summary == "ev-1 supports the deterministic finding."
     assert result.evidence_refs == ["ev-1"]
     assert result.error is None
-    assert result.metadata["source"] == "unit-test"
     assert result.metadata["schema_version"] == "codex-review-output-v1"
+    assert result.metadata["parser"] == "codex_review_output"
     assert result.completed_at is not None
 
 
@@ -170,7 +170,7 @@ def test_parse_add_finding_output_builds_suggested_finding() -> None:
                         "expected": None,
                         "actual": None,
                         "evidence_refs": ["ev-1"],
-                        "metadata": {"field": "型号规格"},
+                        "metadata": {},
                     },
                 )
             ]
@@ -259,6 +259,13 @@ def test_unknown_evidence_ref_falls_back_to_failed_results() -> None:
     _assert_failed(
         _parse(_output_payload([_review_payload(evidence_refs=["ev-missing"])])),
         "CODEX_OUTPUT_UNKNOWN_EVIDENCE_REF",
+    )
+
+
+def test_duplicate_evidence_refs_falls_back_to_failed_results() -> None:
+    _assert_failed(
+        _parse(_output_payload([_review_payload(evidence_refs=["ev-1", "ev-1"])])),
+        "CODEX_OUTPUT_DUPLICATE_EVIDENCE_REF",
     )
 
 

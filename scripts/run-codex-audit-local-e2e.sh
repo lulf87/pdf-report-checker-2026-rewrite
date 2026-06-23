@@ -4,7 +4,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python}"
-MODE="${MODE:-disabled}"
 TASK_TYPE="${TASK_TYPE:-ptr-compare}"
 BASE_URL="${BASE_URL:-http://127.0.0.1:8000}"
 START_BACKEND="${START_BACKEND:-0}"
@@ -28,24 +27,30 @@ fail() {
 usage() {
   cat <<'EOF'
 Usage:
-  MODE=disabled|fake|codex-cli TASK_TYPE=ptr-compare PTR_FILE=/path/to/ptr.pdf REPORT_FILE=/path/to/report.pdf bash scripts/run-codex-audit-local-e2e.sh
-  MODE=disabled|fake|codex-cli TASK_TYPE=report-check REPORT_FILE=/path/to/report.pdf bash scripts/run-codex-audit-local-e2e.sh
+  ENABLE_CODEX_AUDIT_LOCAL_E2E=1 TASK_TYPE=ptr-compare PTR_FILE=/path/to/ptr.pdf REPORT_FILE=/path/to/report.pdf bash scripts/run-codex-audit-local-e2e.sh
+  ENABLE_CODEX_AUDIT_LOCAL_E2E=1 TASK_TYPE=report-check REPORT_FILE=/path/to/report.pdf bash scripts/run-codex-audit-local-e2e.sh
 
 Options:
   --help          Show this help without starting services or calling Codex.
-  --print-config  Print resolved mode and safety gates without starting services or calling Codex.
+  --print-config  Print resolved mandatory Codex CLI configuration without starting services or calling Codex.
 
 Common variables:
-  MODE=disabled|fake|codex-cli
   TASK_TYPE=ptr-compare|report-check
   BASE_URL=http://127.0.0.1:8000
   START_BACKEND=1
   PYTHON_BIN=/path/to/python
   PTR_FILE=/path/to/ptr.pdf REPORT_FILE=/path/to/report.pdf
   EXPECT_CODEX_REVIEWS=auto|empty|nonempty|any
+  CODEX_CLI_PATH=codex
+  CODEX_AUDIT_MAX_TARGETS_PER_BATCH=5
+  CODEX_AUDIT_INCLUDED_CHECK_IDS=C07
+  CODEX_AUDIT_INCLUDED_FINDING_CODES=CONCLUSION_MISMATCH_001
+  CODEX_AUDIT_EXCLUDED_CHECK_IDS=C04
+  CODEX_AUDIT_PRIORITY_CHECK_IDS=C02,C03,C07,C04,C05,C06
+  CODEX_AUDIT_TIMEOUT_SECONDS=300
 
 Codex CLI safety:
-  codex-cli mode requires ENABLE_CODEX_AUDIT_LOCAL_E2E=1 and CODEX_AUDIT_ALLOW_REAL_EXECUTION=1.
+  Running this script against a backend may call the local Codex CLI. It requires ENABLE_CODEX_AUDIT_LOCAL_E2E=1.
   The backend still uses runtime/codex_audit evidence workspaces, read-only sandbox, output schema, and timeout.
 EOF
 }
@@ -67,10 +72,6 @@ cleanup() {
 }
 
 validate_mode() {
-  case "$MODE" in
-    disabled|fake|codex-cli) ;;
-    *) fail "MODE must be one of: disabled, fake, codex-cli" ;;
-  esac
   case "$TASK_TYPE" in
     ptr-compare|report-check) ;;
     *) fail "TASK_TYPE must be one of: ptr-compare, report-check" ;;
@@ -78,7 +79,7 @@ validate_mode() {
 }
 
 will_call_real_codex_cli() {
-  if [[ "$MODE" == "codex-cli" && "${ENABLE_CODEX_AUDIT_LOCAL_E2E:-}" == "1" && "${CODEX_AUDIT_ALLOW_REAL_EXECUTION:-}" == "1" ]]; then
+  if [[ "${ENABLE_CODEX_AUDIT_LOCAL_E2E:-}" == "1" ]]; then
     printf 'yes\n'
   else
     printf 'no\n'
@@ -88,39 +89,39 @@ will_call_real_codex_cli() {
 print_config() {
   validate_mode
   cat <<EOF
-mode: $MODE
+audit_runtime: mandatory_codex_cli
 task_type: $TASK_TYPE
 base_url: $BASE_URL
 start_backend: $START_BACKEND
 will_call_real_codex_cli: $(will_call_real_codex_cli)
-codex_cli_gate: requires ENABLE_CODEX_AUDIT_LOCAL_E2E=1 and CODEX_AUDIT_ALLOW_REAL_EXECUTION=1
+codex_cli_gate: requires ENABLE_CODEX_AUDIT_LOCAL_E2E=1 before starting or contacting a backend
+codex_cli_path: ${CODEX_CLI_PATH:-codex}
 runtime_dir: ${CODEX_AUDIT_RUNTIME_DIR:-runtime/codex_audit}
+codex_audit_max_targets_per_batch: ${CODEX_AUDIT_MAX_TARGETS_PER_BATCH:-5}
+codex_audit_included_check_ids: ${CODEX_AUDIT_INCLUDED_CHECK_IDS:-}
+codex_audit_included_finding_codes: ${CODEX_AUDIT_INCLUDED_FINDING_CODES:-}
+codex_audit_excluded_check_ids: ${CODEX_AUDIT_EXCLUDED_CHECK_IDS:-}
+codex_audit_priority_check_ids: ${CODEX_AUDIT_PRIORITY_CHECK_IDS:-C02,C03,C07,C04,C05,C06}
+codex_audit_timeout_seconds: ${CODEX_AUDIT_TIMEOUT_SECONDS:-300}
 expect_codex_reviews: $EXPECT_CODEX_REVIEWS
 EOF
 }
 
 configure_codex_env() {
-  case "$MODE" in
-    disabled)
-      export CODEX_AUDIT_ENABLED=0
-      export CODEX_AUDIT_BACKEND=disabled
-      export CODEX_AUDIT_ALLOW_REAL_EXECUTION=0
-      ;;
-    fake)
-      export CODEX_AUDIT_ENABLED=1
-      export CODEX_AUDIT_BACKEND=fake
-      export CODEX_AUDIT_ALLOW_REAL_EXECUTION=0
-      ;;
-    codex-cli)
-      [[ "${ENABLE_CODEX_AUDIT_LOCAL_E2E:-}" == "1" ]] || fail "codex-cli mode requires ENABLE_CODEX_AUDIT_LOCAL_E2E=1."
-      [[ "${CODEX_AUDIT_ALLOW_REAL_EXECUTION:-}" == "1" ]] || fail "codex-cli mode requires CODEX_AUDIT_ALLOW_REAL_EXECUTION=1."
-      export CODEX_AUDIT_ENABLED=1
-      export CODEX_AUDIT_BACKEND=codex-cli
-      export CODEX_AUDIT_ALLOW_REAL_EXECUTION=1
-      ;;
-  esac
+  [[ "${ENABLE_CODEX_AUDIT_LOCAL_E2E:-}" == "1" ]] || fail "Mandatory Codex CLI local E2E requires ENABLE_CODEX_AUDIT_LOCAL_E2E=1."
+  unset CODEX_AUDIT_ENABLED
+  unset CODEX_AUDIT_BACKEND
+  unset CODEX_AUDIT_ALLOW_REAL_EXECUTION
+  export CODEX_CLI_PATH="${CODEX_CLI_PATH:-codex}"
   export CODEX_AUDIT_RUNTIME_DIR="${CODEX_AUDIT_RUNTIME_DIR:-runtime/codex_audit}"
-  export CODEX_AUDIT_TIMEOUT_SECONDS="${CODEX_AUDIT_TIMEOUT_SECONDS:-120}"
+  export CODEX_AUDIT_TIMEOUT_SECONDS="${CODEX_AUDIT_TIMEOUT_SECONDS:-300}"
+  export CODEX_AUDIT_MAX_TARGETS_PER_BATCH="${CODEX_AUDIT_MAX_TARGETS_PER_BATCH:-5}"
+  export CODEX_AUDIT_INCLUDED_CHECK_IDS="${CODEX_AUDIT_INCLUDED_CHECK_IDS:-}"
+  export CODEX_AUDIT_INCLUDED_FINDING_CODES="${CODEX_AUDIT_INCLUDED_FINDING_CODES:-}"
+  export CODEX_AUDIT_EXCLUDED_CHECK_IDS="${CODEX_AUDIT_EXCLUDED_CHECK_IDS:-}"
+  export CODEX_AUDIT_PRIORITY_CHECK_IDS="${CODEX_AUDIT_PRIORITY_CHECK_IDS:-C02,C03,C07,C04,C05,C06}"
+  export CODEX_AUDIT_SANDBOX="read-only"
+  export CODEX_AUDIT_EPHEMERAL="${CODEX_AUDIT_EPHEMERAL:-true}"
 }
 
 wait_for_backend() {
@@ -135,7 +136,7 @@ wait_for_backend() {
 
 start_backend() {
   configure_codex_env
-  log "Starting backend at http://${BACKEND_HOST}:${BACKEND_PORT} with MODE=$MODE"
+  log "Starting backend at http://${BACKEND_HOST}:${BACKEND_PORT} with mandatory Codex CLI audit"
   (
     cd "$ROOT_DIR/backend"
     "$PYTHON" -m uvicorn app.main:app --host "$BACKEND_HOST" --port "$BACKEND_PORT"
@@ -214,10 +215,57 @@ import json
 import sys
 
 data = json.loads(open(sys.argv[1], encoding="utf-8").read())
-count = 0
-for check in data.get("check_results", []):
-    count += len(check.get("codex_reviews") or [])
-print(count)
+
+def walk(obj):
+    if isinstance(obj, dict):
+        yield obj
+        for value in obj.values():
+            yield from walk(value)
+    elif isinstance(obj, list):
+        for value in obj:
+            yield from walk(value)
+
+seen = set()
+for node in walk(data):
+    reviews = node.get("codex_reviews") if isinstance(node, dict) else None
+    if not isinstance(reviews, list):
+        continue
+    for review in reviews:
+        if not isinstance(review, dict):
+            continue
+        key = review.get("review_id") or json.dumps(review, ensure_ascii=False, sort_keys=True)
+        seen.add(str(key))
+print(len(seen))
+PY
+}
+
+count_unique_findings() {
+  "$PYTHON" - "$1" <<'PY'
+import json
+import sys
+
+data = json.loads(open(sys.argv[1], encoding="utf-8").read())
+
+def walk(obj):
+    if isinstance(obj, dict):
+        yield obj
+        for value in obj.values():
+            yield from walk(value)
+    elif isinstance(obj, list):
+        for value in obj:
+            yield from walk(value)
+
+seen = set()
+for node in walk(data):
+    findings = node.get("findings") if isinstance(node, dict) else None
+    if not isinstance(findings, list):
+        continue
+    for finding in findings:
+        if not isinstance(finding, dict):
+            continue
+        key = finding.get("id") or json.dumps(finding, ensure_ascii=False, sort_keys=True)
+        seen.add(str(key))
+print(len(seen))
 PY
 }
 
@@ -226,11 +274,7 @@ expected_review_mode() {
     printf '%s\n' "$EXPECT_CODEX_REVIEWS"
     return
   fi
-  if [[ "$MODE" == "disabled" ]]; then
-    printf 'empty\n'
-  else
-    printf 'nonempty\n'
-  fi
+  printf 'nonempty\n'
 }
 
 assert_codex_reviews() {
@@ -244,10 +288,10 @@ assert_codex_reviews() {
   case "$expected" in
     any) return ;;
     empty)
-      [[ "$count" == "0" ]] || fail "Expected no codex_reviews in MODE=$MODE, got $count."
+      [[ "$count" == "0" ]] || fail "Expected no codex_reviews, got $count."
       ;;
     nonempty)
-      [[ "$count" != "0" ]] || fail "Expected codex_reviews in MODE=$MODE. Ensure the sample produces reviewable deterministic findings."
+      [[ "$count" != "0" ]] || fail "Expected codex_reviews. Ensure the backend used mandatory Codex audit and the sample produced audit targets."
       ;;
     *) fail "EXPECT_CODEX_REVIEWS must be one of: auto, empty, nonempty, any" ;;
   esac
@@ -272,6 +316,7 @@ main() {
   fi
 
   validate_mode
+  [[ "${ENABLE_CODEX_AUDIT_LOCAL_E2E:-}" == "1" ]] || fail "Mandatory Codex CLI local E2E requires ENABLE_CODEX_AUDIT_LOCAL_E2E=1."
   PYTHON="$(resolve_python)"
   command -v curl >/dev/null 2>&1 || fail "curl was not found."
   "$PYTHON" - <<'PY' >/dev/null 2>&1 || fail "Python json module is unavailable."
@@ -295,6 +340,7 @@ PY
   result_file="$(poll_result "$task_id")"
   validate_result_path "$result_file"
   assert_codex_reviews "$result_file"
+  log "unique findings count: $(count_unique_findings "$result_file")"
   log "Result JSON: $result_file"
   log "Local business E2E validation finished."
 }

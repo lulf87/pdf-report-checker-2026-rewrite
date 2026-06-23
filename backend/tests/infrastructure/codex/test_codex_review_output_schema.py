@@ -43,6 +43,16 @@ def _validator() -> Draft202012Validator:
     return Draft202012Validator(schema)
 
 
+def _collect_schema_keys(value):
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            yield key
+            yield from _collect_schema_keys(nested)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _collect_schema_keys(item)
+
+
 def test_schema_file_exists_and_is_valid_json() -> None:
     schema_path = get_codex_review_output_schema_path()
 
@@ -57,6 +67,27 @@ def test_schema_top_level_requires_schema_version_and_reviews() -> None:
     schema = load_codex_review_output_schema()
 
     assert set(schema["required"]) == {"schema_version", "reviews"}
+
+
+def test_schema_uses_structured_output_compatible_subset() -> None:
+    schema_keys = set(_collect_schema_keys(load_codex_review_output_schema()))
+
+    assert not {
+        "uniqueItems",
+        "allOf",
+        "if",
+        "then",
+        "else",
+        "not",
+        "dependentRequired",
+        "dependentSchemas",
+        "minLength",
+        "maxLength",
+        "pattern",
+        "format",
+        "minItems",
+        "maxItems",
+    } & schema_keys
 
 
 def test_schema_review_enums_match_domain_contract() -> None:
@@ -100,10 +131,8 @@ def test_schema_rejects_invalid_verdict() -> None:
         _validator().validate(_output_payload(reviews=[_review_payload(verdict="maybe")]))
 
 
-def test_schema_requires_suggested_finding_for_add_finding() -> None:
-    with pytest.raises(ValidationError):
-        _validator().validate(_output_payload(reviews=[_review_payload(verdict="add_finding")]))
-
+def test_schema_allows_add_finding_suggestion_to_be_parser_validated() -> None:
+    _validator().validate(_output_payload(reviews=[_review_payload(verdict="add_finding")]))
     _validator().validate(
         _output_payload(
             reviews=[

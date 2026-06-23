@@ -27,12 +27,25 @@
 - 使用 `read-only` sandbox。
 - 使用 `--ephemeral`。
 - 使用 `codex_review_output.schema.json` 约束输出 JSON。
+- `codex_review_output.schema.json` 只使用 Codex/OpenAI structured output 兼容的基础 JSON Schema 子集；跨字段和证据引用校验由 `CodexReviewOutputParser` 完成。
 - 使用 pytest `tmp_path` 创建受控临时 evidence workspace。
 - 只提供最小合成 `EvidencePackage`，不提供真实私有 PDF 全文。
 - 不读取旧项目目录。
 - 不读取新项目源码目录作为 evidence。
 - 不修改任何旧项目或新项目源码文件。
 - Codex 输出异常、schema invalid、timeout 或非零退出都必须变为可审计 failed review。
+
+## Structured Output Schema 边界
+
+真实 Codex CLI structured output 不支持完整 JSON Schema。为避免运行时被 response format 拒绝，`codex_review_output.schema.json` 不使用 `uniqueItems`、`allOf`、`if/then/else`、`not`、`dependentRequired`、`dependentSchemas`、`minLength`、`maxLength`、`pattern`、`format`、`minItems` 或 `maxItems`。
+
+Schema 只约束基础结构、required 字段、enum、nullable 字段和 `additionalProperties: false`。以下规则不放在 schema 中，而由 `CodexReviewOutputParser` 解析后校验并降级为 failed review：
+
+- `add_finding` 必须包含 `suggested_finding`。
+- review 必须覆盖所有 request targets。
+- target 不能未知或重复。
+- `evidence_refs` 不能未知、不能越过 target 允许范围、不能重复。
+- `suggested_finding.evidence_refs` 必须引用 evidence package 中存在的证据。
 
 ## 运行命令
 
@@ -144,7 +157,7 @@ tests/integration/test_codex_cli_manual.py::test_real_codex_cli_manual_smoke_ret
 ## 失败排查
 
 - `No module named pytest` 或脚本提示 `pytest: not available`：安装后端 dev 依赖，运行 `cd backend && python -m pip install -e ".[dev]"`；或使用 `PYTHON_BIN=/path/to/python ENABLE_CODEX_CLI_INTEGRATION=1 bash scripts/run-codex-cli-audit-smoke.sh` 指向已有 pytest 的 Python。
-- `CODEX_COMMAND_NOT_FOUND`：Codex CLI 未安装，或 `codex` 不在 `PATH`。
+- `CODEX_CLI_UNAVAILABLE`：Codex CLI 未安装，或 `codex` 不在 `PATH`；也可设置 `CODEX_CLI_PATH=/path/to/codex`。
 - 登录失败或权限失败：确认本机 Codex CLI 已登录，并能独立执行 `codex exec`。
 - `CODEX_TIMEOUT`：模型响应超过 timeout；可在测试中临时调大 timeout，但不要默认放宽普通测试。
 - `CODEX_OUTPUT_SCHEMA_INVALID`：Codex 输出不符合 schema；检查 `codex_review_output.json` 和 prompt。
@@ -165,36 +178,27 @@ tests/integration/test_codex_cli_manual.py::test_real_codex_cli_manual_smoke_ret
 
 ## 本地 API 运行时配置
 
-T-CODEX-10 已把 `CodexAuditService` 装配到本地 API usecase 构造路径。默认配置仍关闭 Codex audit；普通 API、普通 pytest 和前端展示不调用真实 Codex CLI。
+T-CODEX-MANDATORY-01 后，产品运行路径默认构建 `CodexAuditService + CodexCliRunner`。不存在用户层面的 disabled/fake/codex-cli 模式选择；`FakeCodexRunner` 只允许在 pytest 或显式测试 dependency override 中使用。普通 pytest 仍通过 fake/monkeypatch 避免真实 Codex CLI。
 
-新增环境变量：
+当前环境变量：
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| `CODEX_AUDIT_ENABLED` | `false` | 总开关；必须为 `1` 才会向 usecase 注入 Codex audit service。 |
-| `CODEX_AUDIT_BACKEND` | `disabled` | 可选 `disabled`、`fake`、`codex-cli`。 |
-| `CODEX_AUDIT_ALLOW_REAL_EXECUTION` | `false` | 真实 `codex-cli` 执行开关；必须为 `1` 才允许 `codex exec`。 |
-| `CODEX_AUDIT_TIMEOUT_SECONDS` | `120` | Codex CLI runner timeout。 |
+| `CODEX_CLI_PATH` | `codex` | 本机 Codex CLI 可执行文件。 |
+| `CODEX_AUDIT_TIMEOUT_SECONDS` | `300` | Codex CLI runner timeout。 |
 | `CODEX_AUDIT_RUNTIME_DIR` | `runtime/codex_audit` | 受控 evidence workspace 根目录。 |
+| `CODEX_AUDIT_MAX_TARGETS_PER_BATCH` | `5` | 单批 target 数量；分批不是漏审上限。 |
+| `CODEX_AUDIT_SANDBOX` | `read-only` | 固定只读 sandbox。 |
+| `CODEX_AUDIT_EPHEMERAL` | `true` | 是否使用 `--ephemeral`。 |
 
-本地 UI 联调 fake 模式：
-
-```bash
-cd /Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend
-CODEX_AUDIT_ENABLED=1 \
-CODEX_AUDIT_BACKEND=fake \
-python -m uvicorn app.main:app --reload
-```
-
-本地真实 Codex CLI 模式：
+启动本地后端：
 
 ```bash
 cd /Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend
-CODEX_AUDIT_ENABLED=1 \
-CODEX_AUDIT_BACKEND=codex-cli \
-CODEX_AUDIT_ALLOW_REAL_EXECUTION=1 \
+CODEX_CLI_PATH=codex \
 CODEX_AUDIT_RUNTIME_DIR=runtime/codex_audit \
-CODEX_AUDIT_TIMEOUT_SECONDS=120 \
+CODEX_AUDIT_TIMEOUT_SECONDS=300 \
+CODEX_AUDIT_MAX_TARGETS_PER_BATCH=5 \
 python -m uvicorn app.main:app --reload
 ```
 
@@ -205,8 +209,9 @@ python -m uvicorn app.main:app --reload
 - API 依赖只通过 factory 装配 usecase，不在 router 中写 Codex CLI 逻辑。
 - Codex CLI workspace 仍由 `EvidencePackageWriter` 写入 `runtime/codex_audit/{task_id}/{package_id}/input/`。
 - `CodexCliRunner` 仍使用 read-only sandbox、output schema 和 timeout。
-- 未设置 `CODEX_AUDIT_ALLOW_REAL_EXECUTION=1` 时，`codex-cli` backend 不会调用 subprocess，审核结果会走 skipped/failed 可审计路径。
-- Codex review 只写入 `codex_reviews`，不覆盖或删除 deterministic findings。
+- Codex runtime failure 会让业务任务 failed，不再 completed 后只携带 failed review。
+- Codex review 写入 `codex_reviews`，不覆盖或删除 deterministic findings；deterministic findings 在兼容字段中作为 candidate 保留。
+- 旧 `CODEX_AUDIT_ENABLED`、`CODEX_AUDIT_BACKEND`、`CODEX_AUDIT_ALLOW_REAL_EXECUTION` 字段仅为 deprecated 兼容，不作为产品运行模式。
 
 ## 当前状态
 
@@ -214,4 +219,4 @@ python -m uvicorn app.main:app --reload
 - T-CODEX-09A 已提供默认拒绝运行的脚本。
 - T-CODEX-09B 已由用户显式运行并记录结果。
 - T-CODEX-09 整体已完成。
-- T-CODEX-10 已完成本地运行时配置和依赖装配。
+- T-CODEX-10 已完成本地运行时配置和依赖装配；T-CODEX-MANDATORY-01 已将产品运行路径纠偏为 mandatory Codex CLI audit。

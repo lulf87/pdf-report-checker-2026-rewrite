@@ -120,17 +120,17 @@
 - 完成状态：[x]
 
 ### T-CODEX-10：Codex audit 本地运行时配置与依赖装配
-- 目标：让本地运行工具时，可以通过环境变量显式启用 fake 或真实 Codex CLI runtime auditor；默认仍关闭，不影响普通测试和普通 API。
+- 目标：历史阶段为通过环境变量显式启用 fake 或真实 Codex CLI runtime auditor；T-CODEX-MANDATORY-01 后产品运行路径已改为 mandatory Codex CLI，此处保留为迁移记录。
 - 背景：T-CODEX-09 已验证真实 Codex CLI manual smoke；本任务把 `CodexAuditService` 通过配置装配到本地 API usecase 路径中。
 - 新文件位置：`backend/app/application/codex_runtime_factory.py`、`backend/tests/application/test_codex_runtime_factory.py`、`backend/tests/api/test_codex_audit_dependencies.py`，并更新 `backend/app/core/config.py` 和 API 依赖。
-- 需要实现：`CODEX_AUDIT_ENABLED`、`CODEX_AUDIT_BACKEND`、`CODEX_AUDIT_ALLOW_REAL_EXECUTION`、`CODEX_AUDIT_TIMEOUT_SECONDS`、`CODEX_AUDIT_RUNTIME_DIR` 配置；`build_codex_audit_service`、`build_ptr_compare_usecase`、`build_report_check_usecase`；fake backend 使用 `FakeCodexRunner`；codex-cli backend 使用 `CodexCliRunner` 且只有显式允许真实执行时才调用 `codex exec`。
+- 需要实现：历史阶段已实现过 optional runtime factory；当前有效实现以 T-CODEX-MANDATORY-01 为准，产品 factory 默认构建 `CodexCliRunner`，旧 optional env 仅保留 deprecated 兼容字段。
 - 不允许做：不调用 GPT API；不引入 OpenAI Responses/Chat API；不修改旧项目目录；不把 Codex CLI 逻辑写进 router；不让 Codex 读取项目源码；不改变 deterministic findings。
 - 测试要求：运行 `cd backend && python -m pytest tests/ -v`、`cd frontend && npm run build`、`git diff --check`。
-- 验收标准：Done when 默认配置不构建真实 runner、不调用 subprocess；fake 模式可产出 `codex_reviews`；codex-cli 未允许真实执行时返回 skipped 且不调用 subprocess；API 默认路径不启用 Codex；全量测试和前端 build 通过。
+- 验收标准：历史验收为可选装配通过；当前最终语义以 T-CODEX-MANDATORY-01 为准。
 - 完成状态：[x]
 
 ### T-CODEX-11：Codex audit 本地业务端到端验收
-- 目标：验证本地 Web 工具在 disabled/fake/codex-cli 模式下的业务端到端链路，确认真实 Codex CLI 可以在受控 evidence workspace、read-only sandbox 和 output schema 下返回可审计 `codex_reviews`。
+- 目标：历史阶段验证本地 Web 工具的业务端到端链路；T-CODEX-MANDATORY-01 后脚本和文档已改为 mandatory Codex CLI harness，不再提供 disabled/fake/codex-cli 用户模式。
 - 背景：T-CODEX-10 已完成本地运行时配置和依赖装配；T-CODEX-11A 建立 gated local E2E harness；T-CODEX-11B 由用户显式开启真实 codex-cli 模式完成业务验收。
 - 不允许做：不默认启用真实 Codex；不修改旧项目目录；不修改规则逻辑；不修改 router 业务逻辑；不把 Codex 审核逻辑写进 router；不让 Codex 覆盖 deterministic findings。
 - 子任务状态：
@@ -139,13 +139,13 @@
 - 完成状态：[x]
 
 ### T-CODEX-11A：本地业务端到端验收脚本和文档
-- 目标：新增本地业务端到端验收说明和脚本，帮助用户验证 disabled/fake/codex-cli 模式下 `codex_reviews` 的 API 返回和前端展示。
+- 目标：新增本地业务端到端验收说明和脚本；T-CODEX-MANDATORY-01 后脚本不再提供 disabled/fake/codex-cli 用户模式，改为 gated mandatory Codex CLI 验收入口。
 - 背景：T-CODEX-10 已完成 Codex audit 本地运行时配置与依赖装配；本任务提供业务验收入口，但不要求真实运行 Codex CLI。
 - 新文件位置：`docs/codex-audit-local-e2e.md`、`scripts/run-codex-audit-local-e2e.sh`、`backend/tests/integration/test_codex_audit_local_e2e_artifacts.py`。
-- 需要实现：文档覆盖默认模式、fake 模式、codex-cli 模式、脚本参数、业务上传流程、`codex_reviews` 验收点、前端只展示不重算、安全边界和排查；脚本支持 `--help`、`--print-config`、上传 PTR/报告或报告自检任务、轮询结果并统计 `codex_reviews`。
+- 需要实现：文档覆盖 mandatory Codex CLI 本地业务验收、脚本参数、业务上传流程、`codex_reviews` 验收点、前端只展示不重算、安全边界和排查；脚本支持 `--help`、`--print-config`、上传 PTR/报告或报告自检任务、轮询结果并统计 `codex_reviews`。
 - 不允许做：不调用真实 Codex；不修改旧项目目录；不修改规则逻辑；不修改 router 业务逻辑；不把 Codex 审核逻辑写进 router；不修改 C01-C11 或 PTR 规则算法。
 - 测试要求：运行 `cd backend && python -m pytest tests/integration/test_codex_audit_local_e2e_artifacts.py -v`；按影响范围运行后端测试、前端 build 和 `git diff --check`。
-- 验收标准：Done when 脚本默认安全、codex-cli 模式需要显式 gate、文档清楚说明本地 fake/codex-cli 业务验收和前端展示边界。
+- 验收标准：Done when 脚本默认安全、运行前需要显式 `ENABLE_CODEX_AUDIT_LOCAL_E2E=1` gate、文档清楚说明 mandatory Codex CLI 业务验收和前端展示边界。
 - 完成状态：[x]
 
 ### T-CODEX-11B：真实 codex-cli 本地业务端到端验收
@@ -161,10 +161,20 @@
 - 目标：避免本地真实 Codex CLI 一次处理过多审核 target，支持 target 限流、规则筛选和当前 batch 元数据。
 - 背景：T-CODEX-11B 真实 report-check 验收已触达真实 Codex CLI；schema 兼容性修复后，84 个 targets 仍导致 `CODEX_TIMEOUT`。
 - 新文件位置：`backend/app/application/codex_audit_targeting.py`，并更新 `backend/app/core/config.py`、`backend/app/application/*codex_evidence_builder.py`、`backend/app/application/codex_runtime_factory.py`、`scripts/run-codex-audit-local-e2e.sh` 和相关测试/文档。
-- 需要实现：`CODEX_AUDIT_MAX_TARGETS_PER_TASK`、`CODEX_AUDIT_MAX_TARGETS_PER_BATCH`、include/exclude check IDs、included finding codes、priority check IDs；Report/PTR evidence builder 按配置筛选、排序、截断；metadata 记录 `total_candidate_targets`、`emitted_targets`、`truncated`、`omitted_targets_count`、`batch_index`、`batch_size`。
+- 需要实现：`CODEX_AUDIT_MAX_TARGETS_PER_BATCH`、include/exclude check IDs、included finding codes、priority check IDs；Report/PTR evidence builder 按配置筛选、排序并按 batch 发出；metadata 记录 `total_candidate_targets`、`emitted_targets`、`truncated`、`omitted_targets_count`、`target_offset`、`batch_index`、`batch_size`。历史 `CODEX_AUDIT_MAX_TARGETS_PER_TASK` 字段仅作兼容，不应作为产品漏审上限。
 - 不允许做：不调用真实 Codex；不修改 C01-C11 或 PTR 规则逻辑；不修改 router 业务逻辑；不修改旧项目目录；不改变 deterministic findings；T-CODEX-12 本身不替代 T-CODEX-11B 真实验收。
 - 测试要求：运行 `cd backend && python -m pytest tests/application/test_report_codex_evidence_builder.py tests/application/test_ptr_codex_evidence_builder.py tests/application/test_codex_runtime_factory.py tests/integration/test_codex_audit_local_e2e_artifacts.py -v`，并运行后端全量、前端 build、脚本 bash 语法和 `git diff --check`。
-- 验收标准：Done when 默认最多 5 个 audit targets，fake/codex-cli 共用相同筛选限制，脚本可传递限流/筛选环境变量，真实模式可用单 target 命令重新验收。
+- 验收标准：Done when 默认每批最多 5 个 audit targets，batching 不漏审，脚本可传递限流/筛选环境变量，真实模式可用单 target 命令重新验收。
+- 完成状态：[x]
+
+### T-CODEX-MANDATORY-01：Codex CLI 必须审核的运行架构
+- 目标：将产品运行路径从 optional Codex audit 纠偏为 mandatory Codex CLI audit。
+- 背景：T-CODEX-09/10/11/12 已证明真实 Codex CLI 可在受控 workspace、read-only sandbox、output schema 和 batch 限制下运行；但旧架构仍允许默认关闭、fake 用户模式和 runtime failure 后 completed。
+- 涉及文件：`backend/app/core/config.py`、`backend/app/application/codex_runtime_factory.py`、`backend/app/application/report_check_usecase.py`、`backend/app/application/ptr_compare_usecase.py`、`backend/app/application/*codex_evidence_builder.py`、`backend/app/infrastructure/codex/*`、前端 Codex review 展示、脚本和文档。
+- 需要实现：默认构建 `CodexCliRunner`；废弃产品路径的 `CODEX_AUDIT_ENABLED` / `CODEX_AUDIT_BACKEND` / `CODEX_AUDIT_ALLOW_REAL_EXECUTION`；Fake runner 仅用于测试注入；Codex runtime failure 使 task failed；uncertain 作为 completed 人工复核；规则 findings 明确为 candidate；batch size 不得导致漏审。
+- 不允许做：不调用 GPT API；不引入 OpenAI Responses/Chat API；不调用真实 Codex CLI 做自动测试；不修改旧项目目录；不继续 C04/C05/C06/C07 业务规则细化。
+- 测试要求：运行 targeted backend tests、`cd backend && python -m pytest tests/ -v`、`cd frontend && npm run build`、`git diff --check`。
+- 验收标准：Done when API/product factory 默认装配 Codex CLI；Report/PTR usecase 遇到 failed/skipped review 或 service exception 会 task failed；Prompt 明确 Codex 是 mandatory final auditor；脚本和文档不再推荐 disabled/fake 用户模式。
 - 完成状态：[x]
 
 ### T-QUALITY-01：C08/C10/C07 降噪设计
@@ -212,13 +222,21 @@
 ### T-QUALITY-04：C10 page-boundary 重构
 - 目标：让 C10 基于 `InspectionItemGroup` 的跨页边界检查续表标记，避免同一 page boundary 重复报错。
 - 背景：T-QUALITY-02 已提供 group builder；C10 当前仍以页内 physical row 为主要判断单位。
+- 真实样本验收：QW2025-2795 Draft.pdf 最新 `C10 unique count=0`，`by_code={}`、`by_boundary=[]`、`by_item=[]`、`by_page=[]`；C10 已完成从 130 -> 0 的 page-boundary 降噪闭环，C08 仍保持 0。
 - 不允许做：不修改 C07/C08；不改变 C09 序号连续性职责。
 - 完成状态：[x]
 
 ### T-QUALITY-05：C07 group-level 重构
 - 目标：让 C07 消费 `InspectionItemGroup` 的 effective results/conclusion，并为 Codex audit 提供 group evidence。
 - 背景：C07 已有序号归组雏形，但仍未复用统一 group contract。
+- 真实样本验收：首次 8000 端口运行命中旧后端进程，不作为有效验收；随后使用 `BASE_URL=http://127.0.0.1:8011 BACKEND_PORT=8011` 启动当前工作区代码重跑，QW2025-2795 Draft.pdf 最新 `C07=12`、`C08=0`、`C10=0`。C07 已从 72 降到 12，且每个 item_no 最多 1 条。
 - 不允许做：不修改 C08/C10；不调用真实 Codex；不让 Codex 覆盖 deterministic finding。
+- 完成状态：[x]
+
+### T-QUALITY-05B：C07 residual mismatch cleanup
+- 目标：收敛 T-QUALITY-05 后真实样本剩余 12 条 C07 mismatch，区分 actual conclusion 冲突选择、复杂矩阵表 extractor/列映射、以及 `——` 与 `符合要求` 混合时 effective result 聚合不完整或业务口径问题。
+- 背景：T-QUALITY-05 有效验收中 C07 剩余 item_no 为 `3, 27, 33, 41, 59, 72, 94, 121, 131, 142, 149, 151`；其中 item 3 主要是 actual conclusion 冲突选择，item 59 主要是复杂矩阵表列映射，其余 `/ -> 符合` 需要进一步确认业务口径和 result token 聚合。
+- 不允许做：不回退 C07 group-level；不修改 C08/C10；不调用真实 Codex；不修改旧项目目录。
 - 完成状态：[ ]
 
 ### T-QUALITY-06：C04/C05/C06 OCR gating

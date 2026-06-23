@@ -1,7 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://report-checker.local/schemas/codex_review_output.schema.json",
-  "title": "CodexReviewOutput",
   "type": "object",
   "required": [
     "schema_version",
@@ -9,12 +6,10 @@
   ],
   "properties": {
     "schema_version": {
-      "type": "string",
-      "minLength": 1
+      "type": "string"
     },
     "reviews": {
       "type": "array",
-      "minItems": 1,
       "items": {
         "type": "object",
         "required": [
@@ -30,8 +25,7 @@
         ],
         "properties": {
           "target_id": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           },
           "status": {
             "type": "string",
@@ -57,16 +51,13 @@
             ]
           },
           "reasoning_summary": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           },
           "evidence_refs": {
             "type": "array",
             "items": {
-              "type": "string",
-              "minLength": 1
-            },
-            "uniqueItems": true
+              "type": "string"
+            }
           },
           "suggested_severity": {
             "type": [
@@ -75,106 +66,79 @@
             ]
           },
           "suggested_finding": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/suggested_finding"
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "check_id",
+              "severity",
+              "code",
+              "message",
+              "expected",
+              "actual",
+              "evidence_refs",
+              "metadata"
+            ],
+            "properties": {
+              "check_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
-              {
-                "type": "null"
+              "severity": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "expected": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "actual": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "metadata": {
+                "type": "object",
+                "required": [],
+                "properties": {},
+                "additionalProperties": false
               }
-            ]
+            },
+            "additionalProperties": false
           },
           "metadata": {
-            "type": "object"
+            "type": "object",
+            "required": [],
+            "properties": {},
+            "additionalProperties": false
           }
         },
-        "additionalProperties": false,
-        "allOf": [
-          {
-            "if": {
-              "properties": {
-                "verdict": {
-                  "const": "add_finding"
-                }
-              },
-              "required": [
-                "verdict"
-              ]
-            },
-            "then": {
-              "properties": {
-                "suggested_finding": {
-                  "$ref": "#/$defs/suggested_finding"
-                }
-              }
-            }
-          }
-        ]
+        "additionalProperties": false
       }
     }
   },
-  "additionalProperties": false,
-  "$defs": {
-    "suggested_finding": {
-      "type": "object",
-      "required": [
-        "check_id",
-        "severity",
-        "code",
-        "message",
-        "expected",
-        "actual",
-        "evidence_refs",
-        "metadata"
-      ],
-      "properties": {
-        "check_id": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "severity": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "code": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "message": {
-          "type": "string",
-          "minLength": 1
-        },
-        "expected": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "actual": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "evidence_refs": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "uniqueItems": true
-        },
-        "metadata": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": false
-    }
-  }
+  "additionalProperties": false
 }

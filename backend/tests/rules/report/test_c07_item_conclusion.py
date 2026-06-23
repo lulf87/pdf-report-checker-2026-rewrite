@@ -36,6 +36,7 @@ def test_infer_expected_conclusion_uses_c07_priority_order() -> None:
     assert infer_expected_conclusion(["/", "/"]).expected == "/"
     assert infer_expected_conclusion(["", ""]).expected == "/"
     assert infer_expected_conclusion(["100", "——"]).expected == "符合"
+    assert infer_expected_conclusion(["69%", "0.08", "＜0.01", "IPX0", "CF 型"]).expected == "符合"
 
 
 def test_c07_passes_when_conforming_and_placeholder_results_expect_conforming() -> None:
@@ -159,6 +160,32 @@ def test_c07_reports_error_when_expected_conforming_but_actual_is_slash() -> Non
     assert finding.metadata["decision_reason"] == "has_conforming_or_non_empty_result"
 
 
+def test_c07_reports_one_group_level_finding_for_conforming_rows_with_slash_conclusion() -> None:
+    document = ReportDocument(
+        inspection_items=[
+            item(8, result="符合要求", conclusion="/", page=14, row=0),
+            item(None, raw="", result="符合要求", conclusion="", page=14, row=1),
+            item(8, raw="续 8", continued=True, result="符合要求", conclusion="", page=15, row=0),
+        ]
+    )
+
+    result = _run(document)
+
+    assert result.status == CheckStatus.FAIL
+    assert len(result.findings) == 1
+    finding = result.findings[0]
+    assert finding.expected == "符合"
+    assert finding.actual == "/"
+    assert finding.metadata["item_no"] == "8"
+    assert finding.metadata["effective_test_results"] == ["符合要求", "符合要求", "符合要求"]
+    assert finding.metadata["group_row_count"] == 3
+    assert finding.metadata["pages"] == [14, 15]
+    assert finding.metadata["continuation_markers"][0]["raw_text"] == "续 8"
+    assert finding.metadata["suppressed_physical_row_count"] == 2
+    assert finding.metadata["result_summary"]["conforming_or_non_empty_count"] == 3
+    assert finding.metadata["reasoning_basis"] == "has_conforming_or_non_empty_result"
+
+
 def test_c07_reports_error_when_expected_nonconforming_but_actual_is_conforming() -> None:
     finding = _one_finding(ReportDocument(inspection_items=[item(9, result="不符合要求", conclusion="符合")]))
 
@@ -182,6 +209,28 @@ def test_c07_groups_same_sequence_multiple_rows_before_decision() -> None:
     assert result.status == CheckStatus.PASS
     assert result.findings == []
     assert result.metadata["groups"][0]["result_values"] == ["——", "符合要求"]
+
+
+def test_c07_uses_group_builder_so_requirement_text_does_not_become_item_no() -> None:
+    document = ReportDocument(
+        inspection_items=[
+            item(15, result="符合要求", conclusion="符合", row=0),
+            item(
+                None,
+                raw="当外壳的分类为 IPX0 时，保持 ME 设备和其部件在潮湿箱里 48h。",
+                result="符合要求",
+                conclusion="",
+                row=1,
+            ),
+        ]
+    )
+
+    result = _run(document)
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert [group["item_no"] for group in result.metadata["groups"]] == ["15"]
+    assert result.metadata["groups"][0]["effective_test_results"] == ["符合要求", "符合要求"]
 
 
 def test_c07_groups_continuation_sequence_with_original_sequence() -> None:

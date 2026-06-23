@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
 
-import { groupCodexReviewsByFinding, normalizeCodexReviews } from "../../../entities/codexReview/types";
+import {
+  codexFinalStatusLabel,
+  codexFinalStatusTone,
+  findingCodexFinalStatus,
+  groupCodexReviewsByFinding,
+  normalizeCodexReviews,
+} from "../../../entities/codexReview/types";
 import { severityLabel, severityTone } from "../../../entities/finding/types";
 import type { Finding, FindingSeverity } from "../../../entities/finding/types";
 import { REPORT_RULE_GROUPS, checkResultSeverity } from "../../../entities/report/types";
@@ -194,14 +200,27 @@ function FindingList({
   return (
     <div className="panel-stack">
       {findings.map((finding) => (
-        <div className="evidence-text" key={finding.id}>
+        <FindingItem finding={finding} key={finding.id} reviews={reviewsByFindingId[finding.id]} />
+      ))}
+    </div>
+  );
+}
+
+function FindingItem({ finding, reviews }: { finding: Finding; reviews: ReturnType<typeof normalizeCodexReviews> }) {
+  const finalStatus = findingCodexFinalStatus(finding, reviews);
+
+  return (
+    <div className="evidence-text">
+      <div className="button-row">
+        <Badge variant={codexFinalStatusTone(finalStatus)}>{codexFinalStatusLabel(finalStatus)}</Badge>
+        <span>
           <strong>{finding.code}</strong>: {finding.message}
           {finding.location?.page_number ? `（第 ${finding.location.page_number} 页）` : ""}
           <FindingValue label="期望" value={finding.expected} />
           <FindingValue label="实际" value={finding.actual} />
-          <FindingCodexReviewSummary reviews={reviewsByFindingId[finding.id]} />
-        </div>
-      ))}
+        </span>
+      </div>
+      <FindingCodexReviewSummary reviews={reviews} />
     </div>
   );
 }

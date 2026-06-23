@@ -146,6 +146,56 @@ def test_effective_single_conclusion_prefers_first_non_blank_unique_value() -> N
     assert slash.groups[0].effective_single_conclusion == "/"
 
 
+def test_splits_combined_conclusion_and_remark_placeholder() -> None:
+    cases = [
+        ("符合 /", "符合"),
+        ("不符合 /", "不符合"),
+        ("/ /", "/"),
+        ("—— /", "——"),
+    ]
+
+    for raw_conclusion, expected_conclusion in cases:
+        result = build_inspection_item_groups(
+            [
+                item(
+                    126,
+                    raw="126",
+                    result="符合要求",
+                    conclusion=raw_conclusion,
+                    remark="",
+                    page=87,
+                    row=3,
+                    name="指示灯颜色",
+                )
+            ]
+        )
+
+        group = result.groups[0]
+        assert group.effective_single_conclusion == expected_conclusion
+        assert group.effective_remark == "/"
+
+
+def test_recovers_shifted_remark_placeholder_from_conclusion_column() -> None:
+    result = build_inspection_item_groups(
+        [
+            item(
+                126,
+                raw="126",
+                result="符合",
+                conclusion="/",
+                remark="",
+                page=87,
+                row=3,
+                name="指示灯颜色",
+            )
+        ]
+    )
+
+    group = result.groups[0]
+    assert group.effective_single_conclusion == "符合"
+    assert group.effective_remark == "/"
+
+
 def test_effective_remark_treats_slash_and_dash_as_valid_values() -> None:
     slash = build_inspection_item_groups([item(9, raw="9", remark="/", page=4, row=0)])
     dash = build_inspection_item_groups([item(10, raw="10", remark="——", page=4, row=0)])
@@ -199,6 +249,76 @@ def test_records_diagnostics_for_missing_context_and_unparseable_sequence() -> N
     assert "ROW_CONTEXT_MISSING" in codes
     assert "UNPARSEABLE_ITEM_NO" in codes
     assert len(result.ungrouped_rows) == 1
+
+
+def test_standard_requirement_text_is_not_used_as_item_no_even_when_sequence_was_parsed() -> None:
+    requirement_text = "——所有其他 ME 设备和 ME 系统，500V。"
+    result = build_inspection_item_groups(
+        [
+            item(10, raw="10", result="符合要求", conclusion="符合", remark="/", page=12, row=0),
+            item(500, raw=requirement_text, result="", conclusion="", remark="", page=12, row=1),
+        ]
+    )
+
+    assert [group.item_no for group in result.groups] == ["10"]
+    group = result.groups[0]
+    assert len(group.rows) == 2
+    assert group.rows[1].sequence_raw == requirement_text
+    assert requirement_text not in [group.item_no for group in result.groups]
+    assert result.ungrouped_rows == []
+    assert any(diagnostic["code"] == "SEQUENCE_TEXT_LOOKS_LIKE_REQUIREMENT" for diagnostic in result.diagnostics)
+
+
+def test_ipx0_requirement_text_is_grouped_into_active_item_not_new_item_no() -> None:
+    requirement_text = "当外壳的分类为 IPX0 时，保持 ME 设备和其部件在潮湿箱里 48h。"
+    result = build_inspection_item_groups(
+        [
+            item(15, raw="15", result="符合要求", conclusion="符合", remark="/", page=13, row=0),
+            item(48, raw=requirement_text, result="", conclusion="", remark="", page=13, row=1),
+        ]
+    )
+
+    assert [group.item_no for group in result.groups] == ["15"]
+    assert len(result.groups[0].rows) == 2
+    assert result.groups[0].effective_test_results == ["符合要求"]
+    assert result.groups[0].effective_single_conclusion == "符合"
+    assert result.groups[0].effective_remark == "/"
+
+
+def test_alpha_subitem_and_standard_clause_sequence_text_join_active_group() -> None:
+    result = build_inspection_item_groups(
+        [
+            item(20, raw="20", result="符合要求", conclusion="符合", remark="/", page=14, row=0),
+            item(None, raw="a) 子项要求", result="", conclusion="", remark="", page=14, row=1),
+            item(4, raw="4.10.2", result="", conclusion="", remark="", page=14, row=2),
+        ]
+    )
+
+    assert [group.item_no for group in result.groups] == ["20"]
+    assert [row.sequence_raw for row in result.groups[0].rows] == ["20", "a) 子项要求", "4.10.2"]
+    assert result.ungrouped_rows == []
+
+
+def test_long_chinese_sequence_without_active_group_is_ungrouped_with_diagnostic() -> None:
+    raw = "预期一次性使用的任何材料，元器件，附件或 ME 设备均应符合适用要求。"
+    result = build_inspection_item_groups([item(1, raw=raw, result="", conclusion="", remark="", page=15, row=0)])
+
+    assert result.groups == []
+    assert len(result.ungrouped_rows) == 1
+    assert result.ungrouped_rows[0].sequence_raw == raw
+    assert any(diagnostic["code"] == "UNGROUPED_PAYLOAD_WITH_INVALID_SEQUENCE" for diagnostic in result.diagnostics)
+
+
+def test_legal_sequence_formats_still_create_groups() -> None:
+    result = build_inspection_item_groups(
+        [
+            item(118, raw="118", page=16, row=0),
+            item(118, raw="续 118", continued=True, page=17, row=0),
+        ]
+    )
+
+    assert [group.item_no for group in result.groups] == ["118"]
+    assert [marker.raw_text for marker in result.groups[0].continuation_markers] == ["续 118"]
 
 
 def test_qw2025_2795_like_cross_page_mini_fixture_groups_c07_evidence() -> None:

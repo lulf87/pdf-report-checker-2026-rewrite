@@ -68,26 +68,62 @@ class Settings(BaseSettings):
         ge=1,
         description="Maximum PTR table pages sent to one VLM enhancement call.",
     )
+    codex_cli_path: str = Field(
+        default="codex",
+        description="Codex CLI executable used by mandatory local runtime audit.",
+    )
     codex_audit_enabled: bool = Field(
-        default=False,
-        description="Whether controlled Codex CLI runtime audit is enabled.",
+        default=True,
+        description="Deprecated compatibility field; product runtime always requires Codex CLI audit.",
     )
     codex_audit_backend: Literal["disabled", "fake", "codex-cli"] = Field(
-        default="disabled",
-        description="Codex audit backend: disabled, fake, or codex-cli.",
+        default="codex-cli",
+        description="Deprecated compatibility field; product runtime always uses codex-cli.",
     )
     codex_audit_allow_real_execution: bool = Field(
-        default=False,
-        description="Whether the codex-cli backend may execute the real Codex CLI process.",
+        default=True,
+        description="Deprecated compatibility field; product runtime requires real local Codex CLI execution.",
     )
     codex_audit_timeout_seconds: int = Field(
-        default=120,
+        default=300,
         ge=1,
         description="Timeout in seconds for real Codex CLI audit execution.",
+    )
+    codex_audit_max_targets_per_task: int = Field(
+        default=5,
+        description="Maximum Codex audit targets emitted for one business task; <=0 disables audit target emission.",
+    )
+    codex_audit_max_targets_per_batch: int = Field(
+        default=5,
+        description="Maximum Codex audit targets emitted for the current batch; <=0 disables audit target emission.",
+    )
+    codex_audit_included_check_ids: str | None = Field(
+        default=None,
+        description="Optional comma-separated check IDs allowed for Codex audit targets.",
+    )
+    codex_audit_included_finding_codes: str | None = Field(
+        default=None,
+        description="Optional comma-separated finding codes allowed for Codex audit targets.",
+    )
+    codex_audit_excluded_check_ids: str | None = Field(
+        default=None,
+        description="Optional comma-separated check IDs excluded from Codex audit targets.",
+    )
+    codex_audit_priority_check_ids: str = Field(
+        default="C02,C03,C07,C04,C05,C06",
+        description="Comma-separated priority order for report Codex audit check IDs.",
     )
     codex_audit_runtime_dir: str = Field(
         default="runtime/codex_audit",
         description="Runtime root for controlled Codex audit evidence workspaces.",
+    )
+    codex_audit_sandbox: Literal["read-only"] = Field(
+        default="read-only",
+        description="Codex CLI sandbox mode. Product runtime only supports read-only.",
+    )
+    codex_audit_ephemeral: bool = Field(
+        default=True,
+        description="Whether Codex CLI audit runs with --ephemeral.",
     )
 
     model_config = SettingsConfigDict(

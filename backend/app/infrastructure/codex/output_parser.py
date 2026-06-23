@@ -241,7 +241,14 @@ class CodexReviewOutputParser:
     ) -> None:
         package_refs = {item.ref_id for item in evidence_package.items}
         allowed_refs = {evidence_ref.ref_id for evidence_ref in target.evidence_refs}
-        for ref_id in review["evidence_refs"]:
+        evidence_refs = review["evidence_refs"]
+        if len(evidence_refs) != len(set(evidence_refs)):
+            raise _OutputContractError(
+                "CODEX_OUTPUT_DUPLICATE_EVIDENCE_REF",
+                "Codex CLI output contained duplicate evidence refs.",
+                detail=f"target_id={target.target_id}",
+            )
+        for ref_id in evidence_refs:
             if ref_id not in package_refs:
                 raise _OutputContractError(
                     "CODEX_OUTPUT_UNKNOWN_EVIDENCE_REF",
@@ -262,10 +269,23 @@ class CodexReviewOutputParser:
     ) -> None:
         suggested_finding = review.get("suggested_finding")
         if suggested_finding is None:
+            if review["verdict"] == CodexReviewVerdict.ADD_FINDING.value:
+                raise _OutputContractError(
+                    "CODEX_OUTPUT_ADD_FINDING_MISSING_SUGGESTION",
+                    "Codex add_finding output must include suggested_finding.",
+                    detail=f"target_id={review['target_id']}",
+                )
             return
 
         package_refs = {item.ref_id for item in evidence_package.items}
-        for ref_id in suggested_finding.get("evidence_refs", []):
+        suggested_refs = suggested_finding.get("evidence_refs", [])
+        if len(suggested_refs) != len(set(suggested_refs)):
+            raise _OutputContractError(
+                "CODEX_OUTPUT_DUPLICATE_EVIDENCE_REF",
+                "Codex suggested finding contained duplicate evidence refs.",
+                detail=f"target_id={review['target_id']}",
+            )
+        for ref_id in suggested_refs:
             if ref_id not in package_refs:
                 raise _OutputContractError(
                     "CODEX_OUTPUT_UNKNOWN_EVIDENCE_REF",

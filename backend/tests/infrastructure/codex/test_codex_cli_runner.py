@@ -92,7 +92,7 @@ def _output_payload() -> dict:
                 "evidence_refs": ["ev-1"],
                 "suggested_severity": None,
                 "suggested_finding": None,
-                "metadata": {"source": "runner-test"},
+                "metadata": {},
             }
         ],
     }
@@ -170,7 +170,7 @@ def test_cli_runner_builds_safe_codex_exec_command(tmp_path, monkeypatch) -> Non
     assert results[0].status is CodexReviewStatus.SUCCEEDED
     assert results[0].verdict is CodexReviewVerdict.CONFIRM
     assert results[0].raw_output_path == "codex_review_output.json"
-    assert results[0].metadata["source"] == "runner-test"
+    assert results[0].metadata["parser"] == "codex_review_output"
 
 
 def test_cli_runner_returns_failed_when_workspace_dir_is_missing(tmp_path, monkeypatch) -> None:
@@ -278,7 +278,7 @@ def test_cli_runner_converts_command_not_found_to_failed_review(tmp_path, monkey
 
     assert results[0].status is CodexReviewStatus.FAILED
     assert results[0].error is not None
-    assert results[0].error.code == "CODEX_COMMAND_NOT_FOUND"
+    assert results[0].error.code == "CODEX_CLI_UNAVAILABLE"
 
 
 def test_cli_runner_converts_malformed_output_to_failed_review(tmp_path, monkeypatch) -> None:

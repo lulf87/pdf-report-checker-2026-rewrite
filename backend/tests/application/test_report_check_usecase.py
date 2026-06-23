@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from app.application.report_codex_evidence_builder import ReportCodexEvidenceBuilder
 from app.application.report_check_usecase import ReportCheckUseCase
 from app.application.task_service import TaskService
 from app.domain.codex_review import (
@@ -134,6 +135,37 @@ class ConfigurableReportRuleRunner:
         )
 
 
+class MultipleReportRuleRunner:
+    def __init__(self, results: list[tuple[str, list[Finding]]]) -> None:
+        self.results = results
+        self.documents: list[ReportDocument] = []
+
+    def run(self, document: ReportDocument, context=None) -> ReportRuleRunResult:
+        self.documents.append(document)
+        task_id = context.task_id
+        check_results = []
+        findings_out: list[Finding] = []
+        for check_id, findings in self.results:
+            task_findings = [finding.model_copy(update={"task_id": task_id}) for finding in findings]
+            findings_out.extend(task_findings)
+            check_results.append(
+                CheckResult(
+                    task_id=task_id,
+                    check_id=check_id,
+                    check_name=f"{check_id} test check",
+                    status=CheckStatus.FAIL if task_findings else CheckStatus.PASS,
+                    findings=task_findings,
+                    evidence=[evidence for finding in task_findings for evidence in finding.evidence],
+                )
+            )
+        return ReportRuleRunResult(
+            task_id=task_id,
+            results=check_results,
+            summary=CheckSummary.from_results(check_results),
+            findings=findings_out,
+        )
+
+
 class FakeReportAuditService:
     def __init__(
         self,
@@ -214,6 +246,7 @@ def test_report_check_usecase_saves_parses_extracts_runs_rules_and_completes_tas
         sample_description_extractor=FakeSampleDescriptionExtractor(),
         photo_label_extractor=FakePhotoLabelExtractor(),
         rule_runner=runner,
+        codex_audit_service=FakeReportAuditService(),
     )
 
     status = usecase.run(file_name="report.pdf", content=b"%PDF-1.4 report", content_type="application/pdf")
@@ -262,20 +295,19 @@ def test_report_check_usecase_converts_processing_errors_to_task_error(tmp_path:
     assert task_service.get_task(status.task_id).error_message == "Invalid PDF file: report.pdf"
 
 
-def test_report_check_codex_audit_disabled_keeps_reviews_empty_and_does_not_call_service(tmp_path: Path) -> None:
-    finding = _report_finding(check_id="C02")
+def test_report_check_without_reviewable_findings_audits_check_summary_target(tmp_path: Path) -> None:
+    finding = _report_finding(check_id="C08")
     audit_service = FakeReportAuditService()
     task_service, status = _run_report_check(
         tmp_path,
-        rule_runner=ConfigurableReportRuleRunner(check_id="C02", findings=[finding]),
+        rule_runner=ConfigurableReportRuleRunner(check_id="C08", findings=[finding]),
         codex_audit_service=audit_service,
-        codex_audit_enabled=False,
     )
 
     result = task_service.get_result(status.task_id)
     assert result.check_results[0].findings[0].code == finding.code
-    assert result.check_results[0].codex_reviews == []
-    assert audit_service.calls == []
+    assert result.check_results[0].codex_reviews[0].target.target_type == "check_result"
+    assert audit_service.calls[0]["request"].targets[0].check_id == "C08"
 
 
 def test_report_check_codex_audit_confirm_review_is_attached_without_deleting_finding(tmp_path: Path) -> None:
@@ -339,7 +371,7 @@ def test_report_check_codex_audit_add_finding_does_not_append_to_deterministic_f
     assert check_result.codex_reviews[0].suggested_finding.message == "Codex 建议新增报告自检 finding。"
 
 
-def test_report_check_codex_audit_failed_review_does_not_break_usecase(tmp_path: Path) -> None:
+def test_report_check_codex_audit_failed_review_fails_task(tmp_path: Path) -> None:
     task_service, status = _run_report_check(
         tmp_path,
         rule_runner=ConfigurableReportRuleRunner(check_id="C02", findings=[_report_finding(check_id="C02")]),
@@ -347,14 +379,11 @@ def test_report_check_codex_audit_failed_review_does_not_break_usecase(tmp_path:
         codex_audit_enabled=True,
     )
 
-    assert status.status == TaskState.COMPLETED
-    review = task_service.get_result(status.task_id).check_results[0].codex_reviews[0]
-    assert review.status is CodexReviewStatus.FAILED
-    assert review.error is not None
-    assert review.error.code == "FAKE_REPORT_AUDIT_FAILED"
+    assert status.status == TaskState.ERROR
+    assert "FAKE_REPORT_AUDIT_FAILED" in (status.error_message or "")
 
 
-def test_report_check_codex_audit_service_exception_is_converted_to_failed_review(tmp_path: Path) -> None:
+def test_report_check_codex_audit_service_exception_fails_task(tmp_path: Path) -> None:
     finding = _report_finding(check_id="C02")
     task_service, status = _run_report_check(
         tmp_path,
@@ -363,15 +392,11 @@ def test_report_check_codex_audit_service_exception_is_converted_to_failed_revie
         codex_audit_enabled=True,
     )
 
-    assert status.status == TaskState.COMPLETED
-    check_result = task_service.get_result(status.task_id).check_results[0]
-    assert len(check_result.findings) == 1
-    assert check_result.codex_reviews[0].status is CodexReviewStatus.FAILED
-    assert check_result.codex_reviews[0].error is not None
-    assert check_result.codex_reviews[0].error.code == "CODEX_REPORT_AUDIT_SERVICE_FAILED"
+    assert status.status == TaskState.ERROR
+    assert "audit boom" in (status.error_message or "")
 
 
-def test_report_check_codex_audit_no_reviewable_findings_does_not_call_service(tmp_path: Path) -> None:
+def test_report_check_codex_audit_no_reviewable_findings_uses_summary_target(tmp_path: Path) -> None:
     audit_service = FakeReportAuditService()
     task_service, status = _run_report_check(
         tmp_path,
@@ -381,8 +406,8 @@ def test_report_check_codex_audit_no_reviewable_findings_does_not_call_service(t
     )
 
     check_result = task_service.get_result(status.task_id).check_results[0]
-    assert check_result.codex_reviews == []
-    assert audit_service.calls == []
+    assert check_result.codex_reviews[0].target.target_type == "check_result"
+    assert audit_service.calls
 
 
 def test_report_check_codex_audit_c02_generates_label_ocr_target(tmp_path: Path) -> None:
@@ -415,12 +440,51 @@ def test_report_check_codex_audit_c07_generates_inspection_item_target(tmp_path:
     assert audit_service.calls[0]["request"].targets[0].target_type == "inspection_item"
 
 
+def test_report_check_codex_audit_batches_without_omitting_targets(tmp_path: Path) -> None:
+    audit_service = FakeReportAuditService()
+    c04_findings = [_report_finding(check_id="C04", id_suffix=f"c04-{index}") for index in range(3)]
+    c07_findings = [_report_finding(check_id="C07", id_suffix=f"c07-{index}") for index in range(3)]
+
+    task_service, status = _run_report_check(
+        tmp_path,
+        rule_runner=MultipleReportRuleRunner([("C04", c04_findings), ("C07", c07_findings)]),
+        codex_audit_service=audit_service,
+        codex_audit_enabled=True,
+        report_codex_evidence_builder=ReportCodexEvidenceBuilder(max_targets_per_task=4),
+    )
+
+    result = task_service.get_result(status.task_id)
+    assert status.status == TaskState.COMPLETED
+    assert sum(len(check.codex_reviews) for check in result.check_results) == 6
+    assert [len(call["request"].targets) for call in audit_service.calls] == [3, 3]
+    assert [call["request"].targets[0].check_id for call in audit_service.calls] == ["C07", "C04"]
+
+
+def test_report_check_codex_audit_batches_single_check_without_omitting_targets(tmp_path: Path) -> None:
+    audit_service = FakeReportAuditService()
+    findings = [_report_finding(check_id="C04", id_suffix=f"c04-{index}") for index in range(6)]
+
+    task_service, status = _run_report_check(
+        tmp_path,
+        rule_runner=ConfigurableReportRuleRunner(check_id="C04", findings=findings),
+        codex_audit_service=audit_service,
+        codex_audit_enabled=True,
+        report_codex_evidence_builder=ReportCodexEvidenceBuilder(max_targets_per_batch=2),
+    )
+
+    result = task_service.get_result(status.task_id)
+    assert status.status == TaskState.COMPLETED
+    assert len(result.check_results[0].codex_reviews) == 6
+    assert [len(call["request"].targets) for call in audit_service.calls] == [2, 2, 2]
+
+
 def _run_report_check(
     tmp_path: Path,
     *,
     rule_runner,
     codex_audit_service: FakeReportAuditService | None = None,
     codex_audit_enabled: bool = False,
+    report_codex_evidence_builder: ReportCodexEvidenceBuilder | None = None,
 ) -> tuple[TaskService, object]:
     task_service = TaskService()
     usecase = ReportCheckUseCase(
@@ -434,12 +498,13 @@ def _run_report_check(
         rule_runner=rule_runner,
         codex_audit_service=codex_audit_service,
         codex_audit_enabled=codex_audit_enabled,
+        report_codex_evidence_builder=report_codex_evidence_builder,
     )
     status = usecase.run(file_name="report.pdf", content=b"%PDF-1.4 report", content_type="application/pdf")
     return task_service, status
 
 
-def _report_finding(check_id: str) -> Finding:
+def _report_finding(check_id: str, *, id_suffix: str = "finding") -> Finding:
     evidence = Evidence(
         id=f"ev-{check_id}",
         source_type=SourceType.REPORT,
@@ -457,7 +522,7 @@ def _report_finding(check_id: str) -> Finding:
             "actual_conclusion": "符合",
         }
     return Finding(
-        id=f"task-placeholder-{check_id}-finding",
+        id=f"task-placeholder-{check_id}-{id_suffix}",
         task_id="task-placeholder",
         check_id=check_id,
         severity=FindingSeverity.ERROR,

@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import re
-from collections import OrderedDict
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Any
 
 from app.domain.common import Confidence, Evidence, EvidenceMethod, SourceType
 from app.domain.finding import Finding, FindingSeverity
-from app.domain.report import InspectionItem, ReportDocument
+from app.domain.inspection_group import InspectionItemGroup
+from app.domain.report import ReportDocument
 from app.domain.result import CheckResult
+from app.infrastructure.report.inspection_item_group_builder import build_inspection_item_groups
 from app.rules.report.common import PLACEHOLDER_MARKERS, compact, make_result
 from app.rules.report.context import CheckContext
 
@@ -31,42 +33,29 @@ def check_c07_item_conclusion(
     context = context or CheckContext()
     findings: list[Finding] = []
     group_metadata: list[dict[str, object]] = []
+    build_result = build_inspection_item_groups(list(document.inspection_items))
 
-    for sequence, items in _group_items(document.inspection_items):
-        decision = infer_expected_conclusion(_collect_result_values(items))
-        actual = _authoritative_conclusion(items)
-        group_metadata.append(
-            {
-                "item_no": sequence,
-                "normalized_item_no": sequence,
-                "expected_conclusion": decision.expected,
-                "actual_conclusion": actual,
-                "result_values": decision.result_values,
-                "decision_reason": decision.reason,
-            }
-        )
+    for group in build_result.groups:
+        decision = infer_expected_conclusion(group.effective_test_results)
+        actual = _normalize_conclusion(group.effective_single_conclusion)
+        metadata = _group_metadata(group, decision, actual)
+        group_metadata.append(metadata)
 
         if actual != decision.expected:
             findings.append(
                 Finding(
-                    id=f"{context.task_id}-c07-{sequence}-conclusion-mismatch",
+                    id=f"{context.task_id}-c07-{group.item_no}-conclusion-mismatch",
                     task_id=context.task_id,
                     check_id=CHECK_ID,
                     severity=FindingSeverity.ERROR,
                     code=_mismatch_code(decision.expected, actual),
-                    message=_mismatch_message(sequence, decision.expected, actual, decision.reason),
-                    location=items[0].row_location if items else None,
+                    message=_mismatch_message(group.item_no, decision.expected, actual, decision.reason),
+                    location=group.rows[0].row_location if group.rows else None,
                     expected=decision.expected,
                     actual=actual,
-                    evidence=_group_evidence(sequence, items),
+                    evidence=_group_evidence(group, decision, actual),
                     confidence=Confidence.HIGH,
-                    metadata={
-                        "item_no": sequence,
-                        "normalized_item_no": sequence,
-                        "result_values": decision.result_values,
-                        "actual_conclusion": actual,
-                        "decision_reason": decision.reason,
-                    },
+                    metadata=metadata,
                 )
             )
 
@@ -75,7 +64,11 @@ def check_c07_item_conclusion(
         check_id=CHECK_ID,
         check_name=CHECK_NAME,
         findings=findings,
-        metadata={"groups": group_metadata},
+        metadata={
+            "groups": group_metadata,
+            "group_builder_diagnostics": build_result.diagnostics,
+            "ungrouped_row_count": len(build_result.ungrouped_rows),
+        },
         pass_summary="检验项目单项结论逻辑一致",
         issue_summary=f"单项结论存在 {len(findings)} 项逻辑问题",
     )
@@ -117,45 +110,6 @@ def infer_expected_conclusion(result_values: Iterable[str | None]) -> Conclusion
     )
 
 
-def _group_items(items: Iterable[InspectionItem]) -> list[tuple[str, list[InspectionItem]]]:
-    groups: OrderedDict[str, list[InspectionItem]] = OrderedDict()
-    current_sequence: str | None = None
-
-    for item in items:
-        sequence = normalize_item_no(item.sequence_raw) or normalize_item_no(item.sequence)
-        if sequence is not None:
-            current_sequence = sequence
-            groups.setdefault(sequence, []).append(item)
-            continue
-
-        if current_sequence is not None and _row_has_c07_payload(item):
-            groups[current_sequence].append(item)
-
-    return list(groups.items())
-
-
-def _row_has_c07_payload(item: InspectionItem) -> bool:
-    return any(
-        (value or "").strip()
-        for value in (
-            item.test_result,
-            item.conclusion,
-            item.remark,
-            item.standard_requirement,
-        )
-    ) or bool(item.result_values)
-
-
-def _collect_result_values(items: list[InspectionItem]) -> list[str | None]:
-    values: list[str | None] = []
-    for item in items:
-        if item.result_values:
-            values.extend(item.result_values)
-        else:
-            values.append(item.test_result)
-    return values
-
-
 def _split_result_values(result_values: Iterable[str | None]) -> list[str | None]:
     tokens: list[str | None] = []
     for value in result_values:
@@ -177,14 +131,6 @@ def _is_nonconforming_result(token: str) -> bool:
 
 def _is_placeholder_result(token: str) -> bool:
     return token in {"", *PLACEHOLDER_MARKERS}
-
-
-def _authoritative_conclusion(items: list[InspectionItem]) -> str:
-    for item in items:
-        conclusion = _normalize_conclusion(item.conclusion)
-        if conclusion:
-            return conclusion
-    return ""
 
 
 def _normalize_conclusion(value: str | None) -> str:
@@ -220,13 +166,91 @@ def _mismatch_message(sequence: str, expected: str, actual: str, reason: str) ->
     return f"序号 {sequence} 的检验结果与单项结论逻辑不一致：{reason_text}，期望单项结论为“{expected}”，实际为“{actual_text}”。"
 
 
-def _group_evidence(sequence: str, items: list[InspectionItem]) -> list[Evidence]:
+def _group_metadata(group: InspectionItemGroup, decision: ConclusionDecision, actual: str) -> dict[str, Any]:
+    source_rows = _source_rows(group)
+    return {
+        "item_no": group.item_no,
+        "normalized_item_no": group.item_no,
+        "display_item_no": group.display_item_no,
+        "expected_conclusion": decision.expected,
+        "actual_conclusion": actual,
+        "effective_test_results": decision.result_values,
+        "result_values": decision.result_values,
+        "group_row_count": len(group.rows),
+        "pages": list(group.pages),
+        "continuation_markers": [marker.model_dump(mode="json") for marker in group.continuation_markers],
+        "source_rows": source_rows,
+        "result_summary": _result_summary(decision.result_values),
+        "reasoning_basis": decision.reason,
+        "decision_reason": decision.reason,
+        "suppressed_physical_row_count": max(0, len(group.rows) - 1),
+        "group_diagnostics": group.diagnostics,
+    }
+
+
+def _source_rows(group: InspectionItemGroup) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for index, item in enumerate(group.rows):
+        rows.append(
+            {
+                "source_index": _source_index(group, index),
+                "page_number": item.source_page,
+                "row_index": item.row_index_in_page,
+                "sequence_raw": item.sequence_raw,
+                "sequence": item.sequence,
+                "is_continuation": item.is_continuation,
+                "test_result": item.test_result,
+                "result_values": list(item.result_values),
+                "single_conclusion": item.conclusion,
+                "remark": item.remark,
+            }
+        )
+    return rows
+
+
+def _source_index(group: InspectionItemGroup, row_index: int) -> int | None:
+    if row_index >= len(group.source_evidence):
+        return None
+    value = group.source_evidence[row_index].get("source_index")
+    return value if isinstance(value, int) else None
+
+
+def _result_summary(result_values: list[str]) -> dict[str, int]:
+    nonconforming = sum(1 for value in result_values if _is_nonconforming_result(value))
+    placeholders = sum(1 for value in result_values if _is_placeholder_result(value))
+    conforming_or_non_empty = len(result_values) - nonconforming - placeholders
+    return {
+        "total_count": len(result_values),
+        "nonconforming_count": nonconforming,
+        "placeholder_count": placeholders,
+        "conforming_or_non_empty_count": max(0, conforming_or_non_empty),
+    }
+
+
+def _group_evidence(group: InspectionItemGroup, decision: ConclusionDecision, actual: str) -> list[Evidence]:
     evidence_items: list[Evidence] = []
-    for index, item in enumerate(items):
+    evidence_items.append(
+        Evidence(
+            id=f"c07-{group.item_no}-group-summary",
+            source_type=SourceType.REPORT,
+            location=group.rows[0].row_location if group.rows else None,
+            raw_text=(
+                f"序号：{group.display_item_no or group.item_no}；"
+                f"有效检验结果：{'；'.join(decision.result_values)}；"
+                f"期望单项结论：{decision.expected}；"
+                f"实际单项结论：{actual}"
+            ),
+            value=actual,
+            method=EvidenceMethod.PDF_TEXT,
+            confidence=Confidence.HIGH,
+            metadata=_group_metadata(group, decision, actual),
+        )
+    )
+    for index, item in enumerate(group.rows):
         evidence_items.extend(item.evidence)
         evidence_items.append(
             Evidence(
-                id=f"c07-{sequence}-row-{index}",
+                id=f"c07-{group.item_no}-row-{index}",
                 source_type=SourceType.REPORT,
                 location=item.row_location,
                 raw_text=(

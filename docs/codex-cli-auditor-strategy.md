@@ -2,7 +2,7 @@
 
 校准日期：2026-06-15
 
-本文用于纠偏当前重写项目的审核链路：Codex CLI 不是普通开发工具，也不只是离线辅助说明，而是产品运行时受控 auditor / judge。确定性规则仍负责构建证据和候选问题，Codex CLI 负责对复杂语义、图文证据和规则歧义做运行时复核。最终结果必须同时保留 deterministic finding 与 Codex review 两层证据。
+本文用于纠偏当前重写项目的审核链路：Codex CLI 不是普通开发工具，也不只是离线辅助说明，而是产品运行时受控且必须执行的 auditor / judge。确定性规则仍负责抽取、结构化、候选问题生成和 evidence package 构建；Codex CLI 负责对候选问题、复杂语义、图文证据和规则歧义做运行时复核。未经 Codex 审核的规则 finding 不是最终结论。
 
 ## 1. 旧项目事实
 
@@ -22,11 +22,12 @@
 
 - 正则、OCR、表格结构化和规则负责 evidence building。
 - C01-C11 / PTR rules 输出 candidate findings。
-- Codex CLI 作为运行时 judge / auditor 做复核。
-- 最终结果保留 deterministic finding 和 Codex review。
+- Codex CLI 作为 mandatory runtime judge / auditor 做复核。
+- 最终结果保留 deterministic candidate finding 和 Codex review。
 - Codex review 可以给出 `confirm`、`refute`、`uncertain`、`add_finding`。
 - Codex review 不删除原始 `Finding`，也不静默覆盖规则结论；被 refute 的 finding 仍保留审计痕迹，并通过 `codex_review_id` 或 `metadata` 标记复核意见。
 - Codex CLI 只能参与产品运行时审核链路，不作为前端业务判断，也不作为 router 内的即时逻辑。
+- Codex runtime failure 与 verdict=`uncertain` 必须区分：前者使业务任务 failed，后者是正常审核结果并进入人工复核展示。
 
 ## 3. 后端模块设计
 
@@ -60,10 +61,10 @@ Codex CLI 运行必须默认最小权限：
 - `codex exec` 使用 read-only sandbox。
 - prompt 明确要求只基于 evidence package 审核，不补造标准条款、字段含义、检测结果或文件路径。
 - 使用 output schema 输出 JSON，不接受自由文本作为最终结构化结果。
-- 设置 timeout；超时、非零退出、schema 解析失败、JSON 校验失败均降级为 `CodexReviewStatus.failed`。
-- Codex 审核失败不阻断主核对流程；主流程继续返回 deterministic findings，并把失败 review 作为诊断证据。
-- 单元测试和 usecase 测试必须使用 `FakeCodexRunner`，不得调用真实 Codex CLI。
-- 真实 Codex CLI 仅在手动验收任务中启用，并记录输入 evidence package、输出 JSON、timeout 和失败 fallback。
+- 设置 timeout；超时、非零退出、schema 解析失败、JSON 校验失败均视为 Codex runtime failure。
+- 产品运行路径中，Codex runtime failure 不得降级为 completed 结果；Report/PTR 任务必须 failed，并记录 `CODEX_CLI_UNAVAILABLE`、`CODEX_TIMEOUT`、`CODEX_EXIT_NONZERO`、`CODEX_OUTPUT_*` 或 `CODEX_AUDIT_FAILED` 等错误码。
+- 单元测试和 usecase 测试必须使用 `FakeCodexRunner` 或 monkeypatch，不得调用真实 Codex CLI；fake runner 只允许作为测试依赖注入，不是本地产品运行模式。
+- 本地产品运行默认通过 `CodexCliRunner` 调用本机 `codex exec`，并记录输入 evidence package、输出 JSON、timeout 和失败诊断。
 
 ## 5. 数据模型
 
@@ -174,7 +175,9 @@ Codex CLI 运行必须默认最小权限：
 展示和导出要求：
 
 - 前端展示“规则初判 + Codex 审核意见”。
-- deterministic finding 不因 Codex refute 被删除；UI 可以显示为“规则初判：ERROR，Codex 审核：refute/uncertain/confirm”。
+- deterministic finding 是 candidate，不因 Codex refute 被删除；UI 可以显示为“规则候选：ERROR，Codex 审核：refute/uncertain/confirm”。
+- 兼容期如果继续使用 `CheckResult.findings` 字段，该字段必须按 candidate 语义理解，并通过 metadata 标记 `codex_required`、`codex_review_id`、`codex_verdict`、`final_status`。
+- `confirm` 表示候选问题被确认；`refute` 表示候选问题不应作为最终 ERROR；`uncertain` 表示需要人工复核但任务可 completed。
 - Codex `add_finding` 必须进入统一 `Finding` 校验和 evidence 关联后才能展示。
 - JSON/PDF/XLSX 导出必须保留 deterministic findings、Codex reviews、失败 review 诊断和 raw output 引用。
 
@@ -209,10 +212,11 @@ Codex CLI 运行必须默认最小权限：
 | T-CODEX-03 | 实现 `FakeCodexRunner` / `CodexCliRunner` 接口，单元测试只使用 fake runner。 |
 | T-CODEX-04 | 实现 `PromptBuilder` 和 JSON output schema，明确只基于 evidence package。 |
 | T-CODEX-05 | 实现 `OutputParser` 和失败 fallback，覆盖 timeout、非零退出、invalid JSON、schema invalid。 |
-| T-CODEX-06 | `PTRCompareUseCase` 接入 `CodexAuditService`，优先覆盖 PTR clause/table/parameter/scope review。 |
-| T-CODEX-07 | `ReportCheckUseCase` 接入 `CodexAuditService`，优先覆盖 C02/C03/C04/C05/C06/C07。 |
+| T-CODEX-06 | `PTRCompareUseCase` 接入 `CodexAuditService`，优先覆盖 PTR clause/table/parameter/scope review；T-CODEX-MANDATORY-01 后产品路径必须审核，失败即 task failed。 |
+| T-CODEX-07 | `ReportCheckUseCase` 接入 `CodexAuditService`，优先覆盖 C02/C03/C04/C05/C06/C07；T-CODEX-MANDATORY-01 后产品路径必须审核，失败即 task failed。 |
 | T-CODEX-08 | 前端展示 Codex review，展示“规则初判 + Codex 审核意见”。 |
 | T-CODEX-09 | 真实 Codex CLI 手动验收，记录 evidence package、JSON 输出、timeout 和 fallback。 |
+| T-CODEX-MANDATORY-01 | 将产品运行路径纠偏为 mandatory Codex CLI：废弃用户层面的 disabled/fake/codex-cli 选择，batching 只控制单批性能，不允许默认漏审。 |
 
 ## 10. 非目标
 

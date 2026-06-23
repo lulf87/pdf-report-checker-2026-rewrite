@@ -52,11 +52,11 @@ def _default_forbidden_parent_roots() -> tuple[Path, ...]:
 class CodexCliRunnerConfig:
     executable: str = "codex"
     sandbox: str = "read-only"
-    timeout_seconds: int = 120
-    enabled: bool = False
+    timeout_seconds: int = 300
+    enabled: bool = True
     ephemeral: bool = True
     extra_args: list[str] = field(default_factory=list)
-    allow_real_execution: bool = False
+    allow_real_execution: bool = True
     forbidden_exact_roots: tuple[Path, ...] = field(default_factory=_default_forbidden_exact_roots)
     forbidden_parent_roots: tuple[Path, ...] = field(default_factory=_default_forbidden_parent_roots)
 
@@ -147,7 +147,7 @@ class CodexCliRunner:
             return self._failed_results(
                 request,
                 CodexReviewError(
-                    code="CODEX_COMMAND_NOT_FOUND",
+                    code="CODEX_CLI_UNAVAILABLE",
                     message="Codex CLI executable was not found.",
                     detail=str(exc),
                     retryable=False,

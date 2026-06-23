@@ -35,17 +35,16 @@ def test_c08_reports_empty_result_conclusion_and_remark_fields() -> None:
     assert [finding.metadata["field_name"] for finding in result.findings] == ["检验结果", "单项结论", "备注"]
 
 
-def test_c08_checks_each_row_instead_of_hiding_empty_continuation_fields() -> None:
+def test_c08_uses_group_effective_fields_instead_of_row_level_noise() -> None:
     document = ReportDocument(
         inspection_items=[
             item(1, result="符合要求", conclusion="符合", remark="/", row=0),
-            item(1, result="", conclusion="符合", remark="/", row=1),
+            item(1, result="", conclusion="", remark="", row=1),
         ]
     )
 
     result = check_c08_non_empty_fields(document, CheckContext(task_id="task-c08"))
 
-    assert result.status == CheckStatus.FAIL
-    assert len(result.findings) == 1
-    assert result.findings[0].metadata["row_index"] == 1
-    assert result.findings[0].metadata["field_name"] == "检验结果"
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["group_count"] == 1

@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 from typing import Protocol
 
+from app.application.codex_audit_targeting import priority_index
 from app.application.report_codex_evidence_builder import ReportCodexEvidenceBuilder
 from app.application.task_service import TaskService
 from app.domain.codex_review import CodexReviewError, CodexReviewRequest, CodexReviewResult, CodexReviewStatus
@@ -81,6 +82,7 @@ class ReportCheckUseCase:
         codex_audit_enabled: bool = False,
         report_codex_evidence_builder: ReportCodexEvidenceBuilder | None = None,
     ) -> None:
+        del codex_audit_enabled
         self.task_service = task_service
         self.file_store = file_store or LocalFileStore(Path(tempfile.gettempdir()) / "report-checker-runtime")
         self.pdf_parser = pdf_parser or PyMuPDFParser()
@@ -90,7 +92,7 @@ class ReportCheckUseCase:
         self.photo_label_extractor = photo_label_extractor or PhotoLabelExtractor()
         self.rule_runner = rule_runner or ReportRuleRunner()
         self.codex_audit_service = codex_audit_service
-        self.codex_audit_enabled = codex_audit_enabled
+        self.codex_audit_enabled = codex_audit_service is not None
         self.report_codex_evidence_builder = report_codex_evidence_builder or ReportCodexEvidenceBuilder()
 
     def run(
@@ -157,26 +159,78 @@ class ReportCheckUseCase:
         parsed_pdf: ParsedPdf,
         check_results: list[CheckResult],
     ) -> None:
-        if not self.codex_audit_enabled or self.codex_audit_service is None:
-            return
-
-        for result in check_results:
-            bundle = self.report_codex_evidence_builder.build(
-                task_id=task_id,
-                task_type=TaskType.REPORT_CHECK.value,
-                result=result,
-                report=document,
-                parsed_pdf=parsed_pdf,
-            )
-            if bundle is None:
-                continue
-
-            try:
+        for result in self._ordered_codex_check_results(check_results):
+            target_offset = 0
+            while True:
+                bundle = self.report_codex_evidence_builder.build(
+                    task_id=task_id,
+                    task_type=TaskType.REPORT_CHECK.value,
+                    result=result,
+                    report=document,
+                    parsed_pdf=parsed_pdf,
+                    target_offset=target_offset,
+                )
+                if bundle is None:
+                    break
+                if self.codex_audit_service is None:
+                    raise RuntimeError("CODEX_AUDIT_REQUIRED: Codex audit service is required for reviewable report targets.")
                 reviews = self.codex_audit_service.review(bundle.request, bundle.evidence_package)
-            except Exception as exc:
-                reviews = _failed_codex_reviews_for_request(bundle.request, exc)
+                _raise_for_required_codex_audit_failure(reviews)
+                result.codex_reviews.extend(reviews)
+                _annotate_candidate_findings_with_codex_status(result, reviews)
+                target_offset += len(bundle.request.targets)
+                if not bundle.evidence_package.metadata.get("truncated"):
+                    break
 
-            result.codex_reviews.extend(reviews)
+    def _ordered_codex_check_results(self, check_results: list[CheckResult]) -> list[CheckResult]:
+        priority = priority_index(self.report_codex_evidence_builder.target_selection.priority_check_ids)
+        fallback = len(priority)
+        return [
+            result
+            for _, result in sorted(
+                enumerate(check_results),
+                key=lambda pair: (priority.get(pair[1].check_id, fallback), pair[0]),
+            )
+        ]
+
+
+def _raise_for_required_codex_audit_failure(reviews: list[CodexReviewResult]) -> None:
+    failed = [review for review in reviews if review.status in {CodexReviewStatus.FAILED, CodexReviewStatus.SKIPPED}]
+    if not failed:
+        return
+    error = next((review.error for review in failed if review.error is not None), None)
+    code = error.code if error is not None else "CODEX_AUDIT_FAILED"
+    message = error.message if error is not None else "Mandatory Codex audit did not produce a succeeded review."
+    detail = error.detail if error is not None else None
+    if detail:
+        raise RuntimeError(f"{code}: {message} {detail}")
+    raise RuntimeError(f"{code}: {message}")
+
+
+def _annotate_candidate_findings_with_codex_status(result: CheckResult, reviews: list[CodexReviewResult]) -> None:
+    findings_by_id = {finding.id: finding for finding in result.findings}
+    for review in reviews:
+        finding_id = review.target.finding_id
+        if not finding_id or finding_id not in findings_by_id:
+            continue
+        finding = findings_by_id[finding_id]
+        verdict = review.verdict.value if review.verdict is not None else None
+        finding.metadata["codex_required"] = True
+        finding.metadata["codex_review_id"] = review.review_id
+        finding.metadata["codex_verdict"] = verdict
+        finding.metadata["final_status"] = _final_status_for_verdict(verdict)
+
+
+def _final_status_for_verdict(verdict: str | None) -> str:
+    if verdict == "confirm":
+        return "confirmed"
+    if verdict == "refute":
+        return "refuted"
+    if verdict == "uncertain":
+        return "manual_review_required"
+    if verdict == "add_finding":
+        return "suggested_additional_finding"
+    return "pending"
 
 
 def _failed_codex_reviews_for_request(

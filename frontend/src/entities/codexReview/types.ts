@@ -95,6 +95,13 @@ export interface GroupedCodexReviews {
   unassociated: CodexReviewResult[];
 }
 
+export type CodexFinalStatus =
+  | "confirmed"
+  | "refuted"
+  | "manual_review_required"
+  | "suggested_additional_finding"
+  | "pending";
+
 export const CODEX_VERDICT_LABELS: Record<CodexReviewVerdict, string> = {
   confirm: "Codex 已确认",
   refute: "Codex 认为可能误报",
@@ -173,7 +180,7 @@ export function codexReviewTone(review: CodexReviewResult): "success" | "danger"
   if (review.status === "skipped") return "info";
   if (review.status === "pending" || review.status === "running") return "accent";
   if (review.verdict === "confirm") return "success";
-  if (review.verdict === "refute") return "danger";
+  if (review.verdict === "refute") return "info";
   if (review.verdict === "uncertain") return "warn";
   if (review.verdict === "add_finding") return "accent";
   return "info";
@@ -182,6 +189,36 @@ export function codexReviewTone(review: CodexReviewResult): "success" | "danger"
 export function codexReviewPrimaryLabel(review: CodexReviewResult): string {
   if (review.verdict) return CODEX_VERDICT_LABELS[review.verdict];
   return CODEX_STATUS_LABELS[review.status];
+}
+
+export function findingCodexFinalStatus(
+  finding: Finding,
+  reviews?: readonly CodexReviewResult[] | null,
+): CodexFinalStatus {
+  const metadataStatus = metadataString(finding.metadata, "final_status");
+  if (isCodexFinalStatus(metadataStatus)) return metadataStatus;
+
+  const review = normalizeCodexReviews(reviews).find((item) => item.status === "succeeded" && item.verdict);
+  if (review?.verdict === "confirm") return "confirmed";
+  if (review?.verdict === "refute") return "refuted";
+  if (review?.verdict === "uncertain") return "manual_review_required";
+  if (review?.verdict === "add_finding") return "suggested_additional_finding";
+  return "pending";
+}
+
+export function codexFinalStatusLabel(status: CodexFinalStatus): string {
+  if (status === "confirmed") return "Codex 已确认";
+  if (status === "refuted") return "Codex 已反驳";
+  if (status === "manual_review_required") return "人工复核";
+  if (status === "suggested_additional_finding") return "Codex 建议新增";
+  return "待 Codex 审核";
+}
+
+export function codexFinalStatusTone(status: CodexFinalStatus): "success" | "danger" | "warn" | "info" | "accent" {
+  if (status === "confirmed") return "success";
+  if (status === "manual_review_required") return "warn";
+  if (status === "suggested_additional_finding") return "accent";
+  return "info";
 }
 
 function findAssociatedFinding(findings: readonly Finding[], review: CodexReviewResult): Finding | undefined {
@@ -214,4 +251,14 @@ function findAssociatedFinding(findings: readonly Finding[], review: CodexReview
 function metadataString(metadata: Record<string, unknown>, key: string): string | null {
   const value = metadata[key];
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+function isCodexFinalStatus(value: string | null): value is CodexFinalStatus {
+  return (
+    value === "confirmed" ||
+    value === "refuted" ||
+    value === "manual_review_required" ||
+    value === "suggested_additional_finding" ||
+    value === "pending"
+  );
 }

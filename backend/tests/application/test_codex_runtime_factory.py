@@ -29,87 +29,78 @@ from app.domain.evidence_package import (
     EvidenceSourceType,
     EvidenceTarget,
 )
-from app.infrastructure.codex import CodexCliRunner, FakeCodexRunner
+from app.infrastructure.codex import CodexCliRunner
 
 
 CREATED_AT = datetime(2026, 6, 18, 10, 0, tzinfo=timezone.utc)
 
 
-def test_codex_audit_settings_default_to_disabled(monkeypatch: MonkeyPatch) -> None:
+def test_codex_audit_settings_default_to_mandatory_codex_cli(monkeypatch: MonkeyPatch) -> None:
     for name in (
         "CODEX_AUDIT_ENABLED",
         "CODEX_AUDIT_BACKEND",
         "CODEX_AUDIT_ALLOW_REAL_EXECUTION",
+        "CODEX_CLI_PATH",
         "CODEX_AUDIT_TIMEOUT_SECONDS",
         "CODEX_AUDIT_RUNTIME_DIR",
+        "CODEX_AUDIT_MAX_TARGETS_PER_TASK",
+        "CODEX_AUDIT_MAX_TARGETS_PER_BATCH",
+        "CODEX_AUDIT_INCLUDED_CHECK_IDS",
+        "CODEX_AUDIT_INCLUDED_FINDING_CODES",
+        "CODEX_AUDIT_EXCLUDED_CHECK_IDS",
+        "CODEX_AUDIT_PRIORITY_CHECK_IDS",
     ):
         monkeypatch.delenv(name, raising=False)
 
     settings = Settings(_env_file=None)
 
-    assert settings.codex_audit_enabled is False
-    assert settings.codex_audit_backend == "disabled"
-    assert settings.codex_audit_allow_real_execution is False
-    assert settings.codex_audit_timeout_seconds == 120
+    assert settings.codex_cli_path == "codex"
+    assert settings.codex_audit_timeout_seconds == 300
     assert settings.codex_audit_runtime_dir == "runtime/codex_audit"
-    assert build_codex_audit_service(settings) is None
+    assert settings.codex_audit_max_targets_per_batch == 5
+    assert settings.codex_audit_sandbox == "read-only"
+    assert settings.codex_audit_ephemeral is True
+    assert settings.codex_audit_included_check_ids is None
+    assert settings.codex_audit_included_finding_codes is None
+    assert settings.codex_audit_excluded_check_ids is None
+    assert settings.codex_audit_priority_check_ids == "C02,C03,C07,C04,C05,C06"
+    service = build_codex_audit_service(settings)
+    assert service is not None
+    assert isinstance(service.runner, CodexCliRunner)
+    assert service.runner.config.executable == "codex"
+    assert service.runner.config.timeout_seconds == 300
+    assert service.runner.config.sandbox == "read-only"
+    assert service.runner.config.ephemeral is True
 
 
 def test_codex_audit_settings_read_environment(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setenv("CODEX_AUDIT_ENABLED", "1")
-    monkeypatch.setenv("CODEX_AUDIT_BACKEND", "fake")
-    monkeypatch.setenv("CODEX_AUDIT_ALLOW_REAL_EXECUTION", "1")
+    monkeypatch.setenv("CODEX_CLI_PATH", "/usr/local/bin/codex")
     monkeypatch.setenv("CODEX_AUDIT_TIMEOUT_SECONDS", "77")
     monkeypatch.setenv("CODEX_AUDIT_RUNTIME_DIR", "runtime/custom-codex-audit")
+    monkeypatch.setenv("CODEX_AUDIT_MAX_TARGETS_PER_BATCH", "1")
+    monkeypatch.setenv("CODEX_AUDIT_SANDBOX", "read-only")
+    monkeypatch.setenv("CODEX_AUDIT_EPHEMERAL", "false")
+    monkeypatch.setenv("CODEX_AUDIT_INCLUDED_CHECK_IDS", "C07")
+    monkeypatch.setenv("CODEX_AUDIT_INCLUDED_FINDING_CODES", "CONCLUSION_MISMATCH_001")
+    monkeypatch.setenv("CODEX_AUDIT_EXCLUDED_CHECK_IDS", "C04")
+    monkeypatch.setenv("CODEX_AUDIT_PRIORITY_CHECK_IDS", "C07,C04")
 
     settings = Settings(_env_file=None)
 
-    assert settings.codex_audit_enabled is True
-    assert settings.codex_audit_backend == "fake"
-    assert settings.codex_audit_allow_real_execution is True
+    assert settings.codex_cli_path == "/usr/local/bin/codex"
     assert settings.codex_audit_timeout_seconds == 77
     assert settings.codex_audit_runtime_dir == "runtime/custom-codex-audit"
+    assert settings.codex_audit_max_targets_per_batch == 1
+    assert settings.codex_audit_sandbox == "read-only"
+    assert settings.codex_audit_ephemeral is False
+    assert settings.codex_audit_included_check_ids == "C07"
+    assert settings.codex_audit_included_finding_codes == "CONCLUSION_MISMATCH_001"
+    assert settings.codex_audit_excluded_check_ids == "C04"
+    assert settings.codex_audit_priority_check_ids == "C07,C04"
 
 
-def test_fake_backend_builds_service_and_usecases_that_enable_codex_reviews(tmp_path: Path) -> None:
+def test_factory_builds_mandatory_codex_cli_service_and_usecases(tmp_path: Path) -> None:
     settings = Settings(
-        codex_audit_enabled=True,
-        codex_audit_backend="fake",
-        codex_audit_runtime_dir=str(tmp_path / "runtime" / "codex_audit"),
-        _env_file=None,
-    )
-
-    service = build_codex_audit_service(settings)
-    assert service is not None
-    assert isinstance(service.runner, FakeCodexRunner)
-
-    request, package = _review_contract()
-    reviews = service.review(request, package)
-
-    assert reviews[0].status is CodexReviewStatus.SUCCEEDED
-    assert reviews[0].verdict is CodexReviewVerdict.CONFIRM
-    assert list((tmp_path / "runtime" / "codex_audit" / "task-1").glob("*/input/prompt.md"))
-
-    ptr_usecase = build_ptr_compare_usecase(settings, task_service=TaskService())
-    report_usecase = build_report_check_usecase(settings, task_service=TaskService())
-    assert ptr_usecase.codex_audit_enabled is True
-    assert report_usecase.codex_audit_enabled is True
-    assert ptr_usecase.codex_audit_service is not None
-    assert report_usecase.codex_audit_service is not None
-
-
-def test_codex_cli_backend_without_real_execution_returns_skipped_without_subprocess(
-    tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-) -> None:
-    def fail_run(*args, **kwargs):  # noqa: ANN002, ANN003
-        raise AssertionError("subprocess.run must not be called when real execution is not allowed")
-
-    monkeypatch.setattr("app.infrastructure.codex.codex_cli_runner.subprocess.run", fail_run)
-    settings = Settings(
-        codex_audit_enabled=True,
-        codex_audit_backend="codex-cli",
-        codex_audit_allow_real_execution=False,
         codex_audit_runtime_dir=str(tmp_path / "runtime" / "codex_audit"),
         _env_file=None,
     )
@@ -117,18 +108,41 @@ def test_codex_cli_backend_without_real_execution_returns_skipped_without_subpro
     service = build_codex_audit_service(settings)
     assert service is not None
     assert isinstance(service.runner, CodexCliRunner)
-    assert service.runner.config.enabled is True
-    assert service.runner.config.allow_real_execution is False
-    assert service.runner.config.sandbox == "read-only"
 
-    request, package = _review_contract()
-    reviews = service.review(request, package)
-
-    assert reviews[0].status is CodexReviewStatus.SKIPPED
-    assert reviews[0].metadata["reason"] == "real_execution_not_allowed"
+    ptr_usecase = build_ptr_compare_usecase(settings, task_service=TaskService())
+    report_usecase = build_report_check_usecase(settings, task_service=TaskService())
+    assert ptr_usecase.codex_audit_service is not None
+    assert report_usecase.codex_audit_service is not None
+    assert ptr_usecase.ptr_codex_evidence_builder.target_selection.max_targets_per_batch == 5
+    assert report_usecase.report_codex_evidence_builder.target_selection.max_targets_per_batch == 5
 
 
-def test_codex_cli_backend_with_real_execution_can_be_monkeypatched(
+def test_factory_passes_target_selection_settings_to_usecase_builders(tmp_path: Path) -> None:
+    settings = Settings(
+        codex_audit_runtime_dir=str(tmp_path / "runtime" / "codex_audit"),
+        codex_audit_max_targets_per_batch=1,
+        codex_audit_included_check_ids="C07",
+        codex_audit_included_finding_codes="CONCLUSION_MISMATCH_001",
+        codex_audit_excluded_check_ids="C04",
+        codex_audit_priority_check_ids="C07,C04",
+        _env_file=None,
+    )
+
+    ptr_usecase = build_ptr_compare_usecase(settings, task_service=TaskService())
+    report_usecase = build_report_check_usecase(settings, task_service=TaskService())
+
+    assert report_usecase.report_codex_evidence_builder.target_selection.max_targets_per_batch == 1
+    assert report_usecase.report_codex_evidence_builder.target_selection.included_check_ids == frozenset({"C07"})
+    assert report_usecase.report_codex_evidence_builder.target_selection.included_finding_codes == frozenset(
+        {"CONCLUSION_MISMATCH_001"}
+    )
+    assert report_usecase.report_codex_evidence_builder.target_selection.excluded_check_ids == frozenset({"C04"})
+    assert report_usecase.report_codex_evidence_builder.target_selection.priority_check_ids == ("C07", "C04")
+    assert ptr_usecase.ptr_codex_evidence_builder.target_selection.max_targets_per_batch == 1
+    assert ptr_usecase.ptr_codex_evidence_builder.target_selection.included_check_ids == frozenset({"C07"})
+
+
+def test_mandatory_codex_cli_execution_can_be_monkeypatched(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
@@ -158,7 +172,7 @@ def test_codex_cli_backend_with_real_execution_can_be_monkeypatched(
                             "evidence_refs": ["ev-1"],
                             "suggested_severity": None,
                             "suggested_finding": None,
-                            "metadata": {"runner": "monkeypatched"},
+                            "metadata": {},
                         }
                     ],
                 }
@@ -169,9 +183,6 @@ def test_codex_cli_backend_with_real_execution_can_be_monkeypatched(
 
     monkeypatch.setattr("app.infrastructure.codex.codex_cli_runner.subprocess.run", fake_run)
     settings = Settings(
-        codex_audit_enabled=True,
-        codex_audit_backend="codex-cli",
-        codex_audit_allow_real_execution=True,
         codex_audit_timeout_seconds=33,
         codex_audit_runtime_dir=str(tmp_path / "runtime" / "codex_audit"),
         _env_file=None,
@@ -180,7 +191,6 @@ def test_codex_cli_backend_with_real_execution_can_be_monkeypatched(
     service = build_codex_audit_service(settings)
     assert service is not None
     assert isinstance(service.runner, CodexCliRunner)
-    assert service.runner.config.allow_real_execution is True
 
     request, package = _review_contract()
     reviews = service.review(request, package)
@@ -188,7 +198,7 @@ def test_codex_cli_backend_with_real_execution_can_be_monkeypatched(
     assert calls
     assert reviews[0].status is CodexReviewStatus.SUCCEEDED
     assert reviews[0].verdict is CodexReviewVerdict.CONFIRM
-    assert reviews[0].metadata["runner"] == "monkeypatched"
+    assert reviews[0].metadata["parser"] == "codex_review_output"
 
 
 def _review_contract() -> tuple[CodexReviewRequest, EvidencePackage]:

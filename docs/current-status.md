@@ -339,21 +339,66 @@ T-CODEX 状态：
 | T-CODEX-03 | 已完成 | `backend/app/infrastructure/codex/` 已新增 runner protocol、fake runner 和 Codex CLI skeleton；codex infrastructure 测试、相关 domain/audit/codex 测试和后端全量测试通过。 |
 | T-CODEX-04 | 已完成 | `backend/app/infrastructure/codex/prompt_builder.py`、output schema 和 schema helper 已新增；prompt/schema contract 测试、codex infrastructure 测试、相关 domain/audit/codex 测试和后端全量测试通过。 |
 | T-CODEX-05 | 已完成 | `backend/app/infrastructure/codex/output_parser.py` 已新增；`CodexCliRunner` 成功输出路径已接入 parser；output parser、codex infrastructure、相关 domain/audit/codex 测试和后端全量测试通过。 |
-| T-CODEX-06 | 已完成 | `PTRCompareUseCase` 已支持可选 `CodexAuditService` 接入；`PtrCodexEvidenceBuilder` 已为 PTR clause/table/parameter/scope finding 构建受控 evidence package 和 review request；默认关闭，不调用真实 Codex。 |
-| T-CODEX-07 | 已完成 | `ReportCheckUseCase` 已支持可选 `CodexAuditService` 接入；`ReportCodexEvidenceBuilder` 已为 C02/C03/C04/C05/C06/C07 deterministic findings 构建受控 evidence package 和 review request；默认关闭，不调用真实 Codex。 |
+| T-CODEX-06 | 已完成 | `PTRCompareUseCase` 已接入 `CodexAuditService`；T-CODEX-MANDATORY-01 后产品 factory 默认注入 mandatory Codex CLI，测试通过 fake dependency 注入。 |
+| T-CODEX-07 | 已完成 | `ReportCheckUseCase` 已接入 `CodexAuditService`；T-CODEX-MANDATORY-01 后产品 factory 默认注入 mandatory Codex CLI，并为无逐 finding target 的规则输出 check summary target。 |
 | T-CODEX-08 | 已完成 | 前端类型已支持 `codex_reviews`；PTR 和报告自检结果页已展示 Codex review 总览、finding 关联意见和未关联审核意见；前端只展示后端结果，不重新计算业务规则。 |
 | T-CODEX-09 | 已完成 | T-CODEX-09A 已建立 gated/manual harness；T-CODEX-09B 已由用户显式运行 gated manual harness 并记录结果。第一次脚本失败为 Python 解释器缺少 pytest，使用 `PYTHON_BIN=python` 后 smoke 脚本通过。 |
-| T-CODEX-10 | 已完成 | 本地 API usecase 构造路径已通过 settings/factory 装配 Codex audit；默认关闭；fake 模式可本地联调；codex-cli 模式必须显式允许真实执行才会调用 `codex exec`。 |
+| T-CODEX-10 | 已完成 | 本地 API usecase 构造路径已通过 settings/factory 装配 Codex audit；T-CODEX-MANDATORY-01 后不再提供用户层面的 disabled/fake/codex-cli 模式，默认使用本机 Codex CLI。 |
 | T-CODEX-11 | 已完成 | T-CODEX-11A 已建立本地业务 E2E 验收脚本和文档；T-CODEX-11B 已由用户显式运行真实 codex-cli report-check 本地业务验收，返回 1 条 succeeded/confirm/high 的 C07 review。 |
-| T-CODEX-11A | 已完成 | 新增本地业务 E2E 验收文档和脚本；脚本支持 disabled/fake/codex-cli 模式、上传业务样本、轮询结果并统计 `codex_reviews`；本阶段不运行真实 Codex CLI。 |
+| T-CODEX-11A | 已完成 | 新增本地业务 E2E 验收文档和脚本；T-CODEX-MANDATORY-01 后脚本改为 mandatory Codex CLI harness，默认 gate 拒绝运行，`--print-config` 安全。 |
 | T-CODEX-11B | 已完成 | 使用 target 限流只审核 1 个 C07 `inspection_item` target；真实 Codex CLI 返回 succeeded review，verdict 为 confirm，confidence 为 high，failed reviews 为 0，deterministic findings 保留。 |
-| T-CODEX-12 | 已完成 | 已实现 Codex audit target 限流、规则筛选和当前 batch 元数据；默认最多 5 个 audit targets，脚本可用单 target 真实模式重新验收。 |
+| T-CODEX-12 | 已完成 | 已实现 Codex audit target 筛选和分批元数据；T-CODEX-MANDATORY-01 后 batch size 仅控制单批性能，usecase 会继续处理后续 batch，不作为漏审上限。 |
+| T-CODEX-MANDATORY-01 | 已完成 | 产品运行路径已纠偏为 mandatory Codex CLI audit：factory 默认构建 `CodexCliRunner`，runtime failed/skipped review 会让 Report/PTR task failed，uncertain 作为 completed 人工复核项，fake 仅用于测试注入。 |
 
 验证命令：
 
 | 命令 | 结果 |
 | --- | --- |
 | `git diff --check` | 通过 |
+
+## Mandatory Codex CLI 运行架构纠偏记录
+
+完成日期：2026-06-23
+
+本次执行 T-CODEX-MANDATORY-01，将报告核对工具从“Codex audit 可选启用”纠偏为“产品运行路径必须通过本机 Codex CLI 审核”。
+
+本次实现：
+
+- `Settings` 新增 mandatory 配置：`CODEX_CLI_PATH=codex`、`CODEX_AUDIT_TIMEOUT_SECONDS=300`、`CODEX_AUDIT_RUNTIME_DIR=runtime/codex_audit`、`CODEX_AUDIT_MAX_TARGETS_PER_BATCH=5`、`CODEX_AUDIT_SANDBOX=read-only`、`CODEX_AUDIT_EPHEMERAL=true`。
+- 旧 `CODEX_AUDIT_ENABLED`、`CODEX_AUDIT_BACKEND`、`CODEX_AUDIT_ALLOW_REAL_EXECUTION` 仅保留为 deprecated 兼容字段，产品 factory 不再把它们作为用户运行模式。
+- `build_codex_audit_service(...)` 默认构建 `CodexCliRunner(enabled=True, allow_real_execution=True)`；API dependency 构造 usecase 时默认带 `CodexAuditService`，但构造阶段不调用 subprocess。
+- `ReportCheckUseCase` 和 `PTRCompareUseCase` 不再把 Codex runtime failed/skipped review 吞进 completed 结果；失败 review 或 audit service exception 会让 task 进入 failed/error。
+- Codex `uncertain` 属于正常 succeeded review，任务可 completed，前端展示为人工复核。
+- `ReportCodexEvidenceBuilder` 对没有逐 finding target 的规则结果生成 `check_result` summary target，避免“无可审核 finding”被误解为无需 Codex。
+- Report/PTR audit batching 改为 `target_offset + max_targets_per_batch` 循环处理；batch size 只限制单批性能，不再作为任务级漏审上限。
+- `PromptBuilder` 明确 Codex 是 mandatory final auditor，deterministic rule output / rule_context 只是 candidate，不是最终事实；证据冲突应 refute，证据不足应 uncertain。
+- `CodexCliRunner` command-not-found 错误码改为 `CODEX_CLI_UNAVAILABLE`。
+- 前端 finding 行读取后端 `final_status` / Codex review 并显示 `Codex 已确认`、`Codex 已反驳`、`人工复核` 等状态；refute 不再渲染为危险色。
+- 本地业务 E2E 脚本不再提供 disabled/fake/codex-cli 用户模式；脚本默认 gate 拒绝运行，设置 `ENABLE_CODEX_AUDIT_LOCAL_E2E=1` 后才会上传并可能触发本机 Codex CLI。
+
+任务结果语义：
+
+- 规则 findings 是 candidate findings；兼容期仍保留在 `CheckResult.findings`。
+- 被 Codex review 关联的 finding 会写入 metadata：`codex_required=true`、`codex_review_id`、`codex_verdict`、`final_status`。
+- `confirm` 对应 `final_status=confirmed`；`refute` 对应 `final_status=refuted`；`uncertain` 对应 `final_status=manual_review_required`。
+- Codex runtime failure 包括 `CODEX_CLI_UNAVAILABLE`、`CODEX_TIMEOUT`、`CODEX_EXIT_NONZERO`、`CODEX_OUTPUT_*` 等，产品 usecase 必须使 task failed。
+
+验证结果：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/integration/test_codex_audit_local_e2e_artifacts.py -v` | 通过，`7 passed`。 |
+| `cd backend && python -m pytest tests/application/test_codex_runtime_factory.py tests/application/test_codex_audit_service.py -v` | 通过，`15 passed`。 |
+| `cd backend && python -m pytest tests/application/test_report_check_usecase.py tests/application/test_ptr_compare_usecase.py -v` | 通过，`42 passed`。 |
+| `cd backend && python -m pytest tests/api -v` | 先失败于 API PTR e2e fixture 未注入 fake Codex audit service；修复测试 fixture 后通过，`14 passed`。 |
+| `cd backend && python -m pytest tests/infrastructure/codex -v` | 通过，`67 passed`。 |
+| `cd backend && python -m pytest tests/application/test_report_codex_evidence_builder.py -v` | 通过，`28 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`557 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+| `bash -n scripts/run-codex-audit-local-e2e.sh` | 通过。 |
+| `git diff --check` | 通过。 |
+
+本次验证未运行真实 Codex CLI；API 和 usecase 测试通过 fake dependency 或 monkeypatch 保持可重复。
 
 ## CodexReview domain model 完成记录
 
@@ -581,7 +626,7 @@ runtime/codex_audit/{task_id}/{package_id}/input/
 
 完成日期：2026-06-17
 
-本次实现 T-CODEX-06 第二阶段，在 `PTRCompareUseCase` 中通过 `CodexAuditService` 接入 PTR clause/table/parameter/scope review。实现仍然默认关闭 Codex audit，测试使用 fake audit service 或 `CodexAuditService + FakeCodexRunner`，不调用真实 Codex CLI，不修改 router、frontend 或旧项目目录，不重写 PTRExtractor、parameter_compare 或 table_reference_compare，不继续扩展 PTR numeric semantic / diff_builder。
+本次实现 T-CODEX-06 第二阶段，在 `PTRCompareUseCase` 中通过 `CodexAuditService` 接入 PTR clause/table/parameter/scope review。当时阶段性实现仍然默认关闭 Codex audit；该语义已被 T-CODEX-MANDATORY-01 取代。当前产品路径默认构建 mandatory `CodexCliRunner`，测试仍使用 fake audit service 或 `CodexAuditService + FakeCodexRunner`，不调用真实 Codex CLI，不修改 router、frontend 或旧项目目录，不重写 PTRExtractor、parameter_compare 或 table_reference_compare，不继续扩展 PTR numeric semantic / diff_builder。
 
 本次实现：
 
@@ -598,7 +643,7 @@ runtime/codex_audit/{task_id}/{package_id}/input/
   - `codex_audit_service: CodexAuditServiceProtocol | None = None`
   - `codex_audit_enabled: bool = False`
   - `ptr_codex_evidence_builder: PtrCodexEvidenceBuilder | None = None`
-- 默认关闭 Codex audit；API 默认构造 `PTRCompareUseCase(task_service=...)`，不会创建真实 `CodexCliRunner`，不会读取环境变量启动真实 Codex。
+- 历史阶段默认关闭 Codex audit；当前产品路径已改为通过 factory 默认注入 mandatory `CodexAuditService + CodexCliRunner`。
 - Codex audit 启用且存在可审核 finding 时，usecase 调用 builder 和 `CodexAuditService.review(...)`，并按 `review.target.check_id` 把 `CodexReviewResult` 附加到对应 `CheckResult.codex_reviews`。
 - Codex review 不删除、不覆盖 deterministic `Finding`；`add_finding` 只保留在 `CodexReviewResult.suggested_finding`，不会自动追加为 deterministic finding。
 - `CodexAuditService` 返回 failed review 或抛异常时，PTR usecase 不崩溃；service 抛异常会转换为 `CODEX_PTR_AUDIT_SERVICE_FAILED` 的 failed review。
@@ -669,7 +714,7 @@ runtime/codex_audit/{task_id}/{package_id}/input/
 
 完成日期：2026-06-17
 
-本次实现 T-CODEX-07 第二阶段，在 `ReportCheckUseCase` 中通过可选依赖接入 `CodexAuditService`。实现默认关闭 Codex audit，测试使用 fake audit service，不调用真实 Codex CLI，不修改 router、frontend 或旧项目目录，不重写 C01-C11 规则，不改变 deterministic findings，不把 `add_finding` 自动追加为 deterministic finding。
+本次实现 T-CODEX-07 第二阶段，在 `ReportCheckUseCase` 中通过可选依赖接入 `CodexAuditService`。当时阶段性实现默认关闭 Codex audit；该语义已被 T-CODEX-MANDATORY-01 取代。当前产品路径默认构建 mandatory `CodexCliRunner`，测试使用 fake audit service，不调用真实 Codex CLI，不修改 router、frontend 或旧项目目录，不重写 C01-C11 规则，不改变 deterministic findings，不把 `add_finding` 自动追加为 deterministic finding。
 
 本次实现：
 
@@ -677,11 +722,11 @@ runtime/codex_audit/{task_id}/{package_id}/input/
   - `codex_audit_service: CodexAuditServiceProtocol | None = None`
   - `codex_audit_enabled: bool = False`
   - `report_codex_evidence_builder: ReportCodexEvidenceBuilder | None = None`
-- 默认 `codex_audit_enabled=False`，API 默认构造 `ReportCheckUseCase(task_service=...)`，不会创建真实 `CodexCliRunner`，不会读取环境变量启动真实 Codex。
+- 历史阶段默认 `codex_audit_enabled=False`；当前产品路径已改为通过 factory 默认注入 mandatory `CodexAuditService + CodexCliRunner`。
 - deterministic C01-C11 流程保持不变：PDF 解析、ReportDocument 构建、规则 runner 运行、`CheckResult` 聚合路径不变。
 - 规则结果生成后，启用 Codex audit 且存在可审核 finding 时，usecase 调用 `ReportCodexEvidenceBuilder.build(...)` 构建 request/package，再调用 `CodexAuditService.review(...)`。
 - `CodexReviewResult` 直接附加到对应 `CheckResult.codex_reviews`；`CheckResult.summary` 和任务级 summary 仍基于 deterministic findings。
-- 支持的运行时审核范围仍仅为 `C02/C03/C04/C05/C06/C07`；`C01/C08/C09/C10/C11` 默认不进入 Codex audit。
+- 历史阶段支持的运行时审核范围仅为 `C02/C03/C04/C05/C06/C07`；当前 mandatory 架构已为无逐 finding target 的规则补充 `check_result` summary target。
 - Codex service 返回 `confirm/refute/uncertain/add_finding/failed` 都保留在 `codex_reviews`；原始 finding 不删除、不覆盖。
 - Codex service 抛异常时，usecase 不崩溃，会基于已构建 request 为每个 target 生成 `CODEX_REPORT_AUDIT_SERVICE_FAILED` 的 failed review。
 - 没有可审核 findings 或 builder 返回 `None` 时，不调用 audit service，`codex_reviews` 保持空列表。
@@ -879,58 +924,22 @@ tests/integration/test_codex_cli_manual.py::test_real_codex_cli_manual_smoke_ret
 - 输出使用 `codex_review_output.schema.json`。
 - Codex 输出或运行异常没有冒泡到主流程；验收测试返回可审计结果。
 - 未修改旧项目目录。
-- API 默认不启用真实 Codex，也不会因本次 harness 验收改变默认运行行为。
+- 历史阶段 API 默认不启用真实 Codex；该说法已被 T-CODEX-MANDATORY-01 取代，当前产品路径默认构建 mandatory Codex CLI audit。
 
 ## Codex audit 本地运行时配置与依赖装配完成记录
 
 完成日期：2026-06-18
 
-本次实现 T-CODEX-10，把 `CodexAuditService` 通过配置和 application factory 装配到本地 API usecase 构造路径。默认仍关闭，不调用真实 Codex CLI，不修改旧项目目录，不修改前端业务判断，不把 Codex CLI 执行逻辑写进 router，不引入 GPT API、OpenAI Responses API 或 Chat API。
+本节是历史完成记录。T-CODEX-10 最初实现了可选装配；该语义已被 T-CODEX-MANDATORY-01 取代。当前产品运行路径不再提供用户层面的 disabled/fake/codex-cli 选择，`FakeCodexRunner` 只用于 pytest 或显式测试 dependency override。
 
-本次实现：
+当前有效语义：
 
-- `backend/app/core/config.py` 新增 Codex audit settings：
-  - `CODEX_AUDIT_ENABLED`
-  - `CODEX_AUDIT_BACKEND`
-  - `CODEX_AUDIT_ALLOW_REAL_EXECUTION`
-  - `CODEX_AUDIT_TIMEOUT_SECONDS`
-  - `CODEX_AUDIT_RUNTIME_DIR`
-- 新增 `backend/app/application/codex_runtime_factory.py`：
-  - `build_codex_audit_service(settings)`
-  - `build_ptr_compare_usecase(settings, task_service=...)`
-  - `build_report_check_usecase(settings, task_service=...)`
-- 默认 settings 下 `build_codex_audit_service(...)` 返回 `None`，PTR/Report usecase 的 `codex_audit_enabled=False`，普通 API 不启用 Codex audit。
-- `CODEX_AUDIT_BACKEND=fake` 且 `CODEX_AUDIT_ENABLED=1` 时使用 `FakeCodexRunner`，可用于本地 UI 联调，写入 `codex_reviews`，不调用真实 Codex。
-- `CODEX_AUDIT_BACKEND=codex-cli` 且 `CODEX_AUDIT_ENABLED=1` 时使用 `CodexCliRunner`；只有 `CODEX_AUDIT_ALLOW_REAL_EXECUTION=1` 才允许真实 `codex exec`。未允许真实执行时返回 skipped review，不调用 subprocess。
-- API route dependency 改为调用 application factory：router 仍只处理 HTTP 输入输出、上传校验和依赖注入，不承载 Codex CLI runner 逻辑。
+- API route dependency 仍通过 application factory 构造 usecase，router 不承载 Codex CLI runner 逻辑。
+- 产品 factory 默认构建 `CodexAuditService + CodexCliRunner(enabled=True, allow_real_execution=True)`。
+- 当前有效配置为 `CODEX_CLI_PATH`、`CODEX_AUDIT_TIMEOUT_SECONDS`、`CODEX_AUDIT_RUNTIME_DIR`、`CODEX_AUDIT_MAX_TARGETS_PER_BATCH`、`CODEX_AUDIT_SANDBOX=read-only`、`CODEX_AUDIT_EPHEMERAL=true`。
+- 旧 `CODEX_AUDIT_ENABLED`、`CODEX_AUDIT_BACKEND`、`CODEX_AUDIT_ALLOW_REAL_EXECUTION` 仅保留为 deprecated 兼容字段，产品 factory 不再读取它们作为运行模式。
 - Codex audit workspace 仍由 `EvidencePackageWriter` 写入 `runtime/codex_audit/{task_id}/{package_id}/input/`，runner 仍使用 read-only sandbox、output schema 和 timeout。
-- Codex review 只附加在 `codex_reviews`，不会删除、覆盖或改写 deterministic findings。
-
-新增测试：
-
-- `backend/tests/application/test_codex_runtime_factory.py` 覆盖 settings 默认值/env 读取、默认关闭、fake backend 产出 confirm review、PTR/Report usecase 通过 factory 接收 audit service、codex-cli 未允许真实执行时不调用 subprocess 并返回 skipped、codex-cli 允许真实执行时可 monkeypatch subprocess 写入 schema 合法输出。
-- `backend/tests/api/test_codex_audit_dependencies.py` 覆盖 API 默认依赖构造出的 PTR/Report usecase 不启用 Codex audit，且不会调用 subprocess。
-
-本地 fake 模式：
-
-```bash
-cd backend
-CODEX_AUDIT_ENABLED=1 \
-CODEX_AUDIT_BACKEND=fake \
-python -m uvicorn app.main:app --reload
-```
-
-本地真实 Codex CLI 模式：
-
-```bash
-cd backend
-CODEX_AUDIT_ENABLED=1 \
-CODEX_AUDIT_BACKEND=codex-cli \
-CODEX_AUDIT_ALLOW_REAL_EXECUTION=1 \
-CODEX_AUDIT_RUNTIME_DIR=runtime/codex_audit \
-CODEX_AUDIT_TIMEOUT_SECONDS=120 \
-python -m uvicorn app.main:app --reload
-```
+- Codex runtime failure 会让业务 task failed；deterministic findings 作为 candidate 保留，并通过 Codex review metadata 标记最终审核状态。
 
 验证命令：
 
@@ -945,25 +954,15 @@ python -m uvicorn app.main:app --reload
 
 完成日期：2026-06-18
 
-本次实现 T-CODEX-11A，只新增本地业务端到端验收脚本、文档和脚本/文档 contract test。本阶段不调用真实 Codex CLI，不修改旧项目目录，不修改规则逻辑，不修改 router 业务逻辑，不把 Codex 审核逻辑写进 router，不修改 C01-C11 或 PTR 规则算法。
+本节是历史完成记录。T-CODEX-11A 最初提供本地业务 E2E 脚本和文档；T-CODEX-MANDATORY-01 后，脚本已改为 mandatory Codex CLI harness，不再提供 disabled/fake/codex-cli 用户模式。
 
-本次实现：
+当前有效语义：
 
-- 新增 `docs/codex-audit-local-e2e.md`，说明本地 Web 工具在 disabled/fake/codex-cli 模式下如何验收 `codex_reviews`。
-- 新增 `scripts/run-codex-audit-local-e2e.sh`，支持：
-  - `--help`：显示用法，不启动服务，不调用 Codex。
-  - `--print-config`：显示当前模式和 safety gate，不启动服务，不调用 Codex。
-  - `MODE=disabled|fake|codex-cli`。
-  - `TASK_TYPE=ptr-compare|report-check`。
-  - `START_BACKEND=1` 可由脚本代启后端。
-  - `PTR_FILE` / `REPORT_FILE` 上传本地业务样本。
-  - 轮询 `/api/tasks/{task_id}`，下载 `/api/tasks/{task_id}/result`，统计 `check_results[].codex_reviews`。
-  - `EXPECT_CODEX_REVIEWS=auto|empty|nonempty|any` 控制验收口径。
-- codex-cli 模式脚本 gate：
-  - 必须设置 `ENABLE_CODEX_AUDIT_LOCAL_E2E=1`。
-  - 必须设置 `CODEX_AUDIT_ALLOW_REAL_EXECUTION=1`。
-  - 未满足 gate 时脚本拒绝运行，避免误调用真实 Codex CLI。
-- 文档明确前端只展示后端返回的 `codex_reviews`，不重新计算 C01-C11 或 PTR 规则；前端入口为 `CodexReviewPanel`、PTR 结果页和报告自检结果页。
+- `docs/codex-audit-local-e2e.md` 说明 mandatory Codex CLI 本地业务验收路径。
+- `scripts/run-codex-audit-local-e2e.sh` 支持 `--help` 和 `--print-config`，这两个命令不启动服务、不上传文件、不调用 Codex。
+- 真正上传/轮询前必须设置 `ENABLE_CODEX_AUDIT_LOCAL_E2E=1`，避免误触发本机 Codex CLI。
+- 脚本支持 `TASK_TYPE=ptr-compare|report-check`、`START_BACKEND=1`、`PTR_FILE` / `REPORT_FILE`、`EXPECT_CODEX_REVIEWS=auto|empty|nonempty|any`。
+- 文档明确前端只展示后端返回的 `codex_reviews` 和 finding metadata，不重新计算 C01-C11 或 PTR 规则。
 - 文档明确安全边界：不使用 GPT API client，不调用 OpenAI Responses/Chat API，不让 Codex 读取项目源码，仍使用 `runtime/codex_audit`、read-only sandbox、output schema 和 timeout。
 
 验证命令：
@@ -992,8 +991,7 @@ python -m uvicorn app.main:app --reload
 - `poll_result` 的 stdout 只输出最终结果 JSON 文件路径。
 - `result_file` 捕获后会校验：非空、不包含换行、文件存在、以 `.json` 结尾。
 - 保留 `PYTHON_BIN` 支持。
-- 保留 codex-cli 安全 gate：必须同时设置 `ENABLE_CODEX_AUDIT_LOCAL_E2E=1` 和 `CODEX_AUDIT_ALLOW_REAL_EXECUTION=1` 才允许真实 Codex CLI。
-- fake 模式仍不调用真实 Codex。
+- T-CODEX-MANDATORY-01 后，脚本只保留 `ENABLE_CODEX_AUDIT_LOCAL_E2E=1` 作为本地业务验收 gate；旧 optional env 会被 unset，避免污染 mandatory 产品运行配置。
 - `docs/codex-audit-local-e2e.md` 已补充 stdout/stderr 输出边界说明。
 - `backend/tests/integration/test_codex_audit_local_e2e_artifacts.py` 新增 fake `curl` 脚本级测试，覆盖上传、轮询、结果下载、日志走 stderr 和结果路径不被污染。
 
@@ -1146,7 +1144,7 @@ Deterministic finding 结果仍保留：
 - T-CODEX-11 整体完成。
 - T-CODEX-12 已完成，且本次真实模式结果证明 target 限流可以把 report-check 真实 Codex CLI 审核收敛到单 target。
 - Codex review 没有覆盖原始 finding；deterministic findings 和 Codex review 两层证据并存。
-- 默认 API 仍不会启用真实 Codex；真实 codex-cli 模式仍需要显式 gate。
+- T-CODEX-MANDATORY-01 后，产品 API 构造路径默认启用本机 Codex CLI audit；真实业务 E2E 脚本仍需要 `ENABLE_CODEX_AUDIT_LOCAL_E2E=1` gate，避免脚本误触发本机 Codex。
 
 后续风险：
 
@@ -1323,16 +1321,19 @@ Finding metadata：
 
 | 命令 | 结果 |
 | --- | --- |
-| `cd backend && python -m pytest tests/rules/report/test_c10_continuation.py -v` | TDD 红灯先失败于旧 row/page-level 行为；实现后通过，`14 passed`。 |
-| `cd backend && python -m pytest tests/infrastructure/report/test_inspection_item_group_builder.py tests/rules/report/test_c07_item_conclusion.py tests/rules/report/test_c08_non_empty.py tests/rules/report/test_c10_continuation.py -v` | 通过，`64 passed`。 |
-| `cd backend && python -m pytest tests/ -v` | 通过，`535 passed, 1 skipped`。 |
+| `cd backend && python -m pytest tests/rules/report/test_c10_continuation.py -v` | TDD 红灯先失败于旧 row/page-level 行为；2026-06-23 复验通过，`14 passed`。 |
+| `cd backend && python -m pytest tests/infrastructure/report/test_inspection_item_group_builder.py tests/rules/report/test_c07_item_conclusion.py tests/rules/report/test_c08_non_empty.py tests/rules/report/test_c10_continuation.py -v` | 2026-06-23 复验通过，`78 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 2026-06-23 复验通过，`551 passed, 1 skipped`。 |
 | `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
 
 任务状态：
 
 - T-QUALITY-04 已完成。
 - T-QUALITY-05 / T-QUALITY-06 / T-QUALITY-07 未完成。
-- 未在本阶段直接跑完整 QW2025-2795 Draft.pdf；真实 PDF 的 C10 数量下降需要后续本地 e2e 或 T-QUALITY-04B 重新确认。
+- 用户已重新对 `/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.4.13/素材/report/2795/QW2025-2795 Draft.pdf` 运行本地 report-check 验收，最新结果为 `C10 unique count: 0`。
+- C10 降噪路径已闭环：此前真实样本 `C10=130`，主要 code 为 `CONTINUATION_MARK_MISMATCH`；T-QUALITY-04 切换为 group page-boundary 后，`by_code={}`、`by_boundary=[]`、`by_item=[]`、`by_page=[]`。
+- C10 page-boundary 降噪闭环完成；C08 仍保持 `C08 count: 0`。
+- 下一推荐任务：T-QUALITY-05：C07 group-level 重构。
 
 ## C08 item_no 污染修复完成记录
 
@@ -1445,5 +1446,92 @@ Finding metadata：
 
 - T-QUALITY-03C 已完成。
 - T-QUALITY-05 / T-QUALITY-06 / T-QUALITY-07 未完成。
-- T-QUALITY-04 本次未修改、未推进。
-- 下一推荐任务：T-QUALITY-04：C10 page-boundary 重构。
+- T-QUALITY-04 已完成并复验通过。
+- 下一推荐任务：T-QUALITY-05：C07 group-level 重构。
+
+## C07 group-level 重构完成记录
+
+完成日期：2026-06-23
+
+本次实现 T-QUALITY-05，将 C07 从规则内自建 physical row 归组切换为消费统一的 `InspectionItemGroup` group-level contract。本阶段不修改 C08/C10，不修改 C04/C05/C06，不修改 `ReportCheckUseCase`、router 或 frontend，不调用真实 Codex，不修改旧项目目录，也不新增 `FindingGroup`。
+
+背景：
+
+- T-QUALITY-02 已提供 `InspectionItemGroupBuilder`。
+- T-QUALITY-03/03B/03C 已将真实样本 C08 从 4894 降到 0。
+- T-QUALITY-04 已将真实样本 C10 从 130 降到 0。
+- C07 此前真实样本为 72 条，业务方向已由 1 条真实 Codex CLI `confirm/high` review 证明可用，但 evidence 和规则判断仍需按 item group 收敛。
+
+本次实现：
+
+- `check_c07_item_conclusion` 现在使用 `build_inspection_item_groups(document.inspection_items)`，逐 `InspectionItemGroup` 推导 expected conclusion。
+- Expected conclusion 继续保持原优先级：
+  - 任一有效结果包含“不符合” -> `不符合`。
+  - 全部有效结果为空、`/` 或 `——` -> `/`。
+  - 其他非空有效结果，包括数值、百分比、`IPX0`、`CF 型` 等 -> `符合`。
+- Actual conclusion 使用 `group.effective_single_conclusion`，保留 `/` 和 `——` 作为有效占位；当 expected 为 `符合` 而 actual 为 `/` 时仍输出 mismatch。
+- 每个 `item_no` 最多输出一条 C07 finding；同一 group 内多 physical rows 作为 evidence 和 metadata，不重复展开为多条主 finding。
+- C07 finding metadata 新增 group-level 证据摘要：
+  - `expected_conclusion`
+  - `actual_conclusion`
+  - `effective_test_results`
+  - `group_row_count`
+  - `pages`
+  - `continuation_markers`
+  - `source_rows`
+  - `result_summary`
+  - `reasoning_basis`
+  - `suppressed_physical_row_count`
+- `CheckResult.metadata` 保留 groups 摘要，并记录 group builder diagnostics 与 ungrouped row count。
+- `ReportCodexEvidenceBuilder` 的 C07 evidence 已适配 group-level：`inspection_item` target 现在携带 `inspection_item_group` summary，包括 effective results、expected/actual conclusion、pages、source rows 和 continuation markers；找不到 group 时保留旧单行 fallback。
+
+新增/更新测试覆盖：
+
+- C07：多行 `符合要求` 且实际 `符合` 时通过。
+- C07：多行 `符合要求` 且实际 `/` 时只输出 1 条 group-level finding。
+- C07：任一行 `不符合要求` 且实际 `符合` 时输出 expected `不符合`。
+- C07：全部 `/` / `——` 且实际 `/` 时通过，实际 `符合` 时输出 mismatch。
+- C07：跨页 `续 8`、空序号 payload 行归入 active group，不产生重复 finding。
+- C07：标准要求正文如“当外壳的分类为 IPX0 时……”不再被当作独立 item_no。
+- C07：数值、百分比、`IPX0`、`CF 型` 作为有效非空结果推导 expected `符合`。
+- Codex evidence：C07 evidence 包含 `inspection_item_group` summary，不包含整份 PDF 文本。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/rules/report/test_c07_item_conclusion.py -v` | 通过，`17 passed`；新增测试先红灯失败于旧实现缺 group metadata、误把标准要求文本当 item_no。 |
+| `cd backend && python -m pytest tests/infrastructure/report/test_inspection_item_group_builder.py tests/rules/report/test_c07_item_conclusion.py tests/rules/report/test_c08_non_empty.py tests/rules/report/test_c10_continuation.py -v` | 通过，`80 passed`。 |
+| `cd backend && python -m pytest tests/application/test_report_codex_evidence_builder.py -v` | 通过，`27 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`553 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+| `git diff --check` | 通过。 |
+
+任务状态：
+
+- T-QUALITY-05 已完成。
+- 用户已对 `/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.4.13/素材/report/2795/QW2025-2795 Draft.pdf` 运行本地 report-check 验收。首次使用 8000 端口命中旧后端进程，不作为有效验收；随后使用 `BASE_URL=http://127.0.0.1:8011 BACKEND_PORT=8011` 启动当前工作区代码重跑，结果有效。
+- 有效结果文件：`/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/runtime/codex_audit_local_e2e/b02deebe-7bc1-431a-8b9f-34e983be2703.result.json`。
+- 有效验收当时运行在旧脚本 `MODE=disabled`，`codex_reviews count=0`，未调用真实 Codex；该脚本模式已被 T-CODEX-MANDATORY-01 废弃。
+- 有效汇总：
+  - `unique_findings_count=61`
+  - `C04=35`
+  - `C05=7`
+  - `C06=6`
+  - `C07=12`
+  - `C09=1`
+  - `C08=0`
+  - `C10=0`
+- C07 细分：
+  - `CONCLUSION_MISMATCH_001=10`
+  - `CONCLUSION_MISMATCH_002=2`
+  - expected vs actual：`/ -> 符合` 为 10 条，`符合 -> /` 为 2 条。
+  - 剩余 item_no：`3, 27, 33, 41, 59, 72, 94, 121, 131, 142, 149, 151`。
+  - 每个 item_no 只剩 1 条，说明 group-level 去重已经生效。
+- T-QUALITY-05 已达成主目标：C07 从 72 降到 12，且不再按 physical row 重复报；C08 保持 0，C10 保持 0。
+- 剩余 C07 已拆为后续 T-QUALITY-05B：
+  - item 3：actual conclusion 冲突选择问题。
+  - item 59：复杂矩阵表 extractor/列映射问题。
+  - 其余 `/ -> 符合`：多数可能是同 group 混合 `——` 与 `符合要求` 时 effective_test_results 聚合不完整，或需要进一步确认 `—— + 符合` 的业务口径。
+- T-QUALITY-06 / T-QUALITY-07 未完成。
+- 下一推荐任务：T-QUALITY-05B：C07 residual mismatch cleanup。

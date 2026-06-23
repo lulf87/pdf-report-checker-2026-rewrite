@@ -7,6 +7,12 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from app.application.codex_audit_targeting import (
+    CodexAuditTargetSelection,
+    DEFAULT_CODEX_AUDIT_MAX_TARGETS,
+    DEFAULT_PTR_PRIORITY_FINDING_CODES,
+    priority_index,
+)
 from app.domain.codex_review import (
     CodexEvidenceRef,
     CodexReviewRequest,
@@ -58,10 +64,28 @@ class PtrCodexAuditBundle:
 class PtrCodexEvidenceBuilder:
     """Build minimal PTR evidence packages for controlled Codex review."""
 
-    def __init__(self, *, max_table_records: int = 8) -> None:
+    def __init__(
+        self,
+        *,
+        max_table_records: int = 8,
+        max_targets_per_task: int = DEFAULT_CODEX_AUDIT_MAX_TARGETS,
+        max_targets_per_batch: int = DEFAULT_CODEX_AUDIT_MAX_TARGETS,
+        included_check_ids: str | list[str] | tuple[str, ...] | None = None,
+        included_finding_codes: str | list[str] | tuple[str, ...] | None = None,
+        excluded_check_ids: str | list[str] | tuple[str, ...] | None = None,
+        priority_check_ids: str | list[str] | tuple[str, ...] | None = DEFAULT_PTR_PRIORITY_FINDING_CODES,
+    ) -> None:
         if max_table_records <= 0:
             raise ValueError("max_table_records must be greater than zero")
         self.max_table_records = max_table_records
+        self.target_selection = CodexAuditTargetSelection.from_raw(
+            max_targets_per_task=max_targets_per_task,
+            max_targets_per_batch=max_targets_per_batch,
+            included_check_ids=included_check_ids,
+            included_finding_codes=included_finding_codes,
+            excluded_check_ids=excluded_check_ids,
+            priority_check_ids=priority_check_ids or DEFAULT_PTR_PRIORITY_FINDING_CODES,
+        )
 
     def build(
         self,
@@ -71,11 +95,19 @@ class PtrCodexEvidenceBuilder:
         ptr_doc: PTRDocument,
         report_doc: ReportDocument,
         check_results: list[CheckResult],
+        target_offset: int = 0,
     ) -> PtrCodexAuditBundle | None:
-        findings = self._reviewable_findings(check_results)
+        candidate_findings = self._candidate_findings(check_results)
+        findings = self._limit_findings(candidate_findings, target_offset=target_offset)
         if not findings:
             return None
 
+        total_candidate_targets = len(candidate_findings)
+        selection_metadata = self.target_selection.selection_metadata(
+            total_candidate_targets=total_candidate_targets,
+            emitted_targets=len(findings),
+            target_offset=target_offset,
+        )
         items_by_ref: dict[str, EvidenceItem] = {}
         targets: list[EvidenceTarget] = []
         review_targets: list[CodexReviewTarget] = []
@@ -132,7 +164,7 @@ class PtrCodexEvidenceBuilder:
             )
 
         package = EvidencePackage(
-            package_id=f"codex-ptr-{task_id}",
+            package_id=f"codex-ptr-{task_id}-batch-{selection_metadata['batch_index']}",
             task_id=task_id,
             task_type=task_type,
             kind=self._package_kind_for_targets(review_targets),
@@ -144,10 +176,11 @@ class PtrCodexEvidenceBuilder:
                 "source": "ptr_compare_usecase",
                 "deterministic_finding_count": sum(len(result.findings) for result in check_results),
                 "target_count": len(review_targets),
+                **selection_metadata,
             },
         )
         request = CodexReviewRequest(
-            request_id=f"codex-request-{task_id}-ptr",
+            request_id=f"codex-request-{task_id}-ptr-batch-{selection_metadata['batch_index']}",
             task_id=task_id,
             task_type=task_type,
             mode="verify",
@@ -159,18 +192,41 @@ class PtrCodexEvidenceBuilder:
                 "source": "ptr_compare_usecase",
                 "deterministic_finding_count": sum(len(result.findings) for result in check_results),
                 "target_count": len(review_targets),
+                **selection_metadata,
             },
         )
         return PtrCodexAuditBundle(request=request, evidence_package=package)
 
-    def _reviewable_findings(self, check_results: list[CheckResult]) -> list[Finding]:
+    def _candidate_findings(self, check_results: list[CheckResult]) -> list[Finding]:
         findings: list[Finding] = []
         for result in check_results:
             for finding in result.findings:
                 if finding.check_id not in {"PTR_CLAUSE", "PTR_TABLE", "PTR_SCOPE"}:
                     continue
+                if not self.target_selection.allows(finding):
+                    continue
                 findings.append(finding)
-        return findings
+        return self._sort_findings(findings)
+
+    def _limit_findings(self, findings: list[Finding], *, target_offset: int) -> list[Finding]:
+        limit = self.target_selection.effective_limit()
+        if limit <= 0:
+            return []
+        return findings[target_offset : target_offset + limit]
+
+    def _sort_findings(self, findings: list[Finding]) -> list[Finding]:
+        priority = priority_index(self.target_selection.priority_check_ids)
+        fallback = len(priority)
+        return [
+            item
+            for _, item in sorted(
+                enumerate(findings),
+                key=lambda pair: (
+                    priority.get(pair[1].code, priority.get(pair[1].check_id, fallback)),
+                    pair[0],
+                ),
+            )
+        ]
 
     def _target_type_for_finding(self, finding: Finding) -> CodexReviewTargetType:
         if finding.code in PARAMETER_CODES:

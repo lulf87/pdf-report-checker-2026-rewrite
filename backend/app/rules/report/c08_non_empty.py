@@ -5,8 +5,10 @@ from typing import Any
 
 from app.domain.common import Confidence, Evidence, EvidenceMethod, Location, SourceType
 from app.domain.finding import Finding, FindingSeverity
+from app.domain.inspection_group import InspectionItemGroup
 from app.domain.report import InspectionItem, ReportDocument
 from app.domain.result import CheckResult
+from app.infrastructure.report.inspection_item_group_builder import build_inspection_item_groups
 from app.rules.report.common import make_result
 from app.rules.report.context import CheckContext
 
@@ -31,37 +33,27 @@ def check_c08_non_empty_fields(
 ) -> CheckResult:
     context = context or CheckContext()
     findings: list[Finding] = []
+    group_result = build_inspection_item_groups(document.inspection_items)
 
-    for item_index, item in enumerate(document.inspection_items):
+    for group_index, group in enumerate(group_result.groups):
         for field_name, attr in REQUIRED_FIELDS:
-            value = getattr(item, attr)
-            if not is_empty_required_field(value):
+            if _group_has_effective_field(group, attr):
                 continue
 
-            is_merged_cell = _is_merged_field(item, attr)
             findings.append(
                 Finding(
-                    id=f"{context.task_id}-c08-row-{item_index}-{attr}-empty",
+                    id=f"{context.task_id}-c08-group-{group_index}-{attr}-empty",
                     task_id=context.task_id,
                     check_id=CHECK_ID,
                     severity=FindingSeverity.ERROR,
-                    code="INSPECTION_MERGED_FIELD_EMPTY" if is_merged_cell else "INSPECTION_FIELD_EMPTY",
-                    message=_empty_field_message(item, field_name, is_merged_cell),
-                    location=_field_location(item, field_name),
+                    code="INSPECTION_FIELD_EMPTY",
+                    message=_empty_field_message(group, field_name),
+                    location=_field_location(group, field_name),
                     expected="非空值",
-                    actual=value or "",
-                    evidence=_field_evidence(item, field_name, attr, value),
+                    actual="",
+                    evidence=_field_evidence(group, field_name, attr),
                     confidence=Confidence.HIGH,
-                    metadata={
-                        "item_no": _item_no(item),
-                        "normalized_item_no": _normalized_item_no(item),
-                        "row_index": item.row_index_in_page,
-                        "field_name": field_name,
-                        "field_key": attr,
-                        "is_merged_cell": is_merged_cell,
-                        "value_provenance": _field_provenance(item, attr),
-                        "source_page": item.source_page,
-                    },
+                    metadata=_finding_metadata(group, field_name, attr),
                 )
             )
 
@@ -70,90 +62,162 @@ def check_c08_non_empty_fields(
         check_id=CHECK_ID,
         check_name=CHECK_NAME,
         findings=findings,
+        metadata={
+            "source": "inspection_item_group_builder",
+            "input_row_count": len(document.inspection_items),
+            "group_count": len(group_result.groups),
+            "ungrouped_row_count": len(group_result.ungrouped_rows),
+            "group_builder_diagnostics": group_result.diagnostics,
+            "group_builder_metadata": group_result.metadata,
+        },
         pass_summary="检验项目必填字段均非空",
         issue_summary=f"检验项目存在 {len(findings)} 个必填字段为空",
     )
 
 
-def _item_no(item: InspectionItem) -> str:
-    raw = (item.sequence_raw or "").strip()
-    if raw:
-        return raw
-    if item.sequence is not None:
-        return str(item.sequence)
-    return ""
-
-
-def _normalized_item_no(item: InspectionItem) -> str | None:
-    text = _item_no(item)
-    match = re.search(r"\d+", text)
-    if match:
-        return match.group(0)
-    return None
-
-
-def _field_provenance(item: InspectionItem, attr: str) -> str | None:
-    return item.field_provenance.get(attr) or item.field_provenance.get(_legacy_field_key(attr))
-
-
-def _legacy_field_key(attr: str) -> str:
+def _group_has_effective_field(group: InspectionItemGroup, attr: str) -> bool:
+    if attr == "test_result":
+        return any(not is_empty_required_field(value) for value in group.effective_test_results)
     if attr == "conclusion":
-        return "item_conclusion"
-    return attr
-
-
-def _is_merged_field(item: InspectionItem, attr: str) -> bool:
-    provenance = _field_provenance(item, attr) or ""
-    if provenance.startswith("merge"):
-        return True
-
-    merged_fields = item.metadata.get("merged_fields")
-    if isinstance(merged_fields, dict):
-        return bool(merged_fields.get(attr) or merged_fields.get(_legacy_field_key(attr)))
-    if isinstance(merged_fields, (list, tuple, set)):
-        return attr in merged_fields or _legacy_field_key(attr) in merged_fields
+        return not is_empty_required_field(group.effective_single_conclusion)
+    if attr == "remark":
+        return not is_empty_required_field(group.effective_remark)
     return False
 
 
-def _empty_field_message(item: InspectionItem, field_name: str, is_merged_cell: bool) -> str:
-    item_no = _item_no(item) or "空序号行"
-    row = item.row_index_in_page if item.row_index_in_page is not None else "未知行"
-    if is_merged_cell:
-        return f"序号 {item_no} 第 {row} 行的{field_name}为空，合并单元格首行为空导致该字段无有效值。"
-    return f"序号 {item_no} 第 {row} 行的{field_name}为空。"
+def _empty_field_message(group: InspectionItemGroup, field_name: str) -> str:
+    item_no = group.display_item_no or group.item_no or "未知序号"
+    return f"序号 {item_no} 的{field_name}为空，已按同序号/续表行聚合后的有效字段判断。"
 
 
-def _field_location(item: InspectionItem, field_name: str) -> Location | None:
-    if item.row_location is None:
+def _field_location(group: InspectionItemGroup, field_name: str) -> Location | None:
+    first_empty_row = next(
+        (row for row in group.rows if _physical_field_empty(row, _field_key_for_name(field_name))),
+        None,
+    )
+    row = first_empty_row or (group.rows[0] if group.rows else None)
+    if row is None or row.row_location is None:
         return None
-    return item.row_location.model_copy(update={"column_name": field_name})
+    return row.row_location.model_copy(update={"column_name": field_name})
 
 
-def _field_evidence(item: InspectionItem, field_name: str, attr: str, value: Any) -> list[Evidence]:
-    evidence_items = list(item.evidence)
+def _field_key_for_name(field_name: str) -> str:
+    for required_name, attr in REQUIRED_FIELDS:
+        if required_name == field_name:
+            return attr
+    return ""
+
+
+def _field_evidence(group: InspectionItemGroup, field_name: str, attr: str) -> list[Evidence]:
+    evidence_items: list[Evidence] = []
+    seen_ids: set[str] = set()
+    for row in group.rows:
+        for evidence in row.evidence:
+            if evidence.id in seen_ids:
+                continue
+            seen_ids.add(evidence.id)
+            evidence_items.append(evidence)
+
     evidence_items.append(
         Evidence(
-            id=f"c08-{item.source_page or 'p'}-{item.row_index_in_page if item.row_index_in_page is not None else 'r'}-{attr}",
+            id=f"c08-group-{_safe_id_part(group.item_no)}-{attr}",
             source_type=SourceType.REPORT,
-            location=_field_location(item, field_name),
+            location=_field_location(group, field_name),
             raw_text=(
-                f"序号：{_item_no(item)}；"
-                f"检验结果：{item.test_result or ''}；"
-                f"单项结论：{item.conclusion or ''}；"
-                f"备注：{item.remark or ''}"
+                f"序号：{group.display_item_no or group.item_no}；"
+                f"行数：{len(group.rows)}；"
+                f"检验结果：{' / '.join(group.effective_test_results)}；"
+                f"单项结论：{group.effective_single_conclusion or ''}；"
+                f"备注：{group.effective_remark or ''}"
             ),
-            value="" if value is None else str(value),
+            value="",
             method=EvidenceMethod.PDF_TEXT,
             confidence=Confidence.HIGH,
             metadata={
                 "field_name": field_name,
                 "field_key": attr,
-                "value_provenance": _field_provenance(item, attr),
-                "is_merged_cell": _is_merged_field(item, attr),
+                "item_no": group.display_item_no or group.item_no,
+                "normalized_item_no": group.item_no,
+                "pages": list(group.pages),
+                "group_row_count": len(group.rows),
             },
         )
     )
     return evidence_items
+
+
+def _finding_metadata(group: InspectionItemGroup, field_name: str, attr: str) -> dict[str, Any]:
+    empty_rows = _empty_physical_rows(group, attr)
+    return {
+        "item_no": group.display_item_no or group.item_no,
+        "normalized_item_no": group.item_no,
+        "field_name": field_name,
+        "field_key": attr,
+        "group_row_count": len(group.rows),
+        "pages": list(group.pages),
+        "source_rows": _source_rows(group),
+        "empty_physical_rows": empty_rows,
+        "inherited_fields": [field.model_dump() for field in group.inherited_merged_fields],
+        "suppressed_physical_row_count": max(0, len(empty_rows) - 1),
+        "group_diagnostics": list(group.diagnostics),
+        "continuation_markers": [marker.model_dump() for marker in group.continuation_markers],
+        "effective_test_results": list(group.effective_test_results),
+        "effective_single_conclusion": group.effective_single_conclusion,
+        "effective_remark": group.effective_remark,
+    }
+
+
+def _source_rows(group: InspectionItemGroup) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row, evidence in zip(group.rows, group.source_evidence, strict=False):
+        rows.append(
+            {
+                "source_index": evidence.get("source_index"),
+                "page_number": evidence.get("page_number"),
+                "row_index": evidence.get("row_index"),
+                "sequence_raw": _sequence_raw(row),
+                "test_result": row.test_result,
+                "single_conclusion": row.conclusion,
+                "remark": row.remark,
+            }
+        )
+    return rows
+
+
+def _empty_physical_rows(group: InspectionItemGroup, attr: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row, evidence in zip(group.rows, group.source_evidence, strict=False):
+        if not _physical_field_empty(row, attr):
+            continue
+        rows.append(
+            {
+                "source_index": evidence.get("source_index"),
+                "page_number": row.source_page,
+                "row_index": row.row_index_in_page,
+                "sequence_raw": _sequence_raw(row),
+            }
+        )
+    return rows
+
+
+def _physical_field_empty(row: InspectionItem, attr: str) -> bool:
+    if attr == "test_result":
+        if any(not is_empty_required_field(value) for value in row.result_values):
+            return False
+    return is_empty_required_field(getattr(row, attr, None))
+
+
+def _sequence_raw(row: InspectionItem) -> str:
+    if row.sequence_raw is not None:
+        return row.sequence_raw
+    if row.sequence is not None:
+        return str(row.sequence)
+    return ""
+
+
+def _safe_id_part(value: str | None) -> str:
+    text = value or "unknown"
+    return re.sub(r"[^0-9A-Za-z_-]+", "-", text).strip("-") or "unknown"
 
 
 __all__ = [

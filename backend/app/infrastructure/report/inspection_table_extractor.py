@@ -344,13 +344,14 @@ class InspectionTableExtractor:
 
 
 def parse_sequence(sequence_raw: str | None) -> int | None:
-    text = (sequence_raw or "").strip()
+    text = _compact(sequence_raw or "").translate(str.maketrans("０１２３４５６７８９", "0123456789"))
     if not text:
         return None
-    match = re.search(r"\d+", text)
-    if not match:
-        return None
-    return int(match.group(0))
+    continuation_match = re.fullmatch(r"续[:：]?(\d+)", text)
+    if continuation_match:
+        return int(continuation_match.group(1))
+    numeric_match = re.fullmatch(r"\d+", text)
+    return int(numeric_match.group(0)) if numeric_match else None
 
 
 def _compact(text: str) -> str:

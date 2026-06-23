@@ -209,6 +209,174 @@ def test_large_table_evidence_is_compacted_to_record_summary() -> None:
     assert "cells" not in table_item.structured
 
 
+def test_ptr_codex_evidence_builder_defaults_to_five_targets_and_records_truncation_metadata() -> None:
+    findings = [
+        _finding(
+            id_suffix=f"value-{index}",
+            code="PTR_TABLE_VALUE_MISMATCH",
+            check_id="PTR_TABLE",
+            metadata={"clause_number": "2.1", "table_number": "1", "parameter_name": f"参数{index}"},
+        )
+        for index in range(6)
+    ]
+
+    bundle = PtrCodexEvidenceBuilder().build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=_ptr_document(),
+        report_doc=_report_document(),
+        check_results=[_check_result("PTR_TABLE", findings)],
+    )
+
+    assert bundle is not None
+    assert len(bundle.request.targets) == 5
+    assert bundle.evidence_package.metadata["total_candidate_targets"] == 6
+    assert bundle.evidence_package.metadata["emitted_targets"] == 5
+    assert bundle.evidence_package.metadata["truncated"] is True
+    assert bundle.evidence_package.metadata["omitted_targets_count"] == 1
+    assert bundle.evidence_package.metadata["batch_index"] == 0
+    assert bundle.evidence_package.metadata["batch_size"] == 5
+
+
+def test_ptr_codex_evidence_builder_can_limit_batch_to_one_target() -> None:
+    findings = [
+        _finding(code="PTR_TABLE_VALUE_MISMATCH", check_id="PTR_TABLE", id_suffix="value"),
+        _finding(code="PTR_TABLE_UNIT_MISMATCH", check_id="PTR_TABLE", id_suffix="unit"),
+    ]
+
+    bundle = PtrCodexEvidenceBuilder(max_targets_per_batch=1).build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=_ptr_document(),
+        report_doc=_report_document(),
+        check_results=[_check_result("PTR_TABLE", findings)],
+    )
+
+    assert bundle is not None
+    assert len(bundle.request.targets) == 1
+
+
+def test_ptr_codex_evidence_builder_can_emit_later_batch_without_omitting_targets() -> None:
+    findings = [
+        _finding(
+            id_suffix=f"value-{index}",
+            code="PTR_TABLE_VALUE_MISMATCH",
+            check_id="PTR_TABLE",
+            metadata={"clause_number": "2.1", "table_number": "1", "parameter_name": f"参数{index}"},
+        )
+        for index in range(6)
+    ]
+
+    first = PtrCodexEvidenceBuilder(max_targets_per_batch=5).build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=_ptr_document(),
+        report_doc=_report_document(),
+        check_results=[_check_result("PTR_TABLE", findings)],
+        target_offset=0,
+    )
+    second = PtrCodexEvidenceBuilder(max_targets_per_batch=5).build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=_ptr_document(),
+        report_doc=_report_document(),
+        check_results=[_check_result("PTR_TABLE", findings)],
+        target_offset=5,
+    )
+
+    assert first is not None
+    assert second is not None
+    assert len(first.request.targets) == 5
+    assert len(second.request.targets) == 1
+    assert second.evidence_package.metadata["batch_index"] == 1
+    assert second.evidence_package.metadata["omitted_targets_count"] == 0
+    assert second.request.targets[0].finding_id.endswith("value-5")
+
+
+def test_ptr_codex_evidence_builder_filters_by_check_id_and_finding_code() -> None:
+    findings = [
+        _finding(code="PTR_CLAUSE_TEXT_MISMATCH", check_id="PTR_CLAUSE", id_suffix="clause"),
+        _finding(code="PTR_TABLE_VALUE_MISMATCH", check_id="PTR_TABLE", id_suffix="value"),
+        _finding(code="PTR_TABLE_UNIT_MISMATCH", check_id="PTR_TABLE", id_suffix="unit"),
+    ]
+
+    bundle = PtrCodexEvidenceBuilder(
+        included_check_ids="PTR_TABLE",
+        included_finding_codes="PTR_TABLE_UNIT_MISMATCH",
+    ).build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=_ptr_document(),
+        report_doc=_report_document(),
+        check_results=[
+            _check_result("PTR_CLAUSE", findings[:1]),
+            _check_result("PTR_TABLE", findings[1:]),
+        ],
+    )
+
+    assert bundle is not None
+    assert [target.finding_code for target in bundle.request.targets] == ["PTR_TABLE_UNIT_MISMATCH"]
+
+
+def test_ptr_codex_evidence_builder_excludes_check_id() -> None:
+    findings = [
+        _finding(code="PTR_CLAUSE_TEXT_MISMATCH", check_id="PTR_CLAUSE", id_suffix="clause"),
+        _finding(code="PTR_TABLE_VALUE_MISMATCH", check_id="PTR_TABLE", id_suffix="value"),
+    ]
+
+    bundle = PtrCodexEvidenceBuilder(excluded_check_ids="PTR_CLAUSE").build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=_ptr_document(),
+        report_doc=_report_document(),
+        check_results=[
+            _check_result("PTR_CLAUSE", findings[:1]),
+            _check_result("PTR_TABLE", findings[1:]),
+        ],
+    )
+
+    assert bundle is not None
+    assert [target.check_id for target in bundle.request.targets] == ["PTR_TABLE"]
+
+
+def test_ptr_codex_evidence_builder_sorts_by_ptr_finding_code_priority() -> None:
+    findings = [
+        _finding(code="PTR_TABLE_VALUE_MISMATCH", check_id="PTR_TABLE", id_suffix="value"),
+        _finding(code="PTR_CLAUSE_TEXT_MISMATCH", check_id="PTR_CLAUSE", id_suffix="clause"),
+        _finding(code="PTR_TABLE_CANDIDATE_AMBIGUOUS", check_id="PTR_TABLE", id_suffix="ambiguous"),
+    ]
+
+    bundle = PtrCodexEvidenceBuilder().build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=_ptr_document(),
+        report_doc=_report_document(),
+        check_results=[
+            _check_result("PTR_TABLE", [findings[0], findings[2]]),
+            _check_result("PTR_CLAUSE", [findings[1]]),
+        ],
+    )
+
+    assert bundle is not None
+    assert [target.finding_code for target in bundle.request.targets] == [
+        "PTR_CLAUSE_TEXT_MISMATCH",
+        "PTR_TABLE_CANDIDATE_AMBIGUOUS",
+        "PTR_TABLE_VALUE_MISMATCH",
+    ]
+
+
+def test_ptr_codex_evidence_builder_zero_max_targets_returns_none() -> None:
+    bundle = PtrCodexEvidenceBuilder(max_targets_per_batch=0).build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=_ptr_document(),
+        report_doc=_report_document(),
+        check_results=[_check_result("PTR_TABLE", [_finding(code="PTR_TABLE_VALUE_MISMATCH", check_id="PTR_TABLE")])],
+    )
+
+    assert bundle is None
+
+
 def _check_result(check_id: str, findings: list[Finding]) -> CheckResult:
     return CheckResult(
         task_id="task-1",

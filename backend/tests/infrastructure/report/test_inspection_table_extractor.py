@@ -1,5 +1,5 @@
 from app.domain.pdf import ParsedPdf, PdfPage, PdfTable
-from app.infrastructure.report.inspection_table_extractor import InspectionTableExtractor
+from app.infrastructure.report.inspection_table_extractor import InspectionTableExtractor, parse_sequence
 
 
 HEADERS = ["序号", "检验项目", "标准条款", "标准要求", "检验结果", "单项结论", "备注"]
@@ -23,6 +23,15 @@ def _table(page_number: int, rows: list[list[str]], *, metadata: dict | None = N
         rows=rows,
         metadata=metadata or {},
     )
+
+
+def test_parse_sequence_only_accepts_plain_numeric_or_continuation_sequence() -> None:
+    assert parse_sequence("10") == 10
+    assert parse_sequence(" 118 ") == 118
+    assert parse_sequence("续 3") == 3
+    assert parse_sequence("——所有其他 ME 设备和 ME 系统，500V。") is None
+    assert parse_sequence("当外壳的分类为 IPX0 时，保持 ME 设备和其部件在潮湿箱里 48h。") is None
+    assert parse_sequence("4.10.2") is None
 
 
 def test_extracts_inspection_items_with_page_row_col_evidence() -> None:

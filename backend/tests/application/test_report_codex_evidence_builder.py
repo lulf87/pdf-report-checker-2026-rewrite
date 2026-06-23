@@ -59,7 +59,7 @@ def test_reviewable_report_findings_build_expected_target_types(
 
 
 @pytest.mark.parametrize("check_id", ["C01", "C08", "C09", "C10", "C11"])
-def test_non_priority_report_findings_are_skipped(check_id: str) -> None:
+def test_non_priority_report_findings_build_check_summary_target(check_id: str) -> None:
     bundle = ReportCodexEvidenceBuilder().build(
         task_id="task-1",
         task_type=TaskType.REPORT_CHECK.value,
@@ -68,10 +68,13 @@ def test_non_priority_report_findings_are_skipped(check_id: str) -> None:
         parsed_pdf=_parsed_pdf(),
     )
 
-    assert bundle is None
+    assert bundle is not None
+    assert bundle.request.targets[0].target_type is CodexReviewTargetType.CHECK_RESULT
+    assert bundle.request.targets[0].check_id == check_id
+    assert bundle.evidence_package.metadata["summary_target"] is True
 
 
-def test_no_reviewable_findings_returns_none() -> None:
+def test_no_findings_builds_check_summary_target() -> None:
     bundle = ReportCodexEvidenceBuilder().build(
         task_id="task-1",
         task_type=TaskType.REPORT_CHECK.value,
@@ -80,7 +83,9 @@ def test_no_reviewable_findings_returns_none() -> None:
         parsed_pdf=_parsed_pdf(),
     )
 
-    assert bundle is None
+    assert bundle is not None
+    assert bundle.request.targets[0].target_type is CodexReviewTargetType.CHECK_RESULT
+    assert bundle.evidence_package.items[0].ref_id == "check_result:C02"
 
 
 def test_target_evidence_refs_exist_and_include_finding_and_rule_context() -> None:
@@ -182,14 +187,52 @@ def test_c07_evidence_contains_inspection_result_actual_and_expected_conclusion(
         check_id="C07",
         expected="不符合",
         actual="符合",
-        metadata=_metadata_for_check("C07"),
+        metadata={
+            **_metadata_for_check("C07"),
+            "effective_test_results": ["符合要求", "不符合要求"],
+            "pages": [4, 5],
+            "source_rows": [
+                {"source_index": 0, "page_number": 4, "row_index": 2},
+                {"source_index": 1, "page_number": 5, "row_index": 0},
+            ],
+        },
     )
 
     bundle = ReportCodexEvidenceBuilder().build(
         task_id="task-1",
         task_type=TaskType.REPORT_CHECK.value,
         result=_check_result("C07", [finding]),
-        report=_report_document(),
+        report=_report_document(
+            inspection_items=[
+                InspectionItem(
+                    sequence_raw="1",
+                    sequence=1,
+                    item_name="外观",
+                    standard_clause="2.1",
+                    standard_requirement="应符合要求",
+                    test_result="符合要求",
+                    result_values=["符合要求"],
+                    conclusion="符合",
+                    remark="/",
+                    source_page=4,
+                    row_index_in_page=2,
+                ),
+                InspectionItem(
+                    sequence_raw="续 1",
+                    sequence=1,
+                    is_continuation=True,
+                    item_name="外观",
+                    standard_clause="2.1",
+                    standard_requirement="应符合要求",
+                    test_result="不符合要求",
+                    result_values=["不符合要求"],
+                    conclusion="",
+                    remark="/",
+                    source_page=5,
+                    row_index_in_page=0,
+                ),
+            ]
+        ),
         parsed_pdf=_parsed_pdf(),
     )
 
@@ -198,10 +241,17 @@ def test_c07_evidence_contains_inspection_result_actual_and_expected_conclusion(
         item for item in bundle.evidence_package.items if item.source_type is EvidenceSourceType.TABLE
     )
     assert inspection_item.ref_id.startswith("inspection_item:")
-    assert inspection_item.structured["test_result"] == "不符合要求"
-    assert inspection_item.structured["actual_conclusion"] == "符合"
-    assert inspection_item.structured["expected_conclusion"] == "不符合"
-    assert inspection_item.structured["row_index_in_page"] == 2
+    assert inspection_item.structured["inspection_item_group"]["item_no"] == "1"
+    assert inspection_item.structured["inspection_item_group"]["effective_test_results"] == [
+        "符合要求",
+        "不符合要求",
+    ]
+    assert inspection_item.structured["inspection_item_group"]["actual_conclusion"] == "符合"
+    assert inspection_item.structured["inspection_item_group"]["expected_conclusion"] == "不符合"
+    assert inspection_item.structured["inspection_item_group"]["pages"] == [4, 5]
+    assert inspection_item.structured["inspection_item_group"]["group_row_count"] == 2
+    assert inspection_item.structured["inspection_item_group"]["source_rows"][0]["row_index"] == 2
+    assert "第三页生产日期" not in inspection_item.model_dump_json()
 
 
 def test_package_sanitizes_old_new_and_user_absolute_paths() -> None:
@@ -290,6 +340,165 @@ def test_long_text_and_large_context_are_truncated() -> None:
     dumped = bundle.evidence_package.model_dump_json()
     assert "[truncated]" in dumped
     assert long_value not in dumped
+
+
+def test_report_codex_evidence_builder_defaults_to_five_targets_and_records_truncation_metadata() -> None:
+    findings = [
+        _finding(check_id="C04", metadata=_metadata_for_check("C04"), id_suffix=f"c04-{index}")
+        for index in range(6)
+    ]
+
+    bundle = ReportCodexEvidenceBuilder().build(
+        task_id="task-1",
+        task_type=TaskType.REPORT_CHECK.value,
+        result=_check_result("C04", findings),
+        report=_report_document(),
+        parsed_pdf=_parsed_pdf(),
+    )
+
+    assert bundle is not None
+    assert len(bundle.request.targets) == 5
+    assert bundle.evidence_package.metadata["total_candidate_targets"] == 6
+    assert bundle.evidence_package.metadata["emitted_targets"] == 5
+    assert bundle.evidence_package.metadata["truncated"] is True
+    assert bundle.evidence_package.metadata["omitted_targets_count"] == 1
+    assert bundle.evidence_package.metadata["batch_index"] == 0
+    assert bundle.evidence_package.metadata["batch_size"] == 5
+
+
+def test_report_codex_evidence_builder_can_limit_batch_to_one_target() -> None:
+    findings = [
+        _finding(check_id="C04", metadata=_metadata_for_check("C04"), id_suffix="c04"),
+        _finding(check_id="C07", metadata=_metadata_for_check("C07"), id_suffix="c07"),
+    ]
+
+    bundle = ReportCodexEvidenceBuilder(max_targets_per_batch=1).build(
+        task_id="task-1",
+        task_type=TaskType.REPORT_CHECK.value,
+        result=_check_result("C04", findings),
+        report=_report_document(),
+        parsed_pdf=_parsed_pdf(),
+    )
+
+    assert bundle is not None
+    assert len(bundle.request.targets) == 1
+    assert bundle.evidence_package.metadata["emitted_targets"] == 1
+
+
+def test_report_codex_evidence_builder_can_emit_later_batch_without_omitting_targets() -> None:
+    findings = [
+        _finding(check_id="C04", metadata=_metadata_for_check("C04"), id_suffix=f"c04-{index}")
+        for index in range(6)
+    ]
+
+    first = ReportCodexEvidenceBuilder(max_targets_per_batch=5).build(
+        task_id="task-1",
+        task_type=TaskType.REPORT_CHECK.value,
+        result=_check_result("C04", findings),
+        report=_report_document(),
+        parsed_pdf=_parsed_pdf(),
+        target_offset=0,
+    )
+    second = ReportCodexEvidenceBuilder(max_targets_per_batch=5).build(
+        task_id="task-1",
+        task_type=TaskType.REPORT_CHECK.value,
+        result=_check_result("C04", findings),
+        report=_report_document(),
+        parsed_pdf=_parsed_pdf(),
+        target_offset=5,
+    )
+
+    assert first is not None
+    assert second is not None
+    assert len(first.request.targets) == 5
+    assert len(second.request.targets) == 1
+    assert second.evidence_package.metadata["batch_index"] == 1
+    assert second.evidence_package.metadata["omitted_targets_count"] == 0
+    assert second.request.targets[0].finding_id.endswith("c04-5")
+
+
+def test_report_codex_evidence_builder_included_check_ids_filter_to_c07() -> None:
+    findings = [
+        _finding(check_id="C04", metadata=_metadata_for_check("C04"), id_suffix="c04"),
+        _finding(check_id="C07", metadata=_metadata_for_check("C07"), id_suffix="c07"),
+    ]
+
+    bundle = ReportCodexEvidenceBuilder(included_check_ids="C07").build(
+        task_id="task-1",
+        task_type=TaskType.REPORT_CHECK.value,
+        result=_check_result("C04", findings),
+        report=_report_document(),
+        parsed_pdf=_parsed_pdf(),
+    )
+
+    assert bundle is not None
+    assert [target.check_id for target in bundle.request.targets] == ["C07"]
+
+
+def test_report_codex_evidence_builder_sorts_by_priority_check_ids() -> None:
+    findings = [
+        _finding(check_id="C04", metadata=_metadata_for_check("C04"), id_suffix="c04"),
+        _finding(check_id="C07", metadata=_metadata_for_check("C07"), id_suffix="c07"),
+    ]
+
+    bundle = ReportCodexEvidenceBuilder(included_check_ids="C04,C07").build(
+        task_id="task-1",
+        task_type=TaskType.REPORT_CHECK.value,
+        result=_check_result("C04", findings),
+        report=_report_document(),
+        parsed_pdf=_parsed_pdf(),
+    )
+
+    assert bundle is not None
+    assert [target.check_id for target in bundle.request.targets] == ["C07", "C04"]
+
+
+def test_report_codex_evidence_builder_excluded_check_ids_filter_out_rule() -> None:
+    findings = [
+        _finding(check_id="C04", metadata=_metadata_for_check("C04"), id_suffix="c04"),
+        _finding(check_id="C07", metadata=_metadata_for_check("C07"), id_suffix="c07"),
+    ]
+
+    bundle = ReportCodexEvidenceBuilder(excluded_check_ids="C04").build(
+        task_id="task-1",
+        task_type=TaskType.REPORT_CHECK.value,
+        result=_check_result("C04", findings),
+        report=_report_document(),
+        parsed_pdf=_parsed_pdf(),
+    )
+
+    assert bundle is not None
+    assert [target.check_id for target in bundle.request.targets] == ["C07"]
+
+
+def test_report_codex_evidence_builder_included_finding_codes_filter_exact_codes() -> None:
+    findings = [
+        _finding(check_id="C04", code="SAMPLE_FIELD_MISSING_IN_LABEL", metadata=_metadata_for_check("C04"), id_suffix="c04"),
+        _finding(check_id="C07", code="CONCLUSION_MISMATCH_001", metadata=_metadata_for_check("C07"), id_suffix="c07"),
+    ]
+
+    bundle = ReportCodexEvidenceBuilder(included_finding_codes="CONCLUSION_MISMATCH_001").build(
+        task_id="task-1",
+        task_type=TaskType.REPORT_CHECK.value,
+        result=_check_result("C04", findings),
+        report=_report_document(),
+        parsed_pdf=_parsed_pdf(),
+    )
+
+    assert bundle is not None
+    assert [target.finding_code for target in bundle.request.targets] == ["CONCLUSION_MISMATCH_001"]
+
+
+def test_report_codex_evidence_builder_zero_max_targets_returns_none() -> None:
+    bundle = ReportCodexEvidenceBuilder(max_targets_per_batch=0).build(
+        task_id="task-1",
+        task_type=TaskType.REPORT_CHECK.value,
+        result=_check_result("C07", [_finding(check_id="C07", metadata=_metadata_for_check("C07"))]),
+        report=_report_document(),
+        parsed_pdf=_parsed_pdf(),
+    )
+
+    assert bundle is None
 
 
 def _check_result(check_id: str, findings: list[Finding]) -> CheckResult:
