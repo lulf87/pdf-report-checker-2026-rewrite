@@ -129,6 +129,91 @@
 - 验收标准：Done when 默认配置不构建真实 runner、不调用 subprocess；fake 模式可产出 `codex_reviews`；codex-cli 未允许真实执行时返回 skipped 且不调用 subprocess；API 默认路径不启用 Codex；全量测试和前端 build 通过。
 - 完成状态：[x]
 
+### T-CODEX-11：Codex audit 本地业务端到端验收
+- 目标：验证本地 Web 工具在 disabled/fake/codex-cli 模式下的业务端到端链路，确认真实 Codex CLI 可以在受控 evidence workspace、read-only sandbox 和 output schema 下返回可审计 `codex_reviews`。
+- 背景：T-CODEX-10 已完成本地运行时配置和依赖装配；T-CODEX-11A 建立 gated local E2E harness；T-CODEX-11B 由用户显式开启真实 codex-cli 模式完成业务验收。
+- 不允许做：不默认启用真实 Codex；不修改旧项目目录；不修改规则逻辑；不修改 router 业务逻辑；不把 Codex 审核逻辑写进 router；不让 Codex 覆盖 deterministic findings。
+- 子任务状态：
+  - T-CODEX-11A：本地业务端到端验收脚本和文档。完成状态：[x]
+  - T-CODEX-11B：真实 codex-cli 本地业务端到端验收并记录结果。完成状态：[x]
+- 完成状态：[x]
+
+### T-CODEX-11A：本地业务端到端验收脚本和文档
+- 目标：新增本地业务端到端验收说明和脚本，帮助用户验证 disabled/fake/codex-cli 模式下 `codex_reviews` 的 API 返回和前端展示。
+- 背景：T-CODEX-10 已完成 Codex audit 本地运行时配置与依赖装配；本任务提供业务验收入口，但不要求真实运行 Codex CLI。
+- 新文件位置：`docs/codex-audit-local-e2e.md`、`scripts/run-codex-audit-local-e2e.sh`、`backend/tests/integration/test_codex_audit_local_e2e_artifacts.py`。
+- 需要实现：文档覆盖默认模式、fake 模式、codex-cli 模式、脚本参数、业务上传流程、`codex_reviews` 验收点、前端只展示不重算、安全边界和排查；脚本支持 `--help`、`--print-config`、上传 PTR/报告或报告自检任务、轮询结果并统计 `codex_reviews`。
+- 不允许做：不调用真实 Codex；不修改旧项目目录；不修改规则逻辑；不修改 router 业务逻辑；不把 Codex 审核逻辑写进 router；不修改 C01-C11 或 PTR 规则算法。
+- 测试要求：运行 `cd backend && python -m pytest tests/integration/test_codex_audit_local_e2e_artifacts.py -v`；按影响范围运行后端测试、前端 build 和 `git diff --check`。
+- 验收标准：Done when 脚本默认安全、codex-cli 模式需要显式 gate、文档清楚说明本地 fake/codex-cli 业务验收和前端展示边界。
+- 完成状态：[x]
+
+### T-CODEX-11B：真实 codex-cli 本地业务端到端验收
+- 目标：在本地业务 report-check 样本上显式启用真实 Codex CLI，验证后端通过 Codex audit runtime 生成可审计 `codex_reviews`。
+- 背景：首次真实业务验收先后暴露 structured output schema 不兼容和 84 targets 超时问题；T-CODEX-12 完成 target 限流后，本次使用单个 C07 target 完成真实验收。
+- 记录位置：`docs/current-status.md`、`docs/codex-audit-local-e2e.md`。
+- 验收结果：`codex_reviews_count=1`，`succeeded=1`，`verdict=confirm`，`confidence=high`，`target_type=inspection_item`，`check_id=C07`，`finding_code=CONCLUSION_MISMATCH_002`，`failed_reviews_count=0`。
+- 不允许做：不把真实 Codex 输出写入 Golden expected；不删除或覆盖 deterministic findings；不提交 runtime 生成文件；不默认启用 API 真实 Codex。
+- 验收标准：Done when 用户显式运行 gated codex-cli local E2E，真实 Codex CLI 返回 succeeded review，deterministic findings 保留且 Codex review 只作为审核意见。
+- 完成状态：[x]
+
+### T-CODEX-12：Codex audit target 限流、筛选和分批审核
+- 目标：避免本地真实 Codex CLI 一次处理过多审核 target，支持 target 限流、规则筛选和当前 batch 元数据。
+- 背景：T-CODEX-11B 真实 report-check 验收已触达真实 Codex CLI；schema 兼容性修复后，84 个 targets 仍导致 `CODEX_TIMEOUT`。
+- 新文件位置：`backend/app/application/codex_audit_targeting.py`，并更新 `backend/app/core/config.py`、`backend/app/application/*codex_evidence_builder.py`、`backend/app/application/codex_runtime_factory.py`、`scripts/run-codex-audit-local-e2e.sh` 和相关测试/文档。
+- 需要实现：`CODEX_AUDIT_MAX_TARGETS_PER_TASK`、`CODEX_AUDIT_MAX_TARGETS_PER_BATCH`、include/exclude check IDs、included finding codes、priority check IDs；Report/PTR evidence builder 按配置筛选、排序、截断；metadata 记录 `total_candidate_targets`、`emitted_targets`、`truncated`、`omitted_targets_count`、`batch_index`、`batch_size`。
+- 不允许做：不调用真实 Codex；不修改 C01-C11 或 PTR 规则逻辑；不修改 router 业务逻辑；不修改旧项目目录；不改变 deterministic findings；T-CODEX-12 本身不替代 T-CODEX-11B 真实验收。
+- 测试要求：运行 `cd backend && python -m pytest tests/application/test_report_codex_evidence_builder.py tests/application/test_ptr_codex_evidence_builder.py tests/application/test_codex_runtime_factory.py tests/integration/test_codex_audit_local_e2e_artifacts.py -v`，并运行后端全量、前端 build、脚本 bash 语法和 `git diff --check`。
+- 验收标准：Done when 默认最多 5 个 audit targets，fake/codex-cli 共用相同筛选限制，脚本可传递限流/筛选环境变量，真实模式可用单 target 命令重新验收。
+- 完成状态：[x]
+
+### T-QUALITY-01：C08/C10/C07 降噪设计
+- 目标：基于真实报告样本分析 C08/C10/C07 噪声来源，设计 group-level 降噪路线。
+- 背景：QW2025-2795 Draft.pdf 真实结果显示 `C08=4894`、`C10=130`、`C07=72`，physical row-level 判断噪声明显。
+- 新文件位置：`docs/quality-noise-reduction-plan.md`。
+- 需要实现：记录当前样本噪声分析、`InspectionItemGroup` 设计、C08/C10/C07 group-level 新策略、C04/C05/C06 OCR gating、Finding 聚合模型、测试计划和 T-QUALITY-02 到 T-QUALITY-07 分阶段任务。
+- 不允许做：不修改业务代码；不修改规则；不修改前端；不调用真实 Codex。
+- 完成状态：[x]
+
+### T-QUALITY-02：InspectionItemGroup builder
+- 目标：实现独立 `InspectionItemGroup` builder，将 `ReportDocument.inspection_items` 中的 physical row `InspectionItem` 归并为业务级 item group，作为后续 C08/C10/C07 降噪共同输入。
+- 背景：T-QUALITY-01 确认 C08/C10/C07 的主要噪声来自 physical row-level 判断；本阶段只建立 group contract，不接入现有规则。
+- 新文件位置：`backend/app/domain/inspection_group.py`、`backend/app/infrastructure/report/inspection_item_group_builder.py`、`backend/tests/infrastructure/report/test_inspection_item_group_builder.py`。
+- 需要实现：普通序号归组、`续 X` 归组、空序号 payload 行归入 active group、空白行 diagnostics、跨页 pages/continuation markers、effective test results/conclusion/remark、inherited merged fields、source evidence 和 diagnostics。
+- 不允许做：不修改 C07/C08/C10 规则输出；不修改 C04/C05/C06；不修改 usecase/router/frontend；不调用真实 Codex；不改变现有 deterministic findings 数量。
+- 测试要求：运行 group builder 测试、C07/C08/C10 规则回归、后端全量、前端 build 和 `git diff --check`。
+- 验收标准：Done when builder 可独立把 physical rows 归组为可追溯 item groups，现有 C07/C08/C10 测试不受影响。
+- 完成状态：[x]
+
+### T-QUALITY-03：C08 group-level 重构
+- 目标：让 C08 消费 `InspectionItemGroup`，从 physical row-level 空字段报错收敛为 group-level effective field finding。
+- 背景：T-QUALITY-02 已提供 group builder；C08 当前仍逐 physical row、逐字段输出 finding。
+- 不允许做：不修改 C07/C10；不让前端重新计算 C08；不删除原始诊断明细。
+- 完成状态：[ ]
+
+### T-QUALITY-04：C10 page-boundary 重构
+- 目标：让 C10 基于 `InspectionItemGroup` 的跨页边界检查续表标记，避免同一 page boundary 重复报错。
+- 背景：T-QUALITY-02 已提供 group builder；C10 当前仍以页内 physical row 为主要判断单位。
+- 不允许做：不修改 C07/C08；不改变 C09 序号连续性职责。
+- 完成状态：[ ]
+
+### T-QUALITY-05：C07 group-level 重构
+- 目标：让 C07 消费 `InspectionItemGroup` 的 effective results/conclusion，并为 Codex audit 提供 group evidence。
+- 背景：C07 已有序号归组雏形，但仍未复用统一 group contract。
+- 不允许做：不修改 C08/C10；不调用真实 Codex；不让 Codex 覆盖 deterministic finding。
+- 完成状态：[ ]
+
+### T-QUALITY-06：C04/C05/C06 OCR gating
+- 目标：明确 label caption、label OCR 和 label image 三层证据，缺 OCR 或低置信 OCR 时优先 WARN / NEEDS_REVIEW。
+- 背景：真实样本 C04/C05/C06 仍有噪声，OCR/caption 证据不足时不应直接扩大 ERROR。
+- 完成状态：[ ]
+
+### T-QUALITY-07：前端 grouped findings 展示
+- 目标：前端展示 grouped finding，并折叠展示 raw rows / diagnostics / suppressed count。
+- 背景：C08/C10/C07 降噪后需要让用户看到“业务问题 + 明细”的层次，而不是物理行噪声列表。
+- 不允许做：不在前端重新计算 C07/C08/C10。
+- 完成状态：[ ]
+
 ## T01：冻结旧项目并创建 rewrite 分支说明
 - 目标：明确旧项目资产只读，建立本次重写的执行边界和分支说明。
 - 背景：`docs/legacy-inventory.md` 已记录旧项目可追溯资产和废弃项，新项目不能继续在旧 Electron、旧 service 大文件或旧同步 API 上叠加。

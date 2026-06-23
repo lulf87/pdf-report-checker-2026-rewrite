@@ -344,7 +344,10 @@ T-CODEX 状态：
 | T-CODEX-08 | 已完成 | 前端类型已支持 `codex_reviews`；PTR 和报告自检结果页已展示 Codex review 总览、finding 关联意见和未关联审核意见；前端只展示后端结果，不重新计算业务规则。 |
 | T-CODEX-09 | 已完成 | T-CODEX-09A 已建立 gated/manual harness；T-CODEX-09B 已由用户显式运行 gated manual harness 并记录结果。第一次脚本失败为 Python 解释器缺少 pytest，使用 `PYTHON_BIN=python` 后 smoke 脚本通过。 |
 | T-CODEX-10 | 已完成 | 本地 API usecase 构造路径已通过 settings/factory 装配 Codex audit；默认关闭；fake 模式可本地联调；codex-cli 模式必须显式允许真实执行才会调用 `codex exec`。 |
+| T-CODEX-11 | 已完成 | T-CODEX-11A 已建立本地业务 E2E 验收脚本和文档；T-CODEX-11B 已由用户显式运行真实 codex-cli report-check 本地业务验收，返回 1 条 succeeded/confirm/high 的 C07 review。 |
 | T-CODEX-11A | 已完成 | 新增本地业务 E2E 验收文档和脚本；脚本支持 disabled/fake/codex-cli 模式、上传业务样本、轮询结果并统计 `codex_reviews`；本阶段不运行真实 Codex CLI。 |
+| T-CODEX-11B | 已完成 | 使用 target 限流只审核 1 个 C07 `inspection_item` target；真实 Codex CLI 返回 succeeded review，verdict 为 confirm，confidence 为 high，failed reviews 为 0，deterministic findings 保留。 |
+| T-CODEX-12 | 已完成 | 已实现 Codex audit target 限流、规则筛选和当前 batch 元数据；默认最多 5 个 audit targets，脚本可用单 target 真实模式重新验收。 |
 
 验证命令：
 
@@ -976,7 +979,7 @@ python -m uvicorn app.main:app --reload
 
 完成日期：2026-06-18
 
-本次修复 T-CODEX-11B 前置脚本问题，不标记 T-CODEX-11B 完成。本次不调用真实 Codex CLI，不修改后端业务代码、frontend、router、Codex runner/parser/prompt 或旧项目目录。
+本次修复 T-CODEX-11B 前置脚本问题，当时不标记 T-CODEX-11B 完成。本次不调用真实 Codex CLI，不修改后端业务代码、frontend、router、Codex runner/parser/prompt 或旧项目目录。
 
 问题：
 
@@ -1003,3 +1006,206 @@ python -m uvicorn app.main:app --reload
 | `cd backend && python -m pytest tests/ -v` | 通过，`490 passed, 1 skipped`。 |
 | `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
 | `git diff --check` | 通过。 |
+
+## Codex CLI structured output schema 兼容性修复记录
+
+完成日期：2026-06-23
+
+本次修复 T-CODEX-11B 前置阻塞点，当时不标记 T-CODEX-11B 完成。本次不调用真实 Codex CLI，不修改后端业务规则、router、frontend、旧项目目录或 Codex runner/prompt 业务内容。
+
+真实 T-CODEX-11B report-check 业务验收已触发真实 Codex CLI，但结果全部 failed：
+
+- `codex_reviews_count: 84`
+- `codex_status_counts: {"failed": 84}`
+- `deterministic_findings_count: 5194`
+- failed `error_code: CODEX_EXIT_NONZERO`
+- stderr 报 `invalid_json_schema`，核心错误为：`Invalid schema for response_format 'codex_output_schema': In context=('properties', 'evidence_refs'), 'uniqueItems' is not permitted.`
+
+原因确认：
+
+- `backend/app/infrastructure/codex/schemas/codex_review_output.schema.json` 使用了真实 Codex/OpenAI structured output 不支持的 JSON Schema 关键字。
+- 已确认 `uniqueItems` 被真实 CLI 拒绝；`allOf`、`if`、`then` 等组合关键字也属于高风险 structured output 非兼容关键字。
+- 复杂跨字段校验不应依赖 JSON Schema，而应放在 `CodexReviewOutputParser` 中做项目自身 contract validation。
+
+本次修复：
+
+- 将 `codex_review_output.schema.json` 收敛为 structured output 兼容的最小 schema，只保留基础结构、required 字段、enum、nullable 类型和 `additionalProperties: false`。
+- 从 schema 中移除 `uniqueItems`、`allOf`、`if`、`then`、`else`、`not`、`dependentRequired`、`dependentSchemas`、`minLength`、`maxLength`、`pattern`、`format`、`minItems`、`maxItems`。
+- 不再在 schema 层强制 `add_finding` 必须包含 `suggested_finding`；该规则由 parser 校验。
+- `CodexReviewOutputParser` 新增重复 evidence ref 校验，输出 `CODEX_OUTPUT_DUPLICATE_EVIDENCE_REF`。
+- `CodexReviewOutputParser` 继续校验 unknown evidence ref、disallowed evidence ref、duplicate/missing target、add_finding 缺 suggestion、suggested_finding evidence refs 不存在等 contract。
+- schema 中 Codex 输出的 `metadata` 收紧为 `{}`；parser 仍会在成功结果 metadata 中追加 `schema_version` 和 `parser` 审计信息。
+- `docs/codex-cli-manual-validation.md` 和 `docs/codex-audit-local-e2e.md` 已记录 structured output 兼容子集和 parser contract validation 边界。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/infrastructure/codex/test_codex_review_output_schema.py tests/infrastructure/codex/test_output_parser.py tests/infrastructure/codex/test_prompt_builder.py -v` | 通过，`44 passed`。 |
+| `cd backend && python -m pytest tests/infrastructure/codex -v` | 通过，`66 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`492 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+| `git diff --check` | 通过。 |
+
+任务状态：
+
+- T-CODEX-11B 当时仍未标记完成；后续已通过真实业务验收收口。
+- 后续已重新运行真实 codex-cli report-check 业务验收，并通过单 target 限流完成 T-CODEX-11B 收口。
+
+## Codex audit target 限流和筛选完成记录
+
+完成日期：2026-06-23
+
+本次实现 T-CODEX-12，不调用真实 Codex CLI，不修改 C01-C11 或 PTR 规则逻辑，不修改 router 业务逻辑，不修改旧项目目录，不改变 deterministic findings；T-CODEX-11B 当时仍等待后续真实业务验收。
+
+T-CODEX-11B 最新真实模式结果：
+
+- structured output schema 已通过此前兼容性修复，不再出现 `invalid_json_schema`。
+- report-check 真实 codex-cli 业务验收已触达真实 Codex CLI，但一次审核 84 个 targets 仍过重。
+- `codex_reviews_count: 84`
+- `codex_status_counts: {"failed": 84}`
+- failed `error_code: CODEX_TIMEOUT`
+- error detail: `Timed out after 120 seconds`
+- `deterministic_findings_count: 5194`
+- target 类型包括 C04/C05/C06/C07。
+
+本次实现：
+
+- 新增 `backend/app/application/codex_audit_targeting.py`，定义共享 `CodexAuditTargetSelection`、CSV 解析和默认优先级。
+- `backend/app/core/config.py` 新增：
+  - `CODEX_AUDIT_MAX_TARGETS_PER_TASK=5`
+  - `CODEX_AUDIT_MAX_TARGETS_PER_BATCH=5`
+  - `CODEX_AUDIT_INCLUDED_CHECK_IDS`
+  - `CODEX_AUDIT_INCLUDED_FINDING_CODES`
+  - `CODEX_AUDIT_EXCLUDED_CHECK_IDS`
+  - `CODEX_AUDIT_PRIORITY_CHECK_IDS=C02,C03,C07,C04,C05,C06`
+- `ReportCodexEvidenceBuilder` 默认只从 C02/C03/C04/C05/C06/C07 中筛选，应用 include/exclude/finding code 过滤，按 priority 排序，同优先级保留原 finding 顺序，并截断到 max targets。
+- `ReportCheckUseCase` 在多个 check results 之间累计 `emitted_targets`，确保单个报告自检任务总 Codex audit targets 不超过配置上限。
+- `PtrCodexEvidenceBuilder` 支持同样的 check ID / finding code 筛选和 max targets，默认 PTR finding code 优先级为 `PTR_CLAUSE_TEXT_MISMATCH`、`PTR_TABLE_CANDIDATE_AMBIGUOUS`、`PTR_TABLE_VALUE_MISMATCH`、`PTR_TABLE_UNIT_MISMATCH`、`PTR_TABLE_PARAM_MISSING`、`PTR_TABLE_CONDITION_MISMATCH`、`PTR_TABLE_TOLERANCE_MISMATCH`。
+- Evidence package 和 request metadata 记录 `total_candidate_targets`、`emitted_targets`、`truncated`、`omitted_targets_count`、`batch_index=0`、`batch_size`、`max_targets_per_task` 和 `max_targets_per_batch`。
+- `backend/app/application/codex_runtime_factory.py` 将配置传入 Report/PTR evidence builders；fake 和 codex-cli 模式共享同一限流/筛选策略。
+- `scripts/run-codex-audit-local-e2e.sh` 支持并展示 target 限流/筛选环境变量，仍保留 codex-cli 真实执行 gate。
+- `docs/codex-audit-local-e2e.md` 已补充单 target 真实 Codex CLI 验收建议命令。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/application/test_report_codex_evidence_builder.py tests/application/test_ptr_codex_evidence_builder.py tests/application/test_codex_runtime_factory.py tests/integration/test_codex_audit_local_e2e_artifacts.py -v` | 通过，`54 passed`。 |
+| `cd backend && python -m pytest tests/application/test_report_check_usecase.py::test_report_check_codex_audit_limits_reviews_across_check_results -v` | 通过，`1 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`508 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+| `bash -n scripts/run-codex-audit-local-e2e.sh` | 通过。 |
+| `git diff --check` | 通过。 |
+
+任务状态：
+
+- T-CODEX-12 已完成。
+- T-CODEX-11B 在 T-CODEX-12 实现时仍未完成；后续已通过单 target 真实 codex-cli 业务验收收口，见下一节记录。
+
+## Codex audit 本地业务端到端真实验收收口记录
+
+完成日期：2026-06-23
+
+本记录收口 T-CODEX-11B 和 T-CODEX-11。用户已显式启用真实 codex-cli 本地业务端到端验收并提供结果；本次只记录文档，不重新运行真实 Codex，不修改后端业务代码、frontend、router、Codex runner/parser/prompt 或旧项目目录，也不提交 runtime 生成文件。
+
+本次验收文件：
+
+- `c26e1901-0173-49f5-abce-6a205d077bf3.result.json`
+
+本次验收使用 T-CODEX-12 的 target 限流能力：
+
+- 只审核 1 个 C07 target。
+- `target_type=inspection_item`
+- `check_id=C07`
+- `finding_code=CONCLUSION_MISMATCH_002`
+
+Codex review 结果：
+
+- `codex_reviews_count: 1`
+- `codex_status_counts: {"succeeded": 1}`
+- `codex_verdict_counts: {"confirm": 1}`
+- `codex_confidence_counts: {"high": 1}`
+- `failed_reviews_count: 0`
+
+Deterministic finding 结果仍保留：
+
+- `deterministic_findings_count: 5194`
+- `finding_severity_counts: {"error": 5180, "warn": 14}`
+- `finding_check_counts: {"C04": 70, "C05": 14, "C06": 12, "C07": 72, "C08": 4894, "C09": 2, "C10": 130}`
+
+审核意见摘要：
+
+- Codex 确认了 C07 规则初判。
+- 目标为 `inspection_item`，finding code 为 `CONCLUSION_MISMATCH_002`。
+- Codex review 认为序号 3 的检验结果为“符合要求”，单项结论为“/”，而 `rule_context` 给出的期望结论为“符合”，因此支持规则初判。
+
+验收结论：
+
+- T-CODEX-11B 验收通过。
+- T-CODEX-11 整体完成。
+- T-CODEX-12 已完成，且本次真实模式结果证明 target 限流可以把 report-check 真实 Codex CLI 审核收敛到单 target。
+- Codex review 没有覆盖原始 finding；deterministic findings 和 Codex review 两层证据并存。
+- 默认 API 仍不会启用真实 Codex；真实 codex-cli 模式仍需要显式 gate。
+
+后续风险：
+
+- 当前样本 deterministic findings 数量仍很大，尤其 `C08=4894` 和 `C10=130`，需要后续单独收敛规则噪声或提取质量。
+- 本次真实 Codex CLI 业务验收只覆盖单个 C07 target；后续扩大到 C02/C03/C04/C05/C06 或 PTR target 时，仍应保持小批量、分批验证。
+
+## InspectionItemGroup builder 完成记录
+
+完成日期：2026-06-23
+
+本次实现 T-QUALITY-02，只新增 `InspectionItemGroup` 领域模型、独立 builder 和测试。本阶段不修改 C07/C08/C10 规则输出，不修改 C04/C05/C06，不修改 `ReportCheckUseCase`、router 或 frontend，不调用真实 Codex，不修改旧项目目录，也不改变现有 deterministic findings 数量。
+
+背景：
+
+- T-QUALITY-01 已确认 QW2025-2795 Draft.pdf 的 C08/C10/C07 噪声主要来自 physical row-level 判断。
+- 本阶段先建立共同输入 contract，供后续 T-QUALITY-03/04/05 分别接入 C08/C10/C07。
+
+本次实现：
+
+- 新增 `backend/app/domain/inspection_group.py`：
+  - `ContinuationMarker`
+  - `InheritedField`
+  - `InspectionItemGroup`
+  - `InspectionItemGroupBuildResult`
+- 新增 `backend/app/infrastructure/report/inspection_item_group_builder.py`：
+  - `InspectionItemGroupBuilder.build(items)`
+  - `build_inspection_item_groups(items)`
+- Builder 只消费 `InspectionItem` 列表，不依赖 router/usecase，不运行 C07/C08/C10，不输出 `Finding`，不修改原始 rows。
+- 支持普通序号归组、同序号多行归组、`续3` / `续 3` / `续\n3` 归组、空序号 payload 行归入 active group、空白行 diagnostics、跨页 pages 和 continuation markers。
+- 输出 group-level `effective_test_results`、`effective_single_conclusion`、`effective_remark`，保留 `/` 和 `——` 作为有效占位符。
+- 通过 `InheritedField` 记录 group 内字段继承关系，不修改原始 `InspectionItem`。
+- `source_evidence` 仅包含每行页码、行号、字段值、field provenance 和 metadata 摘要，不包含完整 PDF 文本或绝对路径。
+- 异常结构通过 diagnostics 记录，例如缺 page/row context、空白行无 payload、序号无法解析。
+
+测试覆盖：
+
+- 普通序号 1/2/3 分组。
+- 同序号多 physical rows 合并。
+- 续表 marker 多种空白形式归组。
+- `is_continuation=True` 和 `metadata.logical_continuation=True` 的空序号续行归入 active group。
+- 空序号空白行进入 diagnostics / ungrouped rows。
+- 跨页 group 记录 `pages=[14, 15]` 和 page 15 的 `续 3` marker。
+- effective test results 保留“符合要求”、`——`、`/` 和数值结果，剔除纯空白。
+- effective conclusion / remark 选择非空有效值。
+- inherited fields 记录继承来源和目标行，且不 mutate 原始 rows。
+- source evidence 不泄露 `/Users/` 绝对路径。
+- 真实样本结构 mini fixture 模拟序号 3 跨 page 14/15 的 C07 evidence。
+
+验证命令：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cd backend && python -m pytest tests/infrastructure/report/test_inspection_item_group_builder.py -v` | 先红灯失败于 `ModuleNotFoundError: No module named 'app.infrastructure.report.inspection_item_group_builder'`；实现后通过，`14 passed`。 |
+| `cd backend && python -m pytest tests/rules/report/test_c07_item_conclusion.py tests/rules/report/test_c08_non_empty.py tests/rules/report/test_c10_continuation.py -v` | 通过，`37 passed`。 |
+| `cd backend && python -m pytest tests/ -v` | 通过，`522 passed, 1 skipped`。 |
+| `cd frontend && npm run build` | 通过，TypeScript 检查和 Vite build 成功。 |
+
+任务状态：
+
+- T-QUALITY-02 已完成。
+- T-QUALITY-03 / T-QUALITY-04 / T-QUALITY-05 仍未开始。
+- C08/C10/C07 降噪尚未完成；现有规则仍保持原输出。
