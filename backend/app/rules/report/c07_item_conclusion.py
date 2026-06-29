@@ -42,6 +42,57 @@ def check_c07_item_conclusion(
         group_metadata.append(metadata)
 
         if actual != decision.expected:
+            complex_matrix_reason = _complex_matrix_reason(group)
+            if complex_matrix_reason is not None:
+                complex_metadata = {
+                    **metadata,
+                    "complex_matrix_table": True,
+                    "complex_matrix_reason": complex_matrix_reason,
+                    "needs_codex_review": True,
+                }
+                findings.append(
+                    Finding(
+                        id=f"{context.task_id}-c07-{group.item_no}-complex-matrix-review",
+                        task_id=context.task_id,
+                        check_id=CHECK_ID,
+                        severity=FindingSeverity.WARN,
+                        code="CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX",
+                        message=(
+                            f"序号 {group.item_no} 为复杂矩阵表，普通 C07 单项结论逻辑无法稳定判断，"
+                            "需人工或 Codex 复核列映射和续表结构。"
+                        ),
+                        location=group.rows[0].row_location if group.rows else None,
+                        expected=decision.expected,
+                        actual=actual,
+                        evidence=_group_evidence(group, decision, actual),
+                        confidence=Confidence.MEDIUM,
+                        metadata=complex_metadata,
+                    )
+                )
+                continue
+
+            if _should_review_extraction_uncertainty(group, decision):
+                findings.append(
+                    Finding(
+                        id=f"{context.task_id}-c07-{group.item_no}-result-token-recovery-uncertain",
+                        task_id=context.task_id,
+                        check_id=CHECK_ID,
+                        severity=FindingSeverity.WARN,
+                        code="CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN",
+                        message=(
+                            f"序号 {group.item_no} 的结构化检验结果可能不完整，"
+                            "需结合原始表格或 Codex evidence 复核后再判断单项结论。"
+                        ),
+                        location=group.rows[0].row_location if group.rows else None,
+                        expected=decision.expected,
+                        actual=actual,
+                        evidence=_group_evidence(group, decision, actual),
+                        confidence=Confidence.MEDIUM,
+                        metadata={**metadata, "needs_codex_review": True},
+                    )
+                )
+                continue
+
             findings.append(
                 Finding(
                     id=f"{context.task_id}-c07-{group.item_no}-conclusion-mismatch",
@@ -175,6 +226,12 @@ def _group_metadata(group: InspectionItemGroup, decision: ConclusionDecision, ac
         "expected_conclusion": decision.expected,
         "actual_conclusion": actual,
         "effective_test_results": decision.result_values,
+        "original_effective_test_results": list(group.original_effective_test_results),
+        "recovered_result_tokens": list(group.recovered_result_tokens),
+        "recovered_effective_test_results": list(group.recovered_effective_test_results),
+        "result_token_recovery_applied": group.result_token_recovery_applied,
+        "result_token_recovery_diagnostics": list(group.result_token_recovery_diagnostics),
+        "result_token_recovery_confidence": group.result_token_recovery_confidence,
         "result_values": decision.result_values,
         "group_row_count": len(group.rows),
         "pages": list(group.pages),
@@ -206,6 +263,78 @@ def _source_rows(group: InspectionItemGroup) -> list[dict[str, Any]]:
             }
         )
     return rows
+
+
+def _should_review_extraction_uncertainty(group: InspectionItemGroup, decision: ConclusionDecision) -> bool:
+    return (
+        decision.reason == "all_placeholders_or_blank"
+        and group.result_token_recovery_confidence == "uncertain"
+        and bool(group.result_token_recovery_diagnostics)
+    )
+
+
+def _complex_matrix_reason(group: InspectionItemGroup) -> str | None:
+    text = _group_text_blob(group)
+    compact_text = compact(text).lower()
+    row_count = len(group.rows)
+    page_count = len(group.pages)
+    matrix_keyword_count = sum(
+        1
+        for keyword in (
+            "矩阵",
+            "漏电流",
+            "电流",
+            "ma",
+            "μa",
+            "ua",
+            "正常状态",
+            "单一故障",
+            "直流",
+            "交流",
+        )
+        if keyword.lower() in compact_text
+    )
+    has_measurement_limit = bool(re.search(r"[≤＜<]\s*\d+(?:\.\d+)?\s*(?:m?a|μa|ua)", compact_text))
+    has_conflicting_conclusion = any(
+        diagnostic.get("code") == "CONFLICTING_EFFECTIVE_CONCLUSION" for diagnostic in group.diagnostics
+    )
+    has_non_conclusion_candidate = any(
+        item.conclusion and re.search(r"\d|≤|＜|<|mA|μA|uA|正常状态|单一故障", item.conclusion, re.IGNORECASE)
+        for item in group.rows
+    )
+
+    if (
+        row_count > 10
+        and (page_count >= 3 or "续" in compact_text)
+        and matrix_keyword_count >= 4
+        and (has_measurement_limit or has_conflicting_conclusion or has_non_conclusion_candidate)
+    ):
+        return (
+            "复杂矩阵表/漏电流多页表存在列映射或续表歧义，"
+            f"row_count={row_count}, page_count={page_count}, matrix_keyword_count={matrix_keyword_count}"
+        )
+    return None
+
+
+def _group_text_blob(group: InspectionItemGroup) -> str:
+    parts: list[str] = []
+    for item in group.rows:
+        parts.extend(
+            str(value)
+            for value in (
+                item.sequence_raw,
+                item.item_name,
+                item.standard_clause,
+                item.standard_requirement,
+                item.test_result,
+                item.conclusion,
+                item.remark,
+                item.metadata.get("row_text"),
+            )
+            if value
+        )
+        parts.extend(str(value) for value in item.result_values if value)
+    return "\n".join(parts)
 
 
 def _source_index(group: InspectionItemGroup, row_index: int) -> int | None:

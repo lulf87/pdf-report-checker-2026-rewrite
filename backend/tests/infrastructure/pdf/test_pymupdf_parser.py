@@ -8,6 +8,29 @@ from app.domain.pdf import ParsedPdf, PdfTable, PdfTextBlock
 from app.infrastructure.pdf.pymupdf_parser import InvalidPdfError, PyMuPDFParser, parse_pdf
 
 
+class _FakeTableHeader:
+    def __init__(self, names: list[str]) -> None:
+        self.names = names
+
+
+class _FakePyMuPDFTable:
+    def __init__(
+        self,
+        *,
+        bbox: tuple[float, float, float, float],
+        rows: list[list[str]],
+        cells: list[tuple[float, float, float, float]],
+        header_names: list[str],
+    ) -> None:
+        self.bbox = bbox
+        self.cells = cells
+        self.header = _FakeTableHeader(header_names)
+        self._rows = rows
+
+    def extract(self) -> list[list[str]]:
+        return self._rows
+
+
 def _save_pdf(path: Path, pages: list[Callable[[fitz.Page], None]]) -> Path:
     doc = fitz.open()
     try:
@@ -85,6 +108,34 @@ def test_table_candidates_are_extracted_as_pdf_tables(tmp_path: Path) -> None:
     assert ["Param", "Value"] in table.rows
     assert ["Voltage", "220V"] in table.rows
     assert table.bbox is not None
+
+
+def test_pymupdf_table_preserves_cell_bboxes() -> None:
+    parser = PyMuPDFParser()
+    table = _FakePyMuPDFTable(
+        bbox=(10, 20, 210, 120),
+        rows=[
+            ["序号", "检验结果", "单项结论", "备注"],
+            ["33", "——", "符合", "/"],
+        ],
+        cells=[
+            (10, 20, 40, 50),
+            (40, 20, 120, 50),
+            (120, 20, 170, 50),
+            (170, 20, 210, 50),
+            (10, 50, 40, 80),
+            (40, 50, 120, 80),
+            (120, 50, 170, 80),
+            (170, 50, 210, 80),
+        ],
+        header_names=["序号", "检验结果", "单项结论", "备注"],
+    )
+
+    parsed = parser._table_from_pymupdf(table, page_number=22, table_index=0)
+
+    assert parsed is not None
+    assert parsed.metadata["cell_bboxes"][1][1] == [40.0, 50.0, 120.0, 80.0]
+    assert parsed.metadata["cell_bboxes"][1][2] == [120.0, 50.0, 170.0, 80.0]
 
 
 def test_page_drawings_are_summarized_without_rule_judgement(tmp_path: Path) -> None:

@@ -143,6 +143,146 @@ def test_prompt_declares_codex_as_mandatory_final_auditor_and_rules_as_candidate
     assert "不要因为 rule_context" in prompt
 
 
+def test_prompt_instructs_label_ocr_missing_is_not_label_content_missing() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    prompt = PromptBuilder().build_review_prompt(_request(), _package())
+
+    assert "OCR 未识别字段不等于标签缺字段" in prompt
+    assert "caption 能证明存在中文标签样张，但不能证明标签字段内容完整或缺失" in prompt
+    assert "没有标签图像、完整标签正文 OCR 或结构化标签字段时，应 uncertain" in prompt
+    assert "中文标签样张 caption 能证明标签样张存在" in prompt
+    assert "caption 存在但缺 matched OCR 时，不应确认标签样张缺失" in prompt
+    assert "未找到 OCR 字段不等于未找到标签样张" in prompt
+    assert "只有 matched label OCR 属于当前 component 时" in prompt
+    assert "只有 matched label OCR 属于当前 component 时，才可判断字段缺失或不一致" in prompt
+    assert "无 matched OCR/crop/structured fields 时应 uncertain" in prompt
+    assert "matched_label_page_text 只是照片页或 caption 周边文本" in prompt
+    assert "matched_label_ocr_text 才是标签本体 OCR 文本" in prompt
+    assert "如果 finding 是 label-not-found，caption 存在时应 refute" in prompt
+    assert "matched_label_fields 中对应字段存在且与样品描述一致，应 refute" in prompt
+    assert "字段确实缺失或与样品描述不一致，可以 confirm" in prompt
+    assert "本次检测未使用" in prompt
+    assert "应 refute 或视为 not_applicable" in prompt
+
+
+def test_prompt_instructs_c04_visual_label_image_review_and_metadata_output() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    prompt = PromptBuilder().build_review_prompt(_request(), _package())
+
+    assert "如果提供 label image/crop image" in prompt
+    assert "视觉读取标签图片中的部件名称、规格型号、序列号/批号、生产日期" in prompt
+    assert "observed_label_fields" in prompt
+    assert "field_comparisons" in prompt
+    assert "visual_evidence_quality" in prompt
+    assert "图片不可读、crop 错误或字段看不清" in prompt
+
+
+def test_prompt_instructs_complex_matrix_c07_to_stay_uncertain_not_confirmed() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    prompt = PromptBuilder().build_review_prompt(_request(), _package())
+
+    assert "complex_matrix_table=true" in prompt
+    assert "不应按普通 C07 直接 confirm" in prompt
+
+
+def test_prompt_instructs_c07_to_use_recovered_tokens_and_compact_rows() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    prompt = PromptBuilder().build_review_prompt(_request(), _package())
+
+    assert "recovered_result_tokens" in prompt
+    assert "compact_rows" in prompt
+    assert "不要要求 Codex 弥补缺失证据" in prompt
+
+
+def test_c07_prompt_contains_visual_evidence_instructions() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    request, package = _c07_visual_request_and_package()
+
+    prompt = PromptBuilder().build_review_prompt(request, package)
+
+    assert "## C07 Visual Review Instructions" in prompt
+    assert "C07 deterministic finding 是 candidate" in prompt
+    assert "同时使用 textual evidence 和 C07 visual images" in prompt
+    assert "page/table/item group/result column/conclusion column/remark column images" in prompt
+    assert "result column images" in prompt
+    assert "conclusion column images" in prompt
+    assert "remark column images" in prompt
+    assert "“——”表示此项不适用" in prompt
+    assert "“/”表示此项空白" in prompt
+    assert "当前 item_no 的所有检验结果" in prompt
+    assert "跨页续表行" in prompt
+    assert "result token 是否被结构化抽取遗漏" in prompt
+    assert "图片能清楚反驳 all-placeholder 判断，应 refute" in prompt
+    assert "复杂矩阵表无法稳定判读，应 uncertain" in prompt
+    assert "complex_matrix_table=true" in prompt
+    assert "/Users/" not in prompt
+
+
+def test_c07_prompt_explains_extraction_uncertainty_refute_conditions() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    request, package = _c07_visual_request_and_package()
+
+    prompt = PromptBuilder().build_review_prompt(request, package)
+
+    assert "CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN" in prompt
+    assert "视觉证据足以判断结论合理时应 refute" in prompt
+    assert "不能仅因结构化抽取遗漏存在就 confirm/manual" in prompt
+    assert "续行中的“符合要求”若属于同一 item group，应作为有效检验结果" in prompt
+    assert "只有图像无法稳定读取对应行/列，或无法确认 result token 属于该 item group，才 uncertain" in prompt
+
+
+def test_c07_complex_matrix_prompt_contains_specialized_matrix_instructions() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    request, package = _c07_complex_matrix_request_and_package()
+
+    prompt = PromptBuilder().build_review_prompt(request, package)
+
+    assert "## C07 Complex Matrix Review Instructions" in prompt
+    assert "先识别矩阵结构，再判断单项结论" in prompt
+    assert "正常状态 / 单一故障状态" in prompt
+    assert "漏电流 / 患者辅助电流" in prompt
+    assert "row/column header crops" in prompt
+    assert "result matrix crops" in prompt
+    assert "conclusion column crops" in prompt
+    assert "cross-page continuation crops" in prompt
+    assert "如果视觉证据足以确认符合结论由矩阵结果支持，应 refute" in prompt
+    assert "不要因为 rule_context 写了 complex_matrix_table=true 就自动 uncertain" in prompt
+    assert "不要按普通 C07 all-placeholder 逻辑直接 confirm/refute" in prompt
+    assert "/Users/" not in prompt
+
+
+def test_regular_c07_prompt_does_not_include_complex_matrix_specialized_instructions() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    request, package = _c07_visual_request_and_package()
+
+    prompt = PromptBuilder().build_review_prompt(request, package)
+
+    assert "## C07 Visual Review Instructions" in prompt
+    assert "## C07 Complex Matrix Review Instructions" not in prompt
+    assert "先识别矩阵结构，再判断单项结论" not in prompt
+    assert "row/column header crops" not in prompt
+    assert "result matrix crops" not in prompt
+    assert "cross-page continuation crops" not in prompt
+
+
+def test_c04_prompt_does_not_include_c07_visual_evidence_instructions() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    prompt = PromptBuilder().build_review_prompt(_request(), _package())
+
+    assert "## C07 Visual Review Instructions" not in prompt
+    assert "page/table/item group/result column/conclusion column/remark column images" not in prompt
+    assert "C07 visual images" not in prompt
+
+
 def test_prompt_only_includes_target_referenced_evidence() -> None:
     from app.infrastructure.codex.prompt_builder import PromptBuilder
 
@@ -324,3 +464,265 @@ def test_prompt_builder_does_not_call_subprocess_or_codex_cli_runner(monkeypatch
     prompt = PromptBuilder().build_review_prompt(_request(), _package())
 
     assert "pkg-1" in prompt
+
+
+def _c07_visual_request_and_package() -> tuple[CodexReviewRequest, EvidencePackage]:
+    refs = [
+        "finding:finding-c07-1",
+        "rule_context:finding-c07-1",
+        "symbol_note:finding-c07-1",
+        "inspection_item:finding-c07-1",
+        "c07_visual_page:finding-c07-1:p22",
+        "c07_visual_table:finding-c07-1:p22",
+        "c07_visual_item_group:finding-c07-1:p22",
+        "c07_visual_result:finding-c07-1:p22",
+        "c07_visual_conclusion:finding-c07-1:p22",
+        "c07_visual_remark:finding-c07-1:p22",
+    ]
+    target = CodexReviewTarget(
+        target_id="target-c07-1",
+        target_type=CodexReviewTargetType.INSPECTION_ITEM,
+        check_id="C07",
+        finding_id="finding-c07-1",
+        finding_code="CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN",
+        title="C07 visual review target",
+        summary="复核 C07 检验项目结论。",
+        evidence_refs=[
+            CodexEvidenceRef(
+                ref_id=ref,
+                source_type="image" if ref.startswith("c07_visual_") else "rule_context",
+            )
+            for ref in refs
+        ],
+        metadata={
+            "c07_visual_evidence": {
+                "has_visual_input": True,
+                "visual_review_mode": "inspection_item_group",
+                "page_image_refs": ["items/finding-c07-1-c07-page-p22.png"],
+                "table_image_refs": ["items/finding-c07-1-c07-table-p22.png"],
+                "item_group_crop_refs": ["items/finding-c07-1-c07-item-group-p22.png"],
+                "result_column_crop_refs": ["items/finding-c07-1-c07-result-p22.png"],
+                "conclusion_column_crop_refs": ["items/finding-c07-1-c07-conclusion-p22.png"],
+                "remark_column_crop_refs": ["items/finding-c07-1-c07-remark-p22.png"],
+                "missing_visual_evidence_reasons": [],
+            },
+            "complex_matrix_table": False,
+        },
+    )
+    request = CodexReviewRequest(
+        request_id="request-c07-1",
+        task_id="task-1",
+        task_type="report_check",
+        targets=[target],
+        prompt_version="codex-review-prompt-v1",
+        schema_version="codex-review-output-v1",
+        created_at=CREATED_AT,
+    )
+    items = [
+        EvidenceItem(
+            ref_id="finding:finding-c07-1",
+            source_type=EvidenceSourceType.FINDING,
+            text="C07 deterministic finding 是 candidate。",
+        ),
+        EvidenceItem(
+            ref_id="rule_context:finding-c07-1",
+            source_type=EvidenceSourceType.RULE_CONTEXT,
+            text="rule_context: all-placeholder 判断需要复核。",
+        ),
+        EvidenceItem(
+            ref_id="symbol_note:finding-c07-1",
+            source_type=EvidenceSourceType.PAGE_TEXT,
+            text="首页说明：“——”表示此项不适用；“/”表示此项空白。",
+        ),
+        EvidenceItem(
+            ref_id="inspection_item:finding-c07-1",
+            source_type=EvidenceSourceType.TABLE,
+            structured={
+                "inspection_item_group": {
+                    "item_no": "94",
+                    "effective_test_results": ["——"],
+                    "recovered_result_tokens": ["符合要求"],
+                    "compact_rows": [{"test_result": "——", "conclusion": "符合"}],
+                }
+            },
+        ),
+        *[
+            EvidenceItem(
+                ref_id=ref,
+                source_type=EvidenceSourceType.IMAGE,
+                file_path=file_path,
+                page_number=22,
+                metadata={"codex_image_input": True, "render_page_number": 22},
+            )
+            for ref, file_path in [
+                ("c07_visual_page:finding-c07-1:p22", "items/finding-c07-1-c07-page-p22.png"),
+                ("c07_visual_table:finding-c07-1:p22", "items/finding-c07-1-c07-table-p22.png"),
+                ("c07_visual_item_group:finding-c07-1:p22", "items/finding-c07-1-c07-item-group-p22.png"),
+                ("c07_visual_result:finding-c07-1:p22", "items/finding-c07-1-c07-result-p22.png"),
+                ("c07_visual_conclusion:finding-c07-1:p22", "items/finding-c07-1-c07-conclusion-p22.png"),
+                ("c07_visual_remark:finding-c07-1:p22", "items/finding-c07-1-c07-remark-p22.png"),
+            ]
+        ],
+    ]
+    package = EvidencePackage(
+        package_id="pkg-c07-1",
+        task_id="task-1",
+        task_type="report_check",
+        kind=EvidencePackageKind.REPORT_RULE_REVIEW,
+        schema_version="evidence-package-v1",
+        created_at=CREATED_AT,
+        targets=[
+            EvidenceTarget(
+                target_id=target.target_id,
+                target_type=target.target_type.value,
+                check_id="C07",
+                finding_id=target.finding_id,
+                finding_code=target.finding_code,
+                evidence_refs=refs,
+            )
+        ],
+        items=items,
+    )
+    return request, package
+
+
+def _c07_complex_matrix_request_and_package() -> tuple[CodexReviewRequest, EvidencePackage]:
+    text_refs = [
+        "finding:finding-c07-59",
+        "rule_context:finding-c07-59",
+        "symbol_note:finding-c07-59",
+        "inspection_item:finding-c07-59",
+    ]
+    image_refs = [
+        "c07_complex_matrix_page:finding-c07-59:p42",
+        "c07_complex_matrix_table:finding-c07-59:p42",
+        "c07_complex_matrix_header:finding-c07-59:p42",
+        "c07_complex_matrix_body:finding-c07-59:p42",
+        "c07_complex_matrix_result:finding-c07-59:p42",
+        "c07_complex_matrix_conclusion:finding-c07-59:p42",
+        "c07_complex_matrix_continuation:finding-c07-59:p43",
+    ]
+    refs = [*text_refs, *image_refs]
+    matrix_metadata = {
+        "has_complex_matrix_input": True,
+        "review_mode": "complex_matrix_specialized",
+        "item_no": "59",
+        "pages": [42, 43],
+        "matrix_page_image_refs": ["items/finding-c07-59-c07-matrix-page-p42.png"],
+        "matrix_table_image_refs": ["items/finding-c07-59-c07-matrix-table-p42.png"],
+        "matrix_header_image_refs": ["items/finding-c07-59-c07-matrix-header-p42.png"],
+        "matrix_body_image_refs": ["items/finding-c07-59-c07-matrix-body-p42.png"],
+        "result_matrix_image_refs": ["items/finding-c07-59-c07-matrix-result-p42.png"],
+        "conclusion_column_image_refs": ["items/finding-c07-59-c07-matrix-conclusion-p42.png"],
+        "continuation_page_image_refs": ["items/finding-c07-59-c07-matrix-continuation-p43.png"],
+        "structured_matrix_hints": {
+            "item_no": "59",
+            "pages": [42, 43],
+            "group_row_count": 2,
+            "continuation_markers": [{"raw_text": "续 59", "page_number": 43}],
+            "effective_test_results": ["0.05 mA", "——"],
+            "actual_conclusion_candidates": [{"value": "符合", "source": "row.conclusion"}],
+            "complex_matrix_table": True,
+            "complex_matrix_reason": "8.7 漏电流多页复杂矩阵需要专门矩阵审核",
+            "known_columns": ["检验项目", "检验结果", "单项结论"],
+            "placeholder_tokens": ["——", "/"],
+            "non_placeholder_tokens": ["0.05 mA", "符合"],
+            "candidate_conclusion": "符合",
+        },
+        "missing_complex_matrix_evidence_reasons": [],
+    }
+    target = CodexReviewTarget(
+        target_id="target-c07-59",
+        target_type=CodexReviewTargetType.INSPECTION_ITEM,
+        check_id="C07",
+        finding_id="finding-c07-59",
+        finding_code="CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX",
+        title="C07 complex matrix review target",
+        summary="复核 C07 item 59 漏电流复杂矩阵。",
+        evidence_refs=[
+            CodexEvidenceRef(
+                ref_id=ref,
+                source_type="image" if ref.startswith("c07_complex_matrix_") else "rule_context",
+            )
+            for ref in refs
+        ],
+        metadata={
+            "complex_matrix_table": True,
+            "complex_matrix_reason": "8.7 漏电流多页复杂矩阵需要专门矩阵审核",
+            "c07_visual_evidence": {
+                "has_visual_input": True,
+                "visual_review_mode": "complex_matrix_table",
+            },
+            "c07_complex_matrix_evidence": matrix_metadata,
+        },
+    )
+    request = CodexReviewRequest(
+        request_id="request-c07-59",
+        task_id="task-1",
+        task_type="report_check",
+        targets=[target],
+        prompt_version="codex-review-prompt-v1",
+        schema_version="codex-review-output-v1",
+        created_at=CREATED_AT,
+    )
+    text_items = [
+        EvidenceItem(
+            ref_id="finding:finding-c07-59",
+            source_type=EvidenceSourceType.FINDING,
+            text="C07 complex matrix deterministic finding 是 candidate。",
+        ),
+        EvidenceItem(
+            ref_id="rule_context:finding-c07-59",
+            source_type=EvidenceSourceType.RULE_CONTEXT,
+            text="rule_context: complex_matrix_table=true, item 59 需要专门矩阵审核。",
+        ),
+        EvidenceItem(
+            ref_id="symbol_note:finding-c07-59",
+            source_type=EvidenceSourceType.PAGE_TEXT,
+            text="首页说明：“——”表示此项不适用；“/”表示此项空白。",
+        ),
+        EvidenceItem(
+            ref_id="inspection_item:finding-c07-59",
+            source_type=EvidenceSourceType.TABLE,
+            structured={"inspection_item_group": {"item_no": "59", "pages": [42, 43]}},
+        ),
+    ]
+    image_items = [
+        EvidenceItem(
+            ref_id=ref,
+            source_type=EvidenceSourceType.IMAGE,
+            file_path=file_path,
+            page_number=page,
+            section="c07_complex_matrix_visual",
+            metadata={"codex_image_input": True, "render_page_number": page, "matrix_evidence_role": role},
+        )
+        for ref, file_path, page, role in [
+            ("c07_complex_matrix_page:finding-c07-59:p42", "items/finding-c07-59-c07-matrix-page-p42.png", 42, "page"),
+            ("c07_complex_matrix_table:finding-c07-59:p42", "items/finding-c07-59-c07-matrix-table-p42.png", 42, "table"),
+            ("c07_complex_matrix_header:finding-c07-59:p42", "items/finding-c07-59-c07-matrix-header-p42.png", 42, "header"),
+            ("c07_complex_matrix_body:finding-c07-59:p42", "items/finding-c07-59-c07-matrix-body-p42.png", 42, "body"),
+            ("c07_complex_matrix_result:finding-c07-59:p42", "items/finding-c07-59-c07-matrix-result-p42.png", 42, "result"),
+            ("c07_complex_matrix_conclusion:finding-c07-59:p42", "items/finding-c07-59-c07-matrix-conclusion-p42.png", 42, "conclusion"),
+            ("c07_complex_matrix_continuation:finding-c07-59:p43", "items/finding-c07-59-c07-matrix-continuation-p43.png", 43, "continuation"),
+        ]
+    ]
+    package = EvidencePackage(
+        package_id="pkg-c07-59",
+        task_id="task-1",
+        task_type="report_check",
+        kind=EvidencePackageKind.REPORT_RULE_REVIEW,
+        schema_version="evidence-package-v1",
+        created_at=CREATED_AT,
+        targets=[
+            EvidenceTarget(
+                target_id=target.target_id,
+                target_type=target.target_type.value,
+                check_id="C07",
+                finding_id=target.finding_id,
+                finding_code=target.finding_code,
+                evidence_refs=refs,
+            )
+        ],
+        items=[*text_items, *image_items],
+    )
+    return request, package

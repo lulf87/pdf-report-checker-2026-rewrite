@@ -31,6 +31,7 @@ class TaskService:
         task_type: TaskType,
         *,
         input_files: list[InputFileRef] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> TaskStatus:
         now = datetime.now(timezone.utc)
         task = TaskStatus(
@@ -40,6 +41,7 @@ class TaskService:
             progress=0,
             current_step="created",
             input_files=input_files or [],
+            metadata=metadata or {},
             created_at=now,
             updated_at=now,
         )
@@ -93,15 +95,18 @@ class TaskService:
         metadata: dict[str, Any] | None = None,
     ) -> TaskStatus:
         task = self.get_task(task_id)
+        result_metadata = metadata or {}
+        summary = CheckSummary.from_results(check_results)
+        _apply_codex_audit_summary_metadata(summary, result_metadata.get("codex_audit"))
         result = TaskResult(
             task_id=task_id,
             task_type=task.task_type,
-            summary=CheckSummary.from_results(check_results),
+            summary=summary,
             check_results=check_results,
             findings=[finding for result in check_results for finding in result.findings],
             input_files=task.input_files,
             diagnostics=diagnostics or [],
-            metadata=metadata or {},
+            metadata=result_metadata,
         )
         self.repository.save_result(task_id, result)
 
@@ -114,6 +119,10 @@ class TaskService:
             error_message=None,
         )
 
+    def update_result_metadata(self, task_id: str, metadata: dict[str, Any]) -> None:
+        result = self.repository.get_result(task_id)
+        self.repository.save_result(task_id, result.model_copy(update={"metadata": metadata}))
+
     def fail_task(self, task_id: str, error_message: str) -> TaskStatus:
         return self.repository.mark_failed(task_id, error_message)
 
@@ -125,6 +134,23 @@ class TaskService:
 
     def _mutate_task(self, task_id: str, **updates: Any) -> TaskStatus:
         return self.repository.update_task(task_id, **updates)
+
+
+def _apply_codex_audit_summary_metadata(summary: CheckSummary, codex_audit_metadata: Any) -> None:
+    if not isinstance(codex_audit_metadata, dict):
+        return
+
+    audit_scope = codex_audit_metadata.get("audit_scope")
+    if isinstance(audit_scope, str):
+        summary.audit_scope = audit_scope
+
+    full_audit = codex_audit_metadata.get("full_audit")
+    if isinstance(full_audit, bool):
+        summary.full_audit = full_audit
+
+    final_audit_status = codex_audit_metadata.get("final_audit_status")
+    if isinstance(final_audit_status, str):
+        summary.final_audit_status = final_audit_status
 
 
 __all__ = [

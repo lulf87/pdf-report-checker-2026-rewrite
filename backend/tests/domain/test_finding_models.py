@@ -90,6 +90,9 @@ def test_check_summary_counts_results_and_finding_severities() -> None:
     payload = summary.model_dump(mode="json")
 
     assert payload == {
+        "audit_scope": None,
+        "full_audit": None,
+        "final_audit_status": None,
         "total_checks": 3,
         "pass_count": 1,
         "fail_count": 1,
@@ -99,4 +102,16 @@ def test_check_summary_counts_results_and_finding_severities() -> None:
         "error_count": 1,
         "warn_count": 1,
         "info_count": 0,
+        "candidate_findings_count": 2,
+        "candidate_errors_count": 1,
+        "confirmed_findings_count": 0,
+        "confirmed_errors_count": 0,
+        "refuted_findings_count": 0,
+        "manual_review_required_count": 0,
+        "suggested_additional_findings_count": 0,
+        "out_of_scope_findings_count": 0,
+        "summary_only_findings_count": 0,
+        "unreviewed_required_findings_count": 0,
+        "codex_reviews_count": 0,
+        "codex_runtime_failure_count": 0,
     }

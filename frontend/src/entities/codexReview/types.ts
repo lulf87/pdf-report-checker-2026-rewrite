@@ -100,6 +100,8 @@ export type CodexFinalStatus =
   | "refuted"
   | "manual_review_required"
   | "suggested_additional_finding"
+  | "out_of_scope"
+  | "summary_only"
   | "pending";
 
 export const CODEX_VERDICT_LABELS: Record<CodexReviewVerdict, string> = {
@@ -211,6 +213,8 @@ export function codexFinalStatusLabel(status: CodexFinalStatus): string {
   if (status === "refuted") return "Codex 已反驳";
   if (status === "manual_review_required") return "人工复核";
   if (status === "suggested_additional_finding") return "Codex 建议新增";
+  if (status === "out_of_scope") return "本次未覆盖";
+  if (status === "summary_only") return "摘要目标";
   return "待 Codex 审核";
 }
 
@@ -259,6 +263,8 @@ function isCodexFinalStatus(value: string | null): value is CodexFinalStatus {
     value === "refuted" ||
     value === "manual_review_required" ||
     value === "suggested_additional_finding" ||
+    value === "out_of_scope" ||
+    value === "summary_only" ||
     value === "pending"
   );
 }

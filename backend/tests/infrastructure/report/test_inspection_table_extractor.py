@@ -81,6 +81,47 @@ def test_extracts_inspection_items_with_page_row_col_evidence() -> None:
     )
 
 
+def test_inspection_items_include_visual_geometry_for_c07_crops() -> None:
+    table = PdfTable(
+        table_id="p22-t1",
+        page_numbers=[22],
+        bbox=(10, 20, 210, 120),
+        columns=["序号", "检验项目", "检验结果", "单项结论", "备注"],
+        rows=[
+            ["33", "分类标记", "——", "符合", "/"],
+            ["", "分类是 IPX0 或 IP0X 的 ME 设备不需要标记。", "", "", ""],
+        ],
+        metadata={
+            "cell_bboxes": [
+                [[10, 20, 35, 50], [35, 20, 110, 50], [110, 20, 150, 50], [150, 20, 185, 50], [185, 20, 210, 50]],
+                [[10, 50, 35, 80], [35, 50, 110, 80], [110, 50, 150, 80], [150, 50, 185, 80], [185, 50, 210, 80]],
+            ]
+        },
+    )
+    parsed = _parsed_pdf(PdfPage(page_number=22, text="检验项目表", tables=[table]))
+
+    extracted = InspectionTableExtractor().extract_items(parsed)
+
+    visual_geometry = extracted[0].metadata["visual_geometry"]
+    assert visual_geometry["table_id"] == "p22-t1"
+    assert visual_geometry["table_bbox"] == [10.0, 20.0, 210.0, 120.0]
+    assert visual_geometry["row_bbox"] == [10.0, 20.0, 210.0, 50.0]
+    assert visual_geometry["field_bboxes"]["test_result"] == [110.0, 20.0, 150.0, 50.0]
+    assert visual_geometry["field_bboxes"]["conclusion"] == [150.0, 20.0, 185.0, 50.0]
+    assert visual_geometry["field_bboxes"]["remark"] == [185.0, 20.0, 210.0, 50.0]
+
+
+def test_inspection_items_without_cell_bboxes_keep_existing_behavior() -> None:
+    table = _table(22, [HEADERS, ["33", "分类标记", "7.2.9", "要求", "——", "符合", "/"]])
+    parsed = _parsed_pdf(PdfPage(page_number=22, text="检验项目表", tables=[table]))
+
+    extracted = InspectionTableExtractor().extract_items(parsed)
+
+    assert "visual_geometry" not in extracted[0].metadata
+    assert extracted[0].test_result == "——"
+    assert extracted[0].conclusion == "符合"
+
+
 def test_keeps_blank_sequence_rows_as_logical_continuations() -> None:
     parsed = _parsed_pdf(
         PdfPage(

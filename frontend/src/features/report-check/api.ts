@@ -1,8 +1,9 @@
 import { apiClient } from "../../shared/api/client";
-import type { ExportFormat, TaskResult, TaskStatus } from "../../entities/task/types";
+import type { AuditOptions, ExportFormat, TaskResult, TaskStatus } from "../../entities/task/types";
 
 export interface ReportCheckUploadOptions {
   enableLlm?: boolean;
+  auditOptions?: AuditOptions;
 }
 
 export async function uploadReportCheckFile(
@@ -12,7 +13,18 @@ export async function uploadReportCheckFile(
   const query = options.enableLlm ? "?enable_llm=true" : "";
   return apiClient.postForm<TaskStatus>(`/api/tasks/report-check${query}`, {
     report_file: reportFile,
+    ...formFieldsFromAuditOptions(options.auditOptions),
   });
+}
+
+function formFieldsFromAuditOptions(options?: AuditOptions): Record<string, string | number | undefined> {
+  return {
+    included_check_ids: options?.included_check_ids,
+    included_finding_codes: options?.included_finding_codes,
+    excluded_check_ids: options?.excluded_check_ids,
+    max_targets_per_batch: options?.max_targets_per_batch,
+    max_parallel_jobs: options?.max_parallel_jobs,
+  };
 }
 
 export function getReportCheckTask(taskId: string): Promise<TaskStatus> {
@@ -31,7 +43,7 @@ export async function waitForReportCheckResult(
   taskId: string,
   onStatus: (task: TaskStatus) => void,
   intervalMs = 1000,
-  timeoutMs = 60000,
+  timeoutMs = 60 * 60 * 1000,
 ): Promise<TaskResult> {
   const startedAt = Date.now();
 

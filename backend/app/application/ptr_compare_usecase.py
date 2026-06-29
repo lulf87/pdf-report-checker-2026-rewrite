@@ -6,6 +6,13 @@ import tempfile
 from pathlib import Path
 from typing import Any, Protocol
 
+from app.application.codex_audit_finalization import (
+    annotate_candidate_findings_with_codex_status,
+    final_status_for_verdict,
+    finalize_codex_audit,
+)
+from app.application.codex_audit_options import CodexAuditOptions
+from app.application.codex_audit_scheduler import CodexAuditJob, CodexAuditScheduler
 from app.application.ptr_codex_evidence_builder import PtrCodexEvidenceBuilder
 from app.application.task_service import TaskService
 from app.domain.codex_review import CodexReviewError, CodexReviewRequest, CodexReviewResult, CodexReviewStatus
@@ -147,6 +154,7 @@ class PTRCompareUseCase:
         codex_audit_service: CodexAuditServiceProtocol | None = None,
         codex_audit_enabled: bool = False,
         ptr_codex_evidence_builder: PtrCodexEvidenceBuilder | None = None,
+        codex_audit_scheduler: CodexAuditScheduler | None = None,
     ) -> None:
         del codex_audit_enabled
         self.task_service = task_service
@@ -164,6 +172,7 @@ class PTRCompareUseCase:
         self.codex_audit_service = codex_audit_service
         self.codex_audit_enabled = codex_audit_service is not None
         self.ptr_codex_evidence_builder = ptr_codex_evidence_builder or PtrCodexEvidenceBuilder()
+        self.codex_audit_scheduler = codex_audit_scheduler or CodexAuditScheduler(max_parallel_jobs=1)
 
     def run(
         self,
@@ -175,8 +184,15 @@ class PTRCompareUseCase:
         ptr_content_type: str = "application/pdf",
         report_content_type: str = "application/pdf",
         content_type: str | None = None,
+        audit_options: CodexAuditOptions | dict[str, Any] | None = None,
     ) -> TaskStatus:
-        task = self.task_service.create_task(TaskType.PTR_COMPARE)
+        options = CodexAuditOptions.from_raw(audit_options)
+        task = self.task_service.create_task(
+            TaskType.PTR_COMPARE,
+            metadata={"audit_options": options.to_metadata(), "audit_options_source": "user_override" if options.has_user_override else "default"},
+        )
+        builder = self._builder_for_audit_options(options)
+        scheduler = self._scheduler_for_audit_options(options)
         try:
             ptr_stored = self.file_store.save_upload(
                 task_id=task.task_id,
@@ -255,6 +271,13 @@ class PTRCompareUseCase:
                 ptr_doc=ptr_doc,
                 report_doc=report_doc,
                 check_results=check_results,
+                evidence_builder=builder,
+                scheduler=scheduler,
+            )
+            codex_audit_metadata = finalize_codex_audit(
+                check_results,
+                target_selection=builder.target_selection,
+                is_reviewable_finding=lambda finding: finding.check_id in {"PTR_CLAUSE", "PTR_TABLE", "PTR_SCOPE"},
             )
             return self.task_service.complete_task(
                 task.task_id,
@@ -267,6 +290,10 @@ class PTRCompareUseCase:
                     "source": "ptr_compare_usecase",
                     "included_clause_count": len(included_clauses),
                     "scope": scope_result.model_dump(mode="json"),
+                    "audit_options_source": "user_override" if options.has_user_override else "default",
+                    "audit_options": options.to_metadata(),
+                    "effective_audit_options": _effective_audit_options_metadata(builder, scheduler),
+                    "codex_audit": codex_audit_metadata,
                 },
             )
         except Exception as exc:
@@ -421,10 +448,15 @@ class PTRCompareUseCase:
         ptr_doc: PTRDocument,
         report_doc: ReportDocument,
         check_results: list[CheckResult],
+        evidence_builder: PtrCodexEvidenceBuilder | None = None,
+        scheduler: CodexAuditScheduler | None = None,
     ) -> None:
+        builder = evidence_builder or self.ptr_codex_evidence_builder
+        active_scheduler = scheduler or self.codex_audit_scheduler
         target_offset = 0
+        jobs: list[CodexAuditJob] = []
         while True:
-            bundle = self.ptr_codex_evidence_builder.build(
+            bundle = builder.build(
                 task_id=task_id,
                 task_type=TaskType.PTR_COMPARE.value,
                 ptr_doc=ptr_doc,
@@ -436,13 +468,40 @@ class PTRCompareUseCase:
                 break
             if self.codex_audit_service is None:
                 raise RuntimeError("CODEX_AUDIT_REQUIRED: Codex audit service is required for reviewable PTR targets.")
-            reviews = self.codex_audit_service.review(bundle.request, bundle.evidence_package)
-            _raise_for_required_codex_audit_failure(reviews)
-            _attach_reviews_to_check_results(check_results, reviews)
-            _annotate_candidate_findings_with_codex_status(check_results, reviews)
+            jobs.append(
+                CodexAuditJob(
+                    key=bundle.request.request_id,
+                    request=bundle.request,
+                    evidence_package=bundle.evidence_package,
+                )
+            )
             target_offset += len(bundle.request.targets)
             if not bundle.evidence_package.metadata.get("truncated"):
                 break
+        job_results = active_scheduler.run(jobs, lambda job: self.codex_audit_service.review(job.request, job.evidence_package))
+        reviews = [review for job_result in job_results for review in job_result.reviews]
+        _raise_for_required_codex_audit_failure(reviews)
+        _attach_reviews_to_check_results(check_results, reviews)
+        annotate_candidate_findings_with_codex_status(check_results, reviews)
+
+    def _builder_for_audit_options(self, options: CodexAuditOptions) -> PtrCodexEvidenceBuilder:
+        selection = self.ptr_codex_evidence_builder.target_selection
+        if not options.has_user_override:
+            return self.ptr_codex_evidence_builder
+        return PtrCodexEvidenceBuilder(
+            max_table_records=self.ptr_codex_evidence_builder.max_table_records,
+            max_targets_per_task=selection.max_targets_per_task,
+            max_targets_per_batch=options.max_targets_per_batch or selection.max_targets_per_batch,
+            included_check_ids=options.included_check_ids or selection.included_check_ids,
+            included_finding_codes=options.included_finding_codes or selection.included_finding_codes,
+            excluded_check_ids=options.excluded_check_ids or selection.excluded_check_ids,
+            priority_check_ids=selection.priority_check_ids,
+        )
+
+    def _scheduler_for_audit_options(self, options: CodexAuditOptions) -> CodexAuditScheduler:
+        if options.max_parallel_jobs is None:
+            return self.codex_audit_scheduler
+        return CodexAuditScheduler(max_parallel_jobs=options.max_parallel_jobs)
 
 
 def _status_for_findings(findings: list[Finding]) -> CheckStatus:
@@ -522,37 +581,24 @@ def _raise_for_required_codex_audit_failure(reviews: list[CodexReviewResult]) ->
     raise RuntimeError(f"{code}: {message}")
 
 
-def _annotate_candidate_findings_with_codex_status(
-    check_results: list[CheckResult],
-    reviews: list[CodexReviewResult],
-) -> None:
-    findings_by_id = {
-        finding.id: finding
-        for check_result in check_results
-        for finding in check_result.findings
+def _effective_audit_options_metadata(
+    evidence_builder: PtrCodexEvidenceBuilder,
+    scheduler: CodexAuditScheduler,
+) -> dict[str, Any]:
+    selection = evidence_builder.target_selection
+    return {
+        "included_check_ids": sorted(selection.included_check_ids),
+        "included_finding_codes": sorted(selection.included_finding_codes),
+        "excluded_check_ids": sorted(selection.excluded_check_ids),
+        "max_targets_per_task": selection.max_targets_per_task,
+        "max_targets_per_batch": selection.max_targets_per_batch,
+        "priority_check_ids": list(selection.priority_check_ids),
+        "max_parallel_jobs": scheduler.max_parallel_jobs,
     }
-    for review in reviews:
-        finding_id = review.target.finding_id
-        if not finding_id or finding_id not in findings_by_id:
-            continue
-        finding = findings_by_id[finding_id]
-        verdict = review.verdict.value if review.verdict is not None else None
-        finding.metadata["codex_required"] = True
-        finding.metadata["codex_review_id"] = review.review_id
-        finding.metadata["codex_verdict"] = verdict
-        finding.metadata["final_status"] = _final_status_for_verdict(verdict)
 
 
 def _final_status_for_verdict(verdict: str | None) -> str:
-    if verdict == "confirm":
-        return "confirmed"
-    if verdict == "refute":
-        return "refuted"
-    if verdict == "uncertain":
-        return "manual_review_required"
-    if verdict == "add_finding":
-        return "suggested_additional_finding"
-    return "pending"
+    return final_status_for_verdict(verdict)
 
 
 def _failed_codex_reviews_for_request(

@@ -30,6 +30,13 @@ class _EffectiveRightFields:
     diagnostics: list[dict[str, Any]]
 
 
+@dataclass(frozen=True)
+class _ResultTokenRecovery:
+    recovered_tokens: list[str]
+    diagnostics: list[dict[str, Any]]
+    confidence: str | None
+
+
 class InspectionItemGroupBuilder:
     """Group physical inspection table rows into business-level item groups."""
 
@@ -160,18 +167,28 @@ class InspectionItemGroupBuilder:
         rows = [indexed.item for indexed in indexed_items]
         display_item_no = _first_display_item_no(rows)
         right_fields = _effective_right_fields(rows)
+        original_results = _effective_values(rows, "test_result", include_result_values=True)
+        recovery = _recover_result_tokens(indexed_items)
+        effective_results = [*original_results, *recovery.recovered_tokens]
+        recovery_applied = bool(recovery.recovered_tokens)
         group = InspectionItemGroup(
             item_no=item_no,
             display_item_no=display_item_no,
             rows=rows,
             pages=_ordered_pages(rows),
             continuation_markers=_continuation_markers(indexed_items),
-            effective_test_results=_effective_values(rows, "test_result", include_result_values=True),
+            effective_test_results=effective_results,
+            original_effective_test_results=original_results,
+            recovered_result_tokens=list(recovery.recovered_tokens),
+            recovered_effective_test_results=effective_results,
+            result_token_recovery_applied=recovery_applied,
+            result_token_recovery_diagnostics=list(recovery.diagnostics),
+            result_token_recovery_confidence=recovery.confidence,
             effective_single_conclusion=right_fields.single_conclusion,
             effective_remark=right_fields.remark,
             inherited_merged_fields=_inherited_fields(indexed_items),
             source_evidence=[_source_evidence(indexed) for indexed in indexed_items],
-            diagnostics=list(right_fields.diagnostics),
+            diagnostics=[*right_fields.diagnostics, *recovery.diagnostics],
         )
         if len(set(_effective_values(rows, "conclusion"))) > 1:
             group.diagnostics.append(
@@ -370,6 +387,189 @@ def _effective_values(
                 continue
             values.append(text)
     return values
+
+
+def _recover_result_tokens(indexed_items: list[_IndexedItem]) -> _ResultTokenRecovery:
+    recovered_tokens: list[str] = []
+    diagnostics: list[dict[str, Any]] = []
+
+    for indexed in indexed_items:
+        item = indexed.item
+        if _has_explicit_result_token(item):
+            continue
+
+        row_recovered = False
+        row_uncertain = False
+        for source_name, source_text in _result_recovery_sources(item):
+            token = _recover_confident_result_token(source_text)
+            if token is not None:
+                recovered_tokens.append(token)
+                diagnostics.append(
+                    _result_recovery_diagnostic(
+                        code="RESULT_TOKEN_RECOVERED",
+                        indexed=indexed,
+                        token=token,
+                        source_text=source_text,
+                        recovery_method=_recovery_method(source_name, source_text),
+                        confidence="high",
+                    )
+                )
+                row_recovered = True
+                break
+
+            possible_tokens = _possible_ambiguous_result_tokens(source_text)
+            if possible_tokens:
+                diagnostics.append(
+                    _result_recovery_diagnostic(
+                        code="RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                        indexed=indexed,
+                        possible_result_tokens=possible_tokens,
+                        source_text=source_text,
+                        recovery_method=f"{source_name}_ambiguous_result",
+                        confidence="uncertain",
+                    )
+                )
+                row_uncertain = True
+                break
+
+        if row_recovered or row_uncertain:
+            continue
+
+    confidence = "high" if recovered_tokens else "uncertain" if diagnostics else None
+    return _ResultTokenRecovery(
+        recovered_tokens=recovered_tokens,
+        diagnostics=diagnostics,
+        confidence=confidence,
+    )
+
+
+def _has_explicit_result_token(item: InspectionItem) -> bool:
+    if _value(item.test_result) is not None:
+        return True
+    return any(_value(value) is not None for value in item.result_values)
+
+
+def _result_recovery_sources(item: InspectionItem) -> list[tuple[str, str]]:
+    sources: list[tuple[str, str]] = []
+    source_keys = (
+        "row_text",
+        "source_text",
+        "source_text_excerpt",
+        "page_text_excerpt",
+        "table_row_text",
+        "combined_row_text",
+        "raw_text",
+    )
+    for key in source_keys:
+        value = item.metadata.get(key)
+        if isinstance(value, str) and value.strip():
+            sources.append((key, value))
+
+    for evidence in item.evidence:
+        field_name = evidence.metadata.get("field_name") if evidence.metadata else None
+        if field_name == "test_result":
+            continue
+        raw_text = evidence.raw_text or evidence.value
+        if raw_text and "检验结果" in raw_text:
+            sources.append(("evidence_raw_text", str(raw_text)))
+    return sources
+
+
+def _recover_confident_result_token(source_text: str) -> str | None:
+    if not _has_result_context(source_text):
+        return _recover_subclause_tail_token(source_text)
+
+    after_marker = _text_after_result_marker(source_text) or source_text
+    for token in ("不符合要求", "符合要求", "不符合", "符合"):
+        if token in after_marker:
+            return token
+    measurement = _recover_measurement_result(after_marker)
+    return measurement
+
+
+def _has_result_context(source_text: str) -> bool:
+    compact_text = _compact(source_text)
+    return "检验结果" in compact_text or "结果:" in compact_text or "结果：" in compact_text
+
+
+def _text_after_result_marker(source_text: str) -> str | None:
+    match = re.search(r"(?:检验)?结果\s*[:：]?\s*(.+)", source_text)
+    return match.group(1) if match else None
+
+
+def _recover_subclause_tail_token(source_text: str) -> str | None:
+    text = source_text.strip()
+    if not re.search(r"\d+(?:\.\d+)+", text):
+        return None
+    if any(keyword in text for keyword in ("应符合", "应满足", "应能", "应当", "要求")):
+        return None
+    tail = text[-24:]
+    for token in ("不符合要求", "符合要求", "不符合", "符合"):
+        if token in tail:
+            return token
+    return None
+
+
+def _recover_measurement_result(source_text: str) -> str | None:
+    text = source_text.strip()
+    match = re.search(r"([<>＜≤≥]?\s*\d+(?:\.\d+)?\s*(?:%|V|mA|A|Ω|MΩ|Hz|s|ms|mm|cm|kg|N|℃)?)", text)
+    if not match:
+        return None
+    token = match.group(1).strip()
+    return token if token and token not in {"/", "——"} else None
+
+
+def _possible_ambiguous_result_tokens(source_text: str) -> list[str]:
+    compact_text = _compact(source_text)
+    tokens: list[str] = []
+    for token in ("不符合要求", "符合要求", "不符合", "符合"):
+        if token in compact_text and token not in tokens:
+            tokens.append(token)
+    return tokens
+
+
+def _recovery_method(source_name: str, source_text: str) -> str:
+    if _has_result_context(source_text):
+        return f"{source_name}_explicit_result"
+    return f"{source_name}_subclause_tail"
+
+
+def _result_recovery_diagnostic(
+    *,
+    code: str,
+    indexed: _IndexedItem,
+    source_text: str,
+    recovery_method: str,
+    confidence: str,
+    token: str | None = None,
+    possible_result_tokens: list[str] | None = None,
+) -> dict[str, Any]:
+    item = indexed.item
+    diagnostic: dict[str, Any] = {
+        "code": code,
+        "source_index": indexed.source_index,
+        "source_page": item.source_page,
+        "source_row_index": item.row_index_in_page,
+        "sequence_raw": item.sequence_raw,
+        "standard_clause": item.standard_clause,
+        "source_text_excerpt": _excerpt(source_text, limit=160),
+        "recovery_method": recovery_method,
+        "confidence": confidence,
+    }
+    if token is not None:
+        diagnostic["token"] = token
+    if possible_result_tokens is not None:
+        diagnostic["possible_result_tokens"] = possible_result_tokens
+    return diagnostic
+
+
+def _excerpt(value: str | None, *, limit: int) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit]} [truncated]"
 
 
 def _first_effective_value(rows: list[InspectionItem], field_name: str) -> str | None:

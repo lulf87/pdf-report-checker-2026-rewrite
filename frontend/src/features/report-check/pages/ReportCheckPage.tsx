@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { TaskResult, TaskStatus } from "../../../entities/task/types";
+import { clearTaskSession } from "../../../shared/lib/taskSessionStorage";
 import { ReportResults } from "../components/ReportResults";
 import { ReportUpload } from "../components/ReportUpload";
 
@@ -14,6 +15,7 @@ export function ReportCheckPage() {
   }
 
   function reset() {
+    clearTaskSession("report_check");
     setTask(null);
     setResult(null);
   }

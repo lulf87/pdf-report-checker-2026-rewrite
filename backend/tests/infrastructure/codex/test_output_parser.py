@@ -26,6 +26,29 @@ from app.infrastructure.codex.output_parser import CodexReviewOutputParser
 CREATED_AT = datetime(2026, 6, 17, 9, 0, tzinfo=timezone.utc)
 
 
+def _visual_metadata(
+    *,
+    observed_label_fields: dict | None = None,
+    field_comparisons: list[dict] | None = None,
+    visual_evidence_quality: str | None = None,
+) -> dict:
+    fields = {
+        "component_name": None,
+        "model": None,
+        "serial_number": None,
+        "batch_or_serial": None,
+        "production_date": None,
+        "expiration_date": None,
+    }
+    if observed_label_fields is not None:
+        fields.update(observed_label_fields)
+    return {
+        "observed_label_fields": fields,
+        "field_comparisons": field_comparisons or [],
+        "visual_evidence_quality": visual_evidence_quality,
+    }
+
+
 def _target(target_id: str = "target-1", refs: list[str] | None = None) -> CodexReviewTarget:
     evidence_refs = refs or [f"ev-{target_id[-1]}"]
     return CodexReviewTarget(
@@ -90,7 +113,7 @@ def _review_payload(target_id: str = "target-1", **overrides) -> dict:
         "evidence_refs": ["ev-1"],
         "suggested_severity": None,
         "suggested_finding": None,
-        "metadata": {},
+        "metadata": _visual_metadata(),
     }
     payload.update(overrides)
     return payload
@@ -147,6 +170,73 @@ def test_parse_refute_output_preserves_suggested_severity() -> None:
     assert results[0].verdict is CodexReviewVerdict.REFUTE
     assert results[0].confidence is CodexReviewConfidence.LOW
     assert results[0].suggested_severity == "info"
+
+
+def test_parse_visual_label_metadata_is_preserved() -> None:
+    results = _parse(
+        _output_payload(
+            [
+                _review_payload(
+                    verdict="refute",
+                    metadata={
+                        "observed_label_fields": {
+                            "component_name": "输注泵",
+                            "model": "RMC-1",
+                            "batch_or_serial": "LOT-1",
+                            "serial_number": "LOT-1",
+                            "production_date": "2025-01-02",
+                            "expiration_date": None,
+                        },
+                        "field_comparisons": [
+                            {
+                                "field_name": "序列号/批号",
+                                "expected_value": "LOT-1",
+                                "observed_value": "LOT-1",
+                                "status": "match",
+                                "evidence_ref": "ev-1",
+                                "reasoning": "视觉读取字段与样品描述一致。",
+                            }
+                        ],
+                        "visual_evidence_quality": "clear",
+                    },
+                )
+            ]
+        )
+    )
+
+    assert results[0].metadata["observed_label_fields"]["serial_number"] == "LOT-1"
+    assert results[0].metadata["field_comparisons"][0]["status"] == "match"
+    assert results[0].metadata["visual_evidence_quality"] == "clear"
+
+
+def test_parse_c04_visual_review_allows_null_observed_fields_and_unknown_quality() -> None:
+    results = _parse(
+        _output_payload(
+            [
+                _review_payload(
+                    verdict="uncertain",
+                    metadata=_visual_metadata(
+                        observed_label_fields={
+                            "component_name": "输注泵",
+                            "model": None,
+                            "serial_number": None,
+                            "batch_or_serial": None,
+                            "production_date": None,
+                            "expiration_date": None,
+                        },
+                        field_comparisons=[],
+                        visual_evidence_quality="unknown",
+                    ),
+                )
+            ]
+        )
+    )
+
+    assert results[0].verdict is CodexReviewVerdict.UNCERTAIN
+    assert results[0].metadata["observed_label_fields"]["component_name"] == "输注泵"
+    assert results[0].metadata["observed_label_fields"]["serial_number"] is None
+    assert results[0].metadata["field_comparisons"] == []
+    assert results[0].metadata["visual_evidence_quality"] == "unknown"
 
 
 def test_parse_uncertain_output_allows_no_suggested_finding() -> None:

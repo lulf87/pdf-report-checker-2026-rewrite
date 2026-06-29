@@ -35,6 +35,21 @@ from app.infrastructure.codex import CodexCliRunner
 CREATED_AT = datetime(2026, 6, 18, 10, 0, tzinfo=timezone.utc)
 
 
+def _visual_metadata() -> dict:
+    return {
+        "observed_label_fields": {
+            "component_name": None,
+            "model": None,
+            "serial_number": None,
+            "batch_or_serial": None,
+            "production_date": None,
+            "expiration_date": None,
+        },
+        "field_comparisons": [],
+        "visual_evidence_quality": None,
+    }
+
+
 def test_codex_audit_settings_default_to_mandatory_codex_cli(monkeypatch: MonkeyPatch) -> None:
     for name in (
         "CODEX_AUDIT_ENABLED",
@@ -45,6 +60,7 @@ def test_codex_audit_settings_default_to_mandatory_codex_cli(monkeypatch: Monkey
         "CODEX_AUDIT_RUNTIME_DIR",
         "CODEX_AUDIT_MAX_TARGETS_PER_TASK",
         "CODEX_AUDIT_MAX_TARGETS_PER_BATCH",
+        "CODEX_AUDIT_MAX_PARALLEL_JOBS",
         "CODEX_AUDIT_INCLUDED_CHECK_IDS",
         "CODEX_AUDIT_INCLUDED_FINDING_CODES",
         "CODEX_AUDIT_EXCLUDED_CHECK_IDS",
@@ -58,6 +74,7 @@ def test_codex_audit_settings_default_to_mandatory_codex_cli(monkeypatch: Monkey
     assert settings.codex_audit_timeout_seconds == 300
     assert settings.codex_audit_runtime_dir == "runtime/codex_audit"
     assert settings.codex_audit_max_targets_per_batch == 5
+    assert settings.codex_audit_max_parallel_jobs == 1
     assert settings.codex_audit_sandbox == "read-only"
     assert settings.codex_audit_ephemeral is True
     assert settings.codex_audit_included_check_ids is None
@@ -78,6 +95,7 @@ def test_codex_audit_settings_read_environment(monkeypatch: MonkeyPatch) -> None
     monkeypatch.setenv("CODEX_AUDIT_TIMEOUT_SECONDS", "77")
     monkeypatch.setenv("CODEX_AUDIT_RUNTIME_DIR", "runtime/custom-codex-audit")
     monkeypatch.setenv("CODEX_AUDIT_MAX_TARGETS_PER_BATCH", "1")
+    monkeypatch.setenv("CODEX_AUDIT_MAX_PARALLEL_JOBS", "2")
     monkeypatch.setenv("CODEX_AUDIT_SANDBOX", "read-only")
     monkeypatch.setenv("CODEX_AUDIT_EPHEMERAL", "false")
     monkeypatch.setenv("CODEX_AUDIT_INCLUDED_CHECK_IDS", "C07")
@@ -91,6 +109,7 @@ def test_codex_audit_settings_read_environment(monkeypatch: MonkeyPatch) -> None
     assert settings.codex_audit_timeout_seconds == 77
     assert settings.codex_audit_runtime_dir == "runtime/custom-codex-audit"
     assert settings.codex_audit_max_targets_per_batch == 1
+    assert settings.codex_audit_max_parallel_jobs == 2
     assert settings.codex_audit_sandbox == "read-only"
     assert settings.codex_audit_ephemeral is False
     assert settings.codex_audit_included_check_ids == "C07"
@@ -115,12 +134,15 @@ def test_factory_builds_mandatory_codex_cli_service_and_usecases(tmp_path: Path)
     assert report_usecase.codex_audit_service is not None
     assert ptr_usecase.ptr_codex_evidence_builder.target_selection.max_targets_per_batch == 5
     assert report_usecase.report_codex_evidence_builder.target_selection.max_targets_per_batch == 5
+    assert report_usecase.codex_audit_scheduler.max_parallel_jobs == 1
+    assert ptr_usecase.codex_audit_scheduler.max_parallel_jobs == 1
 
 
 def test_factory_passes_target_selection_settings_to_usecase_builders(tmp_path: Path) -> None:
     settings = Settings(
         codex_audit_runtime_dir=str(tmp_path / "runtime" / "codex_audit"),
         codex_audit_max_targets_per_batch=1,
+        codex_audit_max_parallel_jobs=2,
         codex_audit_included_check_ids="C07",
         codex_audit_included_finding_codes="CONCLUSION_MISMATCH_001",
         codex_audit_excluded_check_ids="C04",
@@ -132,6 +154,7 @@ def test_factory_passes_target_selection_settings_to_usecase_builders(tmp_path: 
     report_usecase = build_report_check_usecase(settings, task_service=TaskService())
 
     assert report_usecase.report_codex_evidence_builder.target_selection.max_targets_per_batch == 1
+    assert report_usecase.codex_audit_scheduler.max_parallel_jobs == 2
     assert report_usecase.report_codex_evidence_builder.target_selection.included_check_ids == frozenset({"C07"})
     assert report_usecase.report_codex_evidence_builder.target_selection.included_finding_codes == frozenset(
         {"CONCLUSION_MISMATCH_001"}
@@ -139,6 +162,7 @@ def test_factory_passes_target_selection_settings_to_usecase_builders(tmp_path: 
     assert report_usecase.report_codex_evidence_builder.target_selection.excluded_check_ids == frozenset({"C04"})
     assert report_usecase.report_codex_evidence_builder.target_selection.priority_check_ids == ("C07", "C04")
     assert ptr_usecase.ptr_codex_evidence_builder.target_selection.max_targets_per_batch == 1
+    assert ptr_usecase.codex_audit_scheduler.max_parallel_jobs == 2
     assert ptr_usecase.ptr_codex_evidence_builder.target_selection.included_check_ids == frozenset({"C07"})
 
 
@@ -172,7 +196,7 @@ def test_mandatory_codex_cli_execution_can_be_monkeypatched(
                             "evidence_refs": ["ev-1"],
                             "suggested_severity": None,
                             "suggested_finding": None,
-                            "metadata": {},
+                            "metadata": _visual_metadata(),
                         }
                     ],
                 }
@@ -185,6 +209,7 @@ def test_mandatory_codex_cli_execution_can_be_monkeypatched(
     settings = Settings(
         codex_audit_timeout_seconds=33,
         codex_audit_runtime_dir=str(tmp_path / "runtime" / "codex_audit"),
+        codex_audit_cache_dir=str(tmp_path / "runtime" / "codex_audit_cache"),
         _env_file=None,
     )
 

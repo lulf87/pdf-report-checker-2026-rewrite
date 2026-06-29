@@ -337,3 +337,83 @@ def test_qw2025_2795_like_cross_page_mini_fixture_groups_c07_evidence() -> None:
     assert group.effective_single_conclusion == "/"
     assert group.effective_remark == "/"
     assert group.continuation_markers[0].raw_text == "续 3"
+
+
+def test_recovers_result_tokens_from_item_94_subclause_row_text() -> None:
+    result = build_inspection_item_groups(
+        [
+            item(94, raw="94", result="——", conclusion="符合", remark="/", page=72, row=10, name="电源输入"),
+            item(94, raw="续 94", result="——", conclusion="", remark="/", continued=True, page=73, row=0),
+            item(
+                None,
+                raw="12.4.2",
+                result="",
+                conclusion="",
+                remark="",
+                page=73,
+                row=1,
+                name="12.4.2 子条款",
+            ).model_copy(
+                update={
+                    "metadata": {
+                        "row_text": "12.4.2 可编程医用电气系统，检验结果：符合要求，单项结论：符合"
+                    }
+                }
+            ),
+            item(
+                None,
+                raw="12.4.4",
+                result="",
+                conclusion="",
+                remark="",
+                page=73,
+                row=2,
+                name="12.4.4 子条款",
+            ).model_copy(update={"metadata": {"row_text": "12.4.4 防止误动作 检验结果 符合要求"}}),
+        ]
+    )
+
+    group = result.groups[0]
+    assert group.item_no == "94"
+    assert group.original_effective_test_results == ["——", "——"]
+    assert group.recovered_result_tokens == ["符合要求", "符合要求"]
+    assert group.effective_test_results == ["——", "——", "符合要求", "符合要求"]
+    assert group.result_token_recovery_applied is True
+    assert group.result_token_recovery_confidence == "high"
+    assert group.result_token_recovery_diagnostics[0]["source_page"] == 73
+    assert group.result_token_recovery_diagnostics[0]["recovery_method"] == "row_text_explicit_result"
+
+
+def test_recovers_result_token_from_orphan_payload_row_text() -> None:
+    result = build_inspection_item_groups(
+        [
+            item(33, raw="33", result="——", conclusion="符合", remark="/", page=21, row=5),
+            item(None, raw="", result="", conclusion="", remark="", page=21, row=6, name="补充子项").model_copy(
+                update={"metadata": {"row_text": "补充子项 检验结果：符合要求"}}
+            ),
+        ]
+    )
+
+    group = result.groups[0]
+    assert group.item_no == "33"
+    assert group.recovered_result_tokens == ["符合要求"]
+    assert group.effective_test_results == ["——", "符合要求"]
+
+
+def test_records_uncertain_result_token_recovery_without_promoting_to_effective_result() -> None:
+    result = build_inspection_item_groups(
+        [
+            item(41, raw="41", result="——", conclusion="符合", remark="/", page=30, row=5),
+            item(None, raw="12.4.2", result="", conclusion="", remark="", page=30, row=6).model_copy(
+                update={"metadata": {"row_text": "12.4.2 应符合本标准要求"}}
+            ),
+        ]
+    )
+
+    group = result.groups[0]
+    assert group.effective_test_results == ["——"]
+    assert group.recovered_result_tokens == []
+    assert group.result_token_recovery_applied is False
+    assert group.result_token_recovery_confidence == "uncertain"
+    assert group.result_token_recovery_diagnostics[0]["code"] == "RESULT_TOKEN_RECOVERY_UNCERTAIN"
+    assert group.result_token_recovery_diagnostics[0]["possible_result_tokens"] == ["符合"]

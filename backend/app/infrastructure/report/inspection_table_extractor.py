@@ -109,6 +109,17 @@ class InspectionTableExtractor:
             sequence_raw = values["sequence_raw"].strip()
             is_continuation = self._is_continuation_marker(sequence_raw)
             sequence = parse_sequence(sequence_raw)
+            metadata: dict[str, Any] = {
+                "item_no": sequence_raw,
+                "item_name": values["item_name"],
+                "single_conclusion": values["conclusion"],
+                "source_table_id": table.table_id,
+                "field_columns": dict(header_map),
+                "row_text": " ".join(cell.strip() for cell in row if cell and cell.strip()),
+            }
+            visual_geometry = self._visual_geometry(table, row_index, header_map)
+            if visual_geometry is not None:
+                metadata["visual_geometry"] = visual_geometry
 
             item = InspectionItem(
                 sequence_raw=sequence_raw,
@@ -139,13 +150,7 @@ class InspectionTableExtractor:
                     values=values,
                     header_map=header_map,
                 ),
-                metadata={
-                    "item_no": sequence_raw,
-                    "item_name": values["item_name"],
-                    "single_conclusion": values["conclusion"],
-                    "source_table_id": table.table_id,
-                    "field_columns": dict(header_map),
-                },
+                metadata=metadata,
             )
 
             if not item.sequence_raw and self._should_mark_blank_row_as_continuation(item, last_item):
@@ -302,6 +307,78 @@ class InspectionTableExtractor:
             if source:
                 result[field_name] = source
         return result
+
+    def _visual_geometry(
+        self,
+        table: PdfTable,
+        row_index: int,
+        header_map: dict[str, int],
+    ) -> dict[str, Any] | None:
+        cell_bboxes = table.metadata.get("cell_bboxes")
+        if not isinstance(cell_bboxes, list) or row_index >= len(cell_bboxes):
+            return None
+        row_cells = cell_bboxes[row_index]
+        if not isinstance(row_cells, list):
+            return None
+
+        field_bboxes: dict[str, list[float]] = {}
+        for field_name, col_index in header_map.items():
+            bbox = self._bbox_list_from_cell(row_cells, col_index)
+            if bbox is not None:
+                field_bboxes[field_name] = bbox
+
+        row_bbox = self._union_bboxes(list(field_bboxes.values()))
+        table_bbox = self._bbox_list_from_model(table.bbox)
+        if row_bbox is None and table_bbox is None and not field_bboxes:
+            return None
+        return {
+            "table_id": table.table_id,
+            "table_bbox": table_bbox,
+            "row_bbox": row_bbox,
+            "field_bboxes": field_bboxes,
+        }
+
+    def _bbox_list_from_model(self, bbox: Any) -> list[float] | None:
+        if bbox is None:
+            return None
+        try:
+            return [float(bbox.x0), float(bbox.y0), float(bbox.x1), float(bbox.y1)]
+        except (AttributeError, TypeError, ValueError):
+            return self._bbox_list_from_cell([bbox], 0)
+
+    def _bbox_list_from_cell(self, row_cells: list[Any], col_index: int | None) -> list[float] | None:
+        if col_index is None or col_index < 0 or col_index >= len(row_cells):
+            return None
+        raw_bbox = row_cells[col_index]
+        if raw_bbox is None:
+            return None
+        if isinstance(raw_bbox, dict):
+            try:
+                return [
+                    float(raw_bbox["x0"]),
+                    float(raw_bbox["y0"]),
+                    float(raw_bbox["x1"]),
+                    float(raw_bbox["y1"]),
+                ]
+            except (KeyError, TypeError, ValueError):
+                return None
+        if not isinstance(raw_bbox, (list, tuple)) or len(raw_bbox) != 4:
+            return None
+        try:
+            return [float(value) for value in raw_bbox]
+        except (TypeError, ValueError):
+            return None
+
+    def _union_bboxes(self, bboxes: list[list[float]]) -> list[float] | None:
+        valid = [bbox for bbox in bboxes if len(bbox) == 4]
+        if not valid:
+            return None
+        return [
+            min(bbox[0] for bbox in valid),
+            min(bbox[1] for bbox in valid),
+            max(bbox[2] for bbox in valid),
+            max(bbox[3] for bbox in valid),
+        ]
 
     def _row_evidence(
         self,

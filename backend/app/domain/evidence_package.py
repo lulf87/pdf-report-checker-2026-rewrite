@@ -29,6 +29,7 @@ class EvidencePackageKind(StrEnum):
 class EvidenceSourceType(StrEnum):
     PDF_TEXT = "pdf_text"
     OCR_TEXT = "ocr_text"
+    IMAGE = "image"
     TABLE = "table"
     CANONICAL_TABLE = "canonical_table"
     PTR_CLAUSE = "ptr_clause"

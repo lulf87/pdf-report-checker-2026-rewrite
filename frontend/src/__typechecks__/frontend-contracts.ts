@@ -27,6 +27,7 @@ const task: TaskStatus = {
   result_ref: "task-1",
   error_message: null,
   logs: [],
+  metadata: {},
   created_at: "2026-06-14T00:00:00Z",
   updated_at: "2026-06-14T00:00:01Z",
 };
@@ -49,6 +50,9 @@ const result: TaskResult = {
   task_id: task.task_id,
   task_type: "report_check",
   summary: {
+    audit_scope: "full",
+    full_audit: true,
+    final_audit_status: "failed",
     total_checks: 1,
     pass_count: 0,
     fail_count: 1,
@@ -58,6 +62,18 @@ const result: TaskResult = {
     error_count: 1,
     warn_count: 0,
     info_count: 0,
+    candidate_findings_count: 1,
+    candidate_errors_count: 1,
+    confirmed_findings_count: 1,
+    confirmed_errors_count: 1,
+    refuted_findings_count: 0,
+    manual_review_required_count: 0,
+    suggested_additional_findings_count: 0,
+    out_of_scope_findings_count: 0,
+    summary_only_findings_count: 0,
+    unreviewed_required_findings_count: 0,
+    codex_reviews_count: 1,
+    codex_runtime_failure_count: 0,
   },
   check_results: [
     {

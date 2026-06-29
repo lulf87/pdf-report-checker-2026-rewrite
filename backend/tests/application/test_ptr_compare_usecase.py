@@ -645,6 +645,10 @@ def test_ptr_compare_codex_audit_confirm_review_is_attached_to_check_result(tmp_
     ptr_table_result = _check_result(result, "PTR_TABLE")
     assert ptr_table_result.codex_reviews[0].verdict is CodexReviewVerdict.CONFIRM
     assert audit_service.calls
+    assert result.summary.audit_scope == "full"
+    assert result.summary.full_audit is True
+    assert result.summary.final_audit_status == "failed"
+    assert result.metadata["codex_audit"]["final_audit_status"] == "failed"
 
 
 def test_ptr_compare_codex_audit_can_use_codex_audit_service_with_fake_runner(tmp_path: Path) -> None:
@@ -684,6 +688,27 @@ def test_ptr_compare_codex_audit_refute_does_not_delete_deterministic_finding(tm
     ptr_table_result = _check_result(result, "PTR_TABLE")
     assert _finding_codes(ptr_table_result) == ["PTR_TABLE_VALUE_MISMATCH"]
     assert ptr_table_result.codex_reviews[0].verdict is CodexReviewVerdict.REFUTE
+    assert result.summary.final_audit_status == "passed"
+    assert result.metadata["codex_audit"]["final_audit_status"] == "passed"
+
+
+def test_ptr_compare_codex_audit_uncertain_sets_final_status_to_manual_review(tmp_path: Path) -> None:
+    audit_service = FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN)
+
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+        report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])],
+        codex_audit_enabled=True,
+        codex_audit_service=audit_service,
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert ptr_table_result.codex_reviews[0].verdict is CodexReviewVerdict.UNCERTAIN
+    assert ptr_table_result.findings[0].metadata["final_status"] == "manual_review_required"
+    assert result.summary.confirmed_errors_count == 0
+    assert result.summary.manual_review_required_count == 1
+    assert result.summary.final_audit_status == "needs_manual_review"
 
 
 def test_ptr_compare_codex_audit_add_finding_does_not_append_to_deterministic_findings(tmp_path: Path) -> None:
@@ -821,6 +846,37 @@ def test_ptr_compare_codex_audit_batches_without_omitting_targets(tmp_path: Path
     assert [len(request.targets) for request, _ in audit_service.calls] == [2, 2, 2]
 
 
+def test_ptr_compare_task_audit_options_override_default_target_selection(tmp_path: Path) -> None:
+    audit_service = FakePtrCodexAuditService()
+
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+        report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])],
+        codex_audit_enabled=True,
+        codex_audit_service=audit_service,
+        audit_options={
+            "included_check_ids": "PTR_TABLE",
+            "included_finding_codes": "PTR_TABLE_VALUE_MISMATCH",
+            "max_targets_per_batch": 1,
+            "max_parallel_jobs": 2,
+        },
+    )
+
+    assert len(audit_service.calls) == 1
+    assert audit_service.calls[0][0].targets[0].check_id == "PTR_TABLE"
+    assert result.metadata["audit_options_source"] == "user_override"
+    assert result.metadata["audit_options"]["included_check_ids"] == ["PTR_TABLE"]
+    assert result.metadata["audit_options"]["included_finding_codes"] == ["PTR_TABLE_VALUE_MISMATCH"]
+    assert result.metadata["audit_options"]["max_targets_per_batch"] == 1
+    assert result.metadata["audit_options"]["max_parallel_jobs"] == 2
+    assert result.metadata["effective_audit_options"]["included_check_ids"] == ["PTR_TABLE"]
+    assert result.metadata["effective_audit_options"]["included_finding_codes"] == ["PTR_TABLE_VALUE_MISMATCH"]
+    assert result.metadata["effective_audit_options"]["max_targets_per_batch"] == 1
+    assert result.metadata["effective_audit_options"]["max_parallel_jobs"] == 2
+    assert result.metadata["codex_audit"]["audit_scope"] == "targeted"
+
+
 class ClauseMismatchInspectionTableExtractor:
     def extract_table(self, parsed_pdf: ParsedPdf) -> InspectionTable:
         return InspectionTable(
@@ -846,6 +902,7 @@ def _run_parameter_compare_usecase(
     codex_audit_enabled: bool = False,
     codex_audit_service=None,
     ptr_codex_evidence_builder: PtrCodexEvidenceBuilder | None = None,
+    audit_options=None,
 ):
     task_service, status = _run_parameter_compare_task(
         tmp_path,
@@ -855,6 +912,7 @@ def _run_parameter_compare_usecase(
         codex_audit_enabled=codex_audit_enabled,
         codex_audit_service=codex_audit_service,
         ptr_codex_evidence_builder=ptr_codex_evidence_builder,
+        audit_options=audit_options,
     )
 
     assert status.status == TaskState.COMPLETED
@@ -870,6 +928,7 @@ def _run_parameter_compare_task(
     codex_audit_enabled: bool = False,
     codex_audit_service=None,
     ptr_codex_evidence_builder: PtrCodexEvidenceBuilder | None = None,
+    audit_options=None,
 ):
     task_service = TaskService()
     if codex_audit_service is None:
@@ -901,6 +960,7 @@ def _run_parameter_compare_task(
         report_file_name="report.pdf",
         report_content=b"%PDF-1.4 report",
         content_type="application/pdf",
+        audit_options=audit_options,
     )
 
     return task_service, status

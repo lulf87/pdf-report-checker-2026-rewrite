@@ -31,6 +31,21 @@ OLD_PROJECT = Path("/Users/lulingfeng/Documents/工作/开发/报告核对工具
 NEW_PROJECT = Path("/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3")
 
 
+def _visual_metadata() -> dict:
+    return {
+        "observed_label_fields": {
+            "component_name": None,
+            "model": None,
+            "serial_number": None,
+            "batch_or_serial": None,
+            "production_date": None,
+            "expiration_date": None,
+        },
+        "field_comparisons": [],
+        "visual_evidence_quality": None,
+    }
+
+
 def _target() -> CodexReviewTarget:
     return CodexReviewTarget(
         target_id="target-1",
@@ -92,7 +107,7 @@ def _output_payload() -> dict:
                 "evidence_refs": ["ev-1"],
                 "suggested_severity": None,
                 "suggested_finding": None,
-                "metadata": {},
+                "metadata": _visual_metadata(),
             }
         ],
     }
@@ -171,6 +186,186 @@ def test_cli_runner_builds_safe_codex_exec_command(tmp_path, monkeypatch) -> Non
     assert results[0].verdict is CodexReviewVerdict.CONFIRM
     assert results[0].raw_output_path == "codex_review_output.json"
     assert results[0].metadata["parser"] == "codex_review_output"
+    assert results[0].metadata["codex_exec_seconds"] >= 0
+    assert results[0].metadata["exit_code"] == 0
+    assert results[0].metadata["stdout_size_bytes"] == 2
+    assert results[0].metadata["stderr_size_bytes"] == 0
+    assert results[0].metadata["output_size_bytes"] > 0
+    assert results[0].metadata["image_count"] == 0
+
+
+def test_cli_runner_passes_workspace_images_as_codex_image_inputs(tmp_path, monkeypatch) -> None:
+    workspace = tmp_path / "runtime" / "codex_audit" / "task-1" / "pkg-1" / "input"
+    workspace.mkdir(parents=True)
+    schema_path = workspace / "schema.json"
+    prompt_path = workspace / "prompt.txt"
+    image_path = workspace / "items" / "label.png"
+    image_path.parent.mkdir()
+    schema_path.write_text('{"type": "array"}', encoding="utf-8")
+    prompt_path.write_text("Review evidence_package.json and label image", encoding="utf-8")
+    image_path.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    captured: dict[str, object] = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        output_path = Path(cmd[cmd.index("-o") + 1])
+        output_path.write_text(json.dumps(_output_payload()), encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    runner = CodexCliRunner(CodexCliRunnerConfig(enabled=True, allow_real_execution=True))
+
+    results = runner.run_review(
+        _request(),
+        _package(),
+        workspace,
+        output_schema_path=schema_path,
+        prompt_path=prompt_path,
+        image_paths=[image_path],
+    )
+
+    cmd = captured["cmd"]
+    assert isinstance(cmd, list)
+    assert "--image" in cmd
+    assert cmd[cmd.index("--image") + 1] == "items/label.png"
+    assert str(image_path) not in cmd
+    assert results[0].status is CodexReviewStatus.SUCCEEDED
+
+
+def test_cli_runner_passes_multiple_c07_images_as_codex_image_inputs(tmp_path, monkeypatch) -> None:
+    workspace = tmp_path / "runtime" / "codex_audit" / "task-1" / "pkg-1" / "input"
+    items_dir = workspace / "items"
+    items_dir.mkdir(parents=True)
+    schema_path = workspace / "schema.json"
+    prompt_path = workspace / "prompt.txt"
+    schema_path.write_text('{"type": "array"}', encoding="utf-8")
+    prompt_path.write_text("Review C07 visual evidence", encoding="utf-8")
+    image_names = [
+        "finding-1-c07-page-p1.png",
+        "finding-1-c07-table-p1.png",
+        "finding-1-c07-item-group-p1.png",
+        "finding-1-c07-result-p1.png",
+        "finding-1-c07-conclusion-p1.png",
+        "finding-1-c07-remark-p1.png",
+    ]
+    image_paths = []
+    for image_name in image_names:
+        image_path = items_dir / image_name
+        image_path.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+        image_paths.append(image_path)
+    captured: dict[str, object] = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        output_path = Path(cmd[cmd.index("-o") + 1])
+        output_path.write_text(json.dumps(_output_payload()), encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    runner = CodexCliRunner(CodexCliRunnerConfig(enabled=True, allow_real_execution=True))
+
+    results = runner.run_review(
+        _request(),
+        _package(),
+        workspace,
+        output_schema_path=schema_path,
+        prompt_path=prompt_path,
+        image_paths=image_paths,
+    )
+
+    cmd = captured["cmd"]
+    assert isinstance(cmd, list)
+    image_args = [cmd[index + 1] for index, arg in enumerate(cmd) if arg == "--image"]
+    assert image_args == [f"items/{image_name}" for image_name in image_names]
+    assert all(str(path) not in cmd for path in image_paths)
+    assert results[0].status is CodexReviewStatus.SUCCEEDED
+
+
+def test_cli_runner_passes_multiple_complex_matrix_images_as_codex_image_inputs(tmp_path, monkeypatch) -> None:
+    workspace = tmp_path / "runtime" / "codex_audit" / "task-1" / "pkg-1" / "input"
+    items_dir = workspace / "items"
+    items_dir.mkdir(parents=True)
+    schema_path = workspace / "schema.json"
+    prompt_path = workspace / "prompt.txt"
+    schema_path.write_text('{"type": "array"}', encoding="utf-8")
+    prompt_path.write_text("Review C07 complex matrix visual evidence", encoding="utf-8")
+    image_names = [
+        "finding-59-c07-matrix-page-p1.png",
+        "finding-59-c07-matrix-table-p1.png",
+        "finding-59-c07-matrix-header-p1.png",
+        "finding-59-c07-matrix-body-p1.png",
+        "finding-59-c07-matrix-result-p1.png",
+        "finding-59-c07-matrix-conclusion-p1.png",
+        "finding-59-c07-matrix-continuation-p2.png",
+    ]
+    image_paths = []
+    for image_name in image_names:
+        image_path = items_dir / image_name
+        image_path.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+        image_paths.append(image_path)
+    captured: dict[str, object] = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        output_path = Path(cmd[cmd.index("-o") + 1])
+        output_path.write_text(json.dumps(_output_payload()), encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    runner = CodexCliRunner(CodexCliRunnerConfig(enabled=True, allow_real_execution=True))
+
+    results = runner.run_review(
+        _request(),
+        _package(),
+        workspace,
+        output_schema_path=schema_path,
+        prompt_path=prompt_path,
+        image_paths=image_paths,
+    )
+
+    cmd = captured["cmd"]
+    assert isinstance(cmd, list)
+    image_args = [cmd[index + 1] for index, arg in enumerate(cmd) if arg == "--image"]
+    assert image_args == [f"items/{image_name}" for image_name in image_names]
+    assert all(str(path) not in cmd for path in image_paths)
+    assert results[0].status is CodexReviewStatus.SUCCEEDED
+
+
+def test_cli_runner_rejects_missing_image_input_without_subprocess(tmp_path, monkeypatch) -> None:
+    workspace = tmp_path / "runtime" / "codex_audit" / "task-1" / "pkg-1" / "input"
+    workspace.mkdir(parents=True)
+    missing_image = workspace / "items" / "missing-c07-page.png"
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("subprocess.run must not be called for missing image inputs")
+
+    monkeypatch.setattr(subprocess, "run", fail_if_called)
+    runner = CodexCliRunner(CodexCliRunnerConfig(enabled=True, allow_real_execution=True))
+
+    results = runner.run_review(_request(), _package(), workspace, image_paths=[missing_image])
+
+    assert results[0].status is CodexReviewStatus.FAILED
+    assert results[0].error is not None
+    assert results[0].error.code == "CODEX_IMAGE_INPUT_MISSING"
+
+
+def test_cli_runner_rejects_image_inputs_outside_workspace(tmp_path, monkeypatch) -> None:
+    workspace = tmp_path / "runtime" / "codex_audit" / "task-1" / "pkg-1" / "input"
+    workspace.mkdir(parents=True)
+    outside_image = tmp_path / "outside.png"
+    outside_image.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("subprocess.run must not be called for unsafe image inputs")
+
+    monkeypatch.setattr(subprocess, "run", fail_if_called)
+    runner = CodexCliRunner(CodexCliRunnerConfig(enabled=True, allow_real_execution=True))
+
+    results = runner.run_review(_request(), _package(), workspace, image_paths=[outside_image])
+
+    assert results[0].status is CodexReviewStatus.FAILED
+    assert results[0].error is not None
+    assert results[0].error.code == "CODEX_IMAGE_INPUT_FORBIDDEN"
 
 
 def test_cli_runner_returns_failed_when_workspace_dir_is_missing(tmp_path, monkeypatch) -> None:
@@ -262,6 +457,51 @@ def test_cli_runner_converts_nonzero_exit_to_failed_review(tmp_path, monkeypatch
     assert results[0].error is not None
     assert results[0].error.code == "CODEX_EXIT_NONZERO"
     assert "boom" in (results[0].error.detail or "")
+    assert "stdout_size_bytes" in (results[0].error.detail or "")
+    assert results[0].metadata["codex_exec_seconds"] >= 0
+    assert results[0].metadata["exit_code"] == 2
+    assert results[0].metadata["stdout_size_bytes"] == len("partial".encode())
+    assert results[0].metadata["stderr_size_bytes"] == len("boom".encode())
+    assert results[0].metadata["image_count"] == 0
+
+
+def test_cli_runner_classifies_usage_limit_and_writes_diagnostics(tmp_path, monkeypatch) -> None:
+    workspace = tmp_path / "runtime" / "codex_audit" / "task-1" / "pkg-1" / "input"
+    workspace.mkdir(parents=True)
+    prompt_path = workspace / "prompt.md"
+    prompt_path.write_text("Review evidence package.\n" + ("prompt secret\n" * 200), encoding="utf-8")
+    package_path = workspace / "evidence_package.json"
+    package_path.write_text(json.dumps(_package().model_dump(mode="json")), encoding="utf-8")
+    stderr = (
+        "ERROR: You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage "
+        "to purchase more credits or try again at Jun 27th, 2026 9:59 PM."
+    )
+
+    def fake_usage_limit(cmd, **kwargs):
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr=stderr)
+
+    monkeypatch.setattr(subprocess, "run", fake_usage_limit)
+    runner = CodexCliRunner(CodexCliRunnerConfig(enabled=True, allow_real_execution=True))
+
+    results = runner.run_review(_request(), _package(), workspace, prompt_path=prompt_path)
+
+    assert results[0].status is CodexReviewStatus.FAILED
+    assert results[0].error is not None
+    assert results[0].error.code == "CODEX_USAGE_LIMIT_EXCEEDED"
+    assert results[0].metadata["retry_after_text"] == "Jun 27th, 2026 9:59 PM"
+    assert "prompt secret" not in (results[0].error.detail or "")
+    diagnostics_path = workspace / "codex_runner_error.json"
+    assert diagnostics_path.is_file()
+    diagnostics = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+    assert diagnostics["code"] == "CODEX_USAGE_LIMIT_EXCEEDED"
+    assert diagnostics["exit_code"] == 1
+    assert diagnostics["retry_after_text"] == "Jun 27th, 2026 9:59 PM"
+    assert diagnostics["prompt_size_bytes"] == prompt_path.stat().st_size
+    assert diagnostics["evidence_package_size_bytes"] == package_path.stat().st_size
+    assert diagnostics["target_ids"] == ["target-1"]
+    assert diagnostics["package_id"] == "pkg-1"
+    assert (workspace / "codex_stdout.txt").is_file()
+    assert (workspace / "codex_stderr.txt").read_text(encoding="utf-8") == stderr
 
 
 def test_cli_runner_converts_command_not_found_to_failed_review(tmp_path, monkeypatch) -> None:

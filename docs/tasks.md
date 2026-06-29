@@ -177,6 +177,260 @@
 - 验收标准：Done when API/product factory 默认装配 Codex CLI；Report/PTR usecase 遇到 failed/skipped review 或 service exception 会 task failed；Prompt 明确 Codex 是 mandatory final auditor；脚本和文档不再推荐 disabled/fake 用户模式。
 - 完成状态：[x]
 
+### T-CODEX-MANDATORY-02：Codex verdict finalization 与全候选 target 覆盖修复
+- 目标：将 Codex verdict 收口为稳定 final status，并修复 mandatory audit 下 C04/C05/C06/C09 candidate target 覆盖不足的问题。
+- 背景：用户真实运行 `CODEX_AUDIT_INCLUDED_CHECK_IDS=C07` 的本地业务验收后，Codex runtime 成功返回 22 条 succeeded review，但结果仍显示候选 `error=54`，且非 C07 finding `final_status=null`，容易误读为完整最终错误。
+- 涉及文件：`backend/app/application/codex_audit_finalization.py`、`backend/app/application/report_check_usecase.py`、`backend/app/application/ptr_compare_usecase.py`、`backend/app/application/report_codex_evidence_builder.py`、`backend/app/domain/result.py`、前端结果展示和 Codex 文档。
+- 需要实现：`confirm/refute/uncertain/add_finding` 映射到 `confirmed/refuted/manual_review_required/suggested_additional_finding`；summary 增加 candidate/final/refuted/manual/out-of-scope 计数；targeted validation 标记 `audit_scope=targeted`；full mandatory audit 不允许 required candidate 缺 review 或 `final_status`；C04/C05/C06/C09 生成逐条 finding target；summary target 标记 `summary_only`。
+- 不允许做：不调用真实 Codex CLI；不调用 GPT/OpenAI API；不修改旧项目目录；不继续 C04/C05/C06/C07/C09 业务规则细化；不让前端重新计算规则。
+- 测试要求：运行 application targeted tests、API tests、后端全量、前端 build 和 `git diff --check`。
+- 验收标准：Done when refuted candidate 不计入 confirmed errors，uncertain 进入人工复核，targeted validation 的未覆盖候选被标记为 out-of-scope，full mandatory audit 缺少 required review 会 task failed。
+- 完成状态：[x]
+
+### T-CODEX-MANDATORY-03：targeted summary 过滤、C04/C06 OCR 语义和未使用部件 finalization
+- 目标：修复 C04/C05/C06/C09 targeted validation 暴露的 summary target 越界、C04/C06 OCR 语义误读和未使用部件被 Codex confirm 后计入最终错误的问题。
+- 背景：用户真实运行 `CODEX_AUDIT_INCLUDED_CHECK_IDS=C04,C05,C06,C09` 后，任务完成且 Codex runtime 全部 succeeded，但结果中仍包含 C01/C02/C03/C08/C10/C11 summary reviews；部分 C04/C06 confirm 实际只确认“OCR 未识别字段”，不是确认标签本体缺字段；备注为“本次检测未使用”的部件不应被确认为缺照片/缺标签。
+- 涉及文件：`backend/app/application/report_codex_evidence_builder.py`、`backend/app/application/codex_audit_finalization.py`、`backend/app/infrastructure/codex/prompt_builder.py`、`backend/app/rules/report/common.py`、相关 application/codex tests 和 Codex 文档。
+- 需要实现：targeted 模式下 summary targets 也必须遵守 include/exclude/finding-code filters；C04/C06 target metadata 明确 `evidence_has_label_image_crop`、`evidence_has_full_label_text`、`evidence_has_structured_label_fields`、`evidence_can_verify_label_content`；prompt 明确 OCR 未识别字段不等于标签缺字段；未使用部件 metadata 可归一化识别；finalization 对 Codex confirm 的未使用部件和不可验证标签内容防御性降级为 `manual_review_required` 并记录 diagnostic。
+- 不允许做：不调用真实 Codex CLI；不调用 GPT/OpenAI API；不修改旧项目目录；不继续 C04/C05/C06 业务规则清理；不让前端重新计算规则。
+- 测试要求：运行 application targeted tests、Codex prompt tests、API tests、后端全量、前端 build 和 `git diff --check`。
+- 验收标准：Done when C04/C05/C06/C09 targeted request 不再产生非 included summary reviews，C04/C06 无标签图像/完整正文 OCR/结构化字段时不会被 finalization 计为 confirmed business error，未使用部件即使被 Codex confirm 也不会进入 `confirmed_errors_count`。
+- 完成状态：[x]
+
+### T-CODEX-MANDATORY-04：C04 label caption 与 matched label OCR 语义修复
+- 目标：修复 C04 `SAMPLE_COMPONENT_LABEL_NOT_FOUND` 中 “中文标签样张 caption 存在，但当前 component 缺 matched label OCR 正文/结构化字段” 被 Codex confirm 后误进入最终问题的语义边界。
+- 背景：T-CODEX-MANDATORY-03 后 C04/C05/C06/C09 targeted validation 主目标已达成，但真实样本仍有 2 条 C04 confirmed WARN：sample-row-3 推车和 sample-row-14 30m 触摸屏连接线缆都有中文标签样张 caption，Codex confirm 的实际是 OCR 未匹配字段，不是标签样张不存在。
+- 涉及文件：`backend/app/application/report_codex_evidence_builder.py`、`backend/app/application/codex_audit_finalization.py`、`backend/app/infrastructure/codex/prompt_builder.py`、相关 application/codex tests 和 Codex 文档。
+- 需要实现：C04/C06 evidence metadata 拆分 `matching_label_caption_candidates` 与 `matching_label_ocr_candidates`；只有当前 component 的 matched label OCR 有正文/结构化字段或图像证据时才允许 `evidence_can_verify_label_content=true`；C04 label-not-found 且 caption 存在但无 matched OCR 时即使 Codex confirm 也降级为 `manual_review_required`，记录 `CODEX_CONFIRMED_LABEL_MISSING_BUT_CAPTION_EXISTS`；prompt 明确 caption 存在不应确认标签样张缺失。
+- 不允许做：不调用真实 Codex CLI；不调用 GPT/OpenAI API；不修改旧项目目录；不修改 C05/C06/C09 业务规则；不让前端重新计算规则。
+- 测试要求：运行 application targeted tests、Codex prompt tests、API tests、后端全量、前端 build 和 `git diff --check`。
+- 验收标准：Done when sample-row-3 / sample-row-14 caption-only fixture 不再被标记为可验证标签内容，无关 OCR 不会被当作 matched OCR，Codex confirm 的 C04 label-not-found + matching caption 不会得到 `final_status=confirmed`。
+- 真实 targeted validation：用户已运行 C04/C05/C06/C09 targeted validation，结果 `task status=completed`、`targeted_reviews_count=39`、`codex_by_status={"succeeded": 39}`、`unexpected_summary_reviews_count=0`、`confirmed_findings_count=0`、`confirmed_errors_count=0`、`confirmed_c04_label_not_found_count=0`；本轮不是 full audit。
+- 完成状态：[x]
+
+### T-CODEX-MANDATORY-05A：Full mandatory audit 真实验收记录
+- 目标：记录真实样本在未设置 `CODEX_AUDIT_INCLUDED_CHECK_IDS` 时的 full mandatory Codex audit 验收结果。
+- 背景：T-CODEX-MANDATORY-01 至 04 已完成 mandatory audit 运行架构、finalization、targeted filtering、C04 caption/matched OCR 语义修复；需要确认 full audit 口径下所有 required candidate 都完成 Codex finalization。
+- 涉及文件：`docs/current-status.md`、`docs/tasks.md`、`docs/codex-audit-local-e2e.md`、必要时更新 `docs/codex-cli-auditor-strategy.md`。
+- 需要记录：真实样本、结果文件、未设置 include filters、`audit_scope=full`、`full_audit=true`、Codex review status/verdict 分布、candidate/finalization 计数、按 check_id 的 final status，以及旧 `summary.error_count` / `fail_count` 是 candidate 层统计。
+- 不允许做：不修改 backend 业务代码；不修改 frontend；不调用真实 Codex；不修改旧项目目录；不继续证据增强或规则细化。
+- 验收结果：用户已运行 full mandatory audit，结果 `task status=completed`、`audit_scope=full`、`full_audit=true`、`codex_reviews_count=57`、`codex_by_status={"succeeded":57}`、`codex_runtime_failure_count=0`、`null_final_status_count=0`、`unreviewed_required_findings_count=0`、`out_of_scope_findings_count=0`、`confirmed_errors_count=0`；仍有 `manual_review_required_count=34`。
+- 完成状态：[x]
+
+### T-CODEX-MANDATORY-05B：Final audit summary / UI 语义收口
+- 目标：让后端 summary、前端标题区域和 local E2E 脚本优先展示 Codex final audit 语义，避免把旧 deterministic candidate 计数误读为最终错误。
+- 背景：T-CODEX-MANDATORY-05A 的 full mandatory Codex audit 已真实跑通；当时 `confirmed_errors_count=0`、`manual_review_required_count=34`，但旧 `summary.error_count=44`、`fail_count=5` 容易被误读为最终失败。后续 T-CODEX-EVIDENCE-03B 已记录更新后的 full audit 结果。
+- 涉及文件：`backend/app/domain/result.py`、`backend/app/application/codex_audit_finalization.py`、`backend/app/application/task_service.py`、报告/PTR 结果页类型和组件、`scripts/run-codex-audit-local-e2e.sh`、相关测试和文档。
+- 需要实现：summary 增加 `audit_scope`、`full_audit`、`final_audit_status`；`final_audit_status` 支持 `passed`、`needs_manual_review`、`failed`、`audit_failed`；前端标题优先显示 Codex 审核完成/未完成，metric 使用确认错误、人工复核、已反驳候选、候选错误；local E2E 脚本打印 final audit counts 并把旧 `fail_count/error_count/warn_count` 标为 legacy deterministic counts。
+- 不允许做：不删除旧字段；不调用真实 Codex；不修改旧项目目录；不继续 evidence enhancement 或规则细化；不让前端重新计算规则。
+- 测试要求：运行 report/PTR usecase、API、后端全量、前端 build、脚本语法和 `git diff --check`。
+- 验收标准：Done when 本轮 full audit 的 summary 可表达 `final_audit_status=needs_manual_review`，前端不会把 deterministic `fail_count=5` 显示为最终失败，脚本能输出 final audit counts。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-01：Manual review evidence enhancement
+- 目标：增强 C04 标签样张 OCR 证据和 C07 full audit evidence，减少 full mandatory audit 中可由证据补齐解决的 `manual_review_required`。
+- 背景：T-CODEX-MANDATORY-05A full audit 中仍有 34 条人工复核项，其中 C04=29，C07=5。人工核对确认 C04 多数不是 confirmed error，而是缺 matched label crop/OCR/structured fields；C07 item 142/149 targeted audit 可 refute，但 full audit 证据不完整。
+- 涉及文件：`backend/app/application/report_codex_evidence_builder.py`、`backend/app/application/codex_audit_finalization.py`、`backend/app/infrastructure/codex/prompt_builder.py`、相关 application/codex tests 和状态文档。
+- 需要实现：C04 target 包含 sample row、label caption、label crop/page ref、matched OCR text、structured fields 和 label field comparison；无 crop/OCR/structured fields 时标记证据不足并要求 Codex uncertain；unused C04/C05/C06 component 即使被 confirm 也 finalization 为 refuted；C07 target 包含首页符号说明、完整 InspectionItemGroup rows、actual conclusion candidates/provenance、group pages full text，并标记 complex matrix table 不按普通 C07 confirm。
+- 不允许做：不修改旧项目目录；不调用真实 Codex CLI；不调用 GPT/OpenAI API；不改 UI；不把 C04/C07 重写为纯正则规则。
+- 测试要求：运行 report evidence builder/report usecase、C07 rule、API、后端全量、前端 build 和 `git diff --check`。
+- 验收标准：Done when C04 matched label evidence 和 C07 full group/page evidence 能进入 Codex evidence package，unused component 不进入 manual_review_required，complex matrix C07 confirm 被防御性降级为 manual review。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-02：C07 result token recovery 与 compact evidence 修复
+- 目标：修复 C07 item 94 暴露出的 result token 抽取/归组不完整问题，并压缩 C07 evidence package，避免把 page_text 中已有“符合要求”的 target 继续作为普通 all-placeholder ERROR。
+- 背景：T-CODEX-EVIDENCE-01 后 full audit 在 C07 item 94 batch 遇到 runtime failure，但 workspace 显示 item 94 的 `effective_test_results=["——","——"]` 与 page_text 中 12.4.2/12.4.4 的“符合要求”冲突；历史 targeted validation 已证明 item 94 应被 Codex refute。
+- 涉及文件：`backend/app/domain/inspection_group.py`、`backend/app/infrastructure/report/inspection_item_group_builder.py`、`backend/app/infrastructure/report/inspection_table_extractor.py`、`backend/app/rules/report/c07_item_conclusion.py`、`backend/app/application/report_codex_evidence_builder.py`、`backend/app/infrastructure/codex/prompt_builder.py`、相关测试和文档。
+- 需要实现：InspectionItemGroup 记录 original/recovered effective results、recovered token provenance 和 diagnostics；C07 使用 recovered results 重新推导 expected，无法稳定恢复时输出 WARN `CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN`；C07 evidence 改为 compact rows、recovery metadata 和 item 附近 page_text excerpt。
+- 不允许做：不处理 Codex usage limit；不新增 `CODEX_USAGE_LIMIT_EXCEEDED`；不调用真实 Codex CLI；不调用 GPT/OpenAI API；不修改旧项目目录；不改 C04/C05/C06；不改 UI。
+- 测试要求：运行 inspection group builder、C07 rule、report evidence builder/report usecase、API、后端全量、前端 build 和 `git diff --check`。
+- 验收标准：Done when item 94/33/41/149 fixtures 不再生成普通 all-placeholder C07 ERROR，uncertain recovery 输出 WARN，C07 evidence package 不再携带整页 page_text/source_rows/complete_rows 重复结构。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-03：C07 extraction-uncertain finalization 与 complex matrix 语义修复
+- 目标：修复 C07 targeted validation 暴露的 finalization 语义问题：extraction uncertainty 被 Codex confirm 不应计为 confirmed finding；item 59 复杂矩阵表不应按普通 C07 confirmed error。
+- 背景：用户运行 C07 targeted validation task `4380cdc8-ea82-4413-92ce-ba3370ec3f0e`，结果中 10 条 `CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN` WARN 被 confirm 后误计为 confirmed；item 59 的 `CONCLUSION_MISMATCH_002` 被 confirm 为唯一 confirmed error，但历史 targeted validation 显示 item 59 属于多页复杂矩阵表/列映射歧义。
+- 涉及文件：`backend/app/application/codex_audit_finalization.py`、`backend/app/rules/report/c07_item_conclusion.py`、`backend/app/application/report_codex_evidence_builder.py`、相关 tests 和文档。
+- 需要实现：`CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN` 在 Codex confirm/uncertain 时 final_status 进入 `manual_review_required`，保留 `codex_verdict` 审计痕迹并设置 `review_type=extraction_uncertainty`；C07 复杂漏电流/矩阵表输出 WARN `CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX` 或被 target metadata 标记为 `complex_matrix_table=true`；普通 C07 business mismatch 仍可被 confirm 为 confirmed error。
+- 不允许做：不调用真实 Codex CLI；不调用 GPT/OpenAI API；不修改旧项目目录；不改 C04/C05/C06/UI；不处理 usage limit。
+- 测试要求：运行 C07 rule、report evidence builder/report usecase、API、后端全量、前端 build 和 `git diff --check`。
+- 验收标准：Done when extraction uncertainty confirm 不计入 confirmed counts，item 59 complex matrix 不进入 confirmed error，simple C07 mismatch confirm 仍能进入 confirmed error。
+- 真实 targeted validation：用户已运行结果文件 `runtime/codex_audit_local_e2e/004f23d9-bd93-4773-91c4-d1c72acf6208.result.json`，`CODEX_AUDIT_INCLUDED_CHECK_IDS=C07`，`final_audit_status=needs_manual_review`，`confirmed_findings_count=0`，`confirmed_errors_count=0`，`manual_review_required_count=12`，验证 extraction uncertainty 不再被归为 confirmed finding。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-03B：Full audit 真实验收记录
+- 目标：记录 T-CODEX-EVIDENCE-03 后 full mandatory Codex audit 的真实验收结果，确认 finalization 语义在 full audit 口径下成立。
+- 背景：T-CODEX-EVIDENCE-03 的 C07 targeted validation 已通过；需要确认未设置 `CODEX_AUDIT_INCLUDED_CHECK_IDS` 的 full audit 不再产生 confirmed final error。
+- 结果文件：`runtime/codex_audit_local_e2e/53bbeec9-998b-4868-9627-00d9cc3b7ab0.result.json`。
+- 验收结果：`task status=completed`、`audit_scope=full`、`full_audit=true`、`final_audit_status=needs_manual_review`、`candidate_findings_count=51`、`candidate_errors_count=33`、`confirmed_findings_count=0`、`confirmed_errors_count=0`、`refuted_findings_count=11`、`manual_review_required_count=40`、`out_of_scope_findings_count=0`、`unreviewed_required_findings_count=0`、`codex_reviews_count=57`、`codex_runtime_failure_count=0`。
+- 结论：full mandatory Codex audit 运行通过，当前没有 confirmed final error；剩余 40 条为待复核项，其中 C04 标签字段证据不足 28 条、C07 检验项目结构化抽取不确定 12 条；C05/C06/C09 当前候选均已被 Codex refute。
+- 下一步：做 evidence enhancement，而不是继续改 finalization。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-04：C04 label image crop / matched OCR evidence 增强
+- 目标：增强 C04 Codex evidence，明确区分 label caption、label page image/crop、matched OCR text、structured fields 和是否足以验证当前 component 的标签字段内容。
+- 背景：T-CODEX-EVIDENCE-03B full audit 后剩余 C04 `manual_review_required=28`；这些项不是 confirmed error，而是缺 matched label crop/OCR/structured fields，Codex 无法核验标签本体字段。
+- 涉及文件：`backend/app/application/report_codex_evidence_builder.py`、`backend/app/application/codex_audit_finalization.py`、`backend/app/infrastructure/codex/prompt_builder.py`、相关 application/codex tests 和状态文档。
+- 需要实现：C04 evidence 输出 `label_caption_candidate`、`matched_label_caption`、`label_page_number`、`label_image_ref`、`label_crop_ref`、`matched_label_text`、`matched_label_fields`、`matched_label_field_confidence`、`matched_label_ocr_source`、`unmatched_label_ocr_candidates` 和 verification flags；caption matching 覆盖真实样本部件名；只有 matched OCR/text/structured fields 足以验证当前 component 时才设置 `evidence_can_verify_label_content=true`；prompt 要求无 matched OCR/crop/structured fields 时 `uncertain`。
+- 不允许做：不调用真实 Codex CLI；不调用 GPT/OpenAI API；不修改旧项目目录；不修改 C07；不修改 C05/C06 规则算法；不修改 router/frontend/UI；不提交 runtime crop 文件。
+- 测试要求：运行 report evidence builder/report usecase、PromptBuilder、API、后端全量、前端 build 和 `git diff --check`。
+- 验收标准：Done when caption-only、caption+bbox no OCR、matched OCR fields match/missing/unrelated OCR、unverifiable confirm defensive finalization 和 prompt guidance 均有测试覆盖；本任务不要求真实 Codex validation。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-04B：C04 matched label OCR 语义、verification 判定和 caption selector 修正
+- 目标：修正 T-CODEX-EVIDENCE-04 后 C04 targeted validation 暴露的 metadata 假阳性，避免把照片页/page text 当成 matched label OCR，并修复 30m 触摸屏连接线缆 caption 误匹配。
+- 背景：用户运行 C04 targeted validation task `8949ca23-07b6-4f7c-b39c-b428d83daa17`，结果 `completed`、`codex_reviews_count=35`、`confirmed_errors_count=0`、`refuted_findings_count=7`、`manual_review_required_count=28`。extract 显示 `has_matched_label_ocr_count=28`、`can_verify_label_content_count=28`，但 matched text 多为“检验报告照片页 / 照片和说明 / №5... / №6...”这类照片页文本，不是标签本体 OCR。
+- 涉及文件：`backend/app/application/report_codex_evidence_builder.py`、`backend/app/infrastructure/codex/prompt_builder.py`、相关 application/codex tests 和 Codex 文档。
+- 需要实现：拆分 `matched_label_page_text`、`matched_label_caption_text`、`matched_label_ocr_text`、`matched_label_fields`；`pdf_text_label_page` 等来源不得触发 `evidence_has_matched_label_ocr=true`；`evidence_can_verify_label_content=true` 只在真正标签本体 OCR 或 structured fields 可用时成立；caption selector 对完整 subject、型号、`30m`、`可选`、`连接线缆` 等特异 token 加权，分差不足时标记 `LABEL_CAPTION_MATCH_AMBIGUOUS`。
+- 不允许做：不调用真实 Codex CLI；不调用 GPT/OpenAI API；不修改旧项目目录；不改 C07/C05/C06/UI；不接入新 OCR 服务。
+- 测试要求：运行 report evidence builder/report usecase、PromptBuilder、API、后端全量、前端 build 和 `git diff --check`。
+- 验收标准：Done when page text only 不再被视为 matched label OCR，真实 label OCR/fields 仍可验证，sample-row-14 选择 `№22 触摸屏连接线缆（30m）（可选） 中文标签样张`，ambiguous selector 不设置 matched caption，finalization 防御保持不变。
+- 真实验收：用户已运行 C04 targeted validation task `4ec18d39-7dab-4478-b6c0-d6bc464fd2e7`，结果文件为 `runtime/codex_audit_local_e2e/4ec18d39-7dab-4478-b6c0-d6bc464fd2e7.result.json`；本轮 `audit_scope=targeted`、`final_audit_status=needs_manual_review`、`codex_reviews_count=35`、`confirmed_errors_count=0`、`refuted_findings_count=7`、`manual_review_required_count=28`、`out_of_scope_findings_count=16`、`unreviewed_required_findings_count=0`、`codex_runtime_failure_count=0`。C04 extract 显示 `has_matching_label_caption_count=35`、`has_matched_label_image_count=31`、`has_matched_label_crop_count=0`、`has_matched_label_ocr_count=0`、`has_matched_structured_fields_count=0`、`can_verify_label_content_count=0`；`evidence_has_matched_label_ocr_count` 与 `evidence_can_verify_label_content_count` 均从旧的 `28` 降为 `0`，sample-row-14 正确匹配 `№22` 30m 线缆标签样张，不再误匹配 `№8` 触摸屏。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-05：C04 label crop / OCR / VLM evidence
+- 目标：为 C04 剩余 `manual_review_required` 提供真实 label crop、matched OCR、structured fields 或 VLM evidence，使标签字段缺失候选能进一步收敛到 `refute`、`confirm` 或更明确的人工复核原因。
+- 背景：T-CODEX-EVIDENCE-04B 已证明 caption/page text 不再被误当成 matched OCR；当前 28 条 C04 `manual_review_required` 主要因为 `has_matched_label_crop_count=0`、`has_matched_label_ocr_count=0`、`has_matched_structured_fields_count=0`。
+- 需要实现：定位中文标签样张区域，生成可审计 crop/page image reference，接入或复用 OCR/VLM evidence，输出稳定的 matched label text、structured fields、field provenance 和 confidence。
+- 已实现：matched label caption 可根据上传后 source PDF 渲染 workspace 内 `items/*.png`；`EvidencePackageWriter` 写入 PNG 但不把 source PDF 绝对路径落入 `evidence_package.json`；`CodexAuditService` 将 image paths 传给 runner；`CodexCliRunner` 用 `codex exec --image items/...png` 提供图片输入；output schema 支持 `observed_label_fields`、`field_comparisons`、`visual_evidence_quality`；finalization 会保留视觉 metadata，并将 unreadable/wrong crop 的 confirm 防御性降级为 `manual_review_required`。
+- 展示/导出后续问题：`c04_extract` 中 `component_name` / `sample_description_row` 仍不稳定；后续应补标准 metadata，例如 `component_id`、`component_name`、`sample_field_key`、`sample_field_value`。
+- 测试要求：运行 report evidence builder/report usecase、Codex CLI runner/output parser/prompt builder、API、后端全量、前端 build 和 `git diff --check`。
+- 验收说明：代码链路和 fake/monkeypatch 测试已完成；用户随后运行真实 C04 targeted visual validation `c1f421db-4757-4041-8b19-c88b8835a941`，`final_audit_status=passed`，35 条 C04 candidate 全部 refuted，confirmed/manual review/runtime failure 均为 0。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-05A：C04 visual review 输出 JSON Schema strict mode 修复
+- 目标：修复 C04 visual audit 触发的 OpenAI/Codex structured output `invalid_json_schema`，让视觉 metadata schema 满足 strict required-property 约束。
+- 背景：用户运行 C04 visual audit 任务 `7b20f4a4-e99e-42c3-9151-3d00b16c259c`，stderr 显示 `Invalid schema for response_format 'codex_output_schema'`，原因是 `observed_label_fields.properties` 包含 `batch_or_serial`，但 `required` 未覆盖全部 properties key。
+- 涉及文件：`backend/app/infrastructure/codex/schemas/codex_review_output.schema.json`、`backend/app/infrastructure/codex/output_parser.py` 相关测试、`docs/current-status.md`、`docs/codex-audit-local-e2e.md`。
+- 需要实现：所有带 `properties` 的 object 都满足 strict schema 要求，`metadata.required` 覆盖 `observed_label_fields`、`field_comparisons`、`visual_evidence_quality`；`observed_label_fields.required` 覆盖 `component_name`、`model`、`serial_number`、`batch_or_serial`、`production_date`、`expiration_date`；optional 值用 null union 表达。
+- 不允许做：不处理 C04/C07 业务规则；不处理 usage limit；不调用真实 Codex CLI；不调用 GPT/OpenAI API；不修改旧项目目录。
+- 测试要求：运行 Codex schema/parser/prompt tests、report usecase、API、后端全量、前端 build 和 `git diff --check`。
+- 验收说明：Done when strict schema contract 测试通过，C04 visual review valid output 可被 schema/parser 接受；`7b20f4a4` 记录为 schema 合法性失败，不作为报告业务错误。
+- 后续真实尝试记录：用户在 05A 后运行 C04 targeted visual audit，extract package 为 `runtime/codex_audit_local_e2e/extract_runs/20260626-225213-C04.tar.gz`；本轮未 completed，failed workspace 为 `backend/runtime/codex_audit/0ece4dd1-c2db-48b1-8cfa-efd21ea01a80/codex-report-0ece4dd1-c2db-48b1-8cfa-efd21ea01a80-C04-batch-6/input`，stderr 显示 Codex usage limit，非 `invalid_json_schema`，因此不能判断 C04 manual review 是否下降。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-05B：EVIDENCE-05 后 full mandatory audit 真实验收记录
+- 目标：记录 C04 visual label audit 在 full mandatory audit 口径下的真实验收结果，确认 full audit 不再因 C04 标签证据不足停留在人工复核。
+- 背景：T-CODEX-EVIDENCE-05 已通过 C04 targeted visual validation；需要确认未设置 `CODEX_AUDIT_INCLUDED_CHECK_IDS` 的 full audit 中，C04 视觉证据链同样生效，且 finalization 语义保持稳定。
+- 涉及文件：`docs/current-status.md`、`docs/tasks.md`、`docs/codex-audit-local-e2e.md`、必要时更新 `docs/codex-cli-auditor-strategy.md`。
+- 不允许做：不修改 backend 业务代码；不修改 frontend；不调用真实 Codex；不修改旧项目目录；不继续 C04 或 finalization 改动。
+- 验收结果：用户已运行 full mandatory audit，结果文件为 `runtime/codex_audit_local_e2e/1958c184-567f-4c56-aaac-4a8c45913d1c.result.json`；本轮未设置 `CODEX_AUDIT_INCLUDED_CHECK_IDS`，`audit_scope=full`、`full_audit=true`、`included_check_ids=[]`、`final_audit_status=needs_manual_review`、`unique_findings_count=51`、`codex_reviews_count=57`、`confirmed_findings_count=0`、`confirmed_errors_count=0`、`refuted_findings_count=39`、`manual_review_required_count=12`、`out_of_scope_findings_count=0`、`codex_runtime_failure_count=0`、`unreviewed_required_findings_count=0`。
+- 结论：full mandatory Codex audit 运行通过；C04 35 条 candidate、C05 2 条、C06 1 条、C09 1 条均已 refuted；当前没有 confirmed final error，唯一剩余为 C07 12 条 `manual_review_required`。下一步应进入 C07 table visual evidence / row crop review，不应继续改 C04 或 finalization。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-06A：C07 table visual geometry provenance
+- 目标：为 C07 table visual evidence 准备底层几何信息，只完成 table/cell/row/field bbox provenance。
+- 背景：T-CODEX-EVIDENCE-05 后 full audit 已证明 C04/C05/C06/C09 均可被 refute，唯一剩余为 C07 12 条 `manual_review_required`，下一阶段需要让 Codex CLI 能看到检验项目表图像；06A 先打通几何来源，不生成图片。
+- 涉及文件：`backend/app/infrastructure/pdf/pymupdf_parser.py`、`backend/app/infrastructure/report/inspection_table_extractor.py`、对应 infrastructure tests 和状态文档。
+- 需要实现：PyMuPDF table 的 `cells` 坐标保存到 `PdfTable.metadata["cell_bboxes"]`；inspection item metadata 在存在 `cell_bboxes` 时写入 `visual_geometry.table_bbox`、`row_bbox` 和 `field_bboxes`，至少覆盖 `test_result`、`conclusion`、`remark`。
+- 不允许做：不生成 C07 image evidence；不接入 `CodexAuditService`；不修改 prompt/schema/finalization；不运行真实 Codex CLI；不调用 GPT/OpenAI API；不修改旧项目目录；不修改 frontend/router；不改变 C07/C08/C10 规则输出。
+- 测试要求：运行 PyMuPDF parser 目标测试、inspection table extractor 目标测试、两组 infrastructure tests、后端全量和 `git diff --check`。
+- 验收标准：Done when 有 cell bbox 时 `PdfTable` 保留二维 bbox，有 cell bbox 的 `InspectionItem` 带 `visual_geometry`，无 bbox 时抽取行为保持不变。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-06B：C07VisualEvidenceBuilder 与 C07 图像证据生成
+- 目标：基于 06A 的 `visual_geometry` 生成 C07 page/table/item group/result/conclusion/remark 图片 evidence，并交给现有 writer materialization 链路。
+- 背景：06A 只准备几何 provenance；后续需要把这些 bbox 转成受控 workspace 内的 image refs，供 Codex CLI image input 视觉审核。
+- 涉及文件：`backend/app/application/c07_visual_evidence.py`、`backend/app/application/report_codex_evidence_builder.py`、`backend/tests/application/test_report_codex_evidence_builder.py`、状态文档。
+- 需要实现：新增 `C07VisualEvidenceBuilder`，从 `InspectionItemGroup.rows[].metadata.visual_geometry` 生成 page/table/item group/result/conclusion/remark 的 `EvidenceItem(source_type=IMAGE)`；C07 target metadata 写入 `c07_visual_evidence`、`evidence_has_c07_visual_input`、`visual_review_mode` 和 missing bbox reasons；无 bbox 时降级为 page-only image evidence；无 `source_pdf_path` 时不生成 image items 且记录 `source_pdf_path_missing`；item 59 或复杂矩阵标记使用 `complex_matrix_table` 视觉模式。
+- 不允许做：不修改 prompt/schema/finalization；不改变 finalization 语义；不把 visual uncertainty 当 confirmed error；不调用真实 Codex CLI 自动测试；不调用 GPT/OpenAI API；不修改旧项目目录；不修改 frontend/router。
+- 测试要求：运行 C07 visual target tests、report evidence builder tests、report check usecase、evidence package writer、Codex audit service tests、后端全量和 `git diff --check`。
+- 验收标准：Done when C07 target 带 workspace-local image refs，image items 带 `codex_image_input=true` 与 `render_page_number/render_bbox` metadata，无 bbox 时仍可 page-only fallback，无 PDF 时只记录缺失原因，complex matrix 不被当作普通 row-only target，且不改变 C07 deterministic/finalization 语义。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-06C：C07 visual prompt guidance / fake validation
+- 目标：让 06B 生成的 C07 image evidence 能 materialize 为 workspace-local PNG，确认 `CodexAuditService` 能收集 C07 PNG paths，确认 `CodexCliRunner` 会通过 `--image` handoff，并让 PromptBuilder 明确指导 Codex 使用 C07 page/table/row/column 图片 evidence 复核检验结果、单项结论、备注和续页行。
+- 背景：06B 已生成 C07 image evidence items 和 target metadata；本阶段补齐 writer/service/runner/prompt 的基础设施测试，之后再做真实 C07 targeted validation。
+- 涉及文件：`backend/app/infrastructure/audit/evidence_package_writer.py`、`backend/app/application/codex_audit_service.py`、`backend/app/infrastructure/codex/codex_cli_runner.py`、`backend/app/infrastructure/codex/prompt_builder.py`、相关 tests 和状态文档。
+- 需要实现：C07 page/crop image item materialization；manifest relative image paths；缺 source PDF / invalid bbox diagnostics；service 将 C07 PNG 传给 runner；runner 多 `--image` 参数与缺失/越界图片拒绝；C07 visual prompt instructions；C04 prompt 不包含 C07 visual instructions。
+- 不允许做：不改变 C07 finalization 语义；不运行真实 Codex CLI 自动测试；不运行 local E2E；不调用 GPT/OpenAI API；不修改 output schema；不修改旧项目目录；不修改 frontend/router；不修改 C04。
+- 测试要求：运行 evidence writer、Codex audit service、Codex CLI runner、PromptBuilder、report evidence builder、report check usecase、后端全量和 `git diff --check`。
+- 验收标准：Done when C07 image evidence 可写入 workspace-local PNG，service/runner/fake tests 证明 image paths 到达 runner 和 `codex exec --image` command，prompt 包含 C07 visual review instructions，且不改变 finalization。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-06D：C07 targeted visual audit 真实验收
+- 目标：在真实样本上只跑 C07 targeted visual audit，验证 06A/06B/06C 的 C07 图像证据是否能降低 C07 `manual_review_required`。
+- 背景：06C 已完成 C07 image evidence materialization、image-path handoff 和 prompt guidance；下一步需要用户显式运行真实 Codex CLI targeted validation。
+- 建议命令口径：设置 `CODEX_AUDIT_INCLUDED_CHECK_IDS=C07`，不要先跑 full audit。
+- 关注指标：C07 `manual_review_required` 是否从 12 下降，C07 `refute` 是否增加，`confirmed_errors_count` 是否仍为 0，`codex_runtime_failure_count` 是否为 0，image paths 是否进入 Codex run workspace。
+- 重点 item：27、33、41、72、94、121、131、142、149、151，以及 item 3 / item 59 的特殊结构。
+- 不允许做：不修改业务代码；不修改 finalization；不修改旧项目目录；不把 runtime 生成图片提交 git。
+- 验收结果：用户已运行 C07 targeted visual audit，结果文件为 `runtime/codex_audit_local_e2e/2e7bbb93-3e7b-4477-8a5f-b1b25487fef0.result.json`，导出包为 `runtime/codex_audit_local_e2e/c07_visual_runs/20260628-122940.tar.gz`；本轮 `audit_scope=targeted`、`included_check_ids=["C07"]`、`final_audit_status=needs_manual_review`、`c07_findings_count=12`、`c07_reviews_count=12`、`confirmed_findings_count=0`、`confirmed_errors_count=0`、`refuted_findings_count=11`、`manual_review_required_count=1`、`codex_runtime_failure_count=0`、`unreviewed_required_findings_count=0`。
+- 结论：C07 visual evidence 链路真实生效，item 3、27、33、41、72、94、121、131、142、149、151 被 Codex visual evidence refute；唯一剩余 manual review 是 item 59 `CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX` / `complex_matrix_table`。真实 `codex exec` 已携带 C07 page/table/item-group/result/conclusion/remark `--image items/...` 输入，06A/06B/06C 的 geometry、PNG materialization 和 image handoff 被 targeted audit 验证。
+- full audit 复验：用户随后运行 full mandatory audit，结果文件为 `runtime/codex_audit_local_e2e/8e23d5bc-64f5-43c1-a0c5-2e02597840f6.result.json`；本轮 `audit_scope=full`、`full_audit=true`、`included_check_ids=[]`、`final_audit_status=needs_manual_review`、`codex_reviews_count=57`、`confirmed_findings_count=0`、`confirmed_errors_count=0`、`refuted_findings_count=50`、`manual_review_required_count=1`、`codex_runtime_failure_count=0`、`unreviewed_required_findings_count=0`。
+- full audit 结论：T-CODEX-EVIDENCE-06 full audit 复验通过；C04/C05/C06/C09 全部 refuted，C07 12 条中 11 条 refuted，当前全量审核仅剩 C07 item 33 `CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN` 待人工复核，没有 confirmed final error。item 33 的视觉表格显示首行检验结果为“——”，其下续行“分类是 IPX0 或 IP0X 的 ME 设备不需要标记。”对应检验结果列可见“符合要求”；结构化结果仅保留“——”确有遗漏，需人工/视觉复核后判断，且单项结论“符合”与可见非空合格结果一致。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-06E：item 33 residual manual review closeout
+- 目标：收口 full mandatory audit 中唯一剩余的 C07 item 33 `CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN` manual review，提升视觉证据 refute 稳定性。
+- 背景：T-CODEX-EVIDENCE-06 full audit 复验 `8e23d5bc-64f5-43c1-a0c5-2e02597840f6` 已证明当前没有 confirmed final error，51 条 candidate 中 50 条已 refuted；唯一剩余 item 33 是结构化抽取遗漏“符合要求”导致的 extraction-uncertain。
+- 建议工作：比较 C07 targeted audit 与 full audit 中 item 33 的 evidence、prompt、image refs、row crop / continuation crop 和视觉裁决差异，确认是否缺少续行 crop、结果列 crop 或符号说明上下文。
+- 不允许做：不改变 mandatory 原则；不把 extraction-uncertain 强行降级为通过；不调用 GPT/OpenAI API；真实 Codex 运行需用户显式触发；不修改旧项目目录。
+- 诊断结果：新增 `scripts/compare-codex-c07-item-evidence.py` 后对比 targeted `2e7bbb93-3e7b-4477-8a5f-b1b25487fef0` 与 full `8e23d5bc-64f5-43c1-a0c5-2e02597840f6`，item 33 的 `allowed_evidence_refs`、`c07_visual_evidence`、materialized image files 和 visual review mode 归一化后一致；旧 prompt 缺少 extraction-uncertain refute 条件，verdict 漂移为 targeted `refute`、full `confirm`。
+- 修复结果：C07 visual item group crop 可从续行字段 bbox fallback 取 union，不再只覆盖首行；C07 visual prompt 明确 `CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN` 在视觉证据足以判断结论合理时应 `refute`，不能仅因结构化抽取遗漏存在就 `confirm/manual`，同一 group 续行“符合要求”应作为有效检验结果。
+- 真实 targeted validation：用户已运行 C07 targeted validation，结果文件为 `runtime/codex_audit_local_e2e/a39b2841-e44d-4efd-a004-ae3147a2c1d6.result.json`，摘要文件为 `runtime/codex_audit_local_e2e/c07_06e_runs/20260628-182451/paste_to_chatgpt.md`；本轮 `audit_scope=targeted`、`included_check_ids=["C07"]`、`final_audit_status=passed`、`c07_findings_count=12`、`c07_reviews_count=12`、`confirmed_findings_count=0`、`confirmed_errors_count=0`、`manual_review_required_count=0`、`refuted_findings_count=12`、`codex_runtime_failure_count=0`、`unreviewed_required_findings_count=0`。
+- 真实验收结论：T-CODEX-EVIDENCE-06E targeted validation 验收通过，item 33 residual manual review 已收口，C07 12 条 candidate 全部被 Codex visual evidence refute；当前 C07 targeted audit 无 confirmed error、无 manual review、无 runtime failure。当时下一步是执行 full mandatory audit 复验，目标为 `confirmed_errors_count=0`、`manual_review_required_count=0`、`refuted_findings_count=51`、`final_audit_status=passed`；实际 full audit 复验结果见下一条。
+- full audit 复验：用户随后运行 full mandatory audit，结果文件为 `runtime/codex_audit_local_e2e/bf36101c-71a4-4f69-9df9-907ced1000cb.result.json`；本轮 `audit_scope=full`、`full_audit=true`、`final_audit_status=needs_manual_review`、`codex_reviews_count=57`、`candidate_findings_count=51`、`confirmed_findings_count=0`、`confirmed_errors_count=0`、`refuted_findings_count=50`、`manual_review_required_count=1`、`codex_runtime_failure_count=0`、`unreviewed_required_findings_count=0`。
+- full audit 结论：当前没有 confirmed final error；C04/C05/C06/C09 已全部 refuted；C07 普通视觉复核项已基本收口；唯一剩余为 C07 item 59 `CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX` / `warn`，Codex verdict 为 `uncertain`、confidence 为 `medium`。视觉证据显示 item 59 为 8.7 漏电流多页复杂矩阵，页内可见多项数值/占位结果且单项结论列为“符合”，但跨页续表与矩阵列映射仍需专门判读；`rule_context` 也标记 `complex_matrix_table=true`，因此不按普通 C07 直接裁决。保留 `manual_review_required` 符合安全口径，不应通过修改 finalization 强行让 item 59 passed。
+- 验收标准：Done when 诊断 helper 可复用、row/field crop union 与 prompt 语义测试通过，且真实 C07 targeted validation 中 12 条 C07 candidate 全部 refuted、无 confirmed error、无 manual review、无 runtime failure。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-07：item 59 complex matrix specialized review
+- 目标：为 C07 item 59 的 8.7 漏电流多页复杂矩阵表建立 specialized matrix review，复核矩阵列映射和跨页续表结构。
+- 背景：T-CODEX-EVIDENCE-06E 后 full mandatory audit `bf36101c-71a4-4f69-9df9-907ced1000cb` 已没有 confirmed final error，51 条 candidate 中 50 条 refuted；唯一剩余为 C07 item 59 `CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX`，Codex 视觉审核返回 `uncertain/medium`，说明普通 C07 row-level 逻辑不适合该复杂矩阵。
+- 规划文档：`docs/superpowers/plans/2026-06-28-t-codex-evidence-07-c07-complex-matrix-specialized-review.md`。
+- 本轮规划结果：已设计 complex matrix specialized review 的 evidence contract、structured evidence、prompt contract、自动化测试计划和真实验收计划；本轮只规划，不实现代码、不修改 finalization、不运行真实 Codex。
+- 07A 实现结果：已新增 `C07ComplexMatrixEvidenceBuilder`，并接入 `ReportCodexEvidenceBuilder`。C07 item 59 complex matrix target 现在会额外携带 `c07_complex_matrix_evidence`，包括 matrix page/table/header/body/result/conclusion/continuation image refs、`structured_matrix_hints` 和 fallback reasons；普通 C07 不携带该 metadata。本阶段只生成 EvidenceItem refs，不 materialize 图片，不改 prompt/schema/finalization，不运行真实 Codex。
+- 07B 实现结果：已补 complex matrix image materialization / service collection / runner handoff / prompt contract。Matrix image items 可 materialize 为 workspace-local PNG，`CodexAuditService` 会把 matrix PNG paths 传给 runner，`CodexCliRunner` 以 `--image items/...` 传递多图，PromptBuilder 仅对 complex matrix target 增加 matrix-first 审核说明。本阶段不改 output schema/finalization，不运行真实 Codex。
+- 07C targeted validation：用户已运行 item 59 complex matrix targeted validation，结果文件为 `runtime/codex_audit_local_e2e/4b15adbb-6e4e-4a66-99e7-9170843b3646.result.json`；本轮设置 `CODEX_AUDIT_INCLUDED_CHECK_IDS=C07` 与 `CODEX_AUDIT_INCLUDED_FINDING_CODES=CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX`，`audit_scope=targeted`、`final_audit_status=passed`、`codex_reviews_count=1`、`confirmed_errors_count=0`、`manual_review_required_count=0`、`refuted_findings_count=1`、`codex_runtime_failure_count=0`。item 59 `CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX` 被 Codex `refute/high`，final status 为 `refuted`。
+- full mandatory audit 最终复验：用户随后运行 full mandatory audit，结果文件为 `runtime/codex_audit_local_e2e/8e84b3e7-e079-4e6f-ac7f-b99348f18ffa.result.json`；本轮未设置 include/exclude filters，`audit_scope=full`、`full_audit=true`、`final_audit_status=passed`、`codex_reviews_count=57`、`candidate_findings_count=51`、`confirmed_findings_count=0`、`confirmed_errors_count=0`、`refuted_findings_count=51`、`manual_review_required_count=0`、`out_of_scope_findings_count=0`、`unreviewed_required_findings_count=0`、`codex_runtime_failure_count=0`。
+- full audit 结论：C04 35 条、C05 2 条、C06 1 条、C07 12 条、C09 1 条全部 `refuted`；真实样本 `QW2025-2795 Draft.pdf` 当前无 confirmed final error、无 manual review，报告自检主线达到 `final_audit_status=passed`。
+- 建议工作：生成完整矩阵表图像 evidence，保留跨页续表、列标题、行标题、单位/限值/测量值/占位符、单项结论和页内上下文；构建专门 prompt 要求复核矩阵列映射、结果归属和续表结构；必要时增加 matrix review metadata，不修改普通 C07 finalization。
+- visual evidence 范围：full page images、matrix table crops、row/column header crops、result matrix crops、conclusion column crops、cross-page continuation crops。
+- structured evidence 范围：item group rows、page numbers、table headers、condition columns、measured values、placeholder cells、conclusion candidates。
+- prompt 设计：先识别矩阵表结构，再判断“符合”结论是否由矩阵结果支持；如果列映射或跨页续表仍不清楚，应返回 `uncertain`。
+- 测试计划：synthetic complex matrix fixture、page/table crop evidence fixture、prompt contract tests；自动化测试只使用 fake/spy runner，不调用真实 Codex。
+- 真实验收计划：先 targeted item 59，再 full audit。
+- 不允许做：不通过 finalization 强行 passed；不把 complex matrix 硬编码为 refuted；不修改旧项目目录；不调用 GPT/OpenAI API；真实 Codex 运行需用户显式触发。
+- 验收标准：Done when item 59 有 specialized matrix evidence 和受控审核口径；证据足够时可 refute/confirm，证据不足时继续 `manual_review_required`；不影响 C04/C05/C06/C09 和普通 C07 visual audit。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-07A：complex matrix specialized evidence builder
+- 目标：先为 item 59 complex matrix 建立专门 evidence contract、image EvidenceItem refs 和 structured hints，不改变审核裁决语义。
+- 涉及文件：`backend/app/application/c07_complex_matrix_evidence.py`、`backend/app/application/c07_visual_evidence.py`、`backend/app/application/report_codex_evidence_builder.py`、`backend/tests/application/test_report_codex_evidence_builder.py`。
+- 完成内容：`c07_complex_matrix_evidence` 包含 `has_complex_matrix_input`、`review_mode=complex_matrix_specialized`、`item_no`、`pages`、`matrix_table_image_refs`、`matrix_header_image_refs`、`matrix_body_image_refs`、`result_matrix_image_refs`、`conclusion_column_image_refs`、`continuation_page_image_refs`、`structured_matrix_hints`、`missing_complex_matrix_evidence_reasons`。
+- fallback：无 `source_pdf_path` 时不生成 image items，并记录 `source_pdf_path_missing`；无 bbox 时保留 page input 并记录 `matrix_bbox_missing` / `column_bbox_missing`。
+- 明确未做：未修改 PromptBuilder；未修改 Codex output schema；未修改 finalization；未运行真实 Codex；未修改旧项目目录。
+- 下一步：T-CODEX-EVIDENCE-07B：complex matrix prompt instructions 和 materialization/handoff 测试。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-07B：complex matrix materialization/handoff/prompt contract
+- 目标：验证并补齐 item 59 complex matrix image evidence 从 `EvidenceItem` 到 workspace PNG、runner image paths、Codex CLI `--image` 参数和 prompt instruction 的基础设施。
+- 涉及文件：`backend/app/infrastructure/audit/evidence_package_writer.py`、`backend/app/application/codex_audit_service.py`、`backend/app/infrastructure/codex/codex_cli_runner.py`、`backend/app/infrastructure/codex/prompt_builder.py` 及对应测试。
+- 完成内容：新增 matrix materialization 测试覆盖 page/table/header/body/result/conclusion/continuation PNG；新增 service spy runner 测试确认 matrix PNG paths 进入 runner；新增 CLI runner 测试确认多张 matrix PNG 以 `--image items/...` 相对路径传入；新增 prompt contract，要求先识别矩阵结构再判断单项结论。
+- prompt 口径：视觉证据支持“符合”结论时 refute 原 candidate；视觉证据明确冲突时 confirm；列映射、跨页续表或矩阵结果不清楚时 uncertain；不因 `complex_matrix_table=true` 自动 uncertain，也不按普通 C07 all-placeholder 逻辑直接裁决。
+- 明确未做：未修改 output schema；未修改 finalization；未修改 C07 deterministic rule；未运行真实 Codex；未修改旧项目目录。
+- 下一步：T-CODEX-EVIDENCE-07C：targeted item 59 complex matrix 真实验收。
+- 完成状态：[x]
+
+### T-CODEX-EVIDENCE-07C：targeted item 59 complex matrix 真实验收
+- 目标：使用真实样本对 C07 item 59 complex matrix specialized review 进行 targeted validation。
+- 建议运行范围：优先 targeted C07 / item 59，确认 matrix image paths 已进入 Codex run workspace，关注 `confirmed_errors_count`、`manual_review_required_count`、`refuted_findings_count` 和 `codex_runtime_failure_count`。
+- 预期安全口径：如果视觉矩阵证据足够支持“符合”结论，应 refute item 59 candidate；如果矩阵列映射仍不稳定，应保留 `manual_review_required`；只有视觉证据明确证明业务错误时才可 confirmed。
+- 不允许做：不通过 finalization 强行 passed；不把 item 59 硬编码 refute；不修改旧项目目录。
+- targeted validation 结果：`runtime/codex_audit_local_e2e/4b15adbb-6e4e-4a66-99e7-9170843b3646.result.json` 中 `audit_scope=targeted`、`final_audit_status=passed`、`codex_reviews_count=1`、`confirmed_errors_count=0`、`manual_review_required_count=0`、`refuted_findings_count=1`、`codex_runtime_failure_count=0`；item 59 final status 为 `refuted`。
+- full mandatory audit 最终复验：`runtime/codex_audit_local_e2e/8e84b3e7-e079-4e6f-ac7f-b99348f18ffa.result.json` 中 `audit_scope=full`、`full_audit=true`、`final_audit_status=passed`、`candidate_findings_count=51`、`codex_reviews_count=57`、`confirmed_errors_count=0`、`manual_review_required_count=0`、`refuted_findings_count=51`、`codex_runtime_failure_count=0`。
+- 完成状态：[x]
+
+### T-CODEX-RUNTIME-01B：local E2E failed error summary 解析修复
+- 目标：修复 `scripts/run-codex-audit-local-e2e.sh` 在 task error 时的错误摘要提取，避免 task JSON 字段缺失导致 `task_id`、`check_id`、`batch_id` 和 usage limit 分类丢失。
+- 背景：C04 failed extract 中 task JSON 行解析不到 `task_id/task_status/progress/current_step`，但 workspace path 包含 `runtime/codex_audit/{task_id}/codex-report-{task_id}-C04-batch-6/input`；stderr 明确出现 `You've hit your usage limit` 时也应归类为 `CODEX_USAGE_LIMIT_EXCEEDED`。
+- 涉及文件：`scripts/run-codex-audit-local-e2e.sh`、`backend/tests/integration/test_codex_audit_local_e2e_artifacts.py`、`docs/current-status.md`、`docs/codex-audit-local-e2e.md`。
+- 需要实现：任务失败时写入 `error_summary.json`；从 workspace path 反推 `task_id` 和 `package_id`；从 package_id 提取 `check_id` 与 `batch_id`；从 stderr 提取 `retry_after_text`；usage limit 错误归类为 `CODEX_USAGE_LIMIT_EXCEEDED`。
+- 不允许做：不改变 mandatory 原则；不把 Codex runtime failure 改为 completed；不调用真实 Codex CLI；不修改后端业务代码、router、frontend 或旧项目目录。
+- 测试要求：运行 local E2E artifact tests、bash syntax 和 `git diff --check`。
+- 完成状态：[x]
+
 ### T-QUALITY-01：C08/C10/C07 降噪设计
 - 目标：基于真实报告样本分析 C08/C10/C07 噪声来源，设计 group-level 降噪路线。
 - 背景：QW2025-2795 Draft.pdf 真实结果显示 `C08=4894`、`C10=130`、`C07=72`，physical row-level 判断噪声明显。
@@ -711,3 +965,56 @@
 - 测试要求：运行 `test -f docs/legacy-deprecation.md`；运行 `rg "python_backend|src/main|src/renderer|Electron|/api/report-self-check" docs/legacy-deprecation.md`。
 - 验收标准：Done when 旧主线去向清楚，后续任务不会误把 Electron 或历史 `python_backend` 当新架构入口。
 - 完成状态：[ ]
+
+## T-PERF：Codex audit speed roadmap
+
+### T-PERF-01：Codex audit speed profile + batch=5 visibility
+- 目标：量化 report-check / Codex audit 各阶段耗时，并明确 full audit 默认 batch 为 5。
+- 完成状态：[x]
+- 实现记录：
+  - 新增 `backend/app/application/performance_profile.py`，记录阶段耗时和 package 汇总。
+  - `ReportCheckUseCase` 记录 `parse_pdf`、`build_report_document`、`run_rules`、`codex_audit_total`、`finalize_codex_audit`、`complete_task`。
+  - `CodexAuditService`、`EvidencePackageWriter`、`CodexCliRunner` 记录 package、image、prompt、evidence 和 codex exec 统计。
+  - `scripts/run-codex-audit-local-e2e.sh` 输出 effective batch size、performance summary，并在 full audit batch=1 时提示 debug/slow mode。
+- 约束：不修改 deterministic rules，不修改 finalization，不运行真实 Codex CLI。
+
+### T-PERF-02：automatic Codex audit scheduler + concurrency cap
+- 目标：支持系统自动分配独立 Codex audit packages，并通过 `CODEX_AUDIT_MAX_PARALLEL_JOBS` 控制并发。
+- 完成状态：[x]
+- 实现记录：
+  - 新增 `backend/app/application/codex_audit_scheduler.py`。
+  - 默认 `CODEX_AUDIT_MAX_PARALLEL_JOBS=1`，保持旧串行行为。
+  - Report/PTR usecase 先收集 packages，再交给 bounded scheduler 执行。
+  - review metadata 记录 `codex_scheduler_profile`，包含 parallel jobs、worker、queue wait 和 scheduler total。
+- 约束：任一 required Codex review failed/skipped 仍会让 mandatory task failed。
+
+### T-PERF-03：user-directed advanced audit controls
+- 目标：支持用户指定 targeted audit、高级 batch 和并发参数，但默认 UI 仍保持简单。
+- 完成状态：[x]
+- 实现记录：
+  - 新增 `backend/app/application/codex_audit_options.py`。
+  - Report/PTR API 接收 `included_check_ids`、`included_finding_codes`、`excluded_check_ids`、`max_targets_per_batch`、`max_parallel_jobs`。
+  - `TaskStatus.metadata` 保存 `audit_options` 和 `audit_options_source`。
+  - 前端 Report/PTR 上传页新增默认折叠的“高级审核设置”。
+- 约束：前端只传参和展示，不重新计算 C01-C11 或 PTR 判断。
+
+### T-PERF-04：succeeded review cache / resume / incremental audit foundation
+- 目标：避免完全相同 evidence/prompt/schema/image 的 succeeded Codex reviews 重复执行，并为 resume/incremental audit 打基础。
+- 完成状态：[x]
+- 实现记录：
+  - 新增 `backend/app/infrastructure/audit/codex_review_cache.py`。
+  - 默认 cache root 为 `runtime/codex_audit_cache`。
+  - cache key 归一化 task UUID，并包含 request/evidence/prompt/schema/image hashes。
+  - 只缓存 `status=succeeded`、parser/schema 已验证且 verdict 不是 `uncertain` 的 review。
+  - cache hit 会把 review 重新绑定到当前 request/task/target，并标记 `cache_hit=true`。
+- 约束：不缓存 failed/skipped/uncertain；runtime failure 仍导致 mandatory task failed。
+
+### T-PERF-05：batch=5 full mandatory audit 真实对比
+- 目标：在真实样本上用 full audit、无 include/exclude filters、effective batch=5 复跑，对比 batch=1 慢跑基线。
+- 完成状态：[ ]
+- 验收关注：
+  - `final_audit_status=passed`
+  - `confirmed_errors_count=0`
+  - `manual_review_required_count=0`
+  - `codex_runtime_failure_count=0`
+  - package count 和总 wall-clock time 较 batch=1 基线下降。

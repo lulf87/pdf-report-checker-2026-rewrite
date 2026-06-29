@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from pathlib import Path
+from typing import Any
 
-from app.domain.evidence_package import EvidencePackage, EvidencePackageManifest
+import fitz
+
+from app.domain.evidence_package import EvidencePackage, EvidencePackageManifest, EvidenceSourceType
 
 
 class EvidencePackageWriter:
@@ -24,7 +28,15 @@ class EvidencePackageWriter:
         input_dir.mkdir(parents=True, exist_ok=True)
 
         package_to_write = package.model_copy(deep=True)
-        item_file_paths = self._externalize_long_text_items(package_to_write, input_dir)
+        source_pdf_path = self._consume_source_pdf_path(package_to_write)
+        image_diagnostics: list[dict[str, Any]] = []
+        image_started = time.perf_counter()
+        item_file_paths = self._materialize_image_items(package_to_write, input_dir, source_pdf_path, image_diagnostics)
+        image_materialization_seconds = time.perf_counter() - image_started
+        externalized_paths = self._externalize_long_text_items(package_to_write, input_dir)
+        item_file_paths.extend(externalized_paths)
+        if image_diagnostics:
+            package_to_write.metadata["image_materialization_diagnostics"] = image_diagnostics
 
         package_json_path = input_dir / "evidence_package.json"
         package_json_path.write_text(
@@ -32,22 +44,178 @@ class EvidencePackageWriter:
             encoding="utf-8",
         )
 
+        manifest_metadata = {
+            "schema_version": package.schema_version,
+            "kind": package.kind.value,
+            "image_materialization_seconds": round(max(0.0, image_materialization_seconds), 6),
+            "image_items_count": self._image_items_count(package),
+            "materialized_image_count": len(item_file_paths) - len(externalized_paths),
+            "materialized_image_bytes": self._file_size_total(input_dir, item_file_paths[: len(item_file_paths) - len(externalized_paths)]),
+            "externalized_text_count": len(externalized_paths),
+            "externalized_text_bytes": self._file_size_total(input_dir, externalized_paths),
+        }
+        if image_diagnostics:
+            manifest_metadata["image_materialization_diagnostics"] = image_diagnostics
         manifest = EvidencePackageManifest(
             package_id=package.package_id,
             task_id=package.task_id,
             root_dir=str(input_dir),
             package_json_path="evidence_package.json",
             item_file_paths=item_file_paths,
-            metadata={
-                "schema_version": package.schema_version,
-                "kind": package.kind.value,
-            },
+            metadata=manifest_metadata,
         )
         (input_dir / "manifest.json").write_text(
             json.dumps(manifest.model_dump(mode="json"), ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
         return manifest
+
+    def _image_items_count(self, package: EvidencePackage) -> int:
+        return sum(
+            1
+            for item in package.items
+            if item.file_path
+            and item.source_type == EvidenceSourceType.IMAGE
+            and item.metadata.get("codex_image_input") is True
+        )
+
+    def _file_size_total(self, input_dir: Path, paths: list[str]) -> int:
+        total = 0
+        for file_path in paths:
+            path = input_dir / file_path
+            if path.is_file():
+                total += path.stat().st_size
+        return total
+
+    def _consume_source_pdf_path(self, package: EvidencePackage) -> Path | None:
+        value = package.metadata.pop("source_pdf_path", None)
+        if not isinstance(value, str) or not value.strip():
+            return None
+        path = Path(value).expanduser().resolve()
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        return path
+
+    def _materialize_image_items(
+        self,
+        package: EvidencePackage,
+        input_dir: Path,
+        source_pdf_path: Path | None,
+        diagnostics: list[dict[str, Any]],
+    ) -> list[str]:
+        item_file_paths: list[str] = []
+        image_items = [
+            item
+            for item in package.items
+            if item.file_path
+            and item.source_type == EvidenceSourceType.IMAGE
+            and item.metadata.get("codex_image_input") is True
+        ]
+        if not image_items:
+            return item_file_paths
+        if source_pdf_path is None:
+            for item in image_items:
+                self._record_image_materialization_failure(
+                    item,
+                    diagnostics,
+                    code="SOURCE_PDF_MISSING",
+                    message="Image evidence item requires package.metadata.source_pdf_path.",
+                )
+            return item_file_paths
+
+        document = fitz.open(str(source_pdf_path))
+        try:
+            for item in image_items:
+                assert item.file_path is not None
+                relative_path = Path(item.file_path)
+                output_path = self._resolve_under_dir(input_dir, relative_path)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    page_number = self._image_render_page_number(item.metadata, item.page_number)
+                except ValueError as exc:
+                    self._record_image_materialization_failure(
+                        item,
+                        diagnostics,
+                        code="INVALID_IMAGE_PAGE_NUMBER",
+                        message=str(exc),
+                    )
+                    continue
+                if page_number > len(document):
+                    self._record_image_materialization_failure(
+                        item,
+                        diagnostics,
+                        code="INVALID_IMAGE_PAGE_NUMBER",
+                        message=f"render_page_number={page_number} exceeds source PDF page count.",
+                    )
+                    continue
+                page = document[page_number - 1]
+                try:
+                    clip = self._image_render_clip(item.metadata)
+                    pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), clip=clip)
+                    pixmap.save(output_path)
+                except ValueError as exc:
+                    self._record_image_materialization_failure(
+                        item,
+                        diagnostics,
+                        code="INVALID_IMAGE_BBOX",
+                        message=str(exc),
+                    )
+                    continue
+                item.metadata = {
+                    **item.metadata,
+                    "materialized_image": True,
+                    "image_file_path": relative_path.as_posix(),
+                }
+                item_file_paths.append(relative_path.as_posix())
+        finally:
+            document.close()
+
+        return item_file_paths
+
+    def _image_render_page_number(self, metadata: dict[str, Any], fallback: int | None) -> int:
+        value = metadata.get("render_page_number") or fallback
+        if isinstance(value, int) and value > 0:
+            return value
+        if isinstance(value, str) and value.isdigit() and int(value) > 0:
+            return int(value)
+        raise ValueError("image evidence item requires a positive render_page_number")
+
+    def _image_render_clip(self, metadata: dict[str, Any]) -> fitz.Rect | None:
+        value = metadata.get("render_bbox")
+        if value is None:
+            value = metadata.get("crop_bbox")
+        if value is None:
+            return None
+        if not isinstance(value, (list, tuple)) or len(value) != 4:
+            raise ValueError("image evidence bbox must contain four numbers")
+        try:
+            x0, y0, x1, y1 = (float(part) for part in value)
+        except (TypeError, ValueError):
+            raise ValueError("image evidence bbox must contain four numbers")
+        if x1 <= x0 or y1 <= y0:
+            raise ValueError("image evidence bbox must have positive width and height")
+        return fitz.Rect(x0, y0, x1, y1)
+
+    def _record_image_materialization_failure(
+        self,
+        item: Any,
+        diagnostics: list[dict[str, Any]],
+        *,
+        code: str,
+        message: str,
+    ) -> None:
+        diagnostic = {
+            "ref_id": item.ref_id,
+            "file_path": item.file_path,
+            "code": code,
+            "message": message,
+        }
+        item.metadata = {
+            **item.metadata,
+            "materialized_image": False,
+            "image_materialization_error": diagnostic,
+        }
+        diagnostics.append(diagnostic)
 
     def read_package(self, manifest_or_path: EvidencePackageManifest | Path | str) -> EvidencePackage:
         if isinstance(manifest_or_path, EvidencePackageManifest):

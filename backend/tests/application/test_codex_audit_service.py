@@ -4,7 +4,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 import subprocess
 
+import fitz
+
 from app.application.codex_audit_service import CodexAuditService
+from app.infrastructure.audit.codex_review_cache import CodexReviewCache
 from app.domain.codex_review import (
     CodexEvidenceRef,
     CodexReviewConfidence,
@@ -48,6 +51,7 @@ class TrackingRunner:
         *,
         output_schema_path: Path | None = None,
         prompt_path: Path | None = None,
+        image_paths: list[Path] | None = None,
     ) -> list[CodexReviewResult]:
         self.calls.append(
             {
@@ -56,6 +60,7 @@ class TrackingRunner:
                 "workspace_dir": workspace_dir,
                 "output_schema_path": output_schema_path,
                 "prompt_path": prompt_path,
+                "image_paths": image_paths or [],
             }
         )
         return self.inner.run_review(
@@ -64,12 +69,39 @@ class TrackingRunner:
             workspace_dir,
             output_schema_path=output_schema_path,
             prompt_path=prompt_path,
+            image_paths=image_paths,
         )
 
 
 class EmptyRunner:
     def run_review(self, *args, **kwargs) -> list[CodexReviewResult]:
         return []
+
+
+class CountingRunner:
+    def __init__(self, *, verdict: CodexReviewVerdict = CodexReviewVerdict.REFUTE) -> None:
+        self.calls = 0
+        self.verdict = verdict
+
+    def run_review(
+        self,
+        request: CodexReviewRequest,
+        evidence_package: EvidencePackage,
+        workspace_dir: Path,
+        *,
+        output_schema_path: Path | None = None,
+        prompt_path: Path | None = None,
+        image_paths: list[Path] | None = None,
+    ) -> list[CodexReviewResult]:
+        self.calls += 1
+        return FakeCodexRunner(verdicts_by_target={target.target_id: self.verdict for target in request.targets}).run_review(
+            request,
+            evidence_package,
+            workspace_dir,
+            output_schema_path=output_schema_path,
+            prompt_path=prompt_path,
+            image_paths=image_paths,
+        )
 
 
 class ExplodingRunner:
@@ -89,8 +121,9 @@ class PartialRunner:
         *,
         output_schema_path: Path | None = None,
         prompt_path: Path | None = None,
+        image_paths: list[Path] | None = None,
     ) -> list[CodexReviewResult]:
-        del evidence_package, workspace_dir, output_schema_path, prompt_path
+        del evidence_package, workspace_dir, output_schema_path, prompt_path, image_paths
         target = request.targets[0]
         return [
             CodexReviewResult(
@@ -191,6 +224,15 @@ def _service(tmp_path, runner) -> CodexAuditService:
     )
 
 
+def _service_with_cache(tmp_path, runner) -> CodexAuditService:
+    return CodexAuditService(
+        evidence_writer=EvidencePackageWriter(tmp_path / "runtime" / "codex_audit"),
+        prompt_builder=PromptBuilder(),
+        runner=runner,
+        review_cache=CodexReviewCache(tmp_path / "runtime" / "codex_audit_cache"),
+    )
+
+
 def _assert_failed(results: list[CodexReviewResult], code: str, *, target_count: int = 1) -> None:
     assert len(results) == target_count
     assert {result.status for result in results} == {CodexReviewStatus.FAILED}
@@ -215,6 +257,198 @@ def test_review_writes_workspace_prompt_and_returns_confirm_with_fake_runner(tmp
     assert runner.calls[0]["workspace_dir"] == input_dir
     assert runner.calls[0]["prompt_path"] == input_dir / "prompt.md"
     assert runner.calls[0]["output_schema_path"] == input_dir / "codex_review_output.schema.json"
+    profile = results[0].metadata["codex_package_profile"]
+    assert profile["package_id"] == "pkg-1"
+    assert profile["check_id"] == "C02"
+    assert profile["target_count"] == 1
+    assert profile["evidence_write_seconds"] >= 0
+    assert profile["prompt_build_seconds"] >= 0
+    assert profile["schema_prepare_seconds"] >= 0
+    assert profile["codex_exec_seconds"] >= 0
+    assert profile["result_validation_seconds"] >= 0
+    assert profile["prompt_size_bytes"] > 0
+    assert profile["evidence_package_size_bytes"] > 0
+    assert profile["image_count"] == 0
+    assert profile["image_bytes"] == 0
+
+
+def test_review_passes_workspace_image_paths_to_runner(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("no real Codex")))
+    source_pdf = tmp_path / "source.pdf"
+    document = fitz.open()
+    page = document.new_page(width=200, height=120)
+    page.insert_text((20, 40), "图2 输注泵中文标签样张")
+    document.save(source_pdf)
+    document.close()
+    image_item = EvidenceItem(
+        ref_id="label_image:finding-1",
+        source_type=EvidenceSourceType.IMAGE,
+        title="C04 label image",
+        file_path="items/label-image.png",
+        page_number=1,
+        metadata={"codex_image_input": True, "render_page_number": 1},
+    )
+    target = _target("target-1", evidence_refs=["label_image:finding-1"])
+    runner = TrackingRunner(FakeCodexRunner())
+    service = _service(tmp_path, runner)
+    package = _package(targets=[target], items=[image_item]).model_copy(
+        update={"metadata": {"source_pdf_path": str(source_pdf)}}
+    )
+
+    results = service.review(_request(targets=[target]), package)
+
+    input_dir = tmp_path / "runtime" / "codex_audit" / "task-1" / "pkg-1" / "input"
+    assert results[0].status is CodexReviewStatus.SUCCEEDED
+    assert runner.calls[0]["image_paths"] == [input_dir / "items" / "label-image.png"]
+    assert runner.inner.last_image_paths == [input_dir / "items" / "label-image.png"]
+
+
+def test_review_passes_c07_visual_image_paths_to_runner(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("no real Codex")))
+    source_pdf = tmp_path / "source.pdf"
+    document = fitz.open()
+    page = document.new_page(width=260, height=180)
+    page.insert_text((20, 40), "序号 33 检验结果 符合要求 单项结论 符合 备注 /")
+    document.save(source_pdf)
+    document.close()
+    refs = [
+        "c07_visual_page:finding-1:p1",
+        "c07_visual_table:finding-1:p1",
+        "c07_visual_item_group:finding-1:p1",
+        "c07_visual_result:finding-1:p1",
+        "c07_visual_conclusion:finding-1:p1",
+        "c07_visual_remark:finding-1:p1",
+    ]
+    image_items = [
+        EvidenceItem(
+            ref_id=ref,
+            source_type=EvidenceSourceType.IMAGE,
+            title=ref,
+            file_path=f"items/finding-1-{name}.png",
+            page_number=1,
+            metadata={
+                "codex_image_input": True,
+                "render_page_number": 1,
+                **({"crop_bbox": bbox} if bbox is not None else {}),
+            },
+        )
+        for ref, name, bbox in [
+            (refs[0], "c07-page-p1", None),
+            (refs[1], "c07-table-p1", [10, 10, 240, 140]),
+            (refs[2], "c07-item-group-p1", [10, 40, 240, 90]),
+            (refs[3], "c07-result-p1", [100, 40, 150, 90]),
+            (refs[4], "c07-conclusion-p1", [150, 40, 190, 90]),
+            (refs[5], "c07-remark-p1", [190, 40, 220, 90]),
+        ]
+    ]
+    target = CodexReviewTarget(
+        target_id="target-c07-1",
+        target_type=CodexReviewTargetType.INSPECTION_ITEM,
+        check_id="C07",
+        finding_id="finding-1",
+        finding_code="CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN",
+        title="C07 visual review",
+        evidence_refs=[CodexEvidenceRef(ref_id=ref, source_type="image") for ref in refs],
+    )
+    runner = TrackingRunner(FakeCodexRunner())
+    service = _service(tmp_path, runner)
+    package = _package(targets=[target], items=image_items).model_copy(
+        update={"metadata": {"source_pdf_path": str(source_pdf)}}
+    )
+
+    results = service.review(_request(targets=[target]), package)
+
+    input_dir = tmp_path / "runtime" / "codex_audit" / "task-1" / "pkg-1" / "input"
+    image_paths = runner.calls[0]["image_paths"]
+    assert results[0].status is CodexReviewStatus.SUCCEEDED
+    assert [path.name for path in image_paths] == [
+        "finding-1-c07-page-p1.png",
+        "finding-1-c07-table-p1.png",
+        "finding-1-c07-item-group-p1.png",
+        "finding-1-c07-result-p1.png",
+        "finding-1-c07-conclusion-p1.png",
+        "finding-1-c07-remark-p1.png",
+    ]
+    assert all(path.is_relative_to(input_dir) for path in image_paths)
+    assert all(path.is_file() for path in image_paths)
+    assert all(str(source_pdf) != str(path) for path in image_paths)
+
+
+def test_review_passes_c07_complex_matrix_image_paths_to_runner(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("no real Codex")))
+    source_pdf = tmp_path / "source.pdf"
+    document = fitz.open()
+    for page_index in range(2):
+        page = document.new_page(width=260, height=180)
+        page.insert_text((20, 40), f"序号 59 漏电流矩阵 p{page_index + 1} 单项结论 符合")
+    document.save(source_pdf)
+    document.close()
+    roles = [
+        ("page", 1, None),
+        ("table", 1, [10, 10, 240, 150]),
+        ("header", 1, [10, 10, 240, 40]),
+        ("body", 1, [10, 40, 240, 130]),
+        ("result", 1, [110, 40, 180, 130]),
+        ("conclusion", 1, [180, 40, 230, 130]),
+        ("continuation", 2, [10, 10, 240, 150]),
+    ]
+    refs = [f"c07_complex_matrix_{role}:finding-59:p{page}" for role, page, _ in roles]
+    image_items = [
+        EvidenceItem(
+            ref_id=ref,
+            source_type=EvidenceSourceType.IMAGE,
+            title=ref,
+            file_path=f"items/finding-59-c07-matrix-{role}-p{page}.png",
+            page_number=page,
+            section="c07_complex_matrix_visual",
+            metadata={
+                "codex_image_input": True,
+                "render_page_number": page,
+                "matrix_evidence_role": role,
+                **({"crop_bbox": bbox} if bbox is not None else {}),
+            },
+        )
+        for ref, (role, page, bbox) in zip(refs, roles, strict=True)
+    ]
+    target = CodexReviewTarget(
+        target_id="target-c07-matrix-59",
+        target_type=CodexReviewTargetType.INSPECTION_ITEM,
+        check_id="C07",
+        finding_id="finding-59",
+        finding_code="CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX",
+        title="C07 complex matrix review",
+        evidence_refs=[CodexEvidenceRef(ref_id=ref, source_type="image") for ref in refs],
+        metadata={
+            "complex_matrix_table": True,
+            "c07_complex_matrix_evidence": {
+                "review_mode": "complex_matrix_specialized",
+                "item_no": "59",
+            },
+        },
+    )
+    runner = TrackingRunner(FakeCodexRunner())
+    service = _service(tmp_path, runner)
+    package = _package(targets=[target], items=image_items).model_copy(
+        update={"metadata": {"source_pdf_path": str(source_pdf)}}
+    )
+
+    results = service.review(_request(targets=[target]), package)
+
+    input_dir = tmp_path / "runtime" / "codex_audit" / "task-1" / "pkg-1" / "input"
+    image_paths = runner.calls[0]["image_paths"]
+    assert results[0].status is CodexReviewStatus.SUCCEEDED
+    assert [path.name for path in image_paths] == [
+        "finding-59-c07-matrix-page-p1.png",
+        "finding-59-c07-matrix-table-p1.png",
+        "finding-59-c07-matrix-header-p1.png",
+        "finding-59-c07-matrix-body-p1.png",
+        "finding-59-c07-matrix-result-p1.png",
+        "finding-59-c07-matrix-conclusion-p1.png",
+        "finding-59-c07-matrix-continuation-p2.png",
+    ]
+    assert all(path.is_relative_to(input_dir) for path in image_paths)
+    assert all(path.is_file() for path in image_paths)
+    assert all(str(source_pdf) != str(path) for path in image_paths)
 
 
 def test_review_returns_results_for_multiple_targets(tmp_path) -> None:
@@ -253,6 +487,66 @@ def test_review_preserves_refute_uncertain_and_add_finding_results(tmp_path) -> 
         CodexReviewVerdict.ADD_FINDING,
     ]
     assert results[2].suggested_finding == suggested
+
+
+def test_review_cache_reuses_succeeded_reviews_without_calling_runner_again(tmp_path) -> None:
+    runner = CountingRunner()
+    service = _service_with_cache(tmp_path, runner)
+    request = _request()
+    package = _package()
+
+    first = service.review(request, package)
+    second = service.review(request, package)
+
+    assert runner.calls == 1
+    assert first[0].status is CodexReviewStatus.SUCCEEDED
+    assert second[0].status is CodexReviewStatus.SUCCEEDED
+    assert second[0].metadata["cache_hit"] is True
+    assert second[0].metadata["cache_key"] == first[0].metadata["cache_key"]
+    assert second[0].request_id == request.request_id
+    assert second[0].task_id == request.task_id
+    assert second[0].target.target_id == request.targets[0].target_id
+
+
+def test_review_cache_miss_when_prompt_version_changes(tmp_path) -> None:
+    runner = CountingRunner()
+    service = _service_with_cache(tmp_path, runner)
+    package = _package()
+
+    service.review(_request().model_copy(update={"prompt_version": "prompt-v1"}), package)
+    service.review(_request().model_copy(update={"prompt_version": "prompt-v2"}), package)
+
+    assert runner.calls == 2
+
+
+def test_review_cache_does_not_reuse_uncertain_reviews(tmp_path) -> None:
+    runner = CountingRunner(verdict=CodexReviewVerdict.UNCERTAIN)
+    service = _service_with_cache(tmp_path, runner)
+    request = _request()
+    package = _package()
+
+    first = service.review(request, package)
+    second = service.review(request, package)
+
+    assert runner.calls == 2
+    assert first[0].verdict is CodexReviewVerdict.UNCERTAIN
+    assert second[0].verdict is CodexReviewVerdict.UNCERTAIN
+    assert "cache_hit" not in second[0].metadata
+
+
+def test_review_cache_rebinds_succeeded_review_to_new_task_id(tmp_path) -> None:
+    runner = CountingRunner()
+    service = _service_with_cache(tmp_path, runner)
+    first_task_id = "11111111-1111-4111-8111-111111111111"
+    second_task_id = "22222222-2222-4222-8222-222222222222"
+
+    service.review(_request(task_id=first_task_id), _package(task_id=first_task_id))
+    cached = service.review(_request(task_id=second_task_id), _package(task_id=second_task_id))
+
+    assert runner.calls == 1
+    assert cached[0].task_id == second_task_id
+    assert cached[0].request_id == "request-1"
+    assert cached[0].metadata["cache_hit"] is True
 
 
 def test_task_id_mismatch_returns_failed_without_calling_runner(tmp_path) -> None:

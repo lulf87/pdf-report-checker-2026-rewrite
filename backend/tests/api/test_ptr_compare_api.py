@@ -22,6 +22,7 @@ class FakePTRCompareUseCase:
         report_file_name: str,
         report_content: bytes,
         report_content_type: str,
+        audit_options: dict[str, object] | None = None,
     ) -> object:
         self.calls.append(
             {
@@ -31,6 +32,7 @@ class FakePTRCompareUseCase:
                 "report_file_name": report_file_name,
                 "report_content": report_content,
                 "report_content_type": report_content_type,
+                "audit_options": audit_options,
             }
         )
         task = self.task_service.create_task(
@@ -91,6 +93,7 @@ def test_ptr_compare_upload_creates_task_through_usecase_and_exposes_result() ->
             "report_file_name": "report.pdf",
             "report_content": b"%PDF-1.4 report",
             "report_content_type": "application/pdf",
+            "audit_options": None,
         }
     ]
 
@@ -100,6 +103,34 @@ def test_ptr_compare_upload_creates_task_through_usecase_and_exposes_result() ->
     assert result_payload["task_type"] == TaskType.PTR_COMPARE
     assert result_payload["summary"]["pass_count"] == 1
     assert result_payload["check_results"][0]["check_id"] == "PTR_CLAUSE"
+
+
+def test_ptr_compare_upload_passes_audit_options_to_usecase() -> None:
+    client, fake_usecase = _client_with_fake_usecase()
+
+    response = client.post(
+        "/api/tasks/ptr-compare",
+        files={
+            "ptr_file": ("ptr.pdf", b"%PDF-1.4 ptr", "application/pdf"),
+            "report_file": ("report.pdf", b"%PDF-1.4 report", "application/pdf"),
+        },
+        data={
+            "included_check_ids": "PTR_TABLE",
+            "included_finding_codes": "PTR_TABLE_VALUE_MISMATCH",
+            "excluded_check_ids": "PTR_SCOPE",
+            "max_targets_per_batch": "1",
+            "max_parallel_jobs": "2",
+        },
+    )
+
+    assert response.status_code == 200
+    assert fake_usecase.calls[0]["audit_options"] == {
+        "included_check_ids": ["PTR_TABLE"],
+        "included_finding_codes": ["PTR_TABLE_VALUE_MISMATCH"],
+        "excluded_check_ids": ["PTR_SCOPE"],
+        "max_targets_per_batch": 1,
+        "max_parallel_jobs": 2,
+    }
 
 
 def test_ptr_compare_upload_rejects_non_pdf_before_usecase() -> None:

@@ -131,8 +131,130 @@
           },
           "metadata": {
             "type": "object",
-            "required": [],
-            "properties": {},
+            "required": [
+              "observed_label_fields",
+              "field_comparisons",
+              "visual_evidence_quality"
+            ],
+            "properties": {
+              "observed_label_fields": {
+                "type": "object",
+                "required": [
+                  "component_name",
+                  "model",
+                  "serial_number",
+                  "batch_or_serial",
+                  "production_date",
+                  "expiration_date"
+                ],
+                "properties": {
+                  "component_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "model": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "batch_or_serial": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "production_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "expiration_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "field_comparisons": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "field_name",
+                    "expected_value",
+                    "observed_value",
+                    "status",
+                    "evidence_ref",
+                    "reasoning"
+                  ],
+                  "properties": {
+                    "field_name": {
+                      "type": "string"
+                    },
+                    "expected_value": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "observed_value": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "match",
+                        "missing",
+                        "conflict",
+                        "unreadable",
+                        "not_applicable",
+                        "unknown"
+                      ]
+                    },
+                    "evidence_ref": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "reasoning": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "visual_evidence_quality": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "clear",
+                  "partial",
+                  "unreadable",
+                  "wrong_crop",
+                  "not_applicable",
+                  "unknown",
+                  null
+                ]
+              }
+            },
             "additionalProperties": false
           }
         },

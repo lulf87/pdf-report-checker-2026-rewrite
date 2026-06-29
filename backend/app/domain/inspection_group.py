@@ -30,6 +30,12 @@ class InspectionItemGroup(BaseModel):
     pages: list[int] = Field(default_factory=list)
     continuation_markers: list[ContinuationMarker] = Field(default_factory=list)
     effective_test_results: list[str] = Field(default_factory=list)
+    original_effective_test_results: list[str] = Field(default_factory=list)
+    recovered_result_tokens: list[str] = Field(default_factory=list)
+    recovered_effective_test_results: list[str] = Field(default_factory=list)
+    result_token_recovery_applied: bool = False
+    result_token_recovery_diagnostics: list[dict[str, Any]] = Field(default_factory=list)
+    result_token_recovery_confidence: str | None = None
     effective_single_conclusion: str | None = None
     effective_remark: str | None = None
     inherited_merged_fields: list[InheritedField] = Field(default_factory=list)

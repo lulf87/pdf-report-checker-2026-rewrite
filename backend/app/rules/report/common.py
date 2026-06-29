@@ -82,7 +82,7 @@ def match_name(left: str | None, right: str | None) -> str | None:
 
 
 def component_not_used(component: SampleComponent) -> bool:
-    return "本次检测未使用" in (component.remark or "")
+    return "本次检测未使用" in compact(component.remark)
 
 
 def evidence_for_field(field: ReportField | None, fallback_id: str) -> list[Evidence]:

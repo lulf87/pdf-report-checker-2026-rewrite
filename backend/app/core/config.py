@@ -97,6 +97,11 @@ class Settings(BaseSettings):
         default=5,
         description="Maximum Codex audit targets emitted for the current batch; <=0 disables audit target emission.",
     )
+    codex_audit_max_parallel_jobs: int = Field(
+        default=1,
+        ge=1,
+        description="Maximum number of independent Codex audit packages reviewed concurrently.",
+    )
     codex_audit_included_check_ids: str | None = Field(
         default=None,
         description="Optional comma-separated check IDs allowed for Codex audit targets.",
@@ -116,6 +121,10 @@ class Settings(BaseSettings):
     codex_audit_runtime_dir: str = Field(
         default="runtime/codex_audit",
         description="Runtime root for controlled Codex audit evidence workspaces.",
+    )
+    codex_audit_cache_dir: str = Field(
+        default="runtime/codex_audit_cache",
+        description="Runtime root for schema-valid succeeded Codex audit review cache entries.",
     )
     codex_audit_sandbox: Literal["read-only"] = Field(
         default="read-only",

@@ -178,6 +178,17 @@ Codex CLI 运行必须默认最小权限：
 - deterministic finding 是 candidate，不因 Codex refute 被删除；UI 可以显示为“规则候选：ERROR，Codex 审核：refute/uncertain/confirm”。
 - 兼容期如果继续使用 `CheckResult.findings` 字段，该字段必须按 candidate 语义理解，并通过 metadata 标记 `codex_required`、`codex_review_id`、`codex_verdict`、`final_status`。
 - `confirm` 表示候选问题被确认；`refute` 表示候选问题不应作为最终 ERROR；`uncertain` 表示需要人工复核但任务可 completed。
+- summary 中必须区分 candidate counts 与 final counts：`candidate_errors_count` 仍是规则候选错误，`confirmed_errors_count` 才是 Codex 已确认的最终错误。
+- summary 应提供 `final_audit_status` 作为 UI 和导出的主状态入口：`passed`、`needs_manual_review`、`failed`、`audit_failed` 分别表示无确认错误且无需复核、无确认错误但需人工复核、存在确认错误、Codex 审核失败或未完成。
+- full mandatory audit 不允许 required candidate finding 缺少 Codex review 或 `final_status`；如果使用 `included_check_ids` 等筛选参数，本次结果必须标记为 `audit_scope=targeted`，未覆盖候选标记 `out_of_scope`。
+- full mandatory audit 验收通过的最低条件包括：不设置 include filters、`audit_scope=full`、`full_audit=true`、required candidates 全部有 Codex finalization、`codex_runtime_failure_count=0`、`null_final_status_count=0`、`unreviewed_required_findings_count=0`、`out_of_scope_findings_count=0`。旧 `summary.error_count` / `fail_count` 属于 candidate 层统计，不代表最终 confirmed error。
+- targeted validation 的 summary targets 也必须服从 include/exclude/finding-code filters；筛选 C04/C05/C06/C09 时不得额外审核 C01/C02/C03/C08/C10/C11 summary target。
+- C04/C06 中 OCR 未识别字段不等于中文标签本体缺字段；如果 evidence 只有 caption 和空 OCR/空结构化字段，没有标签图像 crop、完整标签正文 OCR 或结构化标签字段，Codex verdict 应为 `uncertain`，finalization 不得把这类 confirm 计入 confirmed final error。
+- C04 `SAMPLE_COMPONENT_LABEL_NOT_FOUND` 必须区分 `matching_label_caption_candidates` 和 `matching_label_ocr_candidates`。中文标签样张 caption 能证明标签样张存在；caption 存在但缺 matched OCR 时，不应确认标签样张缺失。只有 matched label OCR 属于当前 component 时，才可确认标签字段缺失或不一致。
+- C04/C05/C06 中备注为“本次检测未使用”的部件不得因为照片/标签缺失被计入 confirmed final error；如 Codex 返回 `confirm`，产品 finalization 应防御性标记为 `refuted` 并保留诊断。
+- C04 evidence package 必须尽量提供 sample row、matching label caption、matched label crop/page reference、matched OCR text、structured fields 和字段对比；caption-only、empty OCR 或 unrelated OCR 应明确证据不足，不能把不相关 OCR 当作当前 component 的 matched label content。
+- C04 label evidence 需要分层表达 `label_caption_candidate`、`matched_label_caption`、`label_page_number`、`label_image_ref`、`label_crop_ref`、`matched_label_page_text`、`matched_label_caption_text`、`matched_label_ocr_text`、`matched_label_fields`、`matched_label_field_confidence`、`matched_label_ocr_source`、`unmatched_label_ocr_candidates` 和 `evidence_can_verify_label_content`；只有 matched label OCR text 或 structured fields 属于当前 component 时，Codex 才可确认字段缺失或不一致。`matched_label_page_text` 只是照片页或 caption 周边文本，不能作为标签本体 OCR。
+- C07 evidence package 必须提供首页符号说明、完整 InspectionItemGroup rows、actual conclusion candidates/provenance、continuation rows 和 group pages page_text；complex matrix table 不应按普通 C07 直接 confirmed。
 - Codex `add_finding` 必须进入统一 `Finding` 校验和 evidence 关联后才能展示。
 - JSON/PDF/XLSX 导出必须保留 deterministic findings、Codex reviews、失败 review 诊断和 raw output 引用。
 
@@ -202,6 +213,12 @@ Codex CLI 运行必须默认最小权限：
 - C06 中文标签 caption 审核：中文标签/英文标签/包装标签/铭牌语义。
 - C07 特殊检验结果语境审核：无菌语境、`/`、`--`、空白结果、特殊检验结果与单项结论。
 
+C04/C06 的审核对象是“标签本体是否缺少字段或字段是否与样品描述不一致”，不是“OCR 是否识别到字段”。caption 只能证明存在中文标签样张，不能证明标签字段完整或缺失；没有 matched label OCR 正文、可读 crop 或结构化标签字段时，应进入 `uncertain`/人工复核。对 C04 `SAMPLE_COMPONENT_LABEL_NOT_FOUND`，如果存在匹配当前 component 的中文标签样张 caption，但缺少 matched label OCR 正文/结构化字段，应 refute “标签样张缺失” 或进入人工复核，而不得作为 confirmed final issue。
+
+T-CODEX-EVIDENCE-04B 后，C04 target 应优先提供可审计的标签证据链：sample description row、caption candidate、matched caption、page/crop reference、matched label OCR text、structured fields、字段 confidence 和 field comparison。不相关 OCR 只能进入 `unmatched_label_ocr_candidates` 作为诊断，照片页/PDF page text 只能进入 `matched_label_page_text`，不能让 `evidence_can_verify_label_content=true`。如果 matched fields 与样品描述一致，Codex 可 refute candidate；如果 matched fields 缺失或冲突且证据属于当前 component，Codex confirm 才能进入 confirmed final issue。
+
+C04/C05/C06 对备注为“本次检测未使用”的部件必须保留审计痕迹，但不得 confirmed 为缺照片、缺标签或标签字段缺失。该防线既应体现在 evidence metadata / prompt guidance，也应体现在 finalization 中。
+
 ## 9. 任务拆分
 
 | 任务 | 目标 |
@@ -217,6 +234,14 @@ Codex CLI 运行必须默认最小权限：
 | T-CODEX-08 | 前端展示 Codex review，展示“规则初判 + Codex 审核意见”。 |
 | T-CODEX-09 | 真实 Codex CLI 手动验收，记录 evidence package、JSON 输出、timeout 和 fallback。 |
 | T-CODEX-MANDATORY-01 | 将产品运行路径纠偏为 mandatory Codex CLI：废弃用户层面的 disabled/fake/codex-cli 选择，batching 只控制单批性能，不允许默认漏审。 |
+| T-CODEX-MANDATORY-02 | 收口 Codex verdict finalization 与全候选 target 覆盖：refute 不计 final error，uncertain 进入人工复核，full audit 缺 required review 会失败，targeted validation 不得伪装为完整审核。 |
+| T-CODEX-MANDATORY-03 | 修复 targeted summary 过滤、C04/C06 OCR 语义和未使用部件 finalization：targeted summary 不越界，OCR 抽取失败不等于标签本体缺失，未使用部件不得 confirmed 为缺照片/缺标签。 |
+| T-CODEX-MANDATORY-04 | 修复 C04 label caption 与 matched label OCR 语义：caption candidate 与 matched OCR content 分离，caption 已证明标签样张存在时不得 confirmed 为 label-not-found。 |
+| T-CODEX-MANDATORY-05A | 记录 full mandatory audit 真实验收：未设置 include filters，所有 required candidate 完成 finalization，无 runtime failure、无 null final_status、无 out_of_scope。 |
+| T-CODEX-EVIDENCE-04 | 增强 C04 label image crop / matched OCR evidence：caption、page/crop、matched OCR、structured fields 和 verification flags 分层，减少 C04 标签字段证据不足导致的 manual review。 |
+| T-CODEX-EVIDENCE-04B | 修正 C04 matched label OCR 语义和 caption selector，并已通过 C04 targeted validation `4ec18d39-7dab-4478-b6c0-d6bc464fd2e7`：page text 不算标签本体 OCR，`evidence_can_verify_label_content` 只由本体 OCR/structured fields 触发，30m 线缆 caption 不被短词误匹配；本轮 `confirmed_errors_count=0`、`manual_review_required_count=28`，后续进入真实 label crop / OCR / VLM evidence。 |
+| T-CODEX-EVIDENCE-05 | 已实现 C04 label image input 视觉审核链路：matched label caption 可渲染为 workspace 内 `items/*.png`，CodexCliRunner 通过 `codex exec --image items/...png` 提供图片输入，schema 支持 `observed_label_fields` / `field_comparisons` / `visual_evidence_quality`，finalization 对不可读图片的 confirm 做人工复核降级；真实 C04 targeted visual validation `c1f421db-4757-4041-8b19-c88b8835a941` 已通过，35 条 C04 candidate 全部 refuted。 |
+| T-CODEX-EVIDENCE-05B | 已记录 EVIDENCE-05 后 full mandatory audit 真实验收 `1958c184-567f-4c56-aaac-4a8c45913d1c`：`audit_scope=full`、`full_audit=true`、`confirmed_errors_count=0`、`refuted_findings_count=39`、`manual_review_required_count=12`、`codex_runtime_failure_count=0`；C04/C05/C06/C09 全部 refuted，剩余仅 C07 12 条人工复核。 |
 
 ## 10. 非目标
 

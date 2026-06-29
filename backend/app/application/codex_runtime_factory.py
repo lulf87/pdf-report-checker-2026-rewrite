@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.application.codex_audit_service import CodexAuditService
+from app.application.codex_audit_scheduler import CodexAuditScheduler
 from app.application.codex_audit_targeting import parse_csv_values
 from app.application.ptr_codex_evidence_builder import PtrCodexEvidenceBuilder
 from app.application.ptr_compare_usecase import PTRCompareUseCase
@@ -10,6 +11,7 @@ from app.application.report_codex_evidence_builder import ReportCodexEvidenceBui
 from app.application.report_check_usecase import ReportCheckUseCase
 from app.application.task_service import TaskService
 from app.core.config import Settings
+from app.infrastructure.audit.codex_review_cache import CodexReviewCache
 from app.infrastructure.audit.evidence_package_writer import EvidencePackageWriter
 from app.infrastructure.codex import CodexCliRunner, CodexCliRunnerConfig, PromptBuilder
 
@@ -22,6 +24,7 @@ def build_codex_audit_service(settings: Settings) -> CodexAuditService:
         evidence_writer=EvidencePackageWriter(Path(settings.codex_audit_runtime_dir)),
         prompt_builder=PromptBuilder(),
         runner=runner,
+        review_cache=CodexReviewCache(Path(settings.codex_audit_cache_dir)),
     )
 
 
@@ -35,6 +38,7 @@ def build_ptr_compare_usecase(
         task_service=task_service,
         codex_audit_service=codex_audit_service,
         ptr_codex_evidence_builder=_build_ptr_codex_evidence_builder(settings),
+        codex_audit_scheduler=CodexAuditScheduler(max_parallel_jobs=settings.codex_audit_max_parallel_jobs),
     )
 
 
@@ -48,6 +52,7 @@ def build_report_check_usecase(
         task_service=task_service,
         codex_audit_service=codex_audit_service,
         report_codex_evidence_builder=_build_report_codex_evidence_builder(settings),
+        codex_audit_scheduler=CodexAuditScheduler(max_parallel_jobs=settings.codex_audit_max_parallel_jobs),
     )
 
 

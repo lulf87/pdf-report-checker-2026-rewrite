@@ -43,6 +43,7 @@ class FakeCodexRunner:
         self.fail = fail
         self.raise_timeout = raise_timeout
         self.raise_error = raise_error
+        self.last_image_paths: list[Path] = []
 
     def run_review(
         self,
@@ -52,8 +53,10 @@ class FakeCodexRunner:
         *,
         output_schema_path: Path | None = None,
         prompt_path: Path | None = None,
+        image_paths: list[Path] | None = None,
     ) -> list[CodexReviewResult]:
         del evidence_package, workspace_dir, output_schema_path, prompt_path
+        self.last_image_paths = list(image_paths or [])
 
         if self.raise_timeout:
             raise CodexRunnerTimeout("fake Codex runner timeout")

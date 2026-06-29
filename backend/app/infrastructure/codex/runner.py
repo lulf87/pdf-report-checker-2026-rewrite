@@ -28,6 +28,7 @@ class CodexRunner(Protocol):
         *,
         output_schema_path: Path | None = None,
         prompt_path: Path | None = None,
+        image_paths: list[Path] | None = None,
     ) -> list[CodexReviewResult]:
         """Run a Codex audit request against a controlled evidence workspace."""
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { TaskResult, TaskStatus } from "../../../entities/task/types";
+import { clearTaskSession } from "../../../shared/lib/taskSessionStorage";
 import { PTRResults } from "../components/PTRResults";
 import { PTRUpload } from "../components/PTRUpload";
 
@@ -14,6 +15,7 @@ export function PTRComparePage() {
   }
 
   function reset() {
+    clearTaskSession("ptr_compare");
     setTask(null);
     setResult(null);
   }

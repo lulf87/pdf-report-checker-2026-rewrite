@@ -1,10 +1,19 @@
 import { apiClient } from "../../shared/api/client";
-import type { ExportFormat, TaskResult, TaskStatus } from "../../entities/task/types";
+import type { AuditOptions, ExportFormat, TaskResult, TaskStatus } from "../../entities/task/types";
 
-export async function uploadPTRCompareFiles(ptrFile: File, reportFile: File): Promise<TaskStatus> {
+export async function uploadPTRCompareFiles(
+  ptrFile: File,
+  reportFile: File,
+  auditOptions?: AuditOptions,
+): Promise<TaskStatus> {
   return apiClient.postForm<TaskStatus>("/api/tasks/ptr-compare", {
     ptr_file: ptrFile,
     report_file: reportFile,
+    included_check_ids: auditOptions?.included_check_ids,
+    included_finding_codes: auditOptions?.included_finding_codes,
+    excluded_check_ids: auditOptions?.excluded_check_ids,
+    max_targets_per_batch: auditOptions?.max_targets_per_batch,
+    max_parallel_jobs: auditOptions?.max_parallel_jobs,
   });
 }
 

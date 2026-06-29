@@ -12,13 +12,15 @@ class FakeReportCheckUseCase:
     def __init__(self, task_service: TaskService) -> None:
         self.task_service = task_service
         self.calls: list[dict[str, object]] = []
+        self.processed_task_ids: list[str] = []
 
-    def run(self, *, file_name: str, content: bytes, content_type: str) -> object:
+    def submit(self, *, file_name: str, content: bytes, content_type: str, audit_options=None) -> object:
         self.calls.append(
             {
                 "file_name": file_name,
                 "content": content,
                 "content_type": content_type,
+                "audit_options": audit_options,
             }
         )
         task = self.task_service.create_task(
@@ -27,12 +29,16 @@ class FakeReportCheckUseCase:
                 InputFileRef(file_id="report-file", file_name=file_name, content_type=content_type)
             ],
         )
-        self.task_service.start_task(task.task_id, current_step="fake report check")
+        return self.task_service.start_task(task.task_id, current_step="queued fake report check", progress=1)
+
+    def process_task(self, task_id: str) -> object:
+        self.processed_task_ids.append(task_id)
+        self.task_service.update_progress(task_id, progress=35, current_step="fake report check")
         self.task_service.complete_task(
-            task.task_id,
+            task_id,
             [
                 CheckResult(
-                    task_id=task.task_id,
+                    task_id=task_id,
                     check_id="C01",
                     check_name="首页与第三页一致性",
                     status=CheckStatus.PASS,
@@ -41,7 +47,7 @@ class FakeReportCheckUseCase:
             ],
             diagnostics=["fake report usecase"],
         )
-        return self.task_service.get_task(task.task_id)
+        return self.task_service.get_task(task_id)
 
 
 def _client_with_fake_usecase() -> tuple[TestClient, FakeReportCheckUseCase]:
@@ -53,7 +59,7 @@ def _client_with_fake_usecase() -> tuple[TestClient, FakeReportCheckUseCase]:
     return TestClient(app), fake_usecase
 
 
-def test_report_check_upload_creates_task_through_usecase_and_exposes_result() -> None:
+def test_report_check_upload_returns_processing_task_then_background_exposes_result() -> None:
     client, fake_usecase = _client_with_fake_usecase()
 
     response = client.post(
@@ -64,7 +70,9 @@ def test_report_check_upload_creates_task_through_usecase_and_exposes_result() -
     assert response.status_code == 200
     payload = response.json()
     task_id = payload["task_id"]
-    assert payload["status"] == TaskState.COMPLETED
+    assert payload["status"] == TaskState.PROCESSING
+    assert payload["progress"] == 1
+    assert payload["current_step"] == "queued fake report check"
     assert payload["task_type"] == TaskType.REPORT_CHECK
     assert payload["input_files"][0]["file_name"] == "report.pdf"
     assert fake_usecase.calls == [
@@ -72,8 +80,10 @@ def test_report_check_upload_creates_task_through_usecase_and_exposes_result() -
             "file_name": "report.pdf",
             "content": b"%PDF-1.4 report",
             "content_type": "application/pdf",
+            "audit_options": None,
         }
     ]
+    assert fake_usecase.processed_task_ids == [task_id]
 
     status_response = client.get(f"/api/tasks/{task_id}")
     assert status_response.status_code == 200
@@ -104,6 +114,31 @@ def test_report_check_upload_rejects_non_pdf_before_usecase() -> None:
     assert response.status_code == 400
     assert response.json()["detail"] == "Only PDF files are supported"
     assert fake_usecase.calls == []
+
+
+def test_report_check_upload_passes_audit_options_to_usecase() -> None:
+    client, fake_usecase = _client_with_fake_usecase()
+
+    response = client.post(
+        "/api/tasks/report-check",
+        files={"report_file": ("report.pdf", b"%PDF-1.4 report", "application/pdf")},
+        data={
+            "included_check_ids": "C07",
+            "included_finding_codes": "CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX",
+            "excluded_check_ids": "C04",
+            "max_targets_per_batch": "1",
+            "max_parallel_jobs": "2",
+        },
+    )
+
+    assert response.status_code == 200
+    assert fake_usecase.calls[0]["audit_options"] == {
+        "included_check_ids": ["C07"],
+        "included_finding_codes": ["CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX"],
+        "excluded_check_ids": ["C04"],
+        "max_targets_per_batch": 1,
+        "max_parallel_jobs": 2,
+    }
 
 
 def test_task_routes_return_404_for_unknown_task() -> None:

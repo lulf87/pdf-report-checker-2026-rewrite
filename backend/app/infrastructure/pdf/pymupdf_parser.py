@@ -260,6 +260,15 @@ class PyMuPDFParser:
         else:
             columns = rows[0]
 
+        column_count = max((len(row) for row in rows), default=0)
+        metadata: dict[str, Any] = {
+            "row_count": len(rows),
+            "column_count": column_count,
+        }
+        cell_bboxes = self._table_cell_bboxes(table, row_count=len(rows), col_count=column_count)
+        if cell_bboxes:
+            metadata["cell_bboxes"] = cell_bboxes
+
         return PdfTable(
             table_id=f"p{page_number}-t{table_index + 1}",
             page_numbers=[page_number],
@@ -268,11 +277,35 @@ class PyMuPDFParser:
             rows=rows,
             extraction_method="pymupdf",
             confidence="medium",
-            metadata={
-                "row_count": len(rows),
-                "column_count": max((len(row) for row in rows), default=0),
-            },
+            metadata=metadata,
         )
+
+    def _table_cell_bboxes(
+        self,
+        table: Any,
+        *,
+        row_count: int,
+        col_count: int,
+    ) -> list[list[list[float] | None]]:
+        raw_cells = getattr(table, "cells", None)
+        if not isinstance(raw_cells, list) or not raw_cells or row_count <= 0 or col_count <= 0:
+            return []
+
+        result: list[list[list[float] | None]] = [
+            [None for _ in range(col_count)] for _ in range(row_count)
+        ]
+        for index, cell in enumerate(raw_cells[: row_count * col_count]):
+            row_index = index // col_count
+            col_index = index % col_count
+            bbox = self._dump_bbox(self._bbox_from_rect(cell))
+            if bbox is not None:
+                result[row_index][col_index] = [
+                    bbox["x0"],
+                    bbox["y0"],
+                    bbox["x1"],
+                    bbox["y1"],
+                ]
+        return result
 
     def _table_from_text_lines(self, words: list[PdfWord], page_number: int) -> PdfTable | None:
         line_rows: list[tuple[list[str], list[BoundingBox]]] = []

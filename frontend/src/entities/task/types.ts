@@ -5,11 +5,21 @@ export type TaskType = "report_check" | "ptr_compare";
 export type TaskState = "pending" | "processing" | "completed" | "error";
 export type CheckStatus = "pass" | "fail" | "review" | "skip" | "system_error";
 export type ExportFormat = "json" | "pdf" | "xlsx";
+export type AuditScope = "full" | "targeted";
+export type FinalAuditStatus = "passed" | "needs_manual_review" | "failed" | "audit_failed";
 
 export interface InputFileRef {
   file_id: string;
   file_name: string;
   content_type: string;
+}
+
+export interface AuditOptions {
+  included_check_ids?: string;
+  included_finding_codes?: string;
+  excluded_check_ids?: string;
+  max_targets_per_batch?: number;
+  max_parallel_jobs?: number;
 }
 
 export interface TaskStatus {
@@ -22,11 +32,15 @@ export interface TaskStatus {
   result_ref?: string | null;
   error_message?: string | null;
   logs: string[];
+  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
 
 export interface CheckSummary {
+  audit_scope: AuditScope | null;
+  full_audit: boolean | null;
+  final_audit_status: FinalAuditStatus | null;
   total_checks: number;
   pass_count: number;
   fail_count: number;
@@ -36,6 +50,18 @@ export interface CheckSummary {
   error_count: number;
   warn_count: number;
   info_count: number;
+  candidate_findings_count: number;
+  candidate_errors_count: number;
+  confirmed_findings_count: number;
+  confirmed_errors_count: number;
+  refuted_findings_count: number;
+  manual_review_required_count: number;
+  suggested_additional_findings_count: number;
+  out_of_scope_findings_count: number;
+  summary_only_findings_count: number;
+  unreviewed_required_findings_count: number;
+  codex_reviews_count: number;
+  codex_runtime_failure_count: number;
 }
 
 export interface CheckResult {
