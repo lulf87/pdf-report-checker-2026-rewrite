@@ -7,8 +7,14 @@ import {
   groupCodexReviewsByFinding,
   normalizeCodexReviews,
 } from "../../../entities/codexReview/types";
-import { severityLabel, severityTone } from "../../../entities/finding/types";
+import {
+  findingUserFacingStatus,
+  findingUserFacingStatusLabel,
+  findingUserFacingStatusTone,
+  severityTone,
+} from "../../../entities/finding/types";
 import type { Finding, FindingSeverity } from "../../../entities/finding/types";
+import type { UserFacingFindingStatus } from "../../../entities/finding/types";
 import { REPORT_RULE_GROUPS, checkResultSeverity } from "../../../entities/report/types";
 import type { ReportSeverityFilter } from "../../../entities/report/types";
 import type { CheckResult, TaskResult, TaskStatus } from "../../../entities/task/types";
@@ -79,7 +85,7 @@ export function ReportResults({ task, result, onBack, onReupload }: ReportResult
               value={severityFilter}
             >
               <option value="all">全部级别</option>
-              <option value="error">错误</option>
+              <option value="error">候选错误</option>
               <option value="warn">需复核</option>
               <option value="info">信息</option>
             </select>
@@ -223,7 +229,8 @@ function CheckGroup({ title, description, checks }: { title: string; description
 function CheckRow({ check }: { check: CheckResult }) {
   const [expanded, setExpanded] = useState(false);
   const severity = checkResultSeverity(check);
-  const tone = severityTone(severity);
+  const checkUserStatus = checkUserFacingStatus(check);
+  const tone = userFacingCheckTone(checkUserStatus, severity);
   const codexReviews = normalizeCodexReviews(check.codex_reviews);
   const groupedCodexReviews = groupCodexReviewsByFinding(check.findings, codexReviews);
 
@@ -239,7 +246,7 @@ function CheckRow({ check }: { check: CheckResult }) {
         <div className="button-row">
           {codexReviews.length > 0 ? <Badge variant="accent">Codex {codexReviews.length}</Badge> : null}
           <Badge pulse={severity !== "info"} variant={tone}>
-            {severityLabel(severity)}
+            {userFacingCheckLabel(checkUserStatus)}
           </Badge>
           <Button onClick={() => setExpanded((value) => !value)} size="sm" variant="ghost">
             {expanded ? "收起" : "展开"}
@@ -278,11 +285,17 @@ function FindingList({
 
 function FindingItem({ finding, reviews }: { finding: Finding; reviews: ReturnType<typeof normalizeCodexReviews> }) {
   const finalStatus = findingCodexFinalStatus(finding, reviews);
+  const userStatus = findingUserFacingStatus(finding, finalStatus);
 
   return (
     <div className="evidence-text">
       <div className="button-row">
-        <Badge variant={codexFinalStatusTone(finalStatus)}>{codexFinalStatusLabel(finalStatus)}</Badge>
+        <Badge variant={findingUserFacingStatusTone(userStatus)}>
+          {findingUserFacingStatusLabel(userStatus, finding)}
+        </Badge>
+        {userStatus === "needs_review" && finalStatus !== "pending" ? (
+          <Badge variant={codexFinalStatusTone(finalStatus)}>{codexFinalStatusLabel(finalStatus)}</Badge>
+        ) : null}
         <span>
           <strong>{finding.code}</strong>: {finding.message}
           {finding.location?.page_number ? `（第 ${finding.location.page_number} 页）` : ""}
@@ -293,6 +306,33 @@ function FindingItem({ finding, reviews }: { finding: Finding; reviews: ReturnTy
       <FindingCodexReviewSummary reviews={reviews} />
     </div>
   );
+}
+
+function checkUserFacingStatus(check: CheckResult): string {
+  const metadataStatus = metadataString(check.metadata, "user_facing_status");
+  if (metadataStatus) return metadataStatus;
+  if (check.findings.length === 0) return "passed";
+  const findingStatuses = check.findings.map((finding) => findingUserFacingStatus(finding));
+  const statusPriority: UserFacingFindingStatus[] = ["confirmed_error", "needs_review", "candidate_issue", "refuted"];
+  for (const status of statusPriority) {
+    if (findingStatuses.includes(status)) return status;
+  }
+  return "passed";
+}
+
+function userFacingCheckLabel(status: string): string {
+  if (status === "confirmed_error") return "确认错误";
+  if (status === "needs_review") return "需复核";
+  if (status === "candidate_issue") return "候选问题";
+  if (status === "refuted") return "已反驳";
+  return "通过";
+}
+
+function userFacingCheckTone(status: string, fallbackSeverity: FindingSeverity): "success" | "danger" | "warn" | "info" {
+  if (status === "confirmed_error") return "danger";
+  if (status === "needs_review" || status === "candidate_issue") return "warn";
+  if (status === "refuted" || status === "passed") return "info";
+  return severityTone(fallbackSeverity);
 }
 
 function FindingValue({ label, value }: { label: string; value: unknown }) {

@@ -3,7 +3,7 @@ from pydantic import ValidationError
 
 from app.domain.common import Evidence, EvidenceMethod, Location, SourceType
 from app.domain.finding import Confidence, Finding, FindingSeverity, MissingEvidence, Severity
-from app.domain.result import CheckResult, CheckStatus, CheckSummary
+from app.domain.result import CheckResult, CheckStatus, CheckSummary, annotate_user_facing_statuses
 
 
 def test_finding_severity_enum_keeps_public_values_and_legacy_alias() -> None:
@@ -115,3 +115,54 @@ def test_check_summary_counts_results_and_finding_severities() -> None:
         "codex_reviews_count": 0,
         "codex_runtime_failure_count": 0,
     }
+
+
+def test_user_facing_status_distinguishes_candidate_review_refuted_and_confirmed_error() -> None:
+    location = Location(source_type=SourceType.REPORT, page_number=3)
+    evidence = Evidence(
+        id="ev-user-facing",
+        source_type=SourceType.REPORT,
+        location=location,
+        raw_text="候选证据",
+        method=EvidenceMethod.PDF_TEXT,
+    )
+    candidate = Finding(
+        id="candidate-error",
+        task_id="task-1",
+        check_id="C09",
+        severity=FindingSeverity.ERROR,
+        code="SERIAL_NUMBER_ERROR_001",
+        message="序号候选问题",
+        evidence=[evidence],
+    )
+    extraction_uncertain = Finding(
+        id="c07-extraction-uncertain",
+        task_id="task-1",
+        check_id="C07",
+        severity=FindingSeverity.WARN,
+        code="CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN",
+        message="表格抽取不确定",
+        evidence=[evidence],
+    )
+    refuted = candidate.model_copy(deep=True, update={"id": "refuted", "metadata": {"final_status": "refuted"}})
+    confirmed = candidate.model_copy(deep=True, update={"id": "confirmed", "metadata": {"final_status": "confirmed"}})
+    results = [
+        CheckResult(
+            task_id="task-1",
+            check_id="CXX",
+            check_name="用户状态测试",
+            status=CheckStatus.FAIL,
+            findings=[candidate, extraction_uncertain, refuted, confirmed],
+        )
+    ]
+
+    annotate_user_facing_statuses(results)
+
+    statuses = {finding.id: finding.metadata["user_facing_status"] for finding in results[0].findings}
+    assert statuses == {
+        "candidate-error": "candidate_issue",
+        "c07-extraction-uncertain": "needs_review",
+        "refuted": "refuted",
+        "confirmed": "confirmed_error",
+    }
+    assert results[0].metadata["user_facing_status"] == "confirmed_error"

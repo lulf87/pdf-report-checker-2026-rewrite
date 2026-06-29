@@ -85,6 +85,13 @@ def component_not_used(component: SampleComponent) -> bool:
     return "本次检测未使用" in compact(component.remark)
 
 
+def component_is_supporting_equipment(component: SampleComponent) -> bool:
+    return (
+        component.metadata.get("sample_role") == "supporting_equipment"
+        or component.metadata.get("supporting_equipment") is True
+    )
+
+
 def evidence_for_field(field: ReportField | None, fallback_id: str) -> list[Evidence]:
     if field is None:
         return []

@@ -132,4 +132,60 @@ class CheckResult(BaseModel):
         return self
 
 
-__all__ = ["CheckResult", "CheckStatus", "CheckSummary", "ResultSummary", "Severity"]
+USER_FACING_CONFIRMED_ERROR = "confirmed_error"
+USER_FACING_NEEDS_REVIEW = "needs_review"
+USER_FACING_CANDIDATE_ISSUE = "candidate_issue"
+USER_FACING_REFUTED = "refuted"
+USER_FACING_PASSED = "passed"
+
+
+def user_facing_status_for_finding(finding: Finding) -> str:
+    final_status = finding.metadata.get("final_status")
+    if final_status == "confirmed":
+        return USER_FACING_CONFIRMED_ERROR if finding.severity == FindingSeverity.ERROR else USER_FACING_NEEDS_REVIEW
+    if final_status == "refuted":
+        return USER_FACING_REFUTED
+    if final_status == "manual_review_required":
+        return USER_FACING_NEEDS_REVIEW
+    if final_status in {"out_of_scope", "summary_only"}:
+        return USER_FACING_NEEDS_REVIEW
+
+    if finding.severity == FindingSeverity.ERROR:
+        return USER_FACING_CANDIDATE_ISSUE
+    if finding.severity == FindingSeverity.WARN:
+        return USER_FACING_NEEDS_REVIEW
+    return USER_FACING_PASSED
+
+
+def user_facing_status_for_result(result: CheckResult) -> str:
+    if not result.findings:
+        return USER_FACING_PASSED
+    statuses = [user_facing_status_for_finding(finding) for finding in result.findings]
+    for status in (
+        USER_FACING_CONFIRMED_ERROR,
+        USER_FACING_NEEDS_REVIEW,
+        USER_FACING_CANDIDATE_ISSUE,
+        USER_FACING_REFUTED,
+    ):
+        if status in statuses:
+            return status
+    return USER_FACING_PASSED
+
+
+def annotate_user_facing_statuses(results: Sequence[CheckResult]) -> None:
+    for result in results:
+        for finding in result.findings:
+            finding.metadata["user_facing_status"] = user_facing_status_for_finding(finding)
+        result.metadata["user_facing_status"] = user_facing_status_for_result(result)
+
+
+__all__ = [
+    "CheckResult",
+    "CheckStatus",
+    "CheckSummary",
+    "ResultSummary",
+    "Severity",
+    "annotate_user_facing_statuses",
+    "user_facing_status_for_finding",
+    "user_facing_status_for_result",
+]

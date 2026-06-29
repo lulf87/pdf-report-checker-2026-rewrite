@@ -39,7 +39,12 @@ def test_excel_exporter_creates_summary_and_findings_sheets() -> None:
 
     assert "task-xlsx" in summary_text
     assert "ptr_compare" in summary_text
+    assert "candidate_errors_count" in summary_text
+    assert "confirmed_errors_count" in summary_text
+    assert "legacy_fail_count" in summary_text
+    assert "legacy_error_count" in summary_text
     assert "C01_FIELD_MISMATCH" in findings_text
+    assert "candidate_issue" in findings_text
     assert "ABC-1" in findings_text
     assert "ABC-2" in findings_text
 

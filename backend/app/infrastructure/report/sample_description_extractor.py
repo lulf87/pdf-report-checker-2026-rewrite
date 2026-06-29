@@ -42,6 +42,7 @@ class SampleDescriptionExtractor:
                 page_number = page.page_number or (table.page_numbers[0] if table.page_numbers else None)
                 if page_number is None:
                     continue
+                sample_role = self._sample_role(table=table, page_text=page.text)
                 for row_index, values in self._data_rows(table, header_row_index):
                     if not any((value or "").strip() for value in values):
                         continue
@@ -54,6 +55,7 @@ class SampleDescriptionExtractor:
                         row_counter=row_counter,
                         values=values,
                         header_map=header_map,
+                        sample_role=sample_role,
                     )
                     if row is not None:
                         rows.append(row)
@@ -75,6 +77,9 @@ class SampleDescriptionExtractor:
                 metadata={
                     **row.metadata,
                     "unused_note": _field_value(row.remark) if "本次检测未使用" in (_field_value(row.remark) or "") else "",
+                    "sample_role": row.metadata.get("sample_role", "main_sample"),
+                    "supporting_equipment": row.metadata.get("sample_role") == "supporting_equipment",
+                    **({"source_context": row.metadata["source_context"]} if "source_context" in row.metadata else {}),
                 },
             )
             components.append(component)
@@ -90,6 +95,7 @@ class SampleDescriptionExtractor:
         row_counter: int,
         values: list[str],
         header_map: dict[str, int],
+        sample_role: dict[str, str | bool],
     ) -> SampleDescriptionRow | None:
         get_value = lambda field_name: self._cell_value(values, header_map.get(field_name))
         row_id = f"sample-row-{row_counter}"
@@ -142,6 +148,7 @@ class SampleDescriptionExtractor:
             metadata={
                 "source_table_id": table.table_id,
                 "field_columns": dict(header_map),
+                **sample_role,
             },
         )
 
@@ -224,6 +231,17 @@ class SampleDescriptionExtractor:
             return False
         supporting_fields = {"model", "batch_or_serial", "production_date", "expiration_date", "remark"}
         return bool(supporting_fields.intersection(header_map))
+
+    def _sample_role(self, *, table: PdfTable, page_text: str) -> dict[str, str | bool]:
+        context = " ".join(part for part in (table.title, table.caption, page_text) if part)
+        compact_context = _compact(context)
+        if "本次检验配合使用" in compact_context or "配合使用设备" in compact_context:
+            return {
+                "sample_role": "supporting_equipment",
+                "supporting_equipment": True,
+                "source_context": "本次检验配合使用",
+            }
+        return {"sample_role": "main_sample", "supporting_equipment": False}
 
     def _data_rows(
         self,

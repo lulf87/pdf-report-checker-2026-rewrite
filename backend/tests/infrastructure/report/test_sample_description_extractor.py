@@ -67,3 +67,29 @@ def test_extracts_rows_with_header_synonyms_and_keeps_empty_values() -> None:
     assert row.expiration_date.value == ""
     assert row.remark is not None
     assert row.remark.value == "/"
+
+
+def test_marks_page_8_cooperating_use_table_as_supporting_equipment() -> None:
+    table = PdfTable(
+        table_id="supporting-equipment-table",
+        page_numbers=[8],
+        columns=["序号", "部件名称", "规格型号", "序列号/批号", "生产日期", "备注"],
+        rows=[
+            ["序号", "部件名称", "规格型号", "序列号/批号", "生产日期", "备注"],
+            ["1", "三维心脏电生理标测系统", "ENSITE-X", "ABC123", "2025-01-01", ""],
+        ],
+    )
+    parsed = _parsed_pdf(
+        PdfPage(
+            page_number=8,
+            text="本次检验配合使用设备如下：",
+            tables=[table],
+        )
+    )
+
+    components = SampleDescriptionExtractor().extract_components(parsed)
+
+    assert len(components) == 1
+    assert components[0].metadata["sample_role"] == "supporting_equipment"
+    assert components[0].metadata["supporting_equipment"] is True
+    assert components[0].metadata["source_context"] == "本次检验配合使用"

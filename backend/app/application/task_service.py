@@ -11,7 +11,7 @@ from app.application.task_repository import (
     TaskResult,
     TaskResultNotFoundError,
 )
-from app.domain.result import CheckResult, CheckSummary
+from app.domain.result import CheckResult, CheckSummary, annotate_user_facing_statuses
 from app.domain.task import TaskState, TaskStatus, TaskType
 from app.domain.task import InputFileRef
 
@@ -96,6 +96,7 @@ class TaskService:
     ) -> TaskStatus:
         task = self.get_task(task_id)
         result_metadata = metadata or {}
+        annotate_user_facing_statuses(check_results)
         summary = CheckSummary.from_results(check_results)
         _apply_codex_audit_summary_metadata(summary, result_metadata.get("codex_audit"))
         result = TaskResult(

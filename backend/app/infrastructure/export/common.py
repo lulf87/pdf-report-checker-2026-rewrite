@@ -5,7 +5,7 @@ from typing import Any
 
 from app.domain.common import Evidence
 from app.domain.finding import Finding
-from app.domain.result import CheckResult, CheckSummary
+from app.domain.result import CheckResult, CheckSummary, annotate_user_facing_statuses
 
 
 def build_export_payload(
@@ -17,17 +17,19 @@ def build_export_payload(
     diagnostics: Sequence[str] | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    findings = flatten_findings(results)
+    export_results = [result.model_copy(deep=True) for result in results]
+    annotate_user_facing_statuses(export_results)
+    findings = flatten_findings(export_results)
     return {
         "task": {
             "task_id": task_id,
             "task_type": task_type,
             "input_files": list(input_files or []),
         },
-        "summary": CheckSummary.from_results(results).model_dump(mode="json"),
-        "check_results": [result.model_dump(mode="json") for result in results],
+        "summary": CheckSummary.from_results(export_results).model_dump(mode="json"),
+        "check_results": [result.model_dump(mode="json") for result in export_results],
         "findings": [finding.model_dump(mode="json") for finding in findings],
-        "evidence": [evidence.model_dump(mode="json") for evidence in flatten_evidence(results)],
+        "evidence": [evidence.model_dump(mode="json") for evidence in flatten_evidence(export_results)],
         "diagnostics": list(diagnostics or []),
         "metadata": metadata or {},
     }

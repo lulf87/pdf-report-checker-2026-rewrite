@@ -1018,3 +1018,16 @@
   - `manual_review_required_count=0`
   - `codex_runtime_failure_count=0`
   - package count 和总 wall-clock time 较 batch=1 基线下降。
+
+## T-RULE：真实样本规则语义校正
+
+### T-RULE-2797-01：2797 报告自检结果语义校正与规则适用性修复
+- 目标：基于 2797 样本修正 report-check 用户层语义，避免未经 Codex final audit 的 deterministic `error_count` 被误读为确认不符合。
+- 完成状态：[x]
+- 实现记录：
+  - 新增 finding/check `user_facing_status`：`confirmed_error`、`needs_review`、`candidate_issue`、`refuted`、`passed`。
+  - C04 caption-only / OCR fields empty 改为 `OCR_EVIDENCE_INSUFFICIENT` WARN / `needs_review`。
+  - 样品描述抽取识别“本次检验配合使用”上下文，标记 `sample_role=supporting_equipment`。
+  - C05/C06 默认跳过 `supporting_equipment`，不作为主样品照片/标签覆盖 error。
+  - Report 前端和 PDF/XLSX 导出区分候选问题、需复核、确认错误和 legacy deterministic counts。
+- 约束：未运行真实 Codex CLI；未调用 GPT/OpenAI API；未修改旧项目目录。

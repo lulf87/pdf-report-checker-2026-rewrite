@@ -9,6 +9,7 @@ from app.domain.finding import Finding, FindingSeverity, MissingEvidence
 from app.domain.report import PhotoCaption, ReportDocument, SampleComponent
 from app.domain.result import CheckResult, CheckStatus
 from app.rules.report.common import (
+    component_is_supporting_equipment,
     component_not_used,
     evidence_for_component,
     make_result,
@@ -116,6 +117,11 @@ def check_c05_photo_coverage(
         if component_not_used(component):
             coverage.append(
                 _coverage_record(component, None, "unused_component_skipped", is_unused_component=True)
+            )
+            continue
+        if component_is_supporting_equipment(component):
+            coverage.append(
+                _coverage_record(component, None, "supporting_equipment_skipped", is_unused_component=False)
             )
             continue
         active_components.append(component)
@@ -309,6 +315,8 @@ def _component_metadata(component: SampleComponent) -> dict[str, Any]:
     return {
         "component_name": component.component_name,
         "component_key": component.identity_key or component.component_id,
+        "sample_role": component.metadata.get("sample_role", "main_sample"),
+        "supporting_equipment": component_is_supporting_equipment(component),
     }
 
 

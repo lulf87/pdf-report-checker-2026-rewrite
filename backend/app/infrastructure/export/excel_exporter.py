@@ -55,24 +55,30 @@ def _summary_rows(payload: dict[str, Any]) -> list[list[Any]]:
         ["input_files", ", ".join(task.get("input_files") or [])],
         ["total_checks", summary["total_checks"]],
         ["pass_count", summary["pass_count"]],
-        ["fail_count", summary["fail_count"]],
         ["review_count", summary["review_count"]],
         ["skip_count", summary["skip_count"]],
         ["system_error_count", summary["system_error_count"]],
-        ["error_count", summary["error_count"]],
-        ["warn_count", summary["warn_count"]],
+        ["candidate_errors_count", summary["candidate_errors_count"]],
+        ["confirmed_errors_count", summary["confirmed_errors_count"]],
+        ["manual_review_required_count", summary["manual_review_required_count"]],
+        ["refuted_findings_count", summary["refuted_findings_count"]],
+        ["legacy_fail_count", summary["fail_count"]],
+        ["legacy_error_count", summary["error_count"]],
+        ["legacy_warn_count", summary["warn_count"]],
         ["info_count", summary["info_count"]],
         ["diagnostics", " | ".join(payload["diagnostics"])],
     ]
 
 
 def _check_result_rows(payload: dict[str, Any]) -> list[list[Any]]:
-    rows = [["check_id", "check_name", "status", "severity", "summary", "finding_count"]]
+    rows = [["check_id", "check_name", "user_facing_status", "deterministic_status", "severity", "summary", "finding_count"]]
     for result in payload["check_results"]:
+        metadata = result.get("metadata") or {}
         rows.append(
             [
                 result["check_id"],
                 result["check_name"],
+                metadata.get("user_facing_status") or "",
                 result["status"],
                 result.get("severity") or "",
                 result.get("summary") or "",
@@ -83,17 +89,19 @@ def _check_result_rows(payload: dict[str, Any]) -> list[list[Any]]:
 
 
 def _finding_rows(payload: dict[str, Any]) -> list[list[Any]]:
-    rows = [["finding_id", "check_id", "severity", "code", "message", "expected", "actual", "page"]]
+    rows = [["finding_id", "check_id", "severity", "user_facing_status", "code", "message", "expected", "actual", "page"]]
     for finding in payload["findings"]:
         location = finding.get("location") or {}
         if not location:
             evidence = finding.get("evidence") or []
             location = (evidence[0].get("location") or {}) if evidence else {}
+        metadata = finding.get("metadata") or {}
         rows.append(
             [
                 finding["id"],
                 finding["check_id"],
                 finding["severity"],
+                metadata.get("user_facing_status") or "",
                 finding["code"],
                 finding["message"],
                 _cell_value(finding.get("expected")),

@@ -68,6 +68,16 @@ def check_c04_sample_description(
                 "matching_strategy": matching_strategy,
             }
         )
+        if _label_ocr_fields_empty(label):
+            findings.append(
+                _ocr_evidence_insufficient_finding(
+                    context=context,
+                    component=component,
+                    label=label,
+                    matching_strategy=matching_strategy,
+                )
+            )
+            continue
         for field_name in _FIELDS_TO_COMPARE:
             component_value = component_field_value(component, field_name)
             label_field = get_label_field(label, field_name)
@@ -161,6 +171,52 @@ def _values_match_exactly(left: str | None, right: str | None) -> bool:
     if is_no_value(left) != is_no_value(right):
         return False
     return (left or "") == (right or "")
+
+
+def _label_ocr_fields_empty(label: LabelOCRResult) -> bool:
+    return is_chinese_label(label) and bool(label.caption_text) and len(label.fields) == 0
+
+
+def _ocr_evidence_insufficient_finding(
+    *,
+    context: CheckContext,
+    component: SampleComponent,
+    label: LabelOCRResult,
+    matching_strategy: str | None,
+) -> Finding:
+    component_name = component.component_name or component.component_id
+    return Finding(
+        id=f"{context.task_id}-c04-{component.component_id}-ocr-evidence-insufficient",
+        task_id=context.task_id,
+        check_id=CHECK_ID,
+        severity=FindingSeverity.WARN,
+        code="OCR_EVIDENCE_INSUFFICIENT",
+        message=(
+            f"样品描述部件“{component_name}”已找到中文标签样张 caption，"
+            "但未抽取到可比对的标签 OCR 字段，需视觉复核标签内容。"
+        ),
+        location=component.row_location,
+        expected="可读取的中文标签字段 OCR 或视觉证据",
+        actual="仅找到中文标签样张 caption，结构化 OCR 字段为空",
+        evidence=[
+            *evidence_for_component(component),
+            *evidence_for_label(label),
+        ],
+        confidence=Confidence.MEDIUM,
+        metadata={
+            "component_id": component.component_id,
+            "component_key": component.identity_key,
+            "label_id": label.label_id,
+            "label_key": label.label_id,
+            "matched_label_key": None,
+            "matched_ocr_field_count": 0,
+            "label_caption_exists": True,
+            "label_caption_text": label.caption_text,
+            "matching_strategy": matching_strategy,
+            "needs_visual_review": True,
+            "user_facing_status": "needs_review",
+        },
+    )
 
 
 def _field_finding(

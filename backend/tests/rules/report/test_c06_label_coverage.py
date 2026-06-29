@@ -116,6 +116,20 @@ def test_c06_skips_not_used_component() -> None:
     assert result.metadata["coverage"][0]["matching_strategy"] == "unused_component_skipped"
 
 
+def test_c06_skips_supporting_equipment_by_default() -> None:
+    document = base_document()
+    supporting = component("c1", "配合使用设备")
+    supporting.metadata["sample_role"] = "supporting_equipment"
+    document.sample_components = [supporting]
+
+    result = check_c06_label_coverage(document, CheckContext(task_id="task-c06"))
+
+    assert result.status == CheckStatus.SKIP
+    assert result.findings == []
+    assert result.metadata["coverage"][0]["sample_role"] == "supporting_equipment"
+    assert result.metadata["coverage"][0]["matching_strategy"] == "supporting_equipment_skipped"
+
+
 def test_c06_distinguishes_same_name_components_by_non_empty_identity_fields() -> None:
     document = base_document(
         labels=[

@@ -104,6 +104,20 @@ def test_c05_skips_component_marked_not_used() -> None:
     assert result.metadata["coverage"][0]["matching_strategy"] == "unused_component_skipped"
 
 
+def test_c05_skips_supporting_equipment_by_default() -> None:
+    document = base_document()
+    supporting = component("c1", "配合使用设备")
+    supporting.metadata["sample_role"] = "supporting_equipment"
+    document.sample_components = [supporting]
+
+    result = check_c05_photo_coverage(document, CheckContext(task_id="task-c05"))
+
+    assert result.status == CheckStatus.SKIP
+    assert result.findings == []
+    assert result.metadata["coverage"][0]["sample_role"] == "supporting_equipment"
+    assert result.metadata["coverage"][0]["matching_strategy"] == "supporting_equipment_skipped"
+
+
 def test_c05_warns_when_matching_caption_has_low_confidence() -> None:
     document = base_document()
     document.sample_components = [component("c1", "消化道脉冲电场消融导管")]

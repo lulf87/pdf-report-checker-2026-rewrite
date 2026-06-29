@@ -2,6 +2,7 @@ export type Confidence = "high" | "medium" | "low";
 export type SourceType = "report" | "ptr" | "system";
 export type EvidenceMethod = "pdf_text" | "pdf_layout" | "ocr" | "vlm" | "llm" | "manual" | "system";
 export type FindingSeverity = "error" | "warn" | "info";
+export type UserFacingFindingStatus = "confirmed_error" | "needs_review" | "candidate_issue" | "refuted" | "passed";
 export type DiffFragmentKind = "equal" | "insert" | "delete" | "replace";
 
 export interface BoundingBox {
@@ -69,7 +70,7 @@ export interface Finding {
 }
 
 export function severityLabel(severity: FindingSeverity): string {
-  if (severity === "error") return "错误";
+  if (severity === "error") return "候选错误";
   if (severity === "warn") return "需复核";
   return "信息";
 }
@@ -78,4 +79,57 @@ export function severityTone(severity?: FindingSeverity | null): "danger" | "war
   if (severity === "error") return "danger";
   if (severity === "warn") return "warn";
   return "info";
+}
+
+export function findingUserFacingStatus(
+  finding: Finding,
+  codexFinalStatus?: string | null,
+): UserFacingFindingStatus {
+  const metadataStatus = metadataString(finding.metadata, "user_facing_status");
+  if (isUserFacingFindingStatus(metadataStatus)) return metadataStatus;
+
+  if (codexFinalStatus === "confirmed") return finding.severity === "error" ? "confirmed_error" : "needs_review";
+  if (codexFinalStatus === "refuted") return "refuted";
+  if (codexFinalStatus === "manual_review_required") return "needs_review";
+
+  if (finding.severity === "error") return "candidate_issue";
+  if (finding.severity === "warn") return "needs_review";
+  return "passed";
+}
+
+export function findingUserFacingStatusLabel(status: UserFacingFindingStatus, finding?: Finding): string {
+  if (status === "confirmed_error") return "确认错误";
+  if (status === "refuted") return "已反驳";
+  if (status === "candidate_issue") return "候选问题";
+  if (status === "passed") return "通过";
+  if (finding?.code === "CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN") return "表格抽取不确定/需视觉复核";
+  if (finding?.code === "CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX") return "复杂矩阵需复核";
+  if (finding?.code === "OCR_EVIDENCE_INSUFFICIENT" || finding?.code === "NEEDS_VISUAL_REVIEW") {
+    return "OCR 证据不足/需视觉复核";
+  }
+  return "需人工复核";
+}
+
+export function findingUserFacingStatusTone(
+  status: UserFacingFindingStatus,
+): "success" | "danger" | "warn" | "info" {
+  if (status === "confirmed_error") return "danger";
+  if (status === "needs_review" || status === "candidate_issue") return "warn";
+  if (status === "passed") return "success";
+  return "info";
+}
+
+function metadataString(metadata: Record<string, unknown>, key: string): string | null {
+  const value = metadata[key];
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function isUserFacingFindingStatus(value: string | null): value is UserFacingFindingStatus {
+  return (
+    value === "confirmed_error" ||
+    value === "needs_review" ||
+    value === "candidate_issue" ||
+    value === "refuted" ||
+    value === "passed"
+  );
 }

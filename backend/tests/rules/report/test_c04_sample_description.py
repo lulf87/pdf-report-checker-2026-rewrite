@@ -255,6 +255,32 @@ def test_c04_reviews_when_no_matching_label_is_found() -> None:
     assert result.findings[0].severity == FindingSeverity.WARN
 
 
+def test_c04_label_caption_with_empty_ocr_fields_needs_visual_review_not_error() -> None:
+    document = base_document(
+        labels=[
+            label(
+                "label-caption-only",
+                caption_text="消化道脉冲电场消融导管 中文标签样张",
+                fields=[],
+            )
+        ]
+    )
+    document.sample_components = [
+        component("c1", "消化道脉冲电场消融导管", expiration_date="2027-12-09")
+    ]
+
+    result = _run(document)
+
+    assert result.status == CheckStatus.REVIEW
+    assert len(result.findings) == 1
+    finding = result.findings[0]
+    assert finding.code == "OCR_EVIDENCE_INSUFFICIENT"
+    assert finding.severity == FindingSeverity.WARN
+    assert finding.metadata["user_facing_status"] == "needs_review"
+    assert finding.metadata["label_caption_exists"] is True
+    assert finding.metadata["matched_ocr_field_count"] == 0
+
+
 def test_c04_handles_flattened_merged_sample_description_rows() -> None:
     document = base_document(labels=[_component_label()])
     flattened_row = component(

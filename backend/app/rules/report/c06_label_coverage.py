@@ -11,6 +11,7 @@ from app.domain.result import CheckResult, CheckStatus
 from app.rules.report.c05_photo_coverage import extract_photo_caption_subject, match_photo_subject
 from app.rules.report.common import (
     component_field_value,
+    component_is_supporting_equipment,
     component_not_used,
     evidence_for_component,
     evidence_for_label,
@@ -91,6 +92,11 @@ def check_c06_label_coverage(
         if component_not_used(component):
             coverage.append(
                 _coverage_record(component, None, "unused_component_skipped", is_unused_component=True)
+            )
+            continue
+        if component_is_supporting_equipment(component):
+            coverage.append(
+                _coverage_record(component, None, "supporting_equipment_skipped", is_unused_component=False)
             )
             continue
         active_components.append(component)
@@ -363,6 +369,8 @@ def _component_metadata(component: SampleComponent) -> dict[str, Any]:
         "component_id": component.component_id,
         "component_name": component.component_name,
         "component_key": build_component_key(component),
+        "sample_role": component.metadata.get("sample_role", "main_sample"),
+        "supporting_equipment": component_is_supporting_equipment(component),
     }
 
 
@@ -397,7 +405,7 @@ def _candidate_evidence(candidate: _LabelCandidate) -> list[Evidence]:
 def _component_name_counts(components: list[SampleComponent]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for component in components:
-        if component_not_used(component):
+        if component_not_used(component) or component_is_supporting_equipment(component):
             continue
         name = component.component_name or ""
         counts[name] = counts.get(name, 0) + 1

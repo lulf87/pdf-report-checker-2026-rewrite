@@ -6,6 +6,8 @@ from app.application.task_service import (
     TaskResultNotFoundError,
     TaskService,
 )
+from app.domain.common import Evidence, EvidenceMethod, SourceType
+from app.domain.finding import Finding, FindingSeverity
 from app.domain.result import CheckResult, CheckStatus
 from app.domain.task import InputFileRef, TaskState, TaskType
 
@@ -63,6 +65,46 @@ def test_task_service_tracks_lifecycle_and_stores_structured_result() -> None:
     assert result.input_files == [input_file]
     assert result.diagnostics == ["deterministic rules only"]
     assert result.metadata == {"source": "unit-test"}
+
+
+def test_task_service_stores_user_facing_status_for_unreviewed_candidate_error() -> None:
+    service = TaskService()
+    task = service.create_task(TaskType.REPORT_CHECK)
+    evidence = Evidence(
+        id="ev-c09",
+        source_type=SourceType.REPORT,
+        raw_text="序号列",
+        method=EvidenceMethod.PDF_TEXT,
+    )
+    finding = Finding(
+        id="finding-c09",
+        task_id=task.task_id,
+        check_id="C09",
+        severity=FindingSeverity.ERROR,
+        code="SERIAL_NUMBER_ERROR_001",
+        message="序号候选问题",
+        evidence=[evidence],
+    )
+
+    service.complete_task(
+        task.task_id,
+        [
+            CheckResult(
+                task_id=task.task_id,
+                check_id="C09",
+                check_name="序号连续性",
+                status=CheckStatus.FAIL,
+                findings=[finding],
+            )
+        ],
+    )
+
+    result = service.get_result(task.task_id)
+    assert result.findings[0].metadata["user_facing_status"] == "candidate_issue"
+    assert result.check_results[0].metadata["user_facing_status"] == "candidate_issue"
+    assert result.summary.error_count == 1
+    assert result.summary.candidate_errors_count == 1
+    assert result.summary.confirmed_errors_count == 0
 
 
 def test_task_service_returns_deep_copies_of_task_state() -> None:

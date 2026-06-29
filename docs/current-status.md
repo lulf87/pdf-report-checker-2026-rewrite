@@ -2864,3 +2864,28 @@ full mandatory audit 最终复验：
 - 未修改旧项目目录。
 
 下一推荐任务：T-PERF-05，使用真实样本执行 full mandatory audit，确保无 include/exclude filters、effective `CODEX_AUDIT_MAX_TARGETS_PER_BATCH=5`，对比 batch=1 基线的 package 数、wall-clock、`codex_exec_seconds`、image bytes 和最终审核结论。
+
+## T-RULE-2797-01：2797 报告自检结果语义校正
+
+完成日期：2026-06-29
+
+背景：
+
+- 用户提供 2797 报告样本和附件导出结果。
+- 附件结果显示 `error_count=36`、`warn_count=14`、`review_count=0`，但未经过 Codex final audit，容易被误读为 36 个确认不符合。
+
+本次修复：
+
+- 新增 finding/check `user_facing_status`：`confirmed_error`、`needs_review`、`candidate_issue`、`refuted`、`passed`。
+- 未经 Codex final audit 的 deterministic `ERROR` 在用户层显示为 `candidate_issue`，不等同 confirmed error。
+- C04 已找到中文标签样张 caption 但结构化 OCR 字段为空时，改为单条 `OCR_EVIDENCE_INSUFFICIENT` WARN / `needs_review`，不再逐字段输出“标签缺字段” error。
+- 样品描述抽取识别“本次检验配合使用”上下文，并标记 `sample_role=supporting_equipment`。
+- C05/C06 默认跳过 `supporting_equipment`，不对配合使用设备输出主样品照片/中文标签覆盖 error。
+- C07 extraction-uncertain / complex-matrix 候选在前端显示为表格抽取或复杂矩阵复核，不作为逻辑错误文案展示。
+- PDF/XLSX 导出将 `candidate_errors_count`、`confirmed_errors_count`、`manual_review_required_count` 放在用户汇总中；旧 deterministic `fail/error/warn` 改为 `legacy_*` 口径。
+
+约束确认：
+
+- 未运行真实 Codex CLI。
+- 未调用 GPT/OpenAI API。
+- 未修改旧项目目录。

@@ -25,6 +25,15 @@ def test_pdf_exporter_includes_task_summary_findings_and_evidence() -> None:
     assert "C01" in text
     assert "ABC-1" in text
     assert "ABC-2" in text
+    assert "candidate_errors_count" in text
+    assert "confirmed_errors_count" in text
+    assert "manual_review_required_count" in text
+    assert "legacy_fail_count" in text
+    assert "legacy_error_count" in text
+    assert "user_facing_status" in text
+    assert "\nerror_count:" not in text
+    assert "\nfail_count:" not in text
+    assert "\nwarn_count:" not in text
     assert "第三页型号规格" in text
     assert "中文字体缺失时不得崩溃" in text
 
