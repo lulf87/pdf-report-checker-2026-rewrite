@@ -48,10 +48,15 @@ class ReportRuleRunner:
         context = context or CheckContext()
         results: list[CheckResult] = []
         for rule in self.rules:
+            if context.on_check_start is not None:
+                context.on_check_start(rule.check_id, rule.check_name)
             try:
-                results.append(rule.run(document, context))
+                result = rule.run(document, context)
             except Exception as exc:  # pragma: no cover - behavior covered by runner tests
-                results.append(_system_error_result(rule, context, exc))
+                result = _system_error_result(rule, context, exc)
+            results.append(result)
+            if context.on_check_complete is not None:
+                context.on_check_complete(result)
 
         findings = [finding for result in results for finding in result.findings]
         return ReportRuleRunResult(

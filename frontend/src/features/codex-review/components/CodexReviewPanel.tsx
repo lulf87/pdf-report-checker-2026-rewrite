@@ -4,6 +4,7 @@ import {
   CODEX_STATUS_LABELS,
   codexReviewPrimaryLabel,
   codexReviewTone,
+  formatCodexReviewError,
   normalizeCodexReviews,
   summarizeCodexReviews,
 } from "../../../entities/codexReview/types";
@@ -78,6 +79,7 @@ function CodexSummaryItem({ label, value }: { label: string; value: number }) {
 
 function CodexReviewItem({ review }: { review: CodexReviewResult }) {
   const confidence = review.confidence ? CODEX_CONFIDENCE_LABELS[review.confidence] : null;
+  const formattedError = review.error ? formatCodexReviewError(review.error) : null;
 
   return (
     <article className={`codex-review-item codex-review-${codexReviewTone(review)}`}>
@@ -111,10 +113,15 @@ function CodexReviewItem({ review }: { review: CodexReviewResult }) {
         </div>
       ) : null}
 
-      {review.error ? (
+      {formattedError ? (
         <div className="codex-error">
-          <strong>{review.error.code}</strong>: {review.error.message}
-          {review.error.detail ? ` ${review.error.detail}` : ""}
+          <strong>LLM 复核提示</strong>: {formattedError.message}
+          {formattedError.detail ? (
+            <details className="advanced-audit-settings">
+              <summary>高级详情</summary>
+              <pre>{formattedError.detail}</pre>
+            </details>
+          ) : null}
         </div>
       ) : null}
     </article>

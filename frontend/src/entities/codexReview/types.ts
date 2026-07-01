@@ -125,6 +125,67 @@ export const CODEX_CONFIDENCE_LABELS: Record<CodexReviewConfidence, string> = {
   low: "低",
 };
 
+export const CODEX_MISSING_TARGET_USER_MESSAGE =
+  "LLM 复核未完成：本次规则核对已完成，但 LLM/Codex 未返回所有候选项的复核结果。请重试，或关闭 LLM 增强识别查看规则初筛结果。这不是报告确认错误。";
+export const CODEX_TIMEOUT_USER_MESSAGE =
+  "LLM 复核超时：本次规则核对已完成，但 LLM/Codex 复核批次在限定时间内没有返回。请重试，或关闭 LLM 增强识别查看规则初筛结果。这不是报告确认错误。";
+export const CODEX_CLI_UNAVAILABLE_USER_MESSAGE =
+  "本机 Codex CLI 不可用：本次规则核对已完成，但本机 LLM/Codex 复核环境未能启动。请检查 Codex CLI 后重试，或关闭 LLM 增强识别查看规则初筛结果。这不是报告确认错误。";
+
+export interface UserFacingCodexError {
+  message: string;
+  detail?: string | null;
+}
+
+export function formatCodexRuntimeError(rawError: string | null | undefined): UserFacingCodexError {
+  const raw = rawError?.trim() ?? "";
+  if (isMissingTargetError(raw)) {
+    return {
+      message: CODEX_MISSING_TARGET_USER_MESSAGE,
+      detail: raw,
+    };
+  }
+  if (isTimeoutError(raw)) {
+    return {
+      message: CODEX_TIMEOUT_USER_MESSAGE,
+      detail: raw,
+    };
+  }
+  if (isCliUnavailableError(raw)) {
+    return {
+      message: CODEX_CLI_UNAVAILABLE_USER_MESSAGE,
+      detail: raw,
+    };
+  }
+  return { message: raw || "报告自检失败", detail: null };
+}
+
+export function formatCodexReviewError(error: CodexReviewError): UserFacingCodexError {
+  const raw = [error.code, error.message, error.detail].filter(Boolean).join(": ");
+  if (error.code === "CODEX_OUTPUT_MISSING_TARGET" || isMissingTargetError(raw)) {
+    return {
+      message: CODEX_MISSING_TARGET_USER_MESSAGE,
+      detail: raw,
+    };
+  }
+  if (error.code === "CODEX_TIMEOUT" || isTimeoutError(raw)) {
+    return {
+      message: CODEX_TIMEOUT_USER_MESSAGE,
+      detail: raw,
+    };
+  }
+  if (error.code === "CODEX_CLI_UNAVAILABLE" || isCliUnavailableError(raw)) {
+    return {
+      message: CODEX_CLI_UNAVAILABLE_USER_MESSAGE,
+      detail: raw,
+    };
+  }
+  return {
+    message: `${error.code}: ${error.message}`,
+    detail: error.detail ?? null,
+  };
+}
+
 export function normalizeCodexReviews(reviews?: readonly CodexReviewResult[] | null): CodexReviewResult[] {
   return Array.isArray(reviews) ? [...reviews] : [];
 }
@@ -255,6 +316,18 @@ function findAssociatedFinding(findings: readonly Finding[], review: CodexReview
 function metadataString(metadata: Record<string, unknown>, key: string): string | null {
   const value = metadata[key];
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+function isMissingTargetError(value: string): boolean {
+  return value.includes("CODEX_OUTPUT_MISSING_TARGET") || value.includes("missing_target_ids") || value.includes("missing target_ids");
+}
+
+function isTimeoutError(value: string): boolean {
+  return value.includes("CODEX_TIMEOUT") || value.includes("timed out") || value.includes("超时");
+}
+
+function isCliUnavailableError(value: string): boolean {
+  return value.includes("CODEX_CLI_UNAVAILABLE") || value.includes("Codex CLI unavailable");
 }
 
 function isCodexFinalStatus(value: string | null): value is CodexFinalStatus {

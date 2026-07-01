@@ -46,6 +46,48 @@ def test_report_rule_runner_runs_all_rules_and_summarizes_results() -> None:
     assert result.findings == []
 
 
+def test_report_rule_runner_emits_rule_progress_callbacks() -> None:
+    events: list[tuple[str, str, str | None]] = []
+
+    def on_check_start(check_id: str, check_name: str) -> None:
+        events.append(("start", check_id, check_name))
+
+    def on_check_complete(result: CheckResult) -> None:
+        events.append(("complete", result.check_id, result.status.value))
+
+    runner = ReportRuleRunner(
+        rules=[
+            ReportRule("C01", "one", _passing_rule("C01")),
+            ReportRule(
+                "C03",
+                "three",
+                lambda document, context: CheckResult(
+                    task_id=context.task_id,
+                    check_id="C03",
+                    check_name="C03 test rule",
+                    status=CheckStatus.SKIP,
+                ),
+            ),
+        ]
+    )
+
+    runner.run(
+        ReportDocument(),
+        CheckContext(
+            task_id="task-runner",
+            on_check_start=on_check_start,
+            on_check_complete=on_check_complete,
+        ),
+    )
+
+    assert events == [
+        ("start", "C01", "one"),
+        ("complete", "C01", "pass"),
+        ("start", "C03", "three"),
+        ("complete", "C03", "skip"),
+    ]
+
+
 def test_report_rule_runner_isolates_single_rule_exception_as_system_error() -> None:
     def broken_rule(document, context):
         raise RuntimeError("boom")

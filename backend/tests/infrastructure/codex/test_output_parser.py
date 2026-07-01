@@ -335,7 +335,14 @@ def test_missing_target_review_falls_back_to_failed_results() -> None:
 
     results = _parse(_output_payload([_review_payload("target-1")]), request, _package(item_refs=["ev-1", "ev-2"]))
 
-    _assert_failed(results, "CODEX_OUTPUT_MISSING_TARGET", target_count=2)
+    assert len(results) == 2
+    by_target = {result.target.target_id: result for result in results}
+    assert by_target["target-1"].status is CodexReviewStatus.SUCCEEDED
+    assert by_target["target-1"].verdict is CodexReviewVerdict.CONFIRM
+    assert by_target["target-2"].status is CodexReviewStatus.FAILED
+    assert by_target["target-2"].error is not None
+    assert by_target["target-2"].error.code == "CODEX_OUTPUT_MISSING_TARGET"
+    assert "target-2" in (by_target["target-2"].error.detail or "")
 
 
 def test_duplicate_target_review_falls_back_to_failed_results() -> None:

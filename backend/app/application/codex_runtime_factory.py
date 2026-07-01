@@ -25,6 +25,7 @@ def build_codex_audit_service(settings: Settings) -> CodexAuditService:
         prompt_builder=PromptBuilder(),
         runner=runner,
         review_cache=CodexReviewCache(Path(settings.codex_audit_cache_dir)),
+        missing_target_retry_batch_size=settings.codex_audit_missing_target_retry_batch_size,
     )
 
 

@@ -168,6 +168,45 @@ class MultipleReportRuleRunner:
         )
 
 
+class ProgressAwareRuleRunner:
+    def __init__(self) -> None:
+        self.documents: list[ReportDocument] = []
+
+    def run(self, document: ReportDocument, context=None) -> ReportRuleRunResult:
+        self.documents.append(document)
+        task_id = context.task_id
+        results = [
+            CheckResult(
+                task_id=task_id,
+                check_id="C01",
+                check_name="首页与第三页一致性",
+                status=CheckStatus.PASS,
+            ),
+            CheckResult(
+                task_id=task_id,
+                check_id="C03",
+                check_name="生产日期格式一致性",
+                status=CheckStatus.SKIP,
+                summary="缺少可核对生产日期",
+            ),
+            CheckResult(
+                task_id=task_id,
+                check_id="C07",
+                check_name="单项结论逻辑",
+                status=CheckStatus.PASS,
+            ),
+        ]
+        for result in results:
+            context.on_check_start(result.check_id, result.check_name)
+            context.on_check_complete(result)
+        return ReportRuleRunResult(
+            task_id=task_id,
+            results=results,
+            summary=CheckSummary.from_results(results),
+            findings=[],
+        )
+
+
 class FakeReportAuditService:
     def __init__(
         self,
@@ -373,6 +412,80 @@ def test_report_check_usecase_process_submitted_task_updates_progress_and_comple
     assert result.task_id == submitted.task_id
     assert result.summary.fail_count == 1
     assert result.check_results[0].check_id == "C01"
+
+
+def test_report_check_usecase_records_progress_details_for_rule_checklist(tmp_path: Path) -> None:
+    task_service = TaskService()
+    usecase = ReportCheckUseCase(
+        task_service=task_service,
+        file_store=LocalFileStore(tmp_path),
+        pdf_parser=FakePdfParser(),
+        field_extractor=FakeFieldExtractor(),
+        inspection_table_extractor=FakeInspectionTableExtractor(),
+        sample_description_extractor=FakeSampleDescriptionExtractor(),
+        photo_label_extractor=FakePhotoLabelExtractor(),
+        rule_runner=ProgressAwareRuleRunner(),
+        codex_audit_service=FakeReportAuditService(),
+    )
+
+    status = usecase.run(file_name="report.pdf", content=b"%PDF-1.4 report", content_type="application/pdf")
+
+    assert status.status == TaskState.COMPLETED
+    assert status.progress_details is not None
+    assert status.progress_details.phase == "completed"
+    checks = {item.check_id: item for item in status.progress_details.checks}
+    assert checks["C01"].status == "passed"
+    assert checks["C03"].status == "skipped"
+    assert checks["C07"].status == "passed"
+    assert status.metadata["progress_details"]["checks"][2]["check_id"] == "C03"
+    assert status.metadata["progress_details"]["checks"][2]["status"] == "skipped"
+
+
+def test_report_check_usecase_records_codex_audit_progress_totals(tmp_path: Path) -> None:
+    audit_service = FakeReportAuditService()
+    findings = [_report_finding(check_id="C04", id_suffix=f"c04-{index}") for index in range(3)]
+
+    task_service, status = _run_report_check(
+        tmp_path,
+        rule_runner=ConfigurableReportRuleRunner(check_id="C04", findings=findings),
+        codex_audit_service=audit_service,
+        report_codex_evidence_builder=ReportCodexEvidenceBuilder(max_targets_per_batch=2),
+    )
+
+    assert status.status == TaskState.COMPLETED
+    assert status.progress_details is not None
+    codex_progress = status.progress_details.codex_audit
+    assert codex_progress is not None
+    assert codex_progress.status == "completed"
+    assert codex_progress.total_reviews_count == 3
+    assert codex_progress.completed_reviews_count == 3
+    assert codex_progress.total_batches_count == 2
+    assert codex_progress.completed_batches_count == 2
+    assert codex_progress.max_targets_per_batch == 2
+    result = task_service.get_result(status.task_id)
+    assert result.metadata["progress_details"]["codex_audit"]["completed_reviews_count"] == 3
+
+
+def test_report_check_usecase_error_preserves_last_progress_details(tmp_path: Path) -> None:
+    task_service = TaskService()
+    usecase = ReportCheckUseCase(
+        task_service=task_service,
+        file_store=LocalFileStore(tmp_path),
+        pdf_parser=FailingParser(),
+        field_extractor=FakeFieldExtractor(),
+        inspection_table_extractor=FakeInspectionTableExtractor(),
+        sample_description_extractor=FakeSampleDescriptionExtractor(),
+        photo_label_extractor=FakePhotoLabelExtractor(),
+        rule_runner=FakeReportRuleRunner(),
+    )
+
+    status = usecase.run(file_name="report.pdf", content=b"broken", content_type="application/pdf")
+
+    assert status.status == TaskState.ERROR
+    assert status.progress_details is not None
+    assert status.progress_details.phase == "error"
+    assert status.progress_details.error_code == "PROCESSING_ERROR"
+    assert "/Users/" not in str(status.progress_details.model_dump())
 
 
 class FailingParser:

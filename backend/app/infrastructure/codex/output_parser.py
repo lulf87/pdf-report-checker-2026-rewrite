@@ -93,6 +93,12 @@ class CodexReviewOutputParser:
             self._validate_output_contract(data, request, evidence_package)
             return self._build_success_results(data, request, raw_output_path=raw_output_path)
         except _OutputContractError as exc:
+            if exc.code == "CODEX_OUTPUT_MISSING_TARGET":
+                return self._build_missing_target_results(
+                    data,
+                    request,
+                    raw_output_path=raw_output_path,
+                )
             return self.build_failed_results_for_request(
                 request,
                 code=exc.code,
@@ -176,6 +182,40 @@ class CodexReviewOutputParser:
                 metadata={"parser": "codex_review_output"},
             )
             for target in request.targets
+        ]
+
+    def build_failed_results_for_targets(
+        self,
+        request: CodexReviewRequest,
+        targets: list[CodexReviewTarget],
+        *,
+        code: str,
+        message: str,
+        detail: str | None = None,
+        retryable: bool = False,
+        raw_output_path: str | None = None,
+    ) -> list[CodexReviewResult]:
+        now = _utc_now()
+        error = CodexReviewError(
+            code=code,
+            message=message,
+            detail=detail,
+            retryable=retryable,
+        )
+        return [
+            CodexReviewResult(
+                review_id=f"codex-review-{request.request_id}-{target.target_id}-failed",
+                request_id=request.request_id,
+                task_id=request.task_id,
+                target=target,
+                status=CodexReviewStatus.FAILED,
+                raw_output_path=raw_output_path,
+                error=error,
+                created_at=now,
+                completed_at=now,
+                metadata={"parser": "codex_review_output"},
+            )
+            for target in targets
         ]
 
     def _schema_failure_code_and_message(
@@ -333,6 +373,30 @@ class CodexReviewOutputParser:
                 )
             )
         return results
+
+    def _build_missing_target_results(
+        self,
+        data: dict[str, Any],
+        request: CodexReviewRequest,
+        *,
+        raw_output_path: str | None,
+    ) -> list[CodexReviewResult]:
+        success_results = self._build_success_results(data, request, raw_output_path=raw_output_path)
+        seen_target_ids = {result.target.target_id for result in success_results}
+        missing_targets = [target for target in request.targets if target.target_id not in seen_target_ids]
+        missing_target_ids = [target.target_id for target in missing_targets]
+        return [
+            *success_results,
+            *self.build_failed_results_for_targets(
+                request,
+                missing_targets,
+                code="CODEX_OUTPUT_MISSING_TARGET",
+                message="Codex CLI output did not include reviews for all request targets.",
+                detail=f"missing target_ids={missing_target_ids}",
+                retryable=True,
+                raw_output_path=raw_output_path,
+            ),
+        ]
 
 
 __all__ = ["CodexReviewOutputParser"]

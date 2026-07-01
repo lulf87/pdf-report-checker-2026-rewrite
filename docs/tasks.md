@@ -1031,3 +1031,29 @@
   - C05/C06 默认跳过 `supporting_equipment`，不作为主样品照片/标签覆盖 error。
   - Report 前端和 PDF/XLSX 导出区分候选问题、需复核、确认错误和 legacy deterministic counts。
 - 约束：未运行真实 Codex CLI；未调用 GPT/OpenAI API；未修改旧项目目录。
+
+### T-CODEX-ROBUST-01：Codex missing target retry + C04 supporting equipment scope fix
+- 目标：修复 2797 网页运行中 `CODEX_OUTPUT_MISSING_TARGET` 造成的 mandatory audit 失败，并避免 C04 将“本次检验配合使用”设备当作主样品标签缺失 target。
+- 完成状态：[x]
+- 实现记录：
+  - C04 现在消费 `sample_role=supporting_equipment` / `supporting_equipment=true` 标记，对配合使用设备写入 coverage `supporting_equipment_skipped`，不输出 `SAMPLE_COMPONENT_LABEL_NOT_FOUND` 或 `SAMPLE_FIELD_MISSING_IN_LABEL`。
+  - `CodexReviewOutputParser` 在 `CODEX_OUTPUT_MISSING_TARGET` 时保留已成功解析的 target reviews，只为缺失 target 生成 failed review。
+  - `CodexAuditService` 首次发现 missing target 时自动构建 retry request/package，仅重试缺失 target；默认 `CODEX_AUDIT_MISSING_TARGET_RETRY_BATCH_SIZE=1`。
+  - retry 成功后合并 reviews 并继续 finalization；retry 失败或仍缺 target 时返回 `CODEX_OUTPUT_MISSING_TARGET`，mandatory task 仍 failed。
+  - 前端将 `CODEX_OUTPUT_MISSING_TARGET` 显示为中文“LLM 复核未完成”提示，并说明这不是报告确认错误；原始 target ids 放入高级详情。
+- 约束：未运行真实 Codex CLI；未调用 GPT/OpenAI API；未修改旧项目目录或用户上传 PDF。
+
+## T-UX：任务进度与错误体验
+
+### T-UX-PROGRESS-01：report-check C01-C11 + Codex target 细粒度进度展示
+- 目标：把 report-check 从长期停留 `70% / running report rules` 的粗粒度状态，改为可解释的阶段、C01-C11 checklist 和 Codex target/batch/retry 进度。
+- 完成状态：[x]
+- 实现记录：
+  - `TaskStatus` 新增可选 `progress_details`，并同步写入 `TaskStatus.metadata["progress_details"]` 作为兼容展示元数据。
+  - 新增 `ReportCheckProgressReporter`，按 upload/parse/extract/rules/evidence/codex_audit/finalize/completed/error 阶段更新任务状态。
+  - `ReportRuleRunner` 通过 `CheckContext` 回调在每条 C01-C11 前后更新 running/passed/failed/skipped/needs_review/error；C03 skip 也会显示为 skipped。
+  - `ReportCheckUseCase` 在 Codex audit 构建 target 后记录 total reviews/batches，并在每个 package 开始/完成时更新 completed reviews/batches。
+  - `CodexAuditService` 在 missing-target retry 时发出 progress event，前端可显示 retrying 和 `CODEX_OUTPUT_MISSING_TARGET`。
+  - 前端 `ProgressOverlay` 展示当前阶段、C01-C11 checklist、Codex 当前 check/target type、review/batch 计数和 retry 状态。
+  - 前端补充 `CODEX_TIMEOUT`、`CODEX_CLI_UNAVAILABLE`、`CODEX_OUTPUT_MISSING_TARGET` 中文错误文案，并把原始错误留在高级详情。
+- 约束：未修改 C01-C11 业务判断；未修改 Codex finalization；未运行真实 Codex CLI；未调用 GPT/OpenAI API；未修改旧项目目录。

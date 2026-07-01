@@ -15,13 +15,14 @@ from app.application.codex_audit_scheduler import CodexAuditJob, CodexAuditSched
 from app.application.codex_audit_targeting import priority_index
 from app.application.performance_profile import PerformanceProfile
 from app.application.report_codex_evidence_builder import REVIEWABLE_TARGET_TYPES, ReportCodexEvidenceBuilder
+from app.application.report_check_progress import ReportCheckProgressReporter
 from app.application.task_service import TaskService
 from app.domain.codex_review import CodexReviewError, CodexReviewRequest, CodexReviewResult, CodexReviewStatus
 from app.domain.evidence_package import EvidencePackage
 from app.domain.pdf import ParsedPdf
 from app.domain.report import InspectionTable, ReportDocument
 from app.domain.result import CheckResult
-from app.domain.task import TaskState, TaskStatus, TaskType
+from app.domain.task import TaskProgressDetails, TaskProgressPhase, TaskState, TaskStatus, TaskType
 from app.infrastructure.pdf.pymupdf_parser import PyMuPDFParser
 from app.infrastructure.report.field_extractor import FieldExtractor
 from app.infrastructure.report.inspection_table_extractor import InspectionTableExtractor
@@ -139,7 +140,14 @@ class ReportCheckUseCase:
                 content_type=content_type,
             )
             self.task_service.set_input_files(task.task_id, [stored.input_file])
-            return self.task_service.start_task(task.task_id, current_step="queued report check", progress=1)
+            progress_reporter = ReportCheckProgressReporter(self.task_service, task.task_id)
+            progress_reporter.upload()
+            return self.task_service.start_task(
+                task.task_id,
+                current_step="queued report check",
+                progress=1,
+                progress_details=progress_reporter.snapshot(),
+            )
         except Exception as exc:
             return self.task_service.fail_task(task.task_id, str(exc))
 
@@ -148,7 +156,18 @@ class ReportCheckUseCase:
             source_pdf_path = self._source_pdf_path_for_task(task_id)
             return self._process_stored_upload(task_id=task_id, source_pdf_path=source_pdf_path)
         except Exception as exc:
-            return self.task_service.fail_task(task_id, str(exc))
+            try:
+                task = self.task_service.get_task(task_id)
+                progress_details = _error_progress_details_from_task(task, str(exc))
+                self.task_service.update_progress(
+                    task_id,
+                    progress=task.progress,
+                    current_step="error",
+                    progress_details=progress_details,
+                )
+            except Exception:
+                progress_details = None
+            return self.task_service.fail_task(task_id, str(exc), progress_details=progress_details)
 
     def _source_pdf_path_for_task(self, task_id: str) -> Path:
         task = self.task_service.get_task(task_id)
@@ -163,18 +182,33 @@ class ReportCheckUseCase:
         audit_options_source = "user_override" if audit_options.has_user_override else "default"
         evidence_builder = self._builder_for_audit_options(audit_options)
         scheduler = self._scheduler_for_audit_options(audit_options)
-        self.task_service.start_task(task_id, current_step="parsing report pdf", progress=5)
+        progress_reporter = ReportCheckProgressReporter(self.task_service, task_id)
+        progress_reporter.parse()
+        self.task_service.start_task(
+            task_id,
+            current_step="parsing report pdf",
+            progress=5,
+            progress_details=progress_reporter.snapshot(),
+        )
 
         with profile.measure("parse_pdf"):
             parsed_pdf = self.pdf_parser.parse(source_pdf_path)
-        self.task_service.update_progress(task_id, progress=35, current_step="extracting report document")
+        progress_reporter.extract()
 
         with profile.measure("build_report_document"):
             document = self._build_report_document(parsed_pdf)
-        self.task_service.update_progress(task_id, progress=70, current_step="running report rules")
+        progress_reporter.rules()
 
         with profile.measure("run_rules"):
-            run_result = self.rule_runner.run(document, CheckContext(task_id=task_id))
+            run_result = self.rule_runner.run(
+                document,
+                CheckContext(
+                    task_id=task_id,
+                    on_check_start=progress_reporter.on_check_start,
+                    on_check_complete=progress_reporter.on_check_complete,
+                ),
+            )
+        progress_reporter.evidence()
         with profile.measure("codex_audit_total", parallel_jobs=scheduler.max_parallel_jobs):
             self._attach_codex_reviews(
                 task_id=task_id,
@@ -184,8 +218,10 @@ class ReportCheckUseCase:
                 check_results=run_result.results,
                 evidence_builder=evidence_builder,
                 scheduler=scheduler,
+                progress_reporter=progress_reporter,
             )
         profile.add_package_profiles(_codex_package_profiles(run_result.results))
+        progress_reporter.finalize(run_result.results)
         with profile.measure("finalize_codex_audit"):
             codex_audit_metadata = finalize_codex_audit(
                 run_result.results,
@@ -195,6 +231,7 @@ class ReportCheckUseCase:
 
         def result_metadata() -> dict[str, Any]:
             profile_payload = profile.to_dict()
+            progress_payload = progress_reporter.snapshot().model_dump(mode="json")
             codex_payload = {
                 **codex_audit_metadata,
                 "performance_profile": {
@@ -207,10 +244,12 @@ class ReportCheckUseCase:
                 "audit_options_source": audit_options_source,
                 "audit_options": audit_options.to_metadata(),
                 "effective_audit_options": _effective_audit_options_metadata(evidence_builder, scheduler),
+                "progress_details": progress_payload,
                 "performance_profile": profile_payload,
                 "codex_audit": codex_payload,
             }
 
+        progress_reporter.completed(run_result.results)
         with profile.measure("complete_task"):
             status = self.task_service.complete_task(
                 task_id,
@@ -247,6 +286,7 @@ class ReportCheckUseCase:
         source_pdf_path: Path | None = None,
         evidence_builder: ReportCodexEvidenceBuilder | None = None,
         scheduler: CodexAuditScheduler | None = None,
+        progress_reporter: ReportCheckProgressReporter | None = None,
     ) -> None:
         builder = evidence_builder or self.report_codex_evidence_builder
         active_scheduler = scheduler or self.codex_audit_scheduler
@@ -278,7 +318,25 @@ class ReportCheckUseCase:
                 target_offset += len(bundle.request.targets)
                 if not bundle.evidence_package.metadata.get("truncated"):
                     break
-        job_results = active_scheduler.run(jobs, lambda job: self.codex_audit_service.review(job.request, job.evidence_package))
+        if progress_reporter is not None:
+            progress_reporter.codex_targets_ready(
+                jobs,
+                max_targets_per_batch=builder.target_selection.max_targets_per_batch,
+            )
+
+        def review_job(job: CodexAuditJob) -> list[CodexReviewResult]:
+            return _review_codex_job(self.codex_audit_service, job)
+
+        previous_progress_callback = _install_progress_callback(self.codex_audit_service, progress_reporter)
+        try:
+            job_results = active_scheduler.run(
+                jobs,
+                review_job,
+                on_job_start=progress_reporter.on_codex_job_start if progress_reporter is not None else None,
+                on_job_complete=progress_reporter.on_codex_job_complete if progress_reporter is not None else None,
+            )
+        finally:
+            _restore_progress_callback(self.codex_audit_service, previous_progress_callback)
         for job_result in job_results:
             reviews = job_result.reviews
             _raise_for_required_codex_audit_failure(reviews)
@@ -366,6 +424,52 @@ def _effective_audit_options_metadata(
         "priority_check_ids": list(selection.priority_check_ids),
         "max_parallel_jobs": scheduler.max_parallel_jobs,
     }
+
+
+_MISSING_PROGRESS_CALLBACK = object()
+
+
+def _review_codex_job(
+    service: CodexAuditServiceProtocol | None,
+    job: CodexAuditJob,
+) -> list[CodexReviewResult]:
+    if service is None:
+        raise RuntimeError("CODEX_AUDIT_REQUIRED: Codex audit service is required for reviewable report targets.")
+    return service.review(job.request, job.evidence_package)
+
+
+def _install_progress_callback(
+    service: CodexAuditServiceProtocol | None,
+    progress_reporter: ReportCheckProgressReporter | None,
+) -> object:
+    previous_callback = getattr(service, "progress_callback", _MISSING_PROGRESS_CALLBACK)
+    if progress_reporter is not None and previous_callback is not _MISSING_PROGRESS_CALLBACK:
+        setattr(service, "progress_callback", progress_reporter.on_codex_progress_event)
+    return previous_callback
+
+
+def _restore_progress_callback(service: CodexAuditServiceProtocol | None, previous_callback: object) -> None:
+    if previous_callback is not _MISSING_PROGRESS_CALLBACK:
+        setattr(service, "progress_callback", previous_callback)
+
+
+def _error_progress_details_from_task(task: TaskStatus, error_message: str) -> TaskProgressDetails:
+    safe_error = error_message.replace("/Users/", "[redacted]/")
+    if task.progress_details is None:
+        return TaskProgressDetails(
+            phase=TaskProgressPhase.ERROR,
+            phase_label="失败",
+            error_code="PROCESSING_ERROR",
+            error_message=safe_error,
+        )
+    return task.progress_details.model_copy(
+        update={
+            "phase": TaskProgressPhase.ERROR,
+            "phase_label": "失败",
+            "error_code": "PROCESSING_ERROR",
+            "error_message": safe_error,
+        }
+    )
 
 
 def _final_status_for_verdict(verdict: str | None) -> str:

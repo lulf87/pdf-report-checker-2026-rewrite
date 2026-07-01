@@ -7,6 +7,25 @@ export type CheckStatus = "pass" | "fail" | "review" | "skip" | "system_error";
 export type ExportFormat = "json" | "pdf" | "xlsx";
 export type AuditScope = "full" | "targeted";
 export type FinalAuditStatus = "passed" | "needs_manual_review" | "failed" | "audit_failed";
+export type TaskProgressPhase =
+  | "upload"
+  | "parse"
+  | "extract"
+  | "rules"
+  | "evidence"
+  | "codex_audit"
+  | "finalize"
+  | "completed"
+  | "error";
+export type TaskCheckProgressStatus =
+  | "pending"
+  | "running"
+  | "passed"
+  | "failed"
+  | "skipped"
+  | "needs_review"
+  | "error";
+export type CodexAuditProgressStatus = "pending" | "running" | "retrying" | "completed" | "failed";
 
 export interface InputFileRef {
   file_id: string;
@@ -22,6 +41,44 @@ export interface AuditOptions {
   max_parallel_jobs?: number;
 }
 
+export interface TaskCheckProgress {
+  check_id: string;
+  check_name: string;
+  status: TaskCheckProgressStatus;
+  progress: number;
+  candidate_findings_count: number;
+  confirmed_errors_count: number;
+  manual_review_required_count: number;
+  refuted_findings_count: number;
+}
+
+export interface TaskCodexAuditProgress {
+  enabled: boolean;
+  status: CodexAuditProgressStatus;
+  current_check_id?: string | null;
+  current_target_type?: string | null;
+  completed_reviews_count: number;
+  total_reviews_count: number;
+  completed_batches_count: number;
+  total_batches_count: number;
+  retry_count: number;
+  last_retry_reason?: string | null;
+  timeout_seconds?: number | null;
+  max_targets_per_batch?: number | null;
+  error_code?: string | null;
+}
+
+export interface TaskProgressDetails {
+  phase: TaskProgressPhase;
+  phase_label?: string | null;
+  current_check_id?: string | null;
+  current_check_name?: string | null;
+  checks: TaskCheckProgress[];
+  codex_audit?: TaskCodexAuditProgress | null;
+  error_code?: string | null;
+  error_message?: string | null;
+}
+
 export interface TaskStatus {
   task_id: string;
   task_type: TaskType;
@@ -33,6 +90,7 @@ export interface TaskStatus {
   error_message?: string | null;
   logs: string[];
   metadata: Record<string, unknown>;
+  progress_details?: TaskProgressDetails | null;
   created_at: string;
   updated_at: string;
 }

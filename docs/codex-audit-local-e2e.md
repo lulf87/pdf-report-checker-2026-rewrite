@@ -1544,6 +1544,48 @@ usage limit 失败时终端只打印简洁提示：
 - `manual_review_required_count=0`
 - `codex_runtime_failure_count=0`
 
+## 三十六、report-check 细粒度进度展示
+
+2026-07-01，T-UX-PROGRESS-01 已补齐任务状态的前端可解释进度。本节记录展示字段；不代表已经运行真实 Codex CLI。
+
+`GET /api/tasks/{task_id}` 的 `TaskStatus` 现在可包含：
+
+- 顶层 `progress_details`
+- 兼容副本 `metadata.progress_details`
+
+`progress_details` 只用于展示，不参与 finalization。主要字段包括：
+
+- `phase`：`upload`、`parse`、`extract`、`rules`、`evidence`、`codex_audit`、`finalize`、`completed`、`error`
+- `phase_label`：中文阶段名
+- `current_check_id` / `current_check_name`
+- `checks[]`：C01-C11 checklist，含 `pending/running/passed/failed/skipped/needs_review/error`
+- `codex_audit`：Codex 复核进度，含 current check、target type、completed/total reviews、completed/total batches、retry count、last retry reason、batch size
+
+report-check 阶段进度建议口径：
+
+- upload/task created：0-5
+- parse PDF：5-15
+- extract report structures：15-25
+- deterministic rules C01-C11：25-45
+- evidence build / image materialization：45-60
+- Codex audit：60-95
+- finalization：95-100
+
+前端 `ProgressOverlay` 会优先展示 `progress_details`：
+
+- 当前阶段。
+- C01-C11 检查清单，包括 skipped。
+- Codex 当前 check / target type。
+- Codex review 进度和 batch 进度。
+- missing-target retry 显示为“正在重试缺失复核项”。
+
+错误文案：
+
+- `CODEX_OUTPUT_MISSING_TARGET`：显示为“LLM 复核未完成”，并说明这不是报告确认错误。
+- `CODEX_TIMEOUT`：显示为“LLM 复核超时”，并说明这不是报告确认错误。
+- `CODEX_CLI_UNAVAILABLE`：显示为“本机 Codex CLI 不可用”，并说明这不是报告确认错误。
+- 原始错误仍保留在高级详情。
+
 ## 二十八、排查
 
 - 脚本被拒绝：确认已设置 `ENABLE_CODEX_AUDIT_LOCAL_E2E=1`。`--help` 和 `--print-config` 不需要 gate。

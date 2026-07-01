@@ -142,6 +142,35 @@ class PartialRunner:
         ]
 
 
+class MissingThenRecoverRunner:
+    def __init__(self, *, missing_target_id: str, recover: bool = True) -> None:
+        self.missing_target_id = missing_target_id
+        self.recover = recover
+        self.calls: list[list[str]] = []
+
+    def run_review(
+        self,
+        request: CodexReviewRequest,
+        evidence_package: EvidencePackage,
+        workspace_dir: Path,
+        *,
+        output_schema_path: Path | None = None,
+        prompt_path: Path | None = None,
+        image_paths: list[Path] | None = None,
+    ) -> list[CodexReviewResult]:
+        del evidence_package, workspace_dir, output_schema_path, prompt_path, image_paths
+        self.calls.append([target.target_id for target in request.targets])
+        if len(self.calls) == 1:
+            return [
+                _successful_review(request, target)
+                for target in request.targets
+                if target.target_id != self.missing_target_id
+            ]
+        if not self.recover:
+            return []
+        return [_successful_review(request, target) for target in request.targets]
+
+
 def _target(target_id: str = "target-1", *, evidence_refs: list[str] | None = None) -> CodexReviewTarget:
     refs = evidence_refs or [f"ev-{target_id}"]
     return CodexReviewTarget(
@@ -237,6 +266,22 @@ def _assert_failed(results: list[CodexReviewResult], code: str, *, target_count:
     assert len(results) == target_count
     assert {result.status for result in results} == {CodexReviewStatus.FAILED}
     assert {result.error.code for result in results if result.error is not None} == {code}
+
+
+def _successful_review(request: CodexReviewRequest, target: CodexReviewTarget) -> CodexReviewResult:
+    return CodexReviewResult(
+        review_id=f"{request.request_id}:{target.target_id}:success",
+        request_id=request.request_id,
+        task_id=request.task_id,
+        target=target,
+        status=CodexReviewStatus.SUCCEEDED,
+        verdict=CodexReviewVerdict.REFUTE,
+        confidence=CodexReviewConfidence.MEDIUM,
+        reasoning_summary="Synthetic review.",
+        evidence_refs=[ref.ref_id for ref in target.evidence_refs],
+        created_at=CREATED_AT,
+        completed_at=CREATED_AT,
+    )
 
 
 def test_review_writes_workspace_prompt_and_returns_confirm_with_fake_runner(tmp_path, monkeypatch) -> None:
@@ -461,6 +506,54 @@ def test_review_returns_results_for_multiple_targets(tmp_path) -> None:
     assert {result.verdict for result in results} == {CodexReviewVerdict.CONFIRM}
 
 
+def test_review_retries_missing_target_and_merges_recovered_review(tmp_path) -> None:
+    targets = [_target("target-1"), _target("target-2"), _target("target-3")]
+    runner = MissingThenRecoverRunner(missing_target_id="target-2")
+    service = _service(tmp_path, runner)
+
+    results = service.review(_request(targets=targets), _package(targets=targets))
+
+    assert [result.target.target_id for result in results] == ["target-1", "target-2", "target-3"]
+    assert {result.status for result in results} == {CodexReviewStatus.SUCCEEDED}
+    assert runner.calls == [["target-1", "target-2", "target-3"], ["target-2"]]
+    recovered = next(result for result in results if result.target.target_id == "target-2")
+    assert recovered.metadata["missing_target_retry"]["attempt"] == 1
+
+
+def test_review_reports_missing_target_retry_progress(tmp_path) -> None:
+    targets = [_target("target-1"), _target("target-2")]
+    runner = MissingThenRecoverRunner(missing_target_id="target-2")
+    events: list[dict] = []
+    service = CodexAuditService(
+        evidence_writer=EvidencePackageWriter(tmp_path / "runtime" / "codex_audit"),
+        prompt_builder=PromptBuilder(),
+        runner=runner,
+        progress_callback=events.append,
+    )
+
+    results = service.review(_request(targets=targets), _package(targets=targets))
+
+    assert {result.status for result in results} == {CodexReviewStatus.SUCCEEDED}
+    retry_events = [event for event in events if event.get("status") == "retrying"]
+    assert retry_events
+    assert retry_events[0]["last_retry_reason"] == "CODEX_OUTPUT_MISSING_TARGET"
+    assert retry_events[0]["retry_count"] == 1
+    assert retry_events[0]["missing_target_ids"] == ["target-2"]
+    assert retry_events[0]["target_count"] == 1
+
+
+def test_review_returns_missing_target_error_when_retry_still_missing(tmp_path) -> None:
+    targets = [_target("target-1"), _target("target-2")]
+    runner = MissingThenRecoverRunner(missing_target_id="target-2", recover=False)
+    service = _service(tmp_path, runner)
+
+    results = service.review(_request(targets=targets), _package(targets=targets))
+
+    _assert_failed(results, "CODEX_OUTPUT_MISSING_TARGET", target_count=2)
+    assert runner.calls == [["target-1", "target-2"], ["target-2"]]
+    assert all("target-2" in (result.error.detail or "") for result in results if result.error)
+
+
 def test_review_preserves_refute_uncertain_and_add_finding_results(tmp_path) -> None:
     targets = [_target("target-1"), _target("target-2"), _target("target-3")]
     suggested = CodexSuggestedFinding(
@@ -595,15 +688,17 @@ def test_runner_exception_returns_failed_result(tmp_path) -> None:
 def test_runner_empty_result_returns_failed_result(tmp_path) -> None:
     results = _service(tmp_path, EmptyRunner()).review(_request(), _package())
 
-    _assert_failed(results, "CODEX_AUDIT_RUNNER_EMPTY_RESULT")
+    _assert_failed(results, "CODEX_OUTPUT_MISSING_TARGET")
 
 
-def test_runner_incomplete_target_results_return_failed_results(tmp_path) -> None:
+def test_runner_incomplete_target_results_are_recovered_by_missing_target_retry(tmp_path) -> None:
     targets = [_target("target-1"), _target("target-2")]
 
     results = _service(tmp_path, PartialRunner()).review(_request(targets=targets), _package(targets=targets))
 
-    _assert_failed(results, "CODEX_AUDIT_RESULT_TARGET_MISMATCH", target_count=2)
+    assert [result.target.target_id for result in results] == ["target-1", "target-2"]
+    assert {result.status for result in results} == {CodexReviewStatus.SUCCEEDED}
+    assert results[1].metadata["missing_target_retry"]["retry_target_ids"] == ["target-2"]
 
 
 def test_prompt_does_not_include_old_or_new_project_absolute_paths(tmp_path) -> None:

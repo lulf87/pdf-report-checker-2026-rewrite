@@ -255,6 +255,45 @@ def test_c04_reviews_when_no_matching_label_is_found() -> None:
     assert result.findings[0].severity == FindingSeverity.WARN
 
 
+def test_c04_skips_2797_like_supporting_equipment_without_label_missing_error() -> None:
+    document = base_document()
+    document.sample_components = [
+        component("sample-row-7", "射频消融仪", model="FG-01", batch="/", page=8),
+        component("sample-row-8", "灌注泵", model="CoolFlow", batch="/", page=8),
+        component("sample-row-9", "电生理记录系统", model="WorkMate", batch="/", page=8),
+    ]
+    for item in document.sample_components:
+        item.metadata.update(
+            {
+                "sample_role": "supporting_equipment",
+                "supporting_equipment": True,
+                "source_context": "本次检验配合使用",
+            }
+        )
+
+    result = _run(document)
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["coverage"] == [
+        {
+            "component_id": "sample-row-7",
+            "label_id": None,
+            "matching_strategy": "supporting_equipment_skipped",
+        },
+        {
+            "component_id": "sample-row-8",
+            "label_id": None,
+            "matching_strategy": "supporting_equipment_skipped",
+        },
+        {
+            "component_id": "sample-row-9",
+            "label_id": None,
+            "matching_strategy": "supporting_equipment_skipped",
+        },
+    ]
+
+
 def test_c04_label_caption_with_empty_ocr_fields_needs_visual_review_not_error() -> None:
     document = base_document(
         labels=[

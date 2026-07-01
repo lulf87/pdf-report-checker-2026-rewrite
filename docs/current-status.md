@@ -2889,3 +2889,63 @@ full mandatory audit 最终复验：
 - 未运行真实 Codex CLI。
 - 未调用 GPT/OpenAI API。
 - 未修改旧项目目录。
+
+## T-CODEX-ROBUST-01：Codex missing target retry 与 C04 配合使用设备 scope 修复
+
+完成日期：2026-07-01
+
+背景：
+
+- 用户在网页对 2797 报告运行 report-check，并勾选“启用 LLM 增强识别”后任务失败。
+- 页面错误为 `CODEX_OUTPUT_MISSING_TARGET`，缺失 target 包含 `c04-sample-row-7-label-missing` 至 `c04-sample-row-10-label-missing`。
+- 这些 row 对应第 8 页“本次检验配合使用”设备，不应作为主样品 C04 中文标签覆盖问题强制送 Codex 复核。
+
+本次修复：
+
+- C04 现在识别 `sample_role=supporting_equipment`、`supporting_equipment=true` 或“本次检验配合使用”上下文传递来的配合使用设备标记。
+- C04 对 supporting equipment 写入 coverage `supporting_equipment_skipped`，不输出 `SAMPLE_COMPONENT_LABEL_NOT_FOUND` 或 `SAMPLE_FIELD_MISSING_IN_LABEL`，因此不会成为 Codex required target。
+- `CodexReviewOutputParser` 在 `CODEX_OUTPUT_MISSING_TARGET` 时保留已成功解析的 target review，只为缺失 target 生成 failed review，避免丢失可合并结果。
+- `CodexAuditService` 增加 missing-target retry：首次发现缺失 target 时，仅用缺失 target 构建 retry request/package；默认 retry batch size 为 `1`，可由 `CODEX_AUDIT_MISSING_TARGET_RETRY_BATCH_SIZE` 配置。
+- retry 成功后合并 reviews 并继续 finalization；retry 失败或仍缺 target 时，才返回 `CODEX_OUTPUT_MISSING_TARGET`，mandatory audit 仍按失败处理。
+- 前端上传页和 Codex review 详情将 `CODEX_OUTPUT_MISSING_TARGET` 显示为中文说明：“LLM 复核未完成……这不是报告确认错误。” 原始 target ids 保留在“高级详情”。
+
+约束确认：
+
+- 未运行真实 Codex CLI。
+- 未调用 GPT/OpenAI API。
+- 未修改旧项目目录。
+- 未修改用户上传的 2797 PDF。
+
+下一步：
+
+- 重新用网页跑 2797，关注 C04 配合使用设备是否不再进入 required Codex target，以及 missing target retry 是否不再导致整任务早退。
+
+## T-UX-PROGRESS-01：report-check 细粒度进度展示
+
+完成日期：2026-07-01
+
+背景：
+
+- 用户在网页运行 2797 report-check 时，任务进入审核后长时间停留在 70%，无法判断后端是在跑 deterministic rules、evidence build、Codex audit、missing-target retry 还是 timeout/失败路径。
+
+本次实现：
+
+- `TaskStatus` 新增可选 `progress_details`，同时在 `metadata.progress_details` 保留兼容副本；该字段只用于展示，不参与 C01-C11 业务判断或 Codex finalization。
+- 新增 `ReportCheckProgressReporter`，阶段覆盖 upload、parse、extract、rules、evidence、codex_audit、finalize、completed、error，对应总进度约为 0-5、5-15、15-25、25-45、45-60、60-95、95-100。
+- `ReportRuleRunner` 支持 `CheckContext.on_check_start/on_check_complete`，真实 C01-C11 runner 会在每条规则开始和完成时更新 checklist；skipped 规则也会显示为 skipped。
+- `ReportCheckUseCase` 在 Codex audit 阶段记录 total/completed reviews、total/completed batches、current check、current target type、max batch，并在 task error 时保留最后一次 `progress_details`。
+- `CodexAuditService` 在 missing-target retry 时发出 progress event，供 usecase/front-end 显示 retrying、retry count 和 `CODEX_OUTPUT_MISSING_TARGET`。
+- 前端 `ProgressOverlay` 增加当前阶段、C01-C11 checklist、Codex review/batch 进度和 retry 状态展示；无 `progress_details` 的旧任务仍按旧 progress/current_step 展示。
+- 前端错误文案补充 `CODEX_TIMEOUT`、`CODEX_OUTPUT_MISSING_TARGET`、`CODEX_CLI_UNAVAILABLE` 的中文提示，并说明这不是报告确认错误；原始错误仍放在高级详情。
+
+约束确认：
+
+- 未修改 C01-C11 规则语义。
+- 未修改 Codex finalization。
+- 未运行真实 Codex CLI。
+- 未调用 GPT/OpenAI API。
+- 未修改旧项目目录或用户 PDF。
+
+下一步：
+
+- 用网页重新跑 2797，观察上传页是否从 70% 长停改为阶段、C01-C11 和 Codex batch/retry 可解释进度；若仍显慢，再结合 T-PERF profile 定位具体慢点。

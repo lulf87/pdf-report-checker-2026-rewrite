@@ -6,6 +6,7 @@ from app.domain.report import LabelOCRField, LabelOCRResult, ReportDocument, Sam
 from app.domain.result import CheckResult, CheckStatus
 from app.rules.report.common import (
     component_field_value,
+    component_is_supporting_equipment,
     component_not_used,
     compact,
     evidence_for_component,
@@ -47,6 +48,15 @@ def check_c04_sample_description(
     findings: list[Finding] = []
     coverage: list[dict[str, str | None]] = []
     for component in document.sample_components:
+        if component_is_supporting_equipment(component):
+            coverage.append(
+                {
+                    "component_id": component.component_id,
+                    "label_id": None,
+                    "matching_strategy": "supporting_equipment_skipped",
+                }
+            )
+            continue
         match = _find_component_label(component, document.labels)
         label = match.label if match else None
         matching_strategy = match.strategy if match else None

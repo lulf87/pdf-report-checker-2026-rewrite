@@ -67,6 +67,43 @@ def test_task_service_tracks_lifecycle_and_stores_structured_result() -> None:
     assert result.metadata == {"source": "unit-test"}
 
 
+def test_task_service_updates_progress_details_metadata() -> None:
+    service = TaskService()
+    task = service.create_task(TaskType.REPORT_CHECK)
+    progress_details = {
+        "phase": "rules",
+        "phase_label": "规则初筛",
+        "current_check_id": "C03",
+        "current_check_name": "生产日期格式一致性",
+        "checks": [
+            {
+                "check_id": "C03",
+                "check_name": "生产日期格式一致性",
+                "status": "skipped",
+                "progress": 100,
+                "candidate_findings_count": 0,
+                "confirmed_errors_count": 0,
+                "manual_review_required_count": 0,
+                "refuted_findings_count": 0,
+            }
+        ],
+        "codex_audit": {"enabled": False, "status": "pending"},
+    }
+
+    updated = service.update_progress(
+        task.task_id,
+        progress=40,
+        current_step="running report rules",
+        progress_details=progress_details,
+    )
+
+    assert updated.progress_details is not None
+    assert updated.progress_details.phase == "rules"
+    assert updated.progress_details.current_check_id == "C03"
+    assert updated.metadata["progress_details"]["phase"] == "rules"
+    assert updated.metadata["progress_details"]["checks"][0]["status"] == "skipped"
+
+
 def test_task_service_stores_user_facing_status_for_unreviewed_candidate_error() -> None:
     service = TaskService()
     task = service.create_task(TaskType.REPORT_CHECK)

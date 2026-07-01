@@ -12,7 +12,7 @@ from app.application.task_repository import (
     TaskResultNotFoundError,
 )
 from app.domain.result import CheckResult, CheckSummary, annotate_user_facing_statuses
-from app.domain.task import TaskState, TaskStatus, TaskType
+from app.domain.task import TaskProgressDetails, TaskState, TaskStatus, TaskType
 from app.domain.task import InputFileRef
 
 
@@ -59,12 +59,17 @@ class TaskService:
         *,
         current_step: str | None = None,
         progress: int = 1,
+        progress_details: TaskProgressDetails | dict[str, Any] | None = None,
     ) -> TaskStatus:
+        task = self.get_task(task_id)
+        metadata, details = _metadata_with_progress_details(task.metadata, progress_details, fallback=task.progress_details)
         return self._mutate_task(
             task_id,
             status=TaskState.PROCESSING,
             progress=progress,
             current_step=current_step or "processing",
+            metadata=metadata,
+            progress_details=details,
         )
 
     def update_progress(
@@ -74,16 +79,20 @@ class TaskService:
         progress: int,
         current_step: str | None = None,
         log: str | None = None,
+        progress_details: TaskProgressDetails | dict[str, Any] | None = None,
     ) -> TaskStatus:
         task = self.get_task(task_id)
         logs = list(task.logs)
         if log:
             logs.append(log)
+        metadata, details = _metadata_with_progress_details(task.metadata, progress_details, fallback=task.progress_details)
         return self._mutate_task(
             task_id,
             progress=progress,
             current_step=current_step if current_step is not None else task.current_step,
             logs=logs,
+            metadata=metadata,
+            progress_details=details,
         )
 
     def complete_task(
@@ -124,8 +133,23 @@ class TaskService:
         result = self.repository.get_result(task_id)
         self.repository.save_result(task_id, result.model_copy(update={"metadata": metadata}))
 
-    def fail_task(self, task_id: str, error_message: str) -> TaskStatus:
-        return self.repository.mark_failed(task_id, error_message)
+    def fail_task(
+        self,
+        task_id: str,
+        error_message: str,
+        *,
+        progress_details: TaskProgressDetails | dict[str, Any] | None = None,
+    ) -> TaskStatus:
+        task = self.get_task(task_id)
+        metadata, details = _metadata_with_progress_details(task.metadata, progress_details, fallback=task.progress_details)
+        return self._mutate_task(
+            task_id,
+            status=TaskState.ERROR,
+            current_step="error",
+            error_message=error_message,
+            metadata=metadata,
+            progress_details=details,
+        )
 
     def get_result(self, task_id: str) -> TaskResult:
         return self.repository.get_result(task_id)
@@ -152,6 +176,26 @@ def _apply_codex_audit_summary_metadata(summary: CheckSummary, codex_audit_metad
     final_audit_status = codex_audit_metadata.get("final_audit_status")
     if isinstance(final_audit_status, str):
         summary.final_audit_status = final_audit_status
+
+
+def _metadata_with_progress_details(
+    metadata: dict[str, Any],
+    progress_details: TaskProgressDetails | dict[str, Any] | None,
+    *,
+    fallback: TaskProgressDetails | None = None,
+) -> tuple[dict[str, Any], TaskProgressDetails | None]:
+    details = _coerce_progress_details(progress_details) if progress_details is not None else fallback
+    if details is None:
+        return dict(metadata), None
+    next_metadata = dict(metadata)
+    next_metadata["progress_details"] = details.model_dump(mode="json")
+    return next_metadata, details
+
+
+def _coerce_progress_details(progress_details: TaskProgressDetails | dict[str, Any]) -> TaskProgressDetails:
+    if isinstance(progress_details, TaskProgressDetails):
+        return progress_details
+    return TaskProgressDetails.model_validate(progress_details)
 
 
 __all__ = [

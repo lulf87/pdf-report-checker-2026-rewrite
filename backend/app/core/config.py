@@ -102,6 +102,11 @@ class Settings(BaseSettings):
         ge=1,
         description="Maximum number of independent Codex audit packages reviewed concurrently.",
     )
+    codex_audit_missing_target_retry_batch_size: int = Field(
+        default=1,
+        ge=1,
+        description="Maximum Codex targets per retry package when a runner output is missing target reviews.",
+    )
     codex_audit_included_check_ids: str | None = Field(
         default=None,
         description="Optional comma-separated check IDs allowed for Codex audit targets.",

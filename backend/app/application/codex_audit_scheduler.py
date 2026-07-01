@@ -11,6 +11,8 @@ from app.domain.evidence_package import EvidencePackage
 
 
 ReviewCallable = Callable[["CodexAuditJob"], list[CodexReviewResult]]
+JobStartCallback = Callable[["CodexAuditJob"], None]
+JobCompleteCallback = Callable[["CodexAuditJob", list[CodexReviewResult]], None]
 
 
 @dataclass(frozen=True)
@@ -37,20 +39,44 @@ class CodexAuditScheduler:
     def __init__(self, *, max_parallel_jobs: int = 1) -> None:
         self.max_parallel_jobs = max(1, int(max_parallel_jobs or 1))
 
-    def run(self, jobs: list[CodexAuditJob], review: ReviewCallable) -> list[CodexAuditJobResult]:
+    def run(
+        self,
+        jobs: list[CodexAuditJob],
+        review: ReviewCallable,
+        *,
+        on_job_start: JobStartCallback | None = None,
+        on_job_complete: JobCompleteCallback | None = None,
+    ) -> list[CodexAuditJobResult]:
         if not jobs:
             return []
         queued_at = time.perf_counter()
         if self.max_parallel_jobs == 1 or len(jobs) == 1:
             return [
-                self._run_one(index, job, review, queued_at=queued_at, worker_id=0)
+                self._run_one(
+                    index,
+                    job,
+                    review,
+                    queued_at=queued_at,
+                    worker_id=0,
+                    on_job_start=on_job_start,
+                    on_job_complete=on_job_complete,
+                )
                 for index, job in enumerate(jobs)
             ]
 
         results_by_index: dict[int, CodexAuditJobResult] = {}
         with ThreadPoolExecutor(max_workers=self.max_parallel_jobs, thread_name_prefix="codex-audit") as executor:
             futures = {
-                executor.submit(self._run_one, index, job, review, queued_at=queued_at, worker_id=index % self.max_parallel_jobs): index
+                executor.submit(
+                    self._run_one,
+                    index,
+                    job,
+                    review,
+                    queued_at=queued_at,
+                    worker_id=index % self.max_parallel_jobs,
+                    on_job_start=on_job_start,
+                    on_job_complete=on_job_complete,
+                ): index
                 for index, job in enumerate(jobs)
             }
             for future in as_completed(futures):
@@ -66,10 +92,16 @@ class CodexAuditScheduler:
         *,
         queued_at: float,
         worker_id: int,
+        on_job_start: JobStartCallback | None = None,
+        on_job_complete: JobCompleteCallback | None = None,
     ) -> CodexAuditJobResult:
         started_perf = time.perf_counter()
         started_at = _utc_now()
+        if on_job_start is not None:
+            on_job_start(job)
         reviews = review(job)
+        if on_job_complete is not None:
+            on_job_complete(job, reviews)
         completed_at = _utc_now()
         scheduler_profile = {
             "parallel_jobs": self.max_parallel_jobs,

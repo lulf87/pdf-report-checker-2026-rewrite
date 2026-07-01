@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { formatCodexRuntimeError } from "../../../entities/codexReview/types";
 import type { AuditOptions, TaskResult, TaskStatus } from "../../../entities/task/types";
 import { Button } from "../../../shared/ui/Button";
 import { FileUpload, type FileUploadFile } from "../../../shared/ui/FileUpload";
@@ -26,6 +27,7 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
   const [task, setTask] = useState<TaskStatus | null>(null);
   const [message, setMessage] = useState("上传并创建任务");
   const [error, setError] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const didRestoreTask = useRef(false);
   const lastTaskRef = useRef<TaskStatus | null>(null);
@@ -41,14 +43,14 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
       lastTaskRef.current = storedSession.task;
       setTask(storedSession.task);
       setMessage(storedSession.message ?? "上次任务失败");
-      setError(storedSession.error ?? storedSession.task.error_message ?? "上次报告自检失败");
+      showTaskError(storedSession.task.error_message ?? storedSession.error ?? "上次报告自检失败");
       return;
     }
 
     let cancelled = false;
     const restoreTask = async () => {
       setBusy(true);
-      setError(null);
+      clearError();
       setTask(storedSession.task);
       setMessage("正在恢复上次报告自检任务...");
 
@@ -60,7 +62,7 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
         if (latestTask.status === "error") {
           const nextError = latestTask.error_message || "上次报告自检失败";
           rememberTask(latestTask, "上次任务失败", nextError);
-          setError(nextError);
+          showTaskError(nextError);
           setBusy(false);
           return;
         }
@@ -94,7 +96,7 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
     lastTaskRef.current = null;
     setTask(null);
     setMessage("上传并创建任务");
-    setError(nextError);
+    showTaskError(nextError);
     setBusy(false);
   }
 
@@ -102,11 +104,12 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
     const reportFile = files[0]?.file;
     if (!reportFile) {
       setError("请先上传检验报告 PDF");
+      setErrorDetail(null);
       return;
     }
 
     setBusy(true);
-    setError(null);
+    clearError();
     setMessage("正在上传文件...");
 
     try {
@@ -125,9 +128,9 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
       rememberTask(finalTask, "报告自检已完成");
       onComplete(finalTask, result);
     } catch (uploadError) {
-      const nextError = uploadError instanceof Error ? uploadError.message : "报告自检失败";
-      if (lastTaskRef.current) rememberTask(lastTaskRef.current, "报告自检失败", nextError);
-      setError(nextError);
+      const rawError = lastTaskRef.current?.error_message ?? (uploadError instanceof Error ? uploadError.message : "报告自检失败");
+      if (lastTaskRef.current) rememberTask(lastTaskRef.current, "报告自检失败", rawError);
+      showTaskError(rawError);
     } finally {
       setBusy(false);
     }
@@ -138,6 +141,17 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
     setTask(nextTask);
     setMessage(nextMessage);
     saveTaskSession("report_check", nextTask, { message: nextMessage, error: nextError });
+  }
+
+  function clearError() {
+    setError(null);
+    setErrorDetail(null);
+  }
+
+  function showTaskError(rawError: string) {
+    const formatted = formatCodexRuntimeError(rawError);
+    setError(formatted.message);
+    setErrorDetail(formatted.detail ?? null);
   }
 
   return (
@@ -227,6 +241,12 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
             </div>
           </details>
           {error ? <p className="form-error">{error}</p> : null}
+          {errorDetail ? (
+            <details className="advanced-audit-settings">
+              <summary>高级详情</summary>
+              <pre>{errorDetail}</pre>
+            </details>
+          ) : null}
           <div className="button-row">
             <Button disabled={busy} onClick={onBack} variant="secondary">
               返回
