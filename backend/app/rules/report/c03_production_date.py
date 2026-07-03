@@ -16,6 +16,13 @@ from app.rules.report.common import (
     parse_date_value,
     select_label,
 )
+from app.rules.report.comparison_details import (
+    comparison_field,
+    comparison_source,
+    evidence_ids_for_fields,
+    field_extract,
+    field_extract_from_report_field,
+)
 from app.rules.report.context import CheckContext
 
 
@@ -43,7 +50,11 @@ def check_c03_production_date(
             check_id=CHECK_ID,
             check_name=CHECK_NAME,
             findings=[],
-            metadata={"reason": "see_sample_description", "compare_value_enabled": COMPARE_VALUE_ENABLED},
+            metadata={
+                "reason": "see_sample_description",
+                "compare_value_enabled": COMPARE_VALUE_ENABLED,
+                "comparison_details": _sample_description_reference_details(document, third_field, page_value),
+            },
             pass_summary="第三页生产日期指向样品描述栏，C03 跳过",
             empty_status=CheckStatus.SKIP,
         )
@@ -61,7 +72,21 @@ def check_c03_production_date(
             check_id=CHECK_ID,
             check_name=CHECK_NAME,
             findings=[finding],
-            metadata={"compare_value_enabled": COMPARE_VALUE_ENABLED},
+            metadata={
+                "compare_value_enabled": COMPARE_VALUE_ENABLED,
+                "comparison_details": _date_format_comparison_details(
+                    document=document,
+                    third_field=third_field,
+                    label=None,
+                    label_field=None,
+                    page_value=page_value,
+                    label_value=None,
+                    page_format=None,
+                    label_format=None,
+                    overall_status="mismatch",
+                    overall_reason="第三页生产日期缺失，无法核对格式。",
+                ),
+            },
             pass_summary="生产日期格式一致",
             issue_summary="第三页生产日期缺失",
         )
@@ -82,7 +107,21 @@ def check_c03_production_date(
             check_id=CHECK_ID,
             check_name=CHECK_NAME,
             findings=[finding],
-            metadata={"compare_value_enabled": COMPARE_VALUE_ENABLED},
+            metadata={
+                "compare_value_enabled": COMPARE_VALUE_ENABLED,
+                "comparison_details": _date_format_comparison_details(
+                    document=document,
+                    third_field=third_field,
+                    label=label,
+                    label_field=label_field,
+                    page_value=page_value,
+                    label_value=label_value,
+                    page_format=date_format_pattern(page_value),
+                    label_format=None,
+                    overall_status="needs_review",
+                    overall_reason="未找到中文标签中的生产日期，需人工复核格式。",
+                ),
+            },
             pass_summary="生产日期格式一致",
             issue_summary="缺少中文标签生产日期，需人工复核 C03",
         )
@@ -108,7 +147,21 @@ def check_c03_production_date(
             check_id=CHECK_ID,
             check_name=CHECK_NAME,
             findings=[finding],
-            metadata={"compare_value_enabled": COMPARE_VALUE_ENABLED},
+            metadata={
+                "compare_value_enabled": COMPARE_VALUE_ENABLED,
+                "comparison_details": _date_format_comparison_details(
+                    document=document,
+                    third_field=third_field,
+                    label=label,
+                    label_field=label_field,
+                    page_value=page_value,
+                    label_value=label_value,
+                    page_format=date_format_pattern(page_value),
+                    label_format=date_format_pattern(label_value),
+                    overall_status="needs_review",
+                    overall_reason="中文标签 OCR 置信度较低，生产日期格式需人工复核。",
+                ),
+            },
             pass_summary="生产日期格式一致",
             issue_summary="中文标签 OCR 置信度低，需人工复核 C03",
         )
@@ -144,14 +197,32 @@ def check_c03_production_date(
         check_name=CHECK_NAME,
         findings=findings,
         evidence=evidence,
-        metadata=_result_metadata(
-            page_value=page_value,
-            label_value=label_value,
-            page_date=page_date,
-            label_date=label_date,
-            page_format=page_format,
-            label_format=label_format,
-        ),
+        metadata={
+            **_result_metadata(
+                page_value=page_value,
+                label_value=label_value,
+                page_date=page_date,
+                label_date=label_date,
+                page_format=page_format,
+                label_format=label_format,
+            ),
+            "comparison_details": _date_format_comparison_details(
+                document=document,
+                third_field=third_field,
+                label=label,
+                label_field=label_field,
+                page_value=page_value,
+                label_value=label_value,
+                page_format=page_format,
+                label_format=label_format,
+                overall_status="mismatch" if findings else "match",
+                overall_reason=(
+                    "第三页生产日期与中文标签生产日期格式不一致或无法识别。"
+                    if findings
+                    else "第三页生产日期与中文标签生产日期格式一致。"
+                ),
+            ),
+        },
         pass_summary="第三页生产日期与中文标签生产日期格式一致",
         issue_summary="生产日期格式不一致或无法识别",
     )
@@ -255,6 +326,138 @@ def _format_finding(
             "matched_label_key": label_field.name,
         },
     )
+
+
+def _sample_description_reference_details(
+    document: ReportDocument,
+    third_field: ReportField | None,
+    page_value: str | None,
+) -> dict[str, object]:
+    third_page = document.page_map.get("third_page") or 3
+    return {
+        "title": CHECK_NAME,
+        "overall_status": "skipped",
+        "overall_reason": "第三页生产日期指向样品描述栏，本规则不直接与中文标签 OCR 比对。",
+        "sources": [
+            comparison_source(
+                source_key="third_page",
+                label="报告首页",
+                page_number=third_page,
+                display_page_label=f"PDF 第 {third_page} 页 / 报告第 1 页",
+                section="检验报告首页",
+            ),
+            comparison_source(
+                source_key="sample_description",
+                label="样品描述栏",
+                page_number=third_page,
+                display_page_label=f"PDF 第 {third_page} 页 / 报告第 1 页",
+                section="样品描述栏引用",
+            ),
+        ],
+        "fields": [
+            comparison_field(
+                field_key="production_date",
+                field_label="生产日期",
+                left=field_extract_from_report_field(
+                    third_field,
+                    source_key="third_page",
+                    label="报告首页摘录",
+                    fallback_page_number=third_page,
+                    display_page_label=f"PDF 第 {third_page} 页 / 报告第 1 页",
+                    raw_text=page_value,
+                    normalized_text=page_value,
+                ),
+                right=field_extract(
+                    source_key="sample_description",
+                    label="样品描述栏",
+                    page_number=third_page,
+                    display_page_label=f"PDF 第 {third_page} 页 / 报告第 1 页",
+                    raw_text="样品描述栏",
+                    normalized_text="样品描述栏",
+                ),
+                status="not_applicable",
+                reason="第三页字段指向样品描述栏，C03 跳过直接格式比对",
+                evidence_ids=evidence_ids_for_fields(third_field),
+            )
+        ],
+    }
+
+
+def _date_format_comparison_details(
+    *,
+    document: ReportDocument,
+    third_field: ReportField | None,
+    label: LabelOCRResult | None,
+    label_field: ReportField | None,
+    page_value: str | None,
+    label_value: str | None,
+    page_format: str | None,
+    label_format: str | None,
+    overall_status: str,
+    overall_reason: str,
+) -> dict[str, object]:
+    third_page = document.page_map.get("third_page") or 3
+    status = "match" if page_format and label_format and page_format == label_format else overall_status
+    if not page_value:
+        status = "missing_left"
+        reason = "第三页生产日期缺失"
+    elif label is None or label_field is None or not label_value:
+        status = "missing_right"
+        reason = "中文标签 OCR 未摘录到生产日期"
+    elif page_format is None or label_format is None:
+        status = "needs_review"
+        reason = "至少一处日期格式无法识别"
+    elif page_format == label_format:
+        reason = "两处生产日期格式一致"
+    else:
+        reason = "两处生产日期格式不一致"
+
+    return {
+        "title": CHECK_NAME,
+        "overall_status": overall_status,
+        "overall_reason": overall_reason,
+        "sources": [
+            comparison_source(
+                source_key="third_page",
+                label="报告首页",
+                page_number=third_page,
+                display_page_label=f"PDF 第 {third_page} 页 / 报告第 1 页",
+                section="检验报告首页",
+            ),
+            comparison_source(
+                source_key="label_ocr",
+                label="中文标签 OCR",
+                page_number=label.page_number if label else None,
+                section="中文标签",
+            ),
+        ],
+        "fields": [
+            comparison_field(
+                field_key="production_date_format",
+                field_label="生产日期格式",
+                left=field_extract_from_report_field(
+                    third_field,
+                    source_key="third_page",
+                    label="报告首页摘录",
+                    fallback_page_number=third_page,
+                    display_page_label=f"PDF 第 {third_page} 页 / 报告第 1 页",
+                    raw_text=page_value,
+                    normalized_text=page_format,
+                ),
+                right=field_extract_from_report_field(
+                    label_field,
+                    source_key="label_ocr",
+                    label="中文标签 OCR 摘录",
+                    fallback_page_number=label.page_number if label else None,
+                    raw_text=label_value,
+                    normalized_text=label_format,
+                ),
+                status=status,
+                reason=reason,
+                evidence_ids=evidence_ids_for_fields(third_field, label_field),
+            )
+        ],
+    }
 
 
 __all__ = ["CHECK_ID", "CHECK_NAME", "check_c03_production_date", "date_format_pattern"]

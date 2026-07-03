@@ -17,6 +17,13 @@ from app.rules.report.common import (
     select_label,
     values_match,
 )
+from app.rules.report.comparison_details import (
+    comparison_field,
+    comparison_source,
+    evidence_ids_for_fields,
+    field_extract,
+    field_extract_from_report_field,
+)
 from app.rules.report.context import CheckContext
 
 
@@ -65,6 +72,12 @@ def check_c02_third_page_extended_fields(
                 "fields_using_reference": referenced_fields,
                 "optional_field_scope": "unconfirmed",
                 "optional_field_results": [],
+                "comparison_details": _reference_comparison_details(
+                    document=document,
+                    referenced_fields=referenced_fields,
+                    overall_status="match",
+                    overall_reason="第三页型号规格、生产日期、产品编号/批号均指向样品描述栏，不与标签 OCR 直接比对。",
+                ),
             },
             pass_summary="第三页型号规格、生产日期、产品编号/批号均指向样品描述栏",
         )
@@ -90,7 +103,16 @@ def check_c02_third_page_extended_fields(
             check_id=CHECK_ID,
             check_name=CHECK_NAME,
             findings=[finding],
-            metadata={"see_sample_description": "partial", "fields_using_reference": referenced_fields},
+            metadata={
+                "see_sample_description": "partial",
+                "fields_using_reference": referenced_fields,
+                "comparison_details": _reference_comparison_details(
+                    document=document,
+                    referenced_fields=referenced_fields,
+                    overall_status="needs_review",
+                    overall_reason=f"仅 {', '.join(referenced_fields)} 指向样品描述栏，其余字段仍需按标签 OCR 核对。",
+                ),
+            },
             pass_summary="第三页扩展字段与中文标签一致",
             issue_summary="第三页见样品描述栏填写不完整",
         )
@@ -111,7 +133,10 @@ def check_c02_third_page_extended_fields(
             check_id=CHECK_ID,
             check_name=CHECK_NAME,
             findings=[finding],
-            metadata={"see_sample_description": "none"},
+            metadata={
+                "see_sample_description": "none",
+                "comparison_details": _missing_label_comparison_details(document),
+            },
             pass_summary="第三页扩展字段与中文标签一致",
             issue_summary="缺少中文标签 OCR，需人工复核 C02",
         )
@@ -133,7 +158,16 @@ def check_c02_third_page_extended_fields(
             check_id=CHECK_ID,
             check_name=CHECK_NAME,
             findings=[finding],
-            metadata={"see_sample_description": "none", "optional_field_scope": "unconfirmed"},
+            metadata={
+                "see_sample_description": "none",
+                "optional_field_scope": "unconfirmed",
+                "comparison_details": _label_comparison_details(
+                    document=document,
+                    label=label,
+                    overall_status="needs_review",
+                    overall_reason="中文标签 OCR 置信度较低，第三页扩展字段需人工复核。",
+                ),
+            },
             pass_summary="第三页扩展字段与中文标签一致",
             issue_summary="中文标签 OCR 置信度低，需人工复核 C02",
         )
@@ -249,6 +283,16 @@ def check_c02_third_page_extended_fields(
             "field_results": compared_fields,
             "optional_field_scope": "unconfirmed",
             "optional_field_results": optional_field_results,
+            "comparison_details": _label_comparison_details(
+                document=document,
+                label=label,
+                overall_status="mismatch" if any(finding.severity == FindingSeverity.ERROR for finding in findings) else ("needs_review" if findings else "match"),
+                overall_reason=(
+                    f"第三页扩展字段存在 {len(findings)} 项 OCR 比对问题。"
+                    if findings
+                    else "第三页型号规格、生产日期、产品编号/批号与中文标签 OCR 摘录一致。"
+                ),
+            ),
         },
         pass_summary="第三页扩展字段与中文标签 OCR 一致",
         issue_summary=f"第三页扩展字段存在 {len(findings)} 项 OCR 比对问题",
@@ -324,6 +368,186 @@ def _optional_identity_field_results(
             }
         )
     return results
+
+
+def _base_sources(
+    document: ReportDocument,
+    label: LabelOCRResult | None = None,
+    *,
+    missing_label: bool = False,
+) -> list[dict[str, object]]:
+    third_page = document.page_map.get("third_page") or 3
+    sources = [
+        comparison_source(
+            source_key="third_page",
+            label="报告首页",
+            page_number=third_page,
+            display_page_label=f"PDF 第 {third_page} 页 / 报告第 1 页",
+            section="检验报告首页",
+        )
+    ]
+    if label is not None:
+        sources.append(
+            comparison_source(
+                source_key="label_ocr",
+                label="中文标签 OCR",
+                page_number=label.page_number,
+                section="中文标签",
+            )
+        )
+    elif missing_label:
+        sources.append(
+            comparison_source(
+                source_key="label_ocr",
+                label="中文标签 OCR",
+                page_number=None,
+                section="缺失",
+            )
+        )
+    else:
+        sources.append(
+            comparison_source(
+                source_key="sample_description",
+                label="样品描述栏",
+                page_number=third_page,
+                display_page_label=f"PDF 第 {third_page} 页 / 报告第 1 页",
+                section="样品描述栏引用",
+            )
+        )
+    return sources
+
+
+def _reference_comparison_details(
+    *,
+    document: ReportDocument,
+    referenced_fields: list[str],
+    overall_status: str,
+    overall_reason: str,
+) -> dict[str, object]:
+    third_page = document.page_map.get("third_page") or 3
+    fields = []
+    for spec in _REFERENCE_FIELDS:
+        third_field = _third_page_field(document, spec)
+        is_reference = spec.name in referenced_fields
+        fields.append(
+            comparison_field(
+                field_key=spec.attr,
+                field_label=spec.name,
+                left=field_extract_from_report_field(
+                    third_field,
+                    source_key="third_page",
+                    label="报告首页摘录",
+                    fallback_page_number=third_page,
+                    display_page_label=f"PDF 第 {third_page} 页 / 报告第 1 页",
+                ),
+                right=field_extract(
+                    source_key="sample_description",
+                    label="样品描述栏",
+                    page_number=third_page,
+                    display_page_label=f"PDF 第 {third_page} 页 / 报告第 1 页",
+                    raw_text="样品描述栏",
+                    normalized_text="样品描述栏",
+                ),
+                status="not_applicable" if is_reference else "needs_review",
+                reason=(
+                    "第三页字段指向样品描述栏，不与标签 OCR 直接比对"
+                    if is_reference
+                    else "该字段未指向样品描述栏，仍需按标签 OCR 核对"
+                ),
+                evidence_ids=evidence_ids_for_fields(third_field),
+            )
+        )
+    return {
+        "title": CHECK_NAME,
+        "overall_status": overall_status,
+        "overall_reason": overall_reason,
+        "sources": _base_sources(document),
+        "fields": fields,
+    }
+
+
+def _missing_label_comparison_details(document: ReportDocument) -> dict[str, object]:
+    return {
+        "title": CHECK_NAME,
+        "overall_status": "needs_review",
+        "overall_reason": "未找到可用于比对的中文标签 OCR 结果，需人工复核。",
+        "sources": _base_sources(document, None, missing_label=True),
+        "fields": [
+            comparison_field(
+                field_key=spec.attr,
+                field_label=spec.name,
+                left=field_extract_from_report_field(
+                    _third_page_field(document, spec),
+                    source_key="third_page",
+                    label="报告首页摘录",
+                    fallback_page_number=document.page_map.get("third_page") or 3,
+                    display_page_label=f"PDF 第 {document.page_map.get('third_page') or 3} 页 / 报告第 1 页",
+                ),
+                status="needs_review",
+                reason="缺少中文标签 OCR，无法完成字段比对",
+                evidence_ids=evidence_ids_for_fields(_third_page_field(document, spec)),
+            )
+            for spec in _REFERENCE_FIELDS
+        ],
+    }
+
+
+def _label_comparison_details(
+    *,
+    document: ReportDocument,
+    label: LabelOCRResult,
+    overall_status: str,
+    overall_reason: str,
+) -> dict[str, object]:
+    third_page = document.page_map.get("third_page") or 3
+    fields = []
+    for spec in _REFERENCE_FIELDS:
+        third_field = _third_page_field(document, spec)
+        label_field = get_label_field(label, spec.label_name)
+        page_value = field_value(third_field)
+        label_value = field_value(label_field)
+        if not page_value:
+            status = "missing_left"
+            reason = "报告首页未摘录到该字段"
+        elif not label_value:
+            status = "missing_right"
+            reason = "中文标签 OCR 未摘录到该字段"
+        elif values_match(page_value, label_value):
+            status = "match"
+            reason = "报告首页摘录与中文标签 OCR 摘录一致"
+        else:
+            status = "mismatch"
+            reason = "报告首页摘录与中文标签 OCR 摘录不一致"
+
+        fields.append(
+            comparison_field(
+                field_key=spec.attr,
+                field_label=spec.name,
+                left=field_extract_from_report_field(
+                    third_field,
+                    source_key="third_page",
+                    label="报告首页摘录",
+                    fallback_page_number=third_page,
+                    display_page_label=f"PDF 第 {third_page} 页 / 报告第 1 页",
+                ),
+                right=field_extract_from_report_field(
+                    label_field,
+                    source_key="label_ocr",
+                    label="中文标签 OCR 摘录",
+                    fallback_page_number=label.page_number,
+                ),
+                status=status,
+                reason=reason,
+                evidence_ids=evidence_ids_for_fields(third_field, label_field),
+            )
+        )
+    return {
+        "title": CHECK_NAME,
+        "overall_status": overall_status,
+        "overall_reason": overall_reason,
+        "sources": _base_sources(document, label),
+        "fields": fields,
+    }
 
 
 __all__ = ["CHECK_ID", "CHECK_NAME", "check_c02_third_page_extended_fields"]

@@ -72,6 +72,17 @@ def test_c02_passes_when_three_reference_fields_all_see_sample_description() -> 
     assert result.status == CheckStatus.PASS
     assert result.findings == []
     assert result.metadata["see_sample_description"] == "all"
+    details = result.metadata["comparison_details"]
+    assert details["title"] == "第三页扩展字段与中文标签 OCR"
+    assert details["overall_status"] == "match"
+    assert "均指向样品描述栏" in details["overall_reason"]
+    fields_by_label = {field["field_label"]: field for field in details["fields"]}
+    assert set(fields_by_label) == {"型号规格", "生产日期", "产品编号/批号"}
+    assert fields_by_label["型号规格"]["left"]["raw_text"] == "见 “样品描述” 栏"
+    assert fields_by_label["型号规格"]["right"]["raw_text"] == "样品描述栏"
+    assert fields_by_label["型号规格"]["status"] == "not_applicable"
+    assert "不与标签 OCR 直接比对" in fields_by_label["型号规格"]["reason"]
+    assert "/Users/" not in str(details)
 
 
 @pytest.mark.parametrize(

@@ -94,6 +94,7 @@ def _payload_to_lines(payload: dict[str, Any], title: str) -> list[str]:
                 f"summary: {result.get('summary') or ''}",
             ]
         )
+        lines.extend(_comparison_detail_lines(result))
 
     lines.extend(["", "Findings"])
     if not payload["findings"]:
@@ -132,6 +133,48 @@ def _stringify(value: Any) -> str:
     if value is None:
         return ""
     return str(value)
+
+
+def _comparison_detail_lines(result: dict[str, Any]) -> list[str]:
+    details = (result.get("metadata") or {}).get("comparison_details")
+    if not isinstance(details, dict):
+        return []
+
+    lines = [
+        "核对明细",
+        f"detail_title: {details.get('title') or ''}",
+        f"overall_status: {details.get('overall_status') or ''}",
+        f"通过原因: {details.get('overall_reason') or ''}",
+    ]
+    fields = details.get("fields") or []
+    if not isinstance(fields, list):
+        return lines
+    for field in fields:
+        if not isinstance(field, dict):
+            continue
+        left = field.get("left") if isinstance(field.get("left"), dict) else {}
+        right = field.get("right") if isinstance(field.get("right"), dict) else {}
+        lines.append(
+            "detail_field: "
+            f"{field.get('field_label') or ''} | "
+            f"left={_extract_label(left)} {_extract_page(left)} {_extract_text(left)} | "
+            f"right={_extract_label(right)} {_extract_page(right)} {_extract_text(right)} | "
+            f"status={field.get('status') or ''} | "
+            f"reason={field.get('reason') or ''}"
+        )
+    return lines
+
+
+def _extract_label(value: dict[str, Any]) -> str:
+    return str(value.get("label") or "")
+
+
+def _extract_page(value: dict[str, Any]) -> str:
+    return str(value.get("display_page_label") or value.get("page_number") or "")
+
+
+def _extract_text(value: dict[str, Any]) -> str:
+    return str(value.get("raw_text") or value.get("normalized_text") or "")
 
 
 def _wrap_line(line: str) -> list[str]:

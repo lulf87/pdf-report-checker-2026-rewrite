@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -215,12 +216,29 @@ class FakeReportAuditService:
         review_metadata: dict | None = None,
         failed: bool = False,
         exc: Exception | None = None,
+        timeout_seconds: int = 900,
+        calls: list[dict[str, object]] | None = None,
+        timeout_overrides: list[int] | None = None,
     ) -> None:
         self.verdict = verdict
         self.review_metadata = review_metadata or {}
         self.failed = failed
         self.exc = exc
-        self.calls: list[dict[str, object]] = []
+        self.calls: list[dict[str, object]] = calls if calls is not None else []
+        self.timeout_overrides = timeout_overrides if timeout_overrides is not None else []
+        self.runner = SimpleNamespace(config=SimpleNamespace(timeout_seconds=timeout_seconds))
+
+    def with_timeout_seconds(self, timeout_seconds: int) -> "FakeReportAuditService":
+        self.timeout_overrides.append(timeout_seconds)
+        return FakeReportAuditService(
+            verdict=self.verdict,
+            review_metadata=self.review_metadata,
+            failed=self.failed,
+            exc=self.exc,
+            timeout_seconds=timeout_seconds,
+            calls=self.calls,
+            timeout_overrides=self.timeout_overrides,
+        )
 
     def review(self, request, evidence_package) -> list[CodexReviewResult]:
         self.calls.append({"request": request, "evidence_package": evidence_package})
@@ -1194,19 +1212,23 @@ def test_report_check_task_audit_options_override_default_target_selection(tmp_p
             "included_check_ids": "C07",
             "max_targets_per_batch": 1,
             "max_parallel_jobs": 1,
+            "timeout_seconds": 900,
         },
     )
 
     result = task_service.get_result(status.task_id)
     assert status.status == TaskState.COMPLETED
     assert [call["request"].targets[0].check_id for call in audit_service.calls] == ["C07"]
+    assert audit_service.timeout_overrides == [900]
     assert result.metadata["audit_options_source"] == "user_override"
     assert result.metadata["audit_options"]["included_check_ids"] == ["C07"]
     assert result.metadata["audit_options"]["max_targets_per_batch"] == 1
     assert result.metadata["audit_options"]["max_parallel_jobs"] == 1
+    assert result.metadata["audit_options"]["timeout_seconds"] == 900
     assert result.metadata["effective_audit_options"]["included_check_ids"] == ["C07"]
     assert result.metadata["effective_audit_options"]["max_targets_per_batch"] == 1
     assert result.metadata["effective_audit_options"]["max_parallel_jobs"] == 1
+    assert result.metadata["effective_audit_options"]["timeout_seconds"] == 900
     assert result.metadata["codex_audit"]["audit_scope"] == "targeted"
     assert result.metadata["codex_audit"]["included_check_ids"] == ["C07"]
 

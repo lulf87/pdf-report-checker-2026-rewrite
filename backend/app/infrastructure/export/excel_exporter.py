@@ -32,6 +32,7 @@ def export_check_results_to_xlsx(
         ("CheckResults", _check_result_rows(payload)),
         ("Findings", _finding_rows(payload)),
         ("Evidence", _evidence_rows(payload)),
+        ("ComparisonDetails", _comparison_detail_rows(payload)),
     ]
 
     buffer = io.BytesIO()
@@ -126,6 +127,50 @@ def _evidence_rows(payload: dict[str, Any]) -> list[list[Any]]:
                 evidence.get("method") or "",
             ]
         )
+    return rows
+
+
+def _comparison_detail_rows(payload: dict[str, Any]) -> list[list[Any]]:
+    rows = [
+        [
+            "check_id",
+            "field_label",
+            "left_source",
+            "left_page",
+            "left_text",
+            "right_source",
+            "right_page",
+            "right_text",
+            "status",
+            "reason",
+        ]
+    ]
+    for result in payload["check_results"]:
+        details = (result.get("metadata") or {}).get("comparison_details")
+        if not isinstance(details, dict):
+            continue
+        fields = details.get("fields") or []
+        if not isinstance(fields, list):
+            continue
+        for field in fields:
+            if not isinstance(field, dict):
+                continue
+            left = field.get("left") if isinstance(field.get("left"), dict) else {}
+            right = field.get("right") if isinstance(field.get("right"), dict) else {}
+            rows.append(
+                [
+                    result["check_id"],
+                    field.get("field_label") or "",
+                    left.get("label") or left.get("source_key") or "",
+                    left.get("display_page_label") or left.get("page_number") or "",
+                    left.get("raw_text") or left.get("normalized_text") or "",
+                    right.get("label") or right.get("source_key") or "",
+                    right.get("display_page_label") or right.get("page_number") or "",
+                    right.get("raw_text") or right.get("normalized_text") or "",
+                    field.get("status") or "",
+                    field.get("reason") or "",
+                ]
+            )
     return rows
 
 

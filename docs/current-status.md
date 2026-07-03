@@ -385,7 +385,7 @@ T-CODEX 状态：
 
 本次实现：
 
-- `Settings` 新增 mandatory 配置：`CODEX_CLI_PATH=codex`、`CODEX_AUDIT_TIMEOUT_SECONDS=300`、`CODEX_AUDIT_RUNTIME_DIR=runtime/codex_audit`、`CODEX_AUDIT_MAX_TARGETS_PER_BATCH=5`、`CODEX_AUDIT_SANDBOX=read-only`、`CODEX_AUDIT_EPHEMERAL=true`。
+- `Settings` 新增 mandatory 配置：`CODEX_CLI_PATH=codex`、`CODEX_AUDIT_TIMEOUT_SECONDS=900`、`CODEX_AUDIT_RUNTIME_DIR=runtime/codex_audit`、`CODEX_AUDIT_MAX_TARGETS_PER_BATCH=5`、`CODEX_AUDIT_SANDBOX=read-only`、`CODEX_AUDIT_EPHEMERAL=true`。
 - 旧 `CODEX_AUDIT_ENABLED`、`CODEX_AUDIT_BACKEND`、`CODEX_AUDIT_ALLOW_REAL_EXECUTION` 仅保留为 deprecated 兼容字段，产品 factory 不再把它们作为用户运行模式。
 - `build_codex_audit_service(...)` 默认构建 `CodexCliRunner(enabled=True, allow_real_execution=True)`；API dependency 构造 usecase 时默认带 `CodexAuditService`，但构造阶段不调用 subprocess。
 - `ReportCheckUseCase` 和 `PTRCompareUseCase` 不再把 Codex runtime failed/skipped review 吞进 completed 结果；失败 review 或 audit service exception 会让 task 进入 failed/error。

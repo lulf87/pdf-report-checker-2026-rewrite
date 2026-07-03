@@ -7,6 +7,12 @@ from app.domain.common import Confidence, Evidence, EvidenceMethod, Location, So
 from app.domain.finding import Finding, FindingSeverity, MissingEvidence
 from app.domain.report import FirstPageInfo, ReportDocument, ReportField, ThirdPageInfo
 from app.domain.result import CheckResult, CheckStatus
+from app.rules.report.comparison_details import (
+    comparison_field,
+    comparison_source,
+    evidence_ids_for_fields,
+    field_extract_from_report_field,
+)
 from app.rules.report.context import CheckContext
 
 
@@ -26,6 +32,10 @@ _FIELDS_TO_COMPARE = (
     _ComparedField("委托方", "client", "client", "client"),
     _ComparedField("样品名称", "sample_name", "sample_name", None),
     _ComparedField("型号规格", "model_spec", "model_spec", "model_spec"),
+)
+
+_DETAIL_ONLY_FIELDS = (
+    _ComparedField("检验类别", "inspection_type", "inspection_type", None),
 )
 
 
@@ -97,7 +107,10 @@ def check_c01_home_vs_third(
         summary=_summary_for_status(status, findings),
         findings=findings,
         evidence=_deduplicate_evidence(result_evidence),
-        metadata={"field_results": field_results},
+        metadata={
+            "field_results": field_results,
+            "comparison_details": _comparison_details(document, findings),
+        },
     )
 
 
@@ -302,6 +315,136 @@ def _summary_for_status(status: CheckStatus, findings: list[Finding]) -> str:
     if status == CheckStatus.FAIL:
         return f"首页与第三页存在 {len(findings)} 项 C01 字段问题"
     return f"首页与第三页有 {len(findings)} 项 C01 字段证据缺失，需复核"
+
+
+def _comparison_details(document: ReportDocument, findings: list[Finding]) -> dict[str, object]:
+    first_page_number = document.page_map.get("first_page") or 1
+    third_page_number = document.page_map.get("third_page") or 3
+    compared_fields = [
+        _comparison_field_for_spec(
+            document=document,
+            spec=spec,
+            first_page_number=first_page_number,
+            third_page_number=third_page_number,
+        )
+        for spec in _FIELDS_TO_COMPARE
+    ]
+    detail_fields = [
+        field
+        for spec in _DETAIL_ONLY_FIELDS
+        if (
+            field := _comparison_field_for_spec(
+                document=document,
+                spec=spec,
+                first_page_number=first_page_number,
+                third_page_number=third_page_number,
+                include_when_both_missing=False,
+            )
+        )
+        is not None
+    ]
+    mismatch_fields = [field["field_label"] for field in compared_fields if field["status"] != "match"]
+    detail_non_match_fields = [field["field_label"] for field in detail_fields if field["status"] != "match"]
+    if mismatch_fields:
+        overall_status = "mismatch"
+        overall_reason = f"封面页与报告首页的{', '.join(mismatch_fields)}不一致或缺失。"
+    elif detail_non_match_fields:
+        overall_status = "needs_review"
+        overall_reason = (
+            "封面页与报告首页的委托方、样品名称、型号规格均一致；"
+            f"{', '.join(detail_non_match_fields)}摘录不一致或缺失，仅作为展示提示。"
+        )
+    elif detail_fields:
+        overall_status = "match"
+        overall_reason = "封面页与报告首页的委托方、样品名称、型号规格、检验类别均一致。"
+    else:
+        overall_status = "match"
+        overall_reason = "封面页与报告首页的委托方、样品名称、型号规格均一致。"
+
+    return {
+        "title": "首页与报告首页一致性",
+        "overall_status": overall_status,
+        "overall_reason": overall_reason,
+        "sources": [
+            comparison_source(
+                source_key="cover_page",
+                label="封面页",
+                page_number=first_page_number,
+                display_page_label=f"PDF 第 {first_page_number} 页",
+                section="报告封面",
+            ),
+            comparison_source(
+                source_key="report_home_page",
+                label="报告首页",
+                page_number=third_page_number,
+                display_page_label=f"PDF 第 {third_page_number} 页 / 报告第 1 页",
+                section="检验报告首页",
+            ),
+        ],
+        "fields": [*compared_fields, *detail_fields],
+        "finding_count": len(findings),
+    }
+
+
+def _comparison_field_for_spec(
+    *,
+    document: ReportDocument,
+    spec: _ComparedField,
+    first_page_number: int,
+    third_page_number: int,
+    include_when_both_missing: bool = True,
+) -> dict[str, object] | None:
+    first_field = _field_from_first_page(document.first_page, spec)
+    third_field = _field_from_third_page(document.third_page, spec)
+    first_value = _strict_value(first_field)
+    third_value = _strict_value(third_field)
+    first_missing = first_value is None or first_value == ""
+    third_missing = third_value is None or third_value == ""
+
+    if first_missing and third_missing and not include_when_both_missing:
+        return None
+
+    if first_missing and third_missing:
+        status = "missing_left"
+        reason = "两处均未摘录到该字段"
+    elif first_missing:
+        status = "missing_left"
+        reason = "封面页未摘录到该字段"
+    elif third_missing:
+        status = "missing_right"
+        reason = "报告首页未摘录到该字段"
+    elif first_value == third_value:
+        status = "match"
+        reason = "两处归一化后完全一致"
+    else:
+        status = "mismatch"
+        reason = "两处摘录不一致"
+
+    return comparison_field(
+        field_key=spec.key,
+        field_label=spec.display_name,
+        left=field_extract_from_report_field(
+            first_field,
+            source_key="cover_page",
+            label="封面页摘录",
+            fallback_page_number=first_page_number,
+            display_page_label=f"PDF 第 {first_page_number} 页",
+            raw_text=first_value,
+            normalized_text=first_value,
+        ),
+        right=field_extract_from_report_field(
+            third_field,
+            source_key="report_home_page",
+            label="报告首页摘录",
+            fallback_page_number=third_page_number,
+            display_page_label=f"PDF 第 {third_page_number} 页 / 报告第 1 页",
+            raw_text=third_value,
+            normalized_text=third_value,
+        ),
+        status=status,
+        reason=reason,
+        evidence_ids=evidence_ids_for_fields(first_field, third_field),
+    )
 
 
 __all__ = [

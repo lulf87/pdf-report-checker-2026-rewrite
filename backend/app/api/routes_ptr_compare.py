@@ -30,6 +30,7 @@ async def create_ptr_compare_task(
     excluded_check_ids: str | None = Form(default=None),
     max_targets_per_batch: int | None = Form(default=None),
     max_parallel_jobs: int | None = Form(default=None),
+    timeout_seconds: int | None = Form(default=None),
     usecase: PTRCompareUseCase = Depends(get_ptr_compare_usecase),
 ):
     _validate_pdf_upload(ptr_file)
@@ -50,6 +51,7 @@ async def create_ptr_compare_task(
                 "excluded_check_ids": excluded_check_ids,
                 "max_targets_per_batch": max_targets_per_batch,
                 "max_parallel_jobs": max_parallel_jobs,
+                "timeout_seconds": timeout_seconds,
             }
         ),
     )

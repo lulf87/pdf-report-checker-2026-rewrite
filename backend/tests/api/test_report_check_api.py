@@ -128,6 +128,7 @@ def test_report_check_upload_passes_audit_options_to_usecase() -> None:
             "excluded_check_ids": "C04",
             "max_targets_per_batch": "1",
             "max_parallel_jobs": "2",
+            "timeout_seconds": "900",
         },
     )
 
@@ -138,6 +139,7 @@ def test_report_check_upload_passes_audit_options_to_usecase() -> None:
         "excluded_check_ids": ["C04"],
         "max_targets_per_batch": 1,
         "max_parallel_jobs": 2,
+        "timeout_seconds": 900,
     }
 
 

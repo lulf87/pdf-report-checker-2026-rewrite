@@ -53,6 +53,22 @@ class CodexAuditService:
         self.missing_target_retry_batch_size = max(1, missing_target_retry_batch_size)
         self.progress_callback = progress_callback
 
+    def with_timeout_seconds(self, timeout_seconds: int | None) -> "CodexAuditService":
+        if timeout_seconds is None:
+            return self
+        clone_runner = getattr(self.runner, "with_timeout_seconds", None)
+        if not callable(clone_runner):
+            return self
+        return CodexAuditService(
+            evidence_writer=self.evidence_writer,
+            prompt_builder=self.prompt_builder,
+            runner=clone_runner(timeout_seconds),
+            output_schema_path=self.output_schema_path,
+            review_cache=self.review_cache,
+            missing_target_retry_batch_size=self.missing_target_retry_batch_size,
+            progress_callback=self.progress_callback,
+        )
+
     def review(
         self,
         request: CodexReviewRequest,

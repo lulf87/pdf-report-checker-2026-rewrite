@@ -7,6 +7,7 @@ import type {
   TaskStatus,
 } from "../../entities/task/types";
 import { taskStateLabel } from "../../entities/task/types";
+import { Button } from "./Button";
 import { GlassCard } from "./GlassCard";
 
 export interface ProgressOverlayProps {
@@ -14,9 +15,11 @@ export interface ProgressOverlayProps {
   visible?: boolean;
   message?: string;
   error?: string | null;
+  onReset?: () => void;
+  resetLabel?: string;
 }
 
-export function ProgressOverlay({ task, visible, message, error }: ProgressOverlayProps) {
+export function ProgressOverlay({ task, visible, message, error, onReset, resetLabel = "重新上传" }: ProgressOverlayProps) {
   const isVisible = visible ?? Boolean(task && task.status !== "completed");
   if (!isVisible) return null;
 
@@ -42,6 +45,13 @@ export function ProgressOverlay({ task, visible, message, error }: ProgressOverl
 
         {progressDetails?.checks?.length ? <ProgressChecklist checks={progressDetails.checks} /> : null}
         {codexProgress?.enabled ? <CodexProgressSummary codex={codexProgress} /> : null}
+        {onReset ? (
+          <div className="button-row progress-actions">
+            <Button onClick={onReset} variant="secondary">
+              {resetLabel}
+            </Button>
+          </div>
+        ) : null}
       </GlassCard>
     </div>
   );

@@ -120,6 +120,7 @@ def test_ptr_compare_upload_passes_audit_options_to_usecase() -> None:
             "excluded_check_ids": "PTR_SCOPE",
             "max_targets_per_batch": "1",
             "max_parallel_jobs": "2",
+            "timeout_seconds": "900",
         },
     )
 
@@ -130,6 +131,7 @@ def test_ptr_compare_upload_passes_audit_options_to_usecase() -> None:
         "excluded_check_ids": ["PTR_SCOPE"],
         "max_targets_per_batch": 1,
         "max_parallel_jobs": 2,
+        "timeout_seconds": 900,
     }
 
 

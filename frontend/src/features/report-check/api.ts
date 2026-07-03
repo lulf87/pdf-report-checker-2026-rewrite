@@ -24,6 +24,7 @@ function formFieldsFromAuditOptions(options?: AuditOptions): Record<string, stri
     excluded_check_ids: options?.excluded_check_ids,
     max_targets_per_batch: options?.max_targets_per_batch,
     max_parallel_jobs: options?.max_parallel_jobs,
+    timeout_seconds: options?.timeout_seconds,
   };
 }
 

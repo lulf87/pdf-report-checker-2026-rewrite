@@ -185,7 +185,7 @@ T-CODEX-MANDATORY-01 后，产品运行路径默认构建 `CodexAuditService + C
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
 | `CODEX_CLI_PATH` | `codex` | 本机 Codex CLI 可执行文件。 |
-| `CODEX_AUDIT_TIMEOUT_SECONDS` | `300` | Codex CLI runner timeout。 |
+| `CODEX_AUDIT_TIMEOUT_SECONDS` | `900` | Codex CLI runner timeout。 |
 | `CODEX_AUDIT_RUNTIME_DIR` | `runtime/codex_audit` | 受控 evidence workspace 根目录。 |
 | `CODEX_AUDIT_MAX_TARGETS_PER_BATCH` | `5` | 单批 target 数量；分批不是漏审上限。 |
 | `CODEX_AUDIT_SANDBOX` | `read-only` | 固定只读 sandbox。 |

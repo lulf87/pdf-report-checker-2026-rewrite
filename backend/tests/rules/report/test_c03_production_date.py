@@ -37,6 +37,14 @@ def test_c03_skips_when_third_page_date_uses_sample_description_reference() -> N
     assert result.status == CheckStatus.SKIP
     assert result.findings == []
     assert result.metadata["reason"] == "see_sample_description"
+    details = result.metadata["comparison_details"]
+    assert details["title"] == "生产日期格式一致性"
+    assert details["overall_status"] == "skipped"
+    assert "指向样品描述栏" in details["overall_reason"]
+    assert details["fields"][0]["field_label"] == "生产日期"
+    assert details["fields"][0]["left"]["raw_text"] == '见"样品描述"栏'
+    assert details["fields"][0]["status"] == "not_applicable"
+    assert "/Users/" not in str(details)
 
 
 def test_c03_passes_when_date_format_matches() -> None:
@@ -50,6 +58,13 @@ def test_c03_passes_when_date_format_matches() -> None:
     assert result.metadata["compare_value_enabled"] is False
     assert result.metadata["page_format"] == "YYYY-MM-DD"
     assert result.metadata["label_format"] == "YYYY-MM-DD"
+    details = result.metadata["comparison_details"]
+    fields_by_label = {field["field_label"]: field for field in details["fields"]}
+    assert details["overall_status"] == "match"
+    assert fields_by_label["生产日期格式"]["left"]["raw_text"] == "2025-12-10"
+    assert fields_by_label["生产日期格式"]["left"]["normalized_text"] == "YYYY-MM-DD"
+    assert fields_by_label["生产日期格式"]["right"]["normalized_text"] == "YYYY-MM-DD"
+    assert fields_by_label["生产日期格式"]["status"] == "match"
 
 
 def test_c03_reports_format_mismatch_using_label_format_as_expected() -> None:

@@ -114,7 +114,13 @@ class ReportCheckProgressReporter:
                 overall_progress = 45
         self._write(TaskProgressPhase.RULES, overall_progress, f"completed report rule {result.check_id}")
 
-    def codex_targets_ready(self, jobs: list[CodexAuditJob], *, max_targets_per_batch: int | None) -> None:
+    def codex_targets_ready(
+        self,
+        jobs: list[CodexAuditJob],
+        *,
+        max_targets_per_batch: int | None,
+        timeout_seconds: int | None = None,
+    ) -> None:
         total_targets = sum(len(job.request.targets) for job in jobs)
         first_target = next((target for job in jobs for target in job.request.targets), None)
         self._completed_batches = 0
@@ -126,6 +132,7 @@ class ReportCheckProgressReporter:
             current_target_type=first_target.target_type.value if first_target is not None else None,
             total_reviews_count=total_targets,
             total_batches_count=len(jobs),
+            timeout_seconds=timeout_seconds,
             max_targets_per_batch=max_targets_per_batch,
         )
         self._write(TaskProgressPhase.CODEX_AUDIT, 60, "running Codex audit")

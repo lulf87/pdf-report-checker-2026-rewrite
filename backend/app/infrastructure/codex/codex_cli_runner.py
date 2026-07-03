@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -55,7 +55,7 @@ def _default_forbidden_parent_roots() -> tuple[Path, ...]:
 class CodexCliRunnerConfig:
     executable: str = "codex"
     sandbox: str = "read-only"
-    timeout_seconds: int = 300
+    timeout_seconds: int = 900
     enabled: bool = True
     ephemeral: bool = True
     extra_args: list[str] = field(default_factory=list)
@@ -96,6 +96,12 @@ class CodexCliRunner:
     ) -> None:
         self.config = config or CodexCliRunnerConfig()
         self.output_parser = output_parser or CodexReviewOutputParser()
+
+    def with_timeout_seconds(self, timeout_seconds: int) -> "CodexCliRunner":
+        return CodexCliRunner(
+            replace(self.config, timeout_seconds=timeout_seconds),
+            output_parser=self.output_parser,
+        )
 
     def run_review(
         self,

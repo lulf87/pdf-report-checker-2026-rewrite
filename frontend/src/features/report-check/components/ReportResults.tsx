@@ -17,7 +17,7 @@ import type { Finding, FindingSeverity } from "../../../entities/finding/types";
 import type { UserFacingFindingStatus } from "../../../entities/finding/types";
 import { REPORT_RULE_GROUPS, checkResultSeverity } from "../../../entities/report/types";
 import type { ReportSeverityFilter } from "../../../entities/report/types";
-import type { CheckResult, TaskResult, TaskStatus } from "../../../entities/task/types";
+import type { CheckResult, ComparisonDetails, ComparisonExtract, ComparisonField, TaskResult, TaskStatus } from "../../../entities/task/types";
 import { checkStatusLabel } from "../../../entities/task/types";
 import { AnimatedCounter } from "../../../shared/ui/AnimatedCounter";
 import { Badge } from "../../../shared/ui/Badge";
@@ -233,6 +233,7 @@ function CheckRow({ check }: { check: CheckResult }) {
   const tone = userFacingCheckTone(checkUserStatus, severity);
   const codexReviews = normalizeCodexReviews(check.codex_reviews);
   const groupedCodexReviews = groupCodexReviewsByFinding(check.findings, codexReviews);
+  const comparisonDetails = check.metadata.comparison_details;
 
   return (
     <article className={`check-row ${tone === "danger" ? "issue-danger" : tone === "warn" ? "issue-warn" : ""}`}>
@@ -255,9 +256,10 @@ function CheckRow({ check }: { check: CheckResult }) {
       </div>
       {expanded ? (
         <div className="details">
+          {comparisonDetails ? <ComparisonDetailsPanel details={comparisonDetails} /> : null}
           {check.findings.length > 0 ? (
             <FindingList findings={check.findings} reviewsByFindingId={groupedCodexReviews.byFindingId} />
-          ) : (
+          ) : comparisonDetails ? null : (
             <p className="muted">后端未返回 Finding。</p>
           )}
           <CodexReviewList reviews={groupedCodexReviews.unassociated} title="其他 Codex 审核意见" />
@@ -265,6 +267,102 @@ function CheckRow({ check }: { check: CheckResult }) {
       ) : null}
     </article>
   );
+}
+
+function ComparisonDetailsPanel({ details }: { details: ComparisonDetails }) {
+  const fields = details.fields ?? [];
+  const sources = details.sources ?? [];
+
+  return (
+    <section className="comparison-details" aria-label="核对明细">
+      <div className="comparison-details-head">
+        <div>
+          <p className="codex-review-list-title">核对依据</p>
+          <p className="comparison-title">{details.title}</p>
+        </div>
+        <Badge variant={comparisonStatusTone(details.overall_status)}>{comparisonStatusLabel(details.overall_status)}</Badge>
+      </div>
+      {sources.length > 0 ? (
+        <div className="comparison-source-list">
+          {sources.map((source) => (
+            <span className="comparison-source" key={`${source.source_key}-${source.page_number ?? source.display_page_label ?? source.label}`}>
+              {source.label}
+              {source.display_page_label || source.page_number ? ` · ${source.display_page_label || `PDF 第 ${source.page_number} 页`}` : ""}
+              {source.section ? ` · ${source.section}` : ""}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {details.overall_reason ? (
+        <p className="comparison-reason">
+          <strong>通过原因</strong>
+          {details.overall_reason}
+        </p>
+      ) : null}
+      {fields.length > 0 ? (
+        <div className="comparison-table-wrap">
+          <table className="comparison-table">
+            <thead>
+              <tr>
+                <th>字段</th>
+                <th>来源 A 摘录</th>
+                <th>来源 B 摘录</th>
+                <th>比对结果</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fields.map((field) => (
+                <ComparisonFieldRow field={field} key={`${field.field_key}-${field.field_label}`} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="muted">暂无字段级核对明细。</p>
+      )}
+    </section>
+  );
+}
+
+function ComparisonFieldRow({ field }: { field: ComparisonField }) {
+  return (
+    <tr className={`comparison-row comparison-row-${comparisonStatusTone(field.status)}`}>
+      <td>{field.field_label}</td>
+      <td>{formatComparisonExtract(field.left)}</td>
+      <td>{formatComparisonExtract(field.right)}</td>
+      <td>
+        <Badge variant={comparisonStatusTone(field.status)}>{comparisonStatusLabel(field.status)}</Badge>
+      </td>
+      <td>{field.reason || "无"}</td>
+    </tr>
+  );
+}
+
+function formatComparisonExtract(extract?: ComparisonExtract | null): string {
+  if (!extract) return "无";
+  const source = extract.label || extract.source_key || "";
+  const page = extract.display_page_label || (extract.page_number ? `PDF 第 ${extract.page_number} 页` : "");
+  const text = extract.raw_text || extract.normalized_text || "";
+  return [source, page, text].filter(Boolean).join(" · ") || "无";
+}
+
+function comparisonStatusLabel(status: string): string {
+  if (status === "match") return "一致";
+  if (status === "mismatch") return "不一致";
+  if (status === "missing_left") return "来源 A 缺失";
+  if (status === "missing_right") return "来源 B 缺失";
+  if (status === "needs_review") return "需复核";
+  if (status === "not_applicable") return "不适用";
+  if (status === "skipped") return "已跳过";
+  return status;
+}
+
+function comparisonStatusTone(status: string): "success" | "danger" | "warn" | "info" {
+  if (status === "match") return "success";
+  if (status === "mismatch" || status === "missing_left" || status === "missing_right") return "danger";
+  if (status === "needs_review") return "warn";
+  return "info";
 }
 
 function FindingList({

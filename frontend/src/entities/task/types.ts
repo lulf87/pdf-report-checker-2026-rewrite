@@ -39,6 +39,7 @@ export interface AuditOptions {
   excluded_check_ids?: string;
   max_targets_per_batch?: number;
   max_parallel_jobs?: number;
+  timeout_seconds?: number;
 }
 
 export interface TaskCheckProgress {
@@ -122,6 +123,54 @@ export interface CheckSummary {
   codex_runtime_failure_count: number;
 }
 
+export interface ComparisonSource {
+  source_key: string;
+  label: string;
+  page_number?: number | null;
+  display_page_label?: string | null;
+  section?: string | null;
+}
+
+export interface ComparisonExtract {
+  source_key?: string | null;
+  label?: string | null;
+  page_number?: number | null;
+  display_page_label?: string | null;
+  raw_text?: string | null;
+  normalized_text?: string | null;
+}
+
+export type ComparisonFieldStatus =
+  | "match"
+  | "mismatch"
+  | "missing_left"
+  | "missing_right"
+  | "needs_review"
+  | "not_applicable"
+  | string;
+
+export interface ComparisonField {
+  field_key: string;
+  field_label: string;
+  left?: ComparisonExtract | null;
+  right?: ComparisonExtract | null;
+  status: ComparisonFieldStatus;
+  reason?: string | null;
+  evidence_ids?: string[];
+}
+
+export interface ComparisonDetails {
+  title: string;
+  overall_status: "match" | "mismatch" | "needs_review" | "skipped" | string;
+  overall_reason?: string | null;
+  sources?: ComparisonSource[];
+  fields?: ComparisonField[];
+}
+
+export interface CheckResultMetadata extends Record<string, unknown> {
+  comparison_details?: ComparisonDetails;
+}
+
 export interface CheckResult {
   task_id: string;
   check_id: string;
@@ -133,7 +182,7 @@ export interface CheckResult {
   evidence: Evidence[];
   codex_reviews?: CodexReviewResult[];
   metrics: Record<string, unknown>;
-  metadata: Record<string, unknown>;
+  metadata: CheckResultMetadata;
 }
 
 export interface TaskResult {

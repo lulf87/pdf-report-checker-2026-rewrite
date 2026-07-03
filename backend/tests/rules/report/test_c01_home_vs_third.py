@@ -38,6 +38,8 @@ def _document(
     third_sample_name: str | None = "一次性使用消化道脉冲电场消融导管",
     first_model_spec: str | None = "RMC01",
     third_model_spec: str | None = "RMC01",
+    first_inspection_type: str | None = "委托检验",
+    third_inspection_type: str | None = "委托检验",
 ) -> ReportDocument:
     first_fields: list[ReportField] = []
     third_fields: list[ReportField] = []
@@ -54,6 +56,8 @@ def _document(
     if first_model_spec is not None:
         first.model_spec = _field("型号规格", first_model_spec, page_number=1, attr="first-model")
         first_fields.append(first.model_spec)
+    if first_inspection_type is not None:
+        first_fields.append(_field("检验类别", first_inspection_type, page_number=1, attr="first-inspection-type"))
     first.fields = first_fields
     first.evidence = [evidence for field in first_fields for evidence in field.evidence]
 
@@ -66,6 +70,8 @@ def _document(
     if third_model_spec is not None:
         third.model_spec = _field("型号规格", third_model_spec, page_number=3, attr="third-model")
         third_fields.append(third.model_spec)
+    if third_inspection_type is not None:
+        third_fields.append(_field("检验类别", third_inspection_type, page_number=3, attr="third-inspection-type"))
     third.fields = third_fields
     third.evidence = [evidence for field in third_fields for evidence in field.evidence]
 
@@ -85,6 +91,39 @@ def test_c01_passes_when_home_and_third_page_identity_fields_match() -> None:
         {"field": "样品名称", "matched": True},
         {"field": "型号规格", "matched": True},
     ]
+
+
+def test_c01_pass_result_includes_comparison_details_for_user_explanation() -> None:
+    result = check_c01_home_vs_third(_document(), CheckContext(task_id="task-c01"))
+
+    details = result.metadata["comparison_details"]
+
+    assert details["title"] == "首页与报告首页一致性"
+    assert details["overall_status"] == "match"
+    assert "均一致" in details["overall_reason"]
+    assert details["sources"] == [
+        {
+            "source_key": "cover_page",
+            "label": "封面页",
+            "page_number": 1,
+            "display_page_label": "PDF 第 1 页",
+            "section": "报告封面",
+        },
+        {
+            "source_key": "report_home_page",
+            "label": "报告首页",
+            "page_number": 3,
+            "display_page_label": "PDF 第 3 页 / 报告第 1 页",
+            "section": "检验报告首页",
+        },
+    ]
+    fields_by_label = {field["field_label"]: field for field in details["fields"]}
+    assert {"委托方", "样品名称", "型号规格", "检验类别"}.issubset(fields_by_label)
+    assert fields_by_label["委托方"]["left"]["raw_text"] == "苏州元科医疗器械有限公司"
+    assert fields_by_label["委托方"]["right"]["raw_text"] == "苏州元科医疗器械有限公司"
+    assert fields_by_label["委托方"]["status"] == "match"
+    assert fields_by_label["检验类别"]["status"] == "match"
+    assert "/Users/" not in str(details)
 
 
 def test_c01_returns_error_finding_for_each_strict_field_mismatch() -> None:
@@ -109,6 +148,14 @@ def test_c01_returns_error_finding_for_each_strict_field_mismatch() -> None:
     assert client_finding.expected == "苏州元科医疗器械有限公司"
     assert client_finding.actual == "苏州元科医疗器械股份有限公司"
     assert {evidence.location.page_number for evidence in client_finding.evidence} == {1, 3}
+
+    details = result.metadata["comparison_details"]
+    fields_by_label = {field["field_label"]: field for field in details["fields"]}
+    assert details["overall_status"] == "mismatch"
+    assert "委托方" in details["overall_reason"]
+    assert "型号规格" in details["overall_reason"]
+    assert fields_by_label["委托方"]["status"] == "mismatch"
+    assert fields_by_label["委托方"]["reason"] == "两处摘录不一致"
 
 
 def test_c01_returns_error_for_sample_name_mismatch() -> None:

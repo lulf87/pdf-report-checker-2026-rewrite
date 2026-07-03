@@ -45,6 +45,15 @@ def test_passes_for_continuous_internal_pages_from_physical_third_page() -> None
         {"pdf_page_number": 6, "current_page": 4, "total_pages": 5, "raw_text": "共 5 页 第 4 页"},
         {"pdf_page_number": 7, "current_page": 5, "total_pages": 5, "raw_text": "共 5 页 第 5 页"},
     ]
+    details = result.metadata["comparison_details"]
+    assert details["title"] == "页码连续性"
+    assert details["overall_status"] == "match"
+    assert "报告页码从 1 到 5 连续" in details["overall_reason"]
+    fields_by_key = {field["field_key"]: field for field in details["fields"]}
+    assert fields_by_key["declared_total_pages"]["left"]["raw_text"] == "5"
+    assert fields_by_key["actual_page_range"]["left"]["raw_text"] == "1, 2, 3, 4, 5"
+    assert fields_by_key["continuity"]["status"] == "match"
+    assert "/Users/" not in str(details)
 
 
 def test_ignores_page_number_evidence_before_physical_third_page() -> None:

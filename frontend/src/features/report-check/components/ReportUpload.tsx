@@ -23,19 +23,17 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
     excluded_check_ids: "",
     max_targets_per_batch: "",
     max_parallel_jobs: "",
+    timeout_seconds: "",
   });
   const [task, setTask] = useState<TaskStatus | null>(null);
   const [message, setMessage] = useState("上传并创建任务");
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const didRestoreTask = useRef(false);
   const lastTaskRef = useRef<TaskStatus | null>(null);
+  const activeRunIdRef = useRef(0);
 
   useEffect(() => {
-    if (didRestoreTask.current) return;
-    didRestoreTask.current = true;
-
     const storedSession = loadTaskSession("report_check");
     if (!storedSession) return;
 
@@ -49,6 +47,7 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
 
     let cancelled = false;
     const restoreTask = async () => {
+      const runId = ++activeRunIdRef.current;
       setBusy(true);
       clearError();
       setTask(storedSession.task);
@@ -56,7 +55,7 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
 
       try {
         const latestTask = await getReportCheckTask(storedSession.task.task_id);
-        if (cancelled) return;
+        if (cancelled || !isActiveRun(runId)) return;
         rememberTask(latestTask, "正在恢复上次报告自检任务...");
 
         if (latestTask.status === "error") {
@@ -71,15 +70,16 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
           latestTask.status === "completed"
             ? await getReportCheckResult(latestTask.task_id)
             : await waitForReportCheckResult(latestTask.task_id, (nextTask) => {
-                if (!cancelled) rememberTask(nextTask, "正在恢复上次报告自检任务...");
+                if (!cancelled && isActiveRun(runId)) rememberTask(nextTask, "正在恢复上次报告自检任务...");
               });
-        if (cancelled) return;
+        if (cancelled || !isActiveRun(runId)) return;
         const finalTask =
           latestTask.status === "completed" ? latestTask : await getReportCheckTask(latestTask.task_id);
+        if (cancelled || !isActiveRun(runId)) return;
         rememberTask(finalTask, "报告自检已完成");
         onComplete(finalTask, result);
       } catch (restoreError) {
-        if (cancelled) return;
+        if (cancelled || !isActiveRun(runId)) return;
         const nextError = restoreError instanceof Error ? restoreError.message : "无法恢复上次报告自检任务";
         clearRestoredTask(nextError);
       }
@@ -90,6 +90,10 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
       cancelled = true;
     };
   }, []);
+
+  function isActiveRun(runId: number): boolean {
+    return activeRunIdRef.current === runId;
+  }
 
   function clearRestoredTask(nextError: string) {
     clearTaskSession("report_check");
@@ -108,6 +112,7 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
       return;
     }
 
+    const runId = ++activeRunIdRef.current;
     setBusy(true);
     clearError();
     setMessage("正在上传文件...");
@@ -117,23 +122,38 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
         enableLlm,
         auditOptions: compactAuditOptions(auditOptions),
       });
+      if (!isActiveRun(runId)) return;
       rememberTask(createdTask, "正在处理报告自检任务...");
       const result =
         createdTask.status === "completed"
           ? await getReportCheckResult(createdTask.task_id)
           : await waitForReportCheckResult(createdTask.task_id, (nextTask) =>
-              rememberTask(nextTask, "正在处理报告自检任务..."),
+              isActiveRun(runId) ? rememberTask(nextTask, "正在处理报告自检任务...") : undefined,
             );
+      if (!isActiveRun(runId)) return;
       const finalTask = createdTask.status === "completed" ? createdTask : await getReportCheckTask(createdTask.task_id);
+      if (!isActiveRun(runId)) return;
       rememberTask(finalTask, "报告自检已完成");
       onComplete(finalTask, result);
     } catch (uploadError) {
+      if (!isActiveRun(runId)) return;
       const rawError = lastTaskRef.current?.error_message ?? (uploadError instanceof Error ? uploadError.message : "报告自检失败");
       if (lastTaskRef.current) rememberTask(lastTaskRef.current, "报告自检失败", rawError);
       showTaskError(rawError);
     } finally {
-      setBusy(false);
+      if (isActiveRun(runId)) setBusy(false);
     }
+  }
+
+  function resetForReupload() {
+    activeRunIdRef.current += 1;
+    clearTaskSession("report_check");
+    lastTaskRef.current = null;
+    setTask(null);
+    setFiles([]);
+    setMessage("上传并创建任务");
+    clearError();
+    setBusy(false);
   }
 
   function rememberTask(nextTask: TaskStatus, nextMessage: string, nextError: string | null = null) {
@@ -238,6 +258,17 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
                   value={auditOptions.max_parallel_jobs}
                 />
               </label>
+              <label>
+                <span>超时（秒）</span>
+                <input
+                  disabled={busy}
+                  min={1}
+                  onChange={(event) => setAuditOptions((value) => ({ ...value, timeout_seconds: event.target.value }))}
+                  placeholder="900"
+                  type="number"
+                  value={auditOptions.timeout_seconds}
+                />
+              </label>
             </div>
           </details>
           {error ? <p className="form-error">{error}</p> : null}
@@ -258,7 +289,14 @@ export function ReportUpload({ onComplete, onBack }: ReportUploadProps) {
         </GlassCard>
       </section>
 
-      <ProgressOverlay error={error} message={message} task={task} visible={busy} />
+      <ProgressOverlay
+        error={error}
+        message={message}
+        onReset={resetForReupload}
+        resetLabel="重新上传"
+        task={task}
+        visible={busy}
+      />
     </>
   );
 }
@@ -269,6 +307,7 @@ function compactAuditOptions(value: {
   excluded_check_ids: string;
   max_targets_per_batch: string;
   max_parallel_jobs: string;
+  timeout_seconds: string;
 }): AuditOptions | undefined {
   const options: AuditOptions = {};
   if (value.included_check_ids.trim()) options.included_check_ids = value.included_check_ids.trim();
@@ -276,8 +315,10 @@ function compactAuditOptions(value: {
   if (value.excluded_check_ids.trim()) options.excluded_check_ids = value.excluded_check_ids.trim();
   const batch = positiveNumber(value.max_targets_per_batch);
   const parallel = positiveNumber(value.max_parallel_jobs);
+  const timeout = positiveNumber(value.timeout_seconds);
   if (batch !== undefined) options.max_targets_per_batch = batch;
   if (parallel !== undefined) options.max_parallel_jobs = parallel;
+  if (timeout !== undefined) options.timeout_seconds = timeout;
   return Object.keys(options).length > 0 ? options : undefined;
 }
 

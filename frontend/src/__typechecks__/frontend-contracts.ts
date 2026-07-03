@@ -66,7 +66,7 @@ const task: TaskStatus = {
       total_batches_count: 2,
       retry_count: 0,
       last_retry_reason: null,
-      timeout_seconds: 300,
+      timeout_seconds: 900,
       max_targets_per_batch: 2,
     },
   },
@@ -128,7 +128,45 @@ const result: TaskResult = {
       findings: [finding],
       evidence: [],
       metrics: {},
-      metadata: {},
+      metadata: {
+        comparison_details: {
+          title: "首页与报告首页一致性",
+          overall_status: "mismatch",
+          overall_reason: "型号规格不一致。",
+          sources: [
+            {
+              source_key: "cover_page",
+              label: "封面页",
+              page_number: 1,
+              display_page_label: "PDF 第 1 页",
+              section: "报告封面",
+            },
+          ],
+          fields: [
+            {
+              field_key: "model_spec",
+              field_label: "型号规格",
+              left: {
+                source_key: "cover_page",
+                label: "封面页摘录",
+                page_number: 1,
+                raw_text: "ABC-1",
+                normalized_text: "ABC-1",
+              },
+              right: {
+                source_key: "report_home_page",
+                label: "报告首页摘录",
+                page_number: 3,
+                raw_text: "ABC-2",
+                normalized_text: "ABC-2",
+              },
+              status: "mismatch",
+              reason: "两处摘录不一致",
+              evidence_ids: [],
+            },
+          ],
+        },
+      },
     },
   ],
   findings: [finding],
@@ -188,6 +226,13 @@ const legacyCheckResultWithoutCodexReviews: CheckResult = {
 const groupedCodexReviews = groupCodexReviewsByFinding([finding], checkResultWithCodex.codex_reviews);
 const codexReviewSummary = summarizeCodexReviews(checkResultWithCodex.codex_reviews);
 const legacyCodexReviews = normalizeCodexReviews(legacyCheckResultWithoutCodexReviews.codex_reviews);
+const progressOverlayWithReset = ProgressOverlay({
+  task,
+  visible: true,
+  message: "正在恢复上次报告自检任务...",
+  onReset: () => undefined,
+  resetLabel: "重新上传",
+});
 
 const ptrClause: PTRClauseViewModel = {
   id: "PTR_CLAUSE-0",
@@ -220,6 +265,7 @@ void ExportButton;
 void FileUpload;
 void GlassCard;
 void ProgressOverlay;
+void progressOverlayWithReset;
 void ptrClause;
 void reportView;
 void groupedCodexReviews;

@@ -31,6 +31,7 @@ async def create_report_check_task(
     excluded_check_ids: str | None = Form(default=None),
     max_targets_per_batch: int | None = Form(default=None),
     max_parallel_jobs: int | None = Form(default=None),
+    timeout_seconds: int | None = Form(default=None),
     usecase: ReportCheckUseCase = Depends(get_report_check_usecase),
 ):
     _validate_pdf_upload(report_file)
@@ -46,6 +47,7 @@ async def create_report_check_task(
                 "excluded_check_ids": excluded_check_ids,
                 "max_targets_per_batch": max_targets_per_batch,
                 "max_parallel_jobs": max_parallel_jobs,
+                "timeout_seconds": timeout_seconds,
             }
         ),
     )

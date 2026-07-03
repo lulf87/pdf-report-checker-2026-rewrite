@@ -34,6 +34,9 @@ def test_pdf_exporter_includes_task_summary_findings_and_evidence() -> None:
     assert "\nerror_count:" not in text
     assert "\nfail_count:" not in text
     assert "\nwarn_count:" not in text
+    assert "核对明细" in text
+    assert "型号规格" in text
+    assert "两处摘录不一致" in text
     assert "第三页型号规格" in text
     assert "中文字体缺失时不得崩溃" in text
 

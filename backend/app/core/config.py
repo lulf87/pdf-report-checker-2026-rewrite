@@ -85,7 +85,7 @@ class Settings(BaseSettings):
         description="Deprecated compatibility field; product runtime requires real local Codex CLI execution.",
     )
     codex_audit_timeout_seconds: int = Field(
-        default=300,
+        default=900,
         ge=1,
         description="Timeout in seconds for real Codex CLI audit execution.",
     )

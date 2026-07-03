@@ -56,7 +56,55 @@ def sample_check_results(task_id: str = "task-export-1") -> list[CheckResult]:
             summary="发现 1 个字段不一致",
             findings=[error_finding],
             evidence=[report_evidence],
-            metadata={"rule_version": "test"},
+            metadata={
+                "rule_version": "test",
+                "comparison_details": {
+                    "title": "首页与报告首页一致性",
+                    "overall_status": "mismatch",
+                    "overall_reason": "型号规格不一致。",
+                    "sources": [
+                        {
+                            "source_key": "cover_page",
+                            "label": "封面页",
+                            "page_number": 1,
+                            "display_page_label": "PDF 第 1 页",
+                            "section": "报告封面",
+                        },
+                        {
+                            "source_key": "report_home_page",
+                            "label": "报告首页",
+                            "page_number": 3,
+                            "display_page_label": "PDF 第 3 页 / 报告第 1 页",
+                            "section": "检验报告首页",
+                        },
+                    ],
+                    "fields": [
+                        {
+                            "field_key": "model_spec",
+                            "field_label": "型号规格",
+                            "left": {
+                                "source_key": "cover_page",
+                                "label": "封面页摘录",
+                                "page_number": 1,
+                                "display_page_label": "PDF 第 1 页",
+                                "raw_text": "ABC-1",
+                                "normalized_text": "ABC-1",
+                            },
+                            "right": {
+                                "source_key": "report_home_page",
+                                "label": "报告首页摘录",
+                                "page_number": 3,
+                                "display_page_label": "PDF 第 3 页 / 报告第 1 页",
+                                "raw_text": "ABC-2",
+                                "normalized_text": "ABC-2",
+                            },
+                            "status": "mismatch",
+                            "reason": "两处摘录不一致",
+                            "evidence_ids": ["ev-report-model"],
+                        }
+                    ],
+                },
+            },
         ),
         CheckResult(
             task_id=task_id,

@@ -129,7 +129,7 @@ bash scripts/run-codex-audit-local-e2e.sh
 | `CODEX_AUDIT_INCLUDED_FINDING_CODES` | 空 | 只审核指定 finding codes，例如 `CONCLUSION_MISMATCH_001`。 |
 | `CODEX_AUDIT_EXCLUDED_CHECK_IDS` | 空 | 排除指定 check IDs，例如 `C08,C09,C10,C11`。 |
 | `CODEX_AUDIT_PRIORITY_CHECK_IDS` | `C02,C03,C07,C04,C05,C06` | 报告自检 target 优先级；PTR builder 使用 PTR finding code 默认优先级。 |
-| `CODEX_AUDIT_TIMEOUT_SECONDS` | `300` | 真实 Codex CLI runner timeout。 |
+| `CODEX_AUDIT_TIMEOUT_SECONDS` | `900` | 真实 Codex CLI runner timeout。 |
 
 脚本会：
 
@@ -1590,7 +1590,7 @@ report-check 阶段进度建议口径：
 
 - 脚本被拒绝：确认已设置 `ENABLE_CODEX_AUDIT_LOCAL_E2E=1`。`--help` 和 `--print-config` 不需要 gate。
 - `CODEX_CLI_UNAVAILABLE`：确认本机安装 Codex CLI，且 `CODEX_CLI_PATH` 或 `codex` 在 `PATH`。
-- `CODEX_TIMEOUT`：优先降低 batch size，例如先设置 `CODEX_AUDIT_MAX_TARGETS_PER_BATCH=1 CODEX_AUDIT_INCLUDED_CHECK_IDS=C07 CODEX_AUDIT_TIMEOUT_SECONDS=300`。
+- `CODEX_TIMEOUT`：优先降低 batch size 或增加 timeout，例如先设置 `CODEX_AUDIT_MAX_TARGETS_PER_BATCH=1 CODEX_AUDIT_INCLUDED_CHECK_IDS=C07 CODEX_AUDIT_TIMEOUT_SECONDS=900`。
 - `CODEX_EXIT_NONZERO` 且 stderr 出现 `invalid_json_schema`：优先检查 `codex_review_output.schema.json` 是否误用了 Codex structured output 不支持的 JSON Schema 关键字，或是否有 object 的 `required` 未覆盖所有 `properties` key。
 - `CODEX_USAGE_LIMIT_EXCEEDED`：等待 `retry_after_text` 指定时间后重试；当前任务失败且不会生成 final audit result JSON。
 - `CODEX_OUTPUT_SCHEMA_INVALID` 或 `CODEX_OUTPUT_INVALID_JSON`：查看 `runtime/codex_audit/{task_id}/.../input/codex_review_output.json` 和 `prompt.md`；复杂 contract 失败会由 OutputParser 转成 failed review，再由 usecase 上升为 task failed。

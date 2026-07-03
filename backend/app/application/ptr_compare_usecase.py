@@ -193,6 +193,7 @@ class PTRCompareUseCase:
         )
         builder = self._builder_for_audit_options(options)
         scheduler = self._scheduler_for_audit_options(options)
+        codex_audit_service = self._codex_audit_service_for_audit_options(options)
         try:
             ptr_stored = self.file_store.save_upload(
                 task_id=task.task_id,
@@ -273,6 +274,7 @@ class PTRCompareUseCase:
                 check_results=check_results,
                 evidence_builder=builder,
                 scheduler=scheduler,
+                codex_audit_service=codex_audit_service,
             )
             codex_audit_metadata = finalize_codex_audit(
                 check_results,
@@ -292,7 +294,7 @@ class PTRCompareUseCase:
                     "scope": scope_result.model_dump(mode="json"),
                     "audit_options_source": "user_override" if options.has_user_override else "default",
                     "audit_options": options.to_metadata(),
-                    "effective_audit_options": _effective_audit_options_metadata(builder, scheduler),
+                    "effective_audit_options": _effective_audit_options_metadata(builder, scheduler, codex_audit_service),
                     "codex_audit": codex_audit_metadata,
                 },
             )
@@ -450,9 +452,11 @@ class PTRCompareUseCase:
         check_results: list[CheckResult],
         evidence_builder: PtrCodexEvidenceBuilder | None = None,
         scheduler: CodexAuditScheduler | None = None,
+        codex_audit_service: CodexAuditServiceProtocol | None = None,
     ) -> None:
         builder = evidence_builder or self.ptr_codex_evidence_builder
         active_scheduler = scheduler or self.codex_audit_scheduler
+        active_service = codex_audit_service or self.codex_audit_service
         target_offset = 0
         jobs: list[CodexAuditJob] = []
         while True:
@@ -466,7 +470,7 @@ class PTRCompareUseCase:
             )
             if bundle is None:
                 break
-            if self.codex_audit_service is None:
+            if active_service is None:
                 raise RuntimeError("CODEX_AUDIT_REQUIRED: Codex audit service is required for reviewable PTR targets.")
             jobs.append(
                 CodexAuditJob(
@@ -478,7 +482,7 @@ class PTRCompareUseCase:
             target_offset += len(bundle.request.targets)
             if not bundle.evidence_package.metadata.get("truncated"):
                 break
-        job_results = active_scheduler.run(jobs, lambda job: self.codex_audit_service.review(job.request, job.evidence_package))
+        job_results = active_scheduler.run(jobs, lambda job: active_service.review(job.request, job.evidence_package))
         reviews = [review for job_result in job_results for review in job_result.reviews]
         _raise_for_required_codex_audit_failure(reviews)
         _attach_reviews_to_check_results(check_results, reviews)
@@ -502,6 +506,14 @@ class PTRCompareUseCase:
         if options.max_parallel_jobs is None:
             return self.codex_audit_scheduler
         return CodexAuditScheduler(max_parallel_jobs=options.max_parallel_jobs)
+
+    def _codex_audit_service_for_audit_options(self, options: CodexAuditOptions) -> CodexAuditServiceProtocol | None:
+        if self.codex_audit_service is None or options.timeout_seconds is None:
+            return self.codex_audit_service
+        with_timeout = getattr(self.codex_audit_service, "with_timeout_seconds", None)
+        if not callable(with_timeout):
+            return self.codex_audit_service
+        return with_timeout(options.timeout_seconds)
 
 
 def _status_for_findings(findings: list[Finding]) -> CheckStatus:
@@ -584,6 +596,7 @@ def _raise_for_required_codex_audit_failure(reviews: list[CodexReviewResult]) ->
 def _effective_audit_options_metadata(
     evidence_builder: PtrCodexEvidenceBuilder,
     scheduler: CodexAuditScheduler,
+    codex_audit_service: CodexAuditServiceProtocol | None = None,
 ) -> dict[str, Any]:
     selection = evidence_builder.target_selection
     return {
@@ -594,7 +607,17 @@ def _effective_audit_options_metadata(
         "max_targets_per_batch": selection.max_targets_per_batch,
         "priority_check_ids": list(selection.priority_check_ids),
         "max_parallel_jobs": scheduler.max_parallel_jobs,
+        "timeout_seconds": _codex_timeout_seconds(codex_audit_service),
     }
+
+
+def _codex_timeout_seconds(service: CodexAuditServiceProtocol | None) -> int | None:
+    runner = getattr(service, "runner", None)
+    config = getattr(runner, "config", None)
+    value = getattr(config, "timeout_seconds", None)
+    if isinstance(value, int) and value > 0:
+        return value
+    return None
 
 
 def _final_status_for_verdict(verdict: str | None) -> str:

@@ -33,9 +33,10 @@ def test_excel_exporter_creates_summary_and_findings_sheets() -> None:
     )
 
     assert xlsx_bytes[:2] == b"PK"
-    assert _workbook_sheet_names(xlsx_bytes) == ["Summary", "CheckResults", "Findings", "Evidence"]
+    assert _workbook_sheet_names(xlsx_bytes) == ["Summary", "CheckResults", "Findings", "Evidence", "ComparisonDetails"]
     summary_text = _worksheet_text(xlsx_bytes, "xl/worksheets/sheet1.xml")
     findings_text = _worksheet_text(xlsx_bytes, "xl/worksheets/sheet3.xml")
+    details_text = _worksheet_text(xlsx_bytes, "xl/worksheets/sheet5.xml")
 
     assert "task-xlsx" in summary_text
     assert "ptr_compare" in summary_text
@@ -47,10 +48,14 @@ def test_excel_exporter_creates_summary_and_findings_sheets() -> None:
     assert "candidate_issue" in findings_text
     assert "ABC-1" in findings_text
     assert "ABC-2" in findings_text
+    assert "field_label" in details_text
+    assert "left_source" in details_text
+    assert "right_text" in details_text
+    assert "两处摘录不一致" in details_text
 
 
 def test_excel_exporter_handles_empty_results() -> None:
     xlsx_bytes = export_check_results_to_xlsx([], task_id="task-empty")
 
     assert xlsx_bytes[:2] == b"PK"
-    assert _workbook_sheet_names(xlsx_bytes) == ["Summary", "CheckResults", "Findings", "Evidence"]
+    assert _workbook_sheet_names(xlsx_bytes) == ["Summary", "CheckResults", "Findings", "Evidence", "ComparisonDetails"]

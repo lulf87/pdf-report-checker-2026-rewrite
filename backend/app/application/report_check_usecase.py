@@ -182,6 +182,7 @@ class ReportCheckUseCase:
         audit_options_source = "user_override" if audit_options.has_user_override else "default"
         evidence_builder = self._builder_for_audit_options(audit_options)
         scheduler = self._scheduler_for_audit_options(audit_options)
+        codex_audit_service = self._codex_audit_service_for_audit_options(audit_options)
         progress_reporter = ReportCheckProgressReporter(self.task_service, task_id)
         progress_reporter.parse()
         self.task_service.start_task(
@@ -218,6 +219,7 @@ class ReportCheckUseCase:
                 check_results=run_result.results,
                 evidence_builder=evidence_builder,
                 scheduler=scheduler,
+                codex_audit_service=codex_audit_service,
                 progress_reporter=progress_reporter,
             )
         profile.add_package_profiles(_codex_package_profiles(run_result.results))
@@ -243,7 +245,11 @@ class ReportCheckUseCase:
                 "source": "report_check_usecase",
                 "audit_options_source": audit_options_source,
                 "audit_options": audit_options.to_metadata(),
-                "effective_audit_options": _effective_audit_options_metadata(evidence_builder, scheduler),
+                "effective_audit_options": _effective_audit_options_metadata(
+                    evidence_builder,
+                    scheduler,
+                    codex_audit_service,
+                ),
                 "progress_details": progress_payload,
                 "performance_profile": profile_payload,
                 "codex_audit": codex_payload,
@@ -286,10 +292,12 @@ class ReportCheckUseCase:
         source_pdf_path: Path | None = None,
         evidence_builder: ReportCodexEvidenceBuilder | None = None,
         scheduler: CodexAuditScheduler | None = None,
+        codex_audit_service: CodexAuditServiceProtocol | None = None,
         progress_reporter: ReportCheckProgressReporter | None = None,
     ) -> None:
         builder = evidence_builder or self.report_codex_evidence_builder
         active_scheduler = scheduler or self.codex_audit_scheduler
+        active_service = codex_audit_service or self.codex_audit_service
         jobs: list[CodexAuditJob] = []
         for result in self._ordered_codex_check_results(check_results, evidence_builder=builder):
             target_offset = 0
@@ -305,7 +313,7 @@ class ReportCheckUseCase:
                 )
                 if bundle is None:
                     break
-                if self.codex_audit_service is None:
+                if active_service is None:
                     raise RuntimeError("CODEX_AUDIT_REQUIRED: Codex audit service is required for reviewable report targets.")
                 jobs.append(
                     CodexAuditJob(
@@ -322,12 +330,13 @@ class ReportCheckUseCase:
             progress_reporter.codex_targets_ready(
                 jobs,
                 max_targets_per_batch=builder.target_selection.max_targets_per_batch,
+                timeout_seconds=_codex_timeout_seconds(active_service),
             )
 
         def review_job(job: CodexAuditJob) -> list[CodexReviewResult]:
-            return _review_codex_job(self.codex_audit_service, job)
+            return _review_codex_job(active_service, job)
 
-        previous_progress_callback = _install_progress_callback(self.codex_audit_service, progress_reporter)
+        previous_progress_callback = _install_progress_callback(active_service, progress_reporter)
         try:
             job_results = active_scheduler.run(
                 jobs,
@@ -336,7 +345,7 @@ class ReportCheckUseCase:
                 on_job_complete=progress_reporter.on_codex_job_complete if progress_reporter is not None else None,
             )
         finally:
-            _restore_progress_callback(self.codex_audit_service, previous_progress_callback)
+            _restore_progress_callback(active_service, previous_progress_callback)
         for job_result in job_results:
             reviews = job_result.reviews
             _raise_for_required_codex_audit_failure(reviews)
@@ -380,6 +389,14 @@ class ReportCheckUseCase:
             return self.codex_audit_scheduler
         return CodexAuditScheduler(max_parallel_jobs=options.max_parallel_jobs)
 
+    def _codex_audit_service_for_audit_options(self, options: CodexAuditOptions) -> CodexAuditServiceProtocol | None:
+        if self.codex_audit_service is None or options.timeout_seconds is None:
+            return self.codex_audit_service
+        with_timeout = getattr(self.codex_audit_service, "with_timeout_seconds", None)
+        if not callable(with_timeout):
+            return self.codex_audit_service
+        return with_timeout(options.timeout_seconds)
+
 
 def _raise_for_required_codex_audit_failure(reviews: list[CodexReviewResult]) -> None:
     failed = [review for review in reviews if review.status in {CodexReviewStatus.FAILED, CodexReviewStatus.SKIPPED}]
@@ -413,6 +430,7 @@ def _codex_package_profiles(check_results: list[CheckResult]) -> list[dict[str, 
 def _effective_audit_options_metadata(
     evidence_builder: ReportCodexEvidenceBuilder,
     scheduler: CodexAuditScheduler,
+    codex_audit_service: CodexAuditServiceProtocol | None = None,
 ) -> dict[str, Any]:
     selection = evidence_builder.target_selection
     return {
@@ -423,6 +441,7 @@ def _effective_audit_options_metadata(
         "max_targets_per_batch": selection.max_targets_per_batch,
         "priority_check_ids": list(selection.priority_check_ids),
         "max_parallel_jobs": scheduler.max_parallel_jobs,
+        "timeout_seconds": _codex_timeout_seconds(codex_audit_service),
     }
 
 
@@ -451,6 +470,15 @@ def _install_progress_callback(
 def _restore_progress_callback(service: CodexAuditServiceProtocol | None, previous_callback: object) -> None:
     if previous_callback is not _MISSING_PROGRESS_CALLBACK:
         setattr(service, "progress_callback", previous_callback)
+
+
+def _codex_timeout_seconds(service: CodexAuditServiceProtocol | None) -> int | None:
+    runner = getattr(service, "runner", None)
+    config = getattr(runner, "config", None)
+    value = getattr(config, "timeout_seconds", None)
+    if isinstance(value, int) and value > 0:
+        return value
+    return None
 
 
 def _error_progress_details_from_task(task: TaskStatus, error_message: str) -> TaskProgressDetails:

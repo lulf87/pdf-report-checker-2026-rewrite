@@ -13,6 +13,7 @@ class CodexAuditOptions:
     excluded_check_ids: tuple[str, ...] = ()
     max_targets_per_batch: int | None = None
     max_parallel_jobs: int | None = None
+    timeout_seconds: int | None = None
 
     @classmethod
     def from_raw(cls, value: "CodexAuditOptions | dict[str, Any] | None") -> "CodexAuditOptions":
@@ -26,6 +27,7 @@ class CodexAuditOptions:
             excluded_check_ids=parse_csv_values(value.get("excluded_check_ids")),
             max_targets_per_batch=_positive_int_or_none(value.get("max_targets_per_batch")),
             max_parallel_jobs=_positive_int_or_none(value.get("max_parallel_jobs")),
+            timeout_seconds=_positive_int_or_none(value.get("timeout_seconds")),
         )
 
     @property
@@ -37,6 +39,7 @@ class CodexAuditOptions:
                 self.excluded_check_ids,
                 self.max_targets_per_batch is not None,
                 self.max_parallel_jobs is not None,
+                self.timeout_seconds is not None,
             )
         )
 
@@ -47,6 +50,7 @@ class CodexAuditOptions:
             "excluded_check_ids": list(self.excluded_check_ids),
             "max_targets_per_batch": self.max_targets_per_batch,
             "max_parallel_jobs": self.max_parallel_jobs,
+            "timeout_seconds": self.timeout_seconds,
         }
 
 

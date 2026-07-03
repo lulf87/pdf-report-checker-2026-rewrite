@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 from app.application.codex_audit_service import CodexAuditService
 from app.application.ptr_codex_evidence_builder import PtrCodexEvidenceBuilder
@@ -184,12 +185,29 @@ class FakePtrCodexAuditService:
         status: CodexReviewStatus = CodexReviewStatus.SUCCEEDED,
         suggested_finding: CodexSuggestedFinding | None = None,
         error: CodexReviewError | None = None,
+        timeout_seconds: int = 900,
+        calls: list[tuple] | None = None,
+        timeout_overrides: list[int] | None = None,
     ) -> None:
         self.verdict = verdict
         self.status = status
         self.suggested_finding = suggested_finding
         self.error = error
-        self.calls: list[tuple] = []
+        self.calls: list[tuple] = calls if calls is not None else []
+        self.timeout_overrides = timeout_overrides if timeout_overrides is not None else []
+        self.runner = SimpleNamespace(config=SimpleNamespace(timeout_seconds=timeout_seconds))
+
+    def with_timeout_seconds(self, timeout_seconds: int) -> "FakePtrCodexAuditService":
+        self.timeout_overrides.append(timeout_seconds)
+        return FakePtrCodexAuditService(
+            verdict=self.verdict,
+            status=self.status,
+            suggested_finding=self.suggested_finding,
+            error=self.error,
+            timeout_seconds=timeout_seconds,
+            calls=self.calls,
+            timeout_overrides=self.timeout_overrides,
+        )
 
     def review(self, request, evidence_package: EvidencePackage) -> list[CodexReviewResult]:
         self.calls.append((request, evidence_package))
@@ -860,20 +878,24 @@ def test_ptr_compare_task_audit_options_override_default_target_selection(tmp_pa
             "included_finding_codes": "PTR_TABLE_VALUE_MISMATCH",
             "max_targets_per_batch": 1,
             "max_parallel_jobs": 2,
+            "timeout_seconds": 900,
         },
     )
 
     assert len(audit_service.calls) == 1
     assert audit_service.calls[0][0].targets[0].check_id == "PTR_TABLE"
+    assert audit_service.timeout_overrides == [900]
     assert result.metadata["audit_options_source"] == "user_override"
     assert result.metadata["audit_options"]["included_check_ids"] == ["PTR_TABLE"]
     assert result.metadata["audit_options"]["included_finding_codes"] == ["PTR_TABLE_VALUE_MISMATCH"]
     assert result.metadata["audit_options"]["max_targets_per_batch"] == 1
     assert result.metadata["audit_options"]["max_parallel_jobs"] == 2
+    assert result.metadata["audit_options"]["timeout_seconds"] == 900
     assert result.metadata["effective_audit_options"]["included_check_ids"] == ["PTR_TABLE"]
     assert result.metadata["effective_audit_options"]["included_finding_codes"] == ["PTR_TABLE_VALUE_MISMATCH"]
     assert result.metadata["effective_audit_options"]["max_targets_per_batch"] == 1
     assert result.metadata["effective_audit_options"]["max_parallel_jobs"] == 2
+    assert result.metadata["effective_audit_options"]["timeout_seconds"] == 900
     assert result.metadata["codex_audit"]["audit_scope"] == "targeted"
 
 

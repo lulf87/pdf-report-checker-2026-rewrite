@@ -14,6 +14,7 @@ export async function uploadPTRCompareFiles(
     excluded_check_ids: auditOptions?.excluded_check_ids,
     max_targets_per_batch: auditOptions?.max_targets_per_batch,
     max_parallel_jobs: auditOptions?.max_parallel_jobs,
+    timeout_seconds: auditOptions?.timeout_seconds,
   });
 }
 

@@ -71,7 +71,7 @@ def test_codex_audit_settings_default_to_mandatory_codex_cli(monkeypatch: Monkey
     settings = Settings(_env_file=None)
 
     assert settings.codex_cli_path == "codex"
-    assert settings.codex_audit_timeout_seconds == 300
+    assert settings.codex_audit_timeout_seconds == 900
     assert settings.codex_audit_runtime_dir == "runtime/codex_audit"
     assert settings.codex_audit_max_targets_per_batch == 5
     assert settings.codex_audit_max_parallel_jobs == 1
@@ -85,7 +85,7 @@ def test_codex_audit_settings_default_to_mandatory_codex_cli(monkeypatch: Monkey
     assert service is not None
     assert isinstance(service.runner, CodexCliRunner)
     assert service.runner.config.executable == "codex"
-    assert service.runner.config.timeout_seconds == 300
+    assert service.runner.config.timeout_seconds == 900
     assert service.runner.config.sandbox == "read-only"
     assert service.runner.config.ephemeral is True
 

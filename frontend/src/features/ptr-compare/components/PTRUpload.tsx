@@ -21,18 +21,15 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
     excluded_check_ids: "",
     max_targets_per_batch: "",
     max_parallel_jobs: "",
+    timeout_seconds: "",
   });
   const [task, setTask] = useState<TaskStatus | null>(null);
   const [message, setMessage] = useState<string>("上传并创建任务");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const didRestoreTask = useRef(false);
   const lastTaskRef = useRef<TaskStatus | null>(null);
 
   useEffect(() => {
-    if (didRestoreTask.current) return;
-    didRestoreTask.current = true;
-
     const storedSession = loadTaskSession("ptr_compare");
     if (!storedSession) return;
 
@@ -213,6 +210,17 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
                   value={auditOptions.max_parallel_jobs}
                 />
               </label>
+              <label>
+                <span>超时（秒）</span>
+                <input
+                  disabled={busy}
+                  min={1}
+                  onChange={(event) => setAuditOptions((value) => ({ ...value, timeout_seconds: event.target.value }))}
+                  placeholder="900"
+                  type="number"
+                  value={auditOptions.timeout_seconds}
+                />
+              </label>
             </div>
           </details>
           {error ? <p className="form-error">{error}</p> : null}
@@ -238,6 +246,7 @@ function compactAuditOptions(value: {
   excluded_check_ids: string;
   max_targets_per_batch: string;
   max_parallel_jobs: string;
+  timeout_seconds: string;
 }): AuditOptions | undefined {
   const options: AuditOptions = {};
   if (value.included_check_ids.trim()) options.included_check_ids = value.included_check_ids.trim();
@@ -245,8 +254,10 @@ function compactAuditOptions(value: {
   if (value.excluded_check_ids.trim()) options.excluded_check_ids = value.excluded_check_ids.trim();
   const batch = positiveNumber(value.max_targets_per_batch);
   const parallel = positiveNumber(value.max_parallel_jobs);
+  const timeout = positiveNumber(value.timeout_seconds);
   if (batch !== undefined) options.max_targets_per_batch = batch;
   if (parallel !== undefined) options.max_parallel_jobs = parallel;
+  if (timeout !== undefined) options.timeout_seconds = timeout;
   return Object.keys(options).length > 0 ? options : undefined;
 }
 
