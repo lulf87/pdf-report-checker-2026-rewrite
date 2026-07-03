@@ -61,6 +61,12 @@ def test_c09_errors_when_sequence_has_gap() -> None:
     assert result.findings[0].expected == [1, 2, 3]
     assert result.findings[0].actual == [1, 3]
     assert result.findings[0].metadata["missing_numbers"] == [2]
+    details = result.metadata["explanation_details"]
+    assert details["decision"]["user_facing_status"] == "candidate_issue"
+    assert "预期序号范围" in str(details)
+    assert any(row["field"] == "缺号" and row["left_value"] == "2" for row in details["comparison_rows"])
+    assert any(group["title"] == "序号列证据" for group in details["evidence_groups"])
+    assert "/Users/" not in str(details)
 
 
 def test_c09_errors_when_plain_sequence_is_duplicated() -> None:

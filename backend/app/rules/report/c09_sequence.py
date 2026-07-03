@@ -9,6 +9,14 @@ from app.domain.report import InspectionItem, ReportDocument
 from app.domain.result import CheckResult
 from app.rules.report.common import make_result
 from app.rules.report.context import CheckContext
+from app.rules.report.explanation_details import (
+    comparison_row,
+    decision_detail,
+    evidence_group,
+    evidence_item,
+    explanation_details,
+    source_section,
+)
 
 
 CHECK_ID = "C09"
@@ -150,6 +158,13 @@ def check_c09_sequence(
             "actual_sequence": actual_sequence,
             "continuation_numbers": continuation_numbers,
             "raw_sequence_values": raw_sequence_values,
+            "explanation_details": _build_explanation_details(
+                rows=rows,
+                actual_sequence=actual_sequence,
+                continuation_numbers=continuation_numbers,
+                raw_sequence_values=raw_sequence_values,
+                findings=findings,
+            ),
         },
         pass_summary="检验项目序号从 1 开始连续递增，且无重复或空白",
         issue_summary=f"检验项目序号存在 {len(findings)} 项问题",
@@ -298,6 +313,102 @@ def _item_no(item: InspectionItem) -> str:
     if item.sequence is not None:
         return str(item.sequence)
     return ""
+
+
+def _build_explanation_details(
+    *,
+    rows: list[_ParsedRow],
+    actual_sequence: list[int],
+    continuation_numbers: list[int],
+    raw_sequence_values: list[str],
+    findings: list[Finding],
+) -> dict[str, object]:
+    missing_numbers = sorted({number for finding in findings for number in finding.metadata.get("missing_numbers", [])})
+    duplicated_numbers = sorted({number for finding in findings for number in finding.metadata.get("duplicated_numbers", [])})
+    blank_rows = sorted({row for finding in findings for row in finding.metadata.get("blank_rows", [])})
+    invalid_continuation_numbers = sorted(
+        {number for finding in findings for number in finding.metadata.get("invalid_continuation_numbers", [])}
+    )
+    expected = _expected_sequence(actual_sequence)
+    if findings:
+        status, label, reason = (
+            "candidate_issue",
+            "候选问题",
+            "序号列存在缺号、重复、空白或续表引用异常；如附近文本疑似进入序号列，需要复核抽取。",
+        )
+    else:
+        status, label, reason = (
+            "passed",
+            "通过",
+            "检验项目普通序号从 1 开始连续递增，续表序号不计为重复。",
+        )
+    pages = sorted({row.item.source_page for row in rows if row.item.source_page is not None})
+    return explanation_details(
+        check_goal="核对检验项目序号是否从 1 开始连续、无重复、无空白。",
+        user_question="实际识别了哪些序号？缺号、重复或空白出现在什么位置？",
+        overall_reason=reason,
+        source_sections=[
+            source_section(
+                label="检验项目序号列",
+                page_number=pages[0] if pages else None,
+                description="普通序号和“续 X”序号分开统计。",
+            )
+        ],
+        comparison_rows=[
+            comparison_row(
+                field="预期序号范围",
+                left_label="规则预期",
+                left_value=expected,
+                right_label="实际识别普通序号",
+                right_value=actual_sequence,
+                status="match" if not findings else "mismatch",
+                reason="普通序号应从 1 开始连续递增。",
+            ),
+            comparison_row(
+                field="实际识别序号范围",
+                left_label="普通序号",
+                left_value=actual_sequence,
+                right_label="续表序号",
+                right_value=continuation_numbers,
+                status="match" if actual_sequence == expected else "needs_review",
+                reason="续表序号只用于续表关系，不作为重复普通序号。",
+            ),
+            comparison_row(
+                field="缺号",
+                left_label="缺失普通序号",
+                left_value=missing_numbers,
+                right_label="无法解析续表引用",
+                right_value=invalid_continuation_numbers,
+                status="match" if not missing_numbers and not invalid_continuation_numbers else "mismatch",
+                reason="缺号或续表引用不存在时会作为候选序号问题。",
+            ),
+            comparison_row(
+                field="重复/空白",
+                left_label="重复普通序号",
+                left_value=duplicated_numbers,
+                right_label="空白/无法解析行",
+                right_value=blank_rows,
+                status="match" if not duplicated_numbers and not blank_rows else "mismatch",
+                reason="空白或无法解析序号可能是真实序号问题，也可能是表格抽取污染。",
+            ),
+        ],
+        evidence_groups=[
+            evidence_group(
+                "序号列证据",
+                [
+                    evidence_item(
+                        label=f"row {row.row_position}: {row.parsed.raw or '<blank>'}",
+                        page_number=row.item.source_page,
+                        evidence_type="sequence_cell",
+                        status="continuation" if row.parsed.is_continuation else "ordinary",
+                    )
+                    for row in rows[:80]
+                ],
+            )
+        ],
+        decision=decision_detail(status, label, reason),
+        next_action="如为候选问题，请查看异常附近页码和原表格，判断是否为真实序号错误或抽取污染。",
+    )
 
 
 __all__ = ["CHECK_ID", "CHECK_NAME", "ParsedItemNo", "check_c09_sequence", "parse_item_no"]

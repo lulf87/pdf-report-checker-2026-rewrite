@@ -12,6 +12,14 @@ from app.domain.result import CheckResult
 from app.rules.report.common import make_result
 from app.rules.report.comparison_details import comparison_field, comparison_source, field_extract
 from app.rules.report.context import CheckContext
+from app.rules.report.explanation_details import (
+    comparison_row,
+    decision_detail,
+    evidence_group,
+    evidence_item,
+    explanation_details,
+    source_section,
+)
 
 
 CHECK_ID = "C11"
@@ -116,6 +124,16 @@ def check_c11_page_number(
                 duplicated_y=duplicated_y,
                 total_values=total_values,
                 finding_count=len(findings),
+            ),
+            "explanation_details": _explanation_details(
+                document=document,
+                start_page=start_page,
+                parsed_items=parsed_items,
+                parsed_summary=parsed_summary,
+                missing_y=missing_y,
+                duplicated_y=duplicated_y,
+                total_values=total_values,
+                findings=findings,
             ),
         },
         pass_summary="报告页码连续且总页数一致",
@@ -563,6 +581,110 @@ def _comparison_details(
         ],
         "parsed_page_numbers": parsed_summary,
     }
+
+
+def _explanation_details(
+    *,
+    document: ReportDocument,
+    start_page: int,
+    parsed_items: list[_ParsedPageNumber],
+    parsed_summary: list[dict[str, object]],
+    missing_y: list[int],
+    duplicated_y: list[int],
+    total_values: list[int],
+    findings: list[Finding],
+) -> dict[str, object]:
+    current_pages = [item.current_page for item in parsed_items]
+    first_pdf_page = parsed_items[0].source.page_number if parsed_items else start_page
+    last_pdf_page = parsed_items[-1].source.page_number if parsed_items else start_page
+    pdf_total = document.parsed_pdf.page_count if document.parsed_pdf else None
+    expected_range = list(range(1, (max(current_pages) if current_pages else 0) + 1))
+    if findings:
+        status, label, reason = (
+            "candidate_issue",
+            "候选问题",
+            "报告页码存在缺失、重复、跳号、总页数不一致或末页不一致的候选问题。",
+        )
+    elif parsed_items:
+        total = total_values[0] if total_values else parsed_items[-1].total_pages
+        status, label, reason = (
+            "passed",
+            "通过",
+            f"报告正文页码连续且总页数一致：内部页码 1 到 {total} 均已识别。",
+        )
+    else:
+        status, label, reason = (
+            "needs_review",
+            "需复核",
+            f"从 PDF 第 {start_page} 页起未获得可解析页码，无法核对连续性。",
+        )
+    return explanation_details(
+        check_goal="核对报告正文页码是否连续且总页数一致。",
+        user_question="报告声明总页数、PDF 总页数和实际提取的正文页码范围分别是什么？",
+        overall_reason=reason,
+        source_sections=[
+            source_section(
+                label="报告正文页码",
+                page_number=first_pdf_page,
+                display_page_label=f"PDF 第 {first_pdf_page}-{last_pdf_page} 页",
+                description=f"从 PDF 第 {start_page} 页起核对；封面/注意事项页已排除。",
+            )
+        ],
+        comparison_rows=[
+            comparison_row(
+                field="报告声明总页数",
+                left_label="页码文本声明",
+                left_value=total_values[0] if len(total_values) == 1 else total_values,
+                right_label="PDF 总页数",
+                right_value=pdf_total,
+                status="match" if len(total_values) == 1 and parsed_items else "needs_review",
+                reason="各页声明总页数一致。" if len(total_values) == 1 and parsed_items else "声明总页数缺失或不一致。",
+            ),
+            comparison_row(
+                field="实际提取页码范围",
+                left_label="提取到的内部页码",
+                left_value=current_pages,
+                right_label="预期连续范围",
+                right_value=expected_range,
+                status="match" if current_pages == expected_range and bool(parsed_items) else "mismatch",
+                reason="正文页码从 1 开始连续。" if current_pages == expected_range and parsed_items else "正文页码存在缺失或跳号。",
+            ),
+            comparison_row(
+                field="缺页/重复页/跳号",
+                left_label="缺页",
+                left_value=missing_y,
+                right_label="重复页",
+                right_value=duplicated_y,
+                status="match" if not missing_y and not duplicated_y else "mismatch",
+                reason="未发现缺页或重复页。" if not missing_y and not duplicated_y else "发现缺页、重复页或非递增页码。",
+            ),
+            comparison_row(
+                field="封面/注意事项排除",
+                left_label="核对起始 PDF 页",
+                left_value=start_page,
+                right_label="排除说明",
+                right_value="封面和注意事项不纳入正文页码连续性。",
+                status="skipped",
+                reason="C11 从报告首页/第三页开始核对正文内部页码。",
+            ),
+        ],
+        evidence_groups=[
+            evidence_group(
+                "页码文本摘录",
+                [
+                    evidence_item(
+                        label=str(item.get("raw_text") or ""),
+                        page_number=item.get("pdf_page_number") if isinstance(item.get("pdf_page_number"), int) else None,
+                        evidence_type="page_number_text",
+                        status="parsed",
+                    )
+                    for item in parsed_summary[:80]
+                ],
+            )
+        ],
+        decision=decision_detail(status, label, reason),
+        next_action="如页码候选异常，请查看对应 PDF 页右上/页脚页码文本。",
+    )
 
 
 __all__ = ["CHECK_ID", "CHECK_NAME", "check_c11_page_number", "parse_page_number_text"]

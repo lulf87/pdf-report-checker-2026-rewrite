@@ -104,6 +104,55 @@ def sample_check_results(task_id: str = "task-export-1") -> list[CheckResult]:
                         }
                     ],
                 },
+                "explanation_details": {
+                    "check_goal": "核对首页与报告首页字段是否一致",
+                    "user_question": "系统摘录了哪些字段，为什么判定不一致？",
+                    "overall_reason": "型号规格两处摘录不一致。",
+                    "source_sections": [
+                        {
+                            "label": "封面页",
+                            "page_number": 1,
+                            "display_page_label": "PDF 第 1 页",
+                            "description": "报告封面",
+                        },
+                        {
+                            "label": "报告首页",
+                            "page_number": 3,
+                            "display_page_label": "PDF 第 3 页 / 报告第 1 页",
+                            "description": "检验报告首页",
+                        },
+                    ],
+                    "comparison_rows": [
+                        {
+                            "field": "型号规格",
+                            "left_label": "封面页摘录",
+                            "left_value": "ABC-1",
+                            "right_label": "报告首页摘录",
+                            "right_value": "ABC-2",
+                            "status": "mismatch",
+                            "reason": "两处摘录不一致",
+                        }
+                    ],
+                    "evidence_groups": [
+                        {
+                            "title": "字段摘录",
+                            "items": [
+                                {
+                                    "label": "第三页型号规格",
+                                    "page_number": 3,
+                                    "evidence_type": "field_extract",
+                                    "status": "mismatch",
+                                }
+                            ],
+                        }
+                    ],
+                    "decision": {
+                        "user_facing_status": "candidate_issue",
+                        "label": "候选问题",
+                        "reason": "规则发现字段不一致，需结合最终审核确认。",
+                    },
+                    "next_action": "查看型号规格两处摘录。",
+                },
             },
         ),
         CheckResult(

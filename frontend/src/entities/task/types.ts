@@ -167,8 +167,56 @@ export interface ComparisonDetails {
   fields?: ComparisonField[];
 }
 
+export interface ExplanationSourceSection {
+  label: string;
+  page_number?: number | null;
+  display_page_label?: string | null;
+  description?: string | null;
+}
+
+export interface ExplanationComparisonRow {
+  field: string;
+  left_label?: string | null;
+  left_value?: unknown;
+  right_label?: string | null;
+  right_value?: unknown;
+  status: "match" | "mismatch" | "missing" | "needs_review" | "skipped" | "not_applicable" | string;
+  reason?: string | null;
+}
+
+export interface ExplanationEvidenceItem {
+  label: string;
+  page_number?: number | null;
+  display_page_label?: string | null;
+  evidence_type?: string | null;
+  status?: string | null;
+}
+
+export interface ExplanationEvidenceGroup {
+  title: string;
+  items?: ExplanationEvidenceItem[];
+}
+
+export interface ExplanationDecision {
+  user_facing_status: "passed" | "candidate_issue" | "needs_review" | "confirmed_error" | "refuted" | string;
+  label?: string | null;
+  reason?: string | null;
+}
+
+export interface ExplanationDetails {
+  check_goal?: string | null;
+  user_question?: string | null;
+  overall_reason?: string | null;
+  source_sections?: ExplanationSourceSection[];
+  comparison_rows?: ExplanationComparisonRow[];
+  evidence_groups?: ExplanationEvidenceGroup[];
+  decision?: ExplanationDecision | null;
+  next_action?: string | null;
+}
+
 export interface CheckResultMetadata extends Record<string, unknown> {
   comparison_details?: ComparisonDetails;
+  explanation_details?: ExplanationDetails;
 }
 
 export interface CheckResult {

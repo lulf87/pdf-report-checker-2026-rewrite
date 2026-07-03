@@ -33,6 +33,7 @@ def export_check_results_to_xlsx(
         ("Findings", _finding_rows(payload)),
         ("Evidence", _evidence_rows(payload)),
         ("ComparisonDetails", _comparison_detail_rows(payload)),
+        ("check_explanations", _explanation_detail_rows(payload)),
     ]
 
     buffer = io.BytesIO()
@@ -172,6 +173,82 @@ def _comparison_detail_rows(payload: dict[str, Any]) -> list[list[Any]]:
                 ]
             )
     return rows
+
+
+def _explanation_detail_rows(payload: dict[str, Any]) -> list[list[Any]]:
+    rows = [
+        [
+            "check_id",
+            "check_name",
+            "field",
+            "left_label",
+            "left_value",
+            "right_label",
+            "right_value",
+            "status",
+            "reason",
+            "page_numbers",
+            "next_action",
+        ]
+    ]
+    for result in payload["check_results"]:
+        details = (result.get("metadata") or {}).get("explanation_details")
+        if not isinstance(details, dict):
+            continue
+        page_numbers = _explanation_page_numbers(details)
+        rows.append(
+            [
+                result["check_id"],
+                result["check_name"],
+                "overall",
+                "检查目的",
+                details.get("check_goal") or "",
+                "判断理由",
+                details.get("overall_reason") or "",
+                ((details.get("decision") or {}).get("user_facing_status") if isinstance(details.get("decision"), dict) else "")
+                or "",
+                ((details.get("decision") or {}).get("reason") if isinstance(details.get("decision"), dict) else "")
+                or "",
+                page_numbers,
+                details.get("next_action") or "",
+            ]
+        )
+        comparison_rows = details.get("comparison_rows") or []
+        if not isinstance(comparison_rows, list):
+            continue
+        for row in comparison_rows:
+            if not isinstance(row, dict):
+                continue
+            rows.append(
+                [
+                    result["check_id"],
+                    result["check_name"],
+                    row.get("field") or "",
+                    row.get("left_label") or "",
+                    row.get("left_value") or "",
+                    row.get("right_label") or "",
+                    row.get("right_value") or "",
+                    row.get("status") or "",
+                    row.get("reason") or "",
+                    page_numbers,
+                    details.get("next_action") or "",
+                ]
+            )
+    return rows
+
+
+def _explanation_page_numbers(details: dict[str, Any]) -> str:
+    pages: list[str] = []
+    for source in details.get("source_sections") or []:
+        if isinstance(source, dict) and source.get("page_number") is not None:
+            pages.append(str(source["page_number"]))
+    for group in details.get("evidence_groups") or []:
+        if not isinstance(group, dict):
+            continue
+        for item in group.get("items") or []:
+            if isinstance(item, dict) and item.get("page_number") is not None:
+                pages.append(str(item["page_number"]))
+    return ", ".join(dict.fromkeys(pages))
 
 
 def _cell_value(value: Any) -> str:

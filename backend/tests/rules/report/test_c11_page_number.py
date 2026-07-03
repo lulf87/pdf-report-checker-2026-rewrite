@@ -54,6 +54,13 @@ def test_passes_for_continuous_internal_pages_from_physical_third_page() -> None
     assert fields_by_key["actual_page_range"]["left"]["raw_text"] == "1, 2, 3, 4, 5"
     assert fields_by_key["continuity"]["status"] == "match"
     assert "/Users/" not in str(details)
+    explanation = result.metadata["explanation_details"]
+    assert explanation["decision"]["user_facing_status"] == "passed"
+    assert "报告声明总页数" in str(explanation)
+    assert "实际提取页码范围" in str(explanation)
+    assert "共 5 页 第 1 页" in str(explanation)
+    assert any(row["field"] == "报告声明总页数" and row["left_value"] == "5" for row in explanation["comparison_rows"])
+    assert "/Users/" not in str(explanation)
 
 
 def test_ignores_page_number_evidence_before_physical_third_page() -> None:

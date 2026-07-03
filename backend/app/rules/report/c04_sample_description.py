@@ -20,6 +20,14 @@ from app.rules.report.common import (
     match_name,
 )
 from app.rules.report.context import CheckContext
+from app.rules.report.explanation_details import (
+    comparison_row,
+    decision_detail,
+    evidence_group,
+    evidence_item,
+    explanation_details,
+    source_section,
+)
 
 
 CHECK_ID = "C04"
@@ -47,7 +55,18 @@ def check_c04_sample_description(
 
     findings: list[Finding] = []
     coverage: list[dict[str, str | None]] = []
+    detail_rows: list[dict[str, object]] = []
+    label_items: list[dict[str, object]] = []
+    component_items: list[dict[str, object]] = []
     for component in document.sample_components:
+        component_items.append(
+            evidence_item(
+                label=component.component_name or component.component_id,
+                page_number=component.row_location.page_number if component.row_location else None,
+                evidence_type="sample_component",
+                status=_component_role(component),
+            )
+        )
         if component_is_supporting_equipment(component):
             coverage.append(
                 {
@@ -56,12 +75,34 @@ def check_c04_sample_description(
                     "matching_strategy": "supporting_equipment_skipped",
                 }
             )
+            detail_rows.append(
+                comparison_row(
+                    field=component.component_name or component.component_id,
+                    left_label="样品描述",
+                    left_value=_component_summary(component),
+                    right_label="C04 适用范围",
+                    right_value=None,
+                    status="not_applicable",
+                    reason="该行来自本次检验配合使用设备表，不按主样品标签字段一致性判错。",
+                )
+            )
             continue
         match = _find_component_label(component, document.labels)
         label = match.label if match else None
         matching_strategy = match.strategy if match else None
         if label is None:
             findings.append(_missing_label_finding(context, component))
+            detail_rows.append(
+                comparison_row(
+                    field=component.component_name or component.component_id,
+                    left_label="样品描述",
+                    left_value=_component_summary(component),
+                    right_label="中文标签 caption/OCR",
+                    right_value=None,
+                    status="missing",
+                    reason="未找到与该样品描述部件匹配的中文标签 caption 或 OCR。",
+                )
+            )
             coverage.append(
                 {
                     "component_id": component.component_id,
@@ -71,6 +112,14 @@ def check_c04_sample_description(
             )
             continue
 
+        label_items.append(
+            evidence_item(
+                label=label.caption_text or label.label_id,
+                page_number=label.page_number,
+                evidence_type="label_caption",
+                status="matched",
+            )
+        )
         coverage.append(
             {
                 "component_id": component.component_id,
@@ -79,6 +128,18 @@ def check_c04_sample_description(
             }
         )
         if _label_ocr_fields_empty(label):
+            for field_name in _FIELDS_TO_COMPARE:
+                detail_rows.append(
+                    comparison_row(
+                        field=field_name,
+                        left_label=f"样品描述：{component.component_name or component.component_id}",
+                        left_value=component_field_value(component, field_name),
+                        right_label="中文标签 OCR",
+                        right_value=None,
+                        status="needs_review",
+                        reason="标签样张存在，但 OCR 未抽取到可比对字段，需视觉复核。",
+                    )
+                )
             findings.append(
                 _ocr_evidence_insufficient_finding(
                     context=context,
@@ -92,6 +153,17 @@ def check_c04_sample_description(
             component_value = component_field_value(component, field_name)
             label_field = get_label_field(label, field_name)
             label_value = field_value(label_field)
+            detail_rows.append(
+                comparison_row(
+                    field=field_name,
+                    left_label=f"样品描述：{component.component_name or component.component_id}",
+                    left_value=component_value,
+                    right_label="中文标签 OCR",
+                    right_value=label_value,
+                    status=_field_status(component_value, label_value),
+                    reason=_field_reason(component_value, label_value, matching_strategy),
+                )
+            )
 
             if is_no_value(component_value) and is_no_value(label_value):
                 continue
@@ -116,7 +188,16 @@ def check_c04_sample_description(
         check_id=CHECK_ID,
         check_name=CHECK_NAME,
         findings=findings,
-        metadata={"coverage": coverage},
+        metadata={
+            "coverage": coverage,
+            "explanation_details": _build_explanation_details(
+                document=document,
+                findings=findings,
+                detail_rows=detail_rows,
+                component_items=component_items,
+                label_items=label_items,
+            ),
+        },
         pass_summary="样品描述表格与中文标签 OCR 一致",
         issue_summary=f"样品描述表格存在 {len(findings)} 项标签比对问题",
     )
@@ -342,6 +423,99 @@ def _missing_label_finding(context: CheckContext, component: SampleComponent) ->
             "component_key": component.identity_key,
         },
     )
+
+
+def _build_explanation_details(
+    *,
+    document: ReportDocument,
+    findings: list[Finding],
+    detail_rows: list[dict[str, object]],
+    component_items: list[dict[str, object]],
+    label_items: list[dict[str, object]],
+) -> dict[str, object]:
+    status, label, reason = _decision_from_findings(findings, "样品描述部件与中文标签 OCR 一致。")
+    source_pages = sorted(
+        {
+            component.row_location.page_number
+            for component in document.sample_components
+            if component.row_location and component.row_location.page_number is not None
+        }
+    )
+    label_pages = sorted({label.page_number for label in document.labels if label.page_number is not None})
+    sources = [
+        source_section(
+            label="样品描述表",
+            page_number=source_pages[0] if source_pages else None,
+            description="样品描述部件行，含部件名称、型号、序列号/批号、生产日期和备注。",
+        )
+    ]
+    if label_pages:
+        sources.append(
+            source_section(
+                label="中文标签 OCR/样张 caption",
+                page_number=label_pages[0],
+                description="中文标签样张 caption 及结构化 OCR 字段。",
+            )
+        )
+    return explanation_details(
+        check_goal="核对样品描述字段与中文标签字段是否一致。",
+        user_question="样品描述行匹配到了哪个中文标签？哪些字段参与比对？",
+        overall_reason=reason,
+        source_sections=sources,
+        comparison_rows=detail_rows,
+        evidence_groups=[
+            evidence_group("样品描述部件", component_items),
+            evidence_group("匹配到的中文标签样张", label_items),
+        ],
+        decision=decision_detail(status, label, reason),
+        next_action="如显示需视觉复核，请查看匹配到的中文标签样张图片和 OCR 字段。",
+    )
+
+
+def _decision_from_findings(findings: list[Finding], pass_reason: str) -> tuple[str, str, str]:
+    if not findings:
+        return "passed", "通过", pass_reason
+    if any(finding.severity == FindingSeverity.ERROR for finding in findings):
+        return "candidate_issue", "候选问题", f"规则发现 {len(findings)} 项候选标签比对问题，需结合最终审核确认。"
+    return "needs_review", "需复核", f"规则发现 {len(findings)} 项证据不足或需视觉复核项。"
+
+
+def _component_role(component: SampleComponent) -> str:
+    if component_is_supporting_equipment(component):
+        return "supporting_equipment"
+    if component_not_used(component):
+        return "unused_component"
+    return "main_sample"
+
+
+def _component_summary(component: SampleComponent) -> str:
+    values = [
+        component.component_name,
+        component.model,
+        component.batch_or_serial,
+        component.production_date,
+        component.expiration_date,
+        component.remark,
+    ]
+    return " / ".join(value for value in values if value)
+
+
+def _field_status(component_value: str | None, label_value: str | None) -> str:
+    if _values_match_exactly(component_value, label_value):
+        return "match"
+    if is_no_value(component_value) or is_no_value(label_value):
+        return "missing"
+    return "mismatch"
+
+
+def _field_reason(component_value: str | None, label_value: str | None, matching_strategy: str | None) -> str:
+    if _values_match_exactly(component_value, label_value):
+        return f"两处字段一致，匹配策略：{matching_strategy or '未标注'}。"
+    if is_no_value(label_value):
+        return "中文标签 OCR 未抽取到该字段。"
+    if is_no_value(component_value):
+        return "样品描述表未填写该字段。"
+    return "样品描述表与中文标签 OCR 字段不一致。"
 
 
 __all__ = ["CHECK_ID", "CHECK_NAME", "check_c04_sample_description"]

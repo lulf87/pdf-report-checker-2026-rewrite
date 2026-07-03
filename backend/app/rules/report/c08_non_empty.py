@@ -11,6 +11,14 @@ from app.domain.result import CheckResult
 from app.infrastructure.report.inspection_item_group_builder import build_inspection_item_groups
 from app.rules.report.common import make_result
 from app.rules.report.context import CheckContext
+from app.rules.report.explanation_details import (
+    comparison_row,
+    decision_detail,
+    evidence_group,
+    evidence_item,
+    explanation_details,
+    source_section,
+)
 
 
 CHECK_ID = "C08"
@@ -69,6 +77,7 @@ def check_c08_non_empty_fields(
             "ungrouped_row_count": len(group_result.ungrouped_rows),
             "group_builder_diagnostics": group_result.diagnostics,
             "group_builder_metadata": group_result.metadata,
+            "explanation_details": _build_explanation_details(group_result.groups, findings),
         },
         pass_summary="检验项目必填字段均非空",
         issue_summary=f"检验项目存在 {len(findings)} 个必填字段为空",
@@ -218,6 +227,90 @@ def _sequence_raw(row: InspectionItem) -> str:
 def _safe_id_part(value: str | None) -> str:
     text = value or "unknown"
     return re.sub(r"[^0-9A-Za-z_-]+", "-", text).strip("-") or "unknown"
+
+
+def _build_explanation_details(
+    groups: list[InspectionItemGroup],
+    findings: list[Finding],
+) -> dict[str, Any]:
+    missing_counts = {field_name: 0 for field_name, _ in REQUIRED_FIELDS}
+    for finding in findings:
+        field_name = finding.metadata.get("field_name")
+        if isinstance(field_name, str) and field_name in missing_counts:
+            missing_counts[field_name] += 1
+
+    if findings:
+        status, label, reason = (
+            "candidate_issue",
+            "候选问题",
+            f"共检查 {len(groups)} 个项目组，发现 {len(findings)} 个必填字段为空。",
+        )
+    else:
+        status, label, reason = (
+            "passed",
+            "通过",
+            f"共检查 {len(groups)} 个项目组，检验结果/单项结论/备注均有有效值或可继承值。",
+        )
+
+    rows = [
+        comparison_row(
+            field="项目组数量",
+            left_label="InspectionItemGroup",
+            left_value=len(groups),
+            right_label="检查字段",
+            right_value=[field_name for field_name, _ in REQUIRED_FIELDS],
+            status="match" if not findings else "needs_review",
+            reason="按同序号/续表行聚合后检查有效字段。",
+        ),
+        comparison_row(
+            field="缺失数量",
+            left_label="按字段统计",
+            left_value=", ".join(f"{field}: {count}" for field, count in missing_counts.items()),
+            right_label="规则要求",
+            right_value="每个项目组均应有检验结果、单项结论、备注",
+            status="match" if not findings else "mismatch",
+            reason="缺失数量为 0 表示必填字段均有有效值或可继承值。",
+        ),
+    ]
+    for field_name, attr in REQUIRED_FIELDS:
+        rows.append(
+            comparison_row(
+                field=field_name,
+                left_label="缺失项目组数",
+                left_value=missing_counts[field_name],
+                right_label="字段键",
+                right_value=attr,
+                status="match" if missing_counts[field_name] == 0 else "missing",
+                reason="该字段在聚合后的项目组中非空。" if missing_counts[field_name] == 0 else "存在聚合后仍为空的项目组。",
+            )
+        )
+
+    source_pages = sorted({page for group in groups for page in group.pages if page is not None})
+    missing_items = [
+        evidence_item(
+            label=f"序号 {finding.metadata.get('item_no')}: {finding.metadata.get('field_name')}",
+            page_number=(finding.metadata.get("pages") or [None])[0] if isinstance(finding.metadata.get("pages"), list) else None,
+            evidence_type="missing_required_field",
+            status="missing",
+        )
+        for finding in findings
+    ]
+    return explanation_details(
+        check_goal="核对检验项目必填字段是否非空。",
+        user_question="系统检查了多少个项目组？检验结果、单项结论、备注分别缺失多少？",
+        overall_reason=reason,
+        source_sections=[
+            source_section(
+                label="检验项目表",
+                page_number=source_pages[0] if source_pages else None,
+                description="按同序号和续表行聚合后的检验项目组。",
+            )
+        ],
+        comparison_rows=rows,
+        evidence_groups=[evidence_group("缺失字段明细", missing_items)],
+        decision=decision_detail(status, label, reason),
+        next_action="如存在缺失字段，请查看对应序号和页码的表格行。",
+    )
 
 
 __all__ = [

@@ -15,6 +15,14 @@ from app.rules.report.common import (
     make_result,
 )
 from app.rules.report.context import CheckContext
+from app.rules.report.explanation_details import (
+    comparison_row,
+    decision_detail,
+    evidence_group,
+    evidence_item,
+    explanation_details,
+    source_section,
+)
 
 
 CHECK_ID = "C05"
@@ -106,6 +114,7 @@ def check_c05_photo_coverage(
     context = context or CheckContext()
     findings: list[Finding] = []
     coverage: list[dict[str, Any]] = []
+    detail_rows: list[dict[str, Any]] = []
     active_components: list[SampleComponent] = []
     photo_candidates = [
         _caption_candidate(caption)
@@ -118,10 +127,32 @@ def check_c05_photo_coverage(
             coverage.append(
                 _coverage_record(component, None, "unused_component_skipped", is_unused_component=True)
             )
+            detail_rows.append(
+                comparison_row(
+                    field=component.component_name or component.component_id,
+                    left_label="样品描述部件",
+                    left_value=component.component_name,
+                    right_label="照片覆盖规则",
+                    right_value=None,
+                    status="skipped",
+                    reason="该部件备注为本次检测未使用，照片覆盖规则已跳过。",
+                )
+            )
             continue
         if component_is_supporting_equipment(component):
             coverage.append(
                 _coverage_record(component, None, "supporting_equipment_skipped", is_unused_component=False)
+            )
+            detail_rows.append(
+                comparison_row(
+                    field=component.component_name or component.component_id,
+                    left_label="样品描述部件",
+                    left_value=component.component_name,
+                    right_label="照片覆盖规则",
+                    right_value=None,
+                    status="not_applicable",
+                    reason="该行来自本次检验配合使用设备表，默认不按主样品照片覆盖判错。",
+                )
             )
             continue
         active_components.append(component)
@@ -130,6 +161,17 @@ def check_c05_photo_coverage(
         match = _find_caption(component, photo_candidates)
         if match is None:
             uncertain_candidates = [candidate for candidate in photo_candidates if candidate.is_uncertain]
+            detail_rows.append(
+                comparison_row(
+                    field=component.component_name or component.component_id,
+                    left_label="样品描述部件",
+                    left_value=component.component_name,
+                    right_label="非标签照片 caption",
+                    right_value=[candidate.caption.text for candidate in photo_candidates],
+                    status="missing",
+                    reason="未找到能覆盖该部件的非标签照片 caption；中文标签样张未计入照片覆盖。",
+                )
+            )
             if uncertain_candidates:
                 findings.append(_caption_uncertain_finding(context, component, uncertain_candidates[0], []))
             findings.append(
@@ -169,6 +211,21 @@ def check_c05_photo_coverage(
             continue
 
         candidate, matching_strategy = match
+        detail_rows.append(
+            comparison_row(
+                field=component.component_name or component.component_id,
+                left_label="样品描述部件",
+                left_value=component.component_name,
+                right_label="非标签照片 caption",
+                right_value=candidate.caption.text,
+                status="match" if not candidate.is_uncertain else "needs_review",
+                reason=(
+                    f"照片 caption 主体与样品描述部件匹配，匹配策略：{matching_strategy}。"
+                    if not candidate.is_uncertain
+                    else "照片 caption 主体或置信度不可靠，需复核。"
+                ),
+            )
+        )
         coverage.append(_coverage_record(component, candidate, matching_strategy, is_unused_component=False))
         if candidate.is_uncertain:
             findings.append(_caption_uncertain_finding(context, component, candidate, [candidate.caption.text]))
@@ -179,7 +236,15 @@ def check_c05_photo_coverage(
             check_id=CHECK_ID,
             check_name=CHECK_NAME,
             findings=findings,
-            metadata={"coverage": coverage},
+            metadata={
+                "coverage": coverage,
+                "explanation_details": _build_explanation_details(
+                    document=document,
+                    findings=findings,
+                    detail_rows=detail_rows,
+                    photo_candidates=photo_candidates,
+                ),
+            },
             pass_summary="无需要照片覆盖的样品部件",
             empty_status=CheckStatus.SKIP,
         )
@@ -189,7 +254,15 @@ def check_c05_photo_coverage(
         check_id=CHECK_ID,
         check_name=CHECK_NAME,
         findings=findings,
-        metadata={"coverage": coverage},
+        metadata={
+            "coverage": coverage,
+            "explanation_details": _build_explanation_details(
+                document=document,
+                findings=findings,
+                detail_rows=detail_rows,
+                photo_candidates=photo_candidates,
+            ),
+        },
         pass_summary="样品描述部件均有对应照片",
         issue_summary=f"照片覆盖存在 {len(findings)} 项缺失",
     )
@@ -330,6 +403,72 @@ def _candidate_metadata(candidate: _CaptionCandidate) -> dict[str, Any]:
         "is_uncertain": candidate.is_uncertain,
         "uncertainty_reason": candidate.uncertainty_reason,
     }
+
+
+def _build_explanation_details(
+    *,
+    document: ReportDocument,
+    findings: list[Finding],
+    detail_rows: list[dict[str, Any]],
+    photo_candidates: list[_CaptionCandidate],
+) -> dict[str, Any]:
+    status, label, reason = _decision_from_findings(findings, "样品描述部件均匹配到非标签照片 caption，或规则明确跳过。")
+    component_pages = sorted(
+        {
+            component.row_location.page_number
+            for component in document.sample_components
+            if component.row_location and component.row_location.page_number is not None
+        }
+    )
+    caption_pages = sorted(
+        {candidate.caption.page_number for candidate in photo_candidates if candidate.caption.page_number is not None}
+    )
+    sources = [
+        source_section(
+            label="样品描述表",
+            page_number=component_pages[0] if component_pages else None,
+            description="待核对照片覆盖的样品描述部件。",
+        )
+    ]
+    if caption_pages:
+        sources.append(
+            source_section(
+                label="非标签照片 caption",
+                page_number=caption_pages[0],
+                description="已排除中文标签样张、标签、铭牌等 caption 后的照片候选。",
+            )
+        )
+    return explanation_details(
+        check_goal="核对样品描述部件是否有对应的非标签照片 caption。",
+        user_question="哪些部件匹配到了照片？哪些部件因未使用或配合使用设备被跳过？",
+        overall_reason=reason,
+        source_sections=sources,
+        comparison_rows=detail_rows,
+        evidence_groups=[
+            evidence_group(
+                "非标签照片 caption 候选",
+                [
+                    evidence_item(
+                        label=candidate.caption.text,
+                        page_number=candidate.caption.page_number,
+                        evidence_type="photo_caption",
+                        status="candidate_uncertain" if candidate.is_uncertain else "candidate",
+                    )
+                    for candidate in photo_candidates
+                ],
+            )
+        ],
+        decision=decision_detail(status, label, reason),
+        next_action="若显示缺照片，请查看候选照片 caption 是否被 OCR 低置信度或主体解析影响。",
+    )
+
+
+def _decision_from_findings(findings: list[Finding], pass_reason: str) -> tuple[str, str, str]:
+    if not findings:
+        return "passed", "通过", pass_reason
+    if any(finding.severity == FindingSeverity.ERROR for finding in findings):
+        return "candidate_issue", "候选问题", f"规则发现 {len(findings)} 项照片覆盖候选问题。"
+    return "needs_review", "需复核", f"规则发现 {len(findings)} 项照片 caption 证据需复核。"
 
 
 def _compact(value: str) -> str:

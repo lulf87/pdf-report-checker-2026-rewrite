@@ -174,6 +174,12 @@ def test_c10_passes_for_multiple_pages_with_correct_continuation_markers() -> No
 
     assert result.status == CheckStatus.PASS
     assert result.findings == []
+    details = result.metadata["explanation_details"]
+    assert details["decision"]["user_facing_status"] == "passed"
+    assert "所有续表标记均能对应到同一检验项目组" in details["overall_reason"]
+    assert any(row["field"] == "续表标记数量" and row["left_value"] == "2" for row in details["comparison_rows"])
+    assert any(item["evidence_type"] == "continuation_marker" for group in details["evidence_groups"] for item in group["items"])
+    assert "/Users/" not in str(details)
 
 
 def test_c10_blank_sequence_payload_rows_do_not_duplicate_boundary_finding() -> None:

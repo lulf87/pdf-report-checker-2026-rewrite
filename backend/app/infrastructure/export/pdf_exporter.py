@@ -136,6 +136,10 @@ def _stringify(value: Any) -> str:
 
 
 def _comparison_detail_lines(result: dict[str, Any]) -> list[str]:
+    explanation = (result.get("metadata") or {}).get("explanation_details")
+    if isinstance(explanation, dict):
+        return _explanation_detail_lines(explanation)
+
     details = (result.get("metadata") or {}).get("comparison_details")
     if not isinstance(details, dict):
         return []
@@ -162,6 +166,60 @@ def _comparison_detail_lines(result: dict[str, Any]) -> list[str]:
             f"status={field.get('status') or ''} | "
             f"reason={field.get('reason') or ''}"
         )
+    return lines
+
+
+def _explanation_detail_lines(details: dict[str, Any]) -> list[str]:
+    lines = [
+        "核对明细",
+        f"检查目的: {details.get('check_goal') or ''}",
+        f"用户问题: {details.get('user_question') or ''}",
+        f"判断理由: {details.get('overall_reason') or ''}",
+    ]
+    decision = details.get("decision") if isinstance(details.get("decision"), dict) else {}
+    if decision:
+        lines.append(
+            "decision: "
+            f"{decision.get('label') or ''} | "
+            f"status={decision.get('user_facing_status') or ''} | "
+            f"reason={decision.get('reason') or ''}"
+        )
+    for source in details.get("source_sections") or []:
+        if not isinstance(source, dict):
+            continue
+        lines.append(
+            "source_section: "
+            f"{source.get('label') or ''} | "
+            f"{source.get('display_page_label') or source.get('page_number') or ''} | "
+            f"{source.get('description') or ''}"
+        )
+    for row in details.get("comparison_rows") or []:
+        if not isinstance(row, dict):
+            continue
+        lines.append(
+            "detail_field: "
+            f"{row.get('field') or ''} | "
+            f"left={row.get('left_label') or ''} {row.get('left_value') or ''} | "
+            f"right={row.get('right_label') or ''} {row.get('right_value') or ''} | "
+            f"status={row.get('status') or ''} | "
+            f"reason={row.get('reason') or ''}"
+        )
+    for group in details.get("evidence_groups") or []:
+        if not isinstance(group, dict):
+            continue
+        lines.append(f"evidence_group: {group.get('title') or ''}")
+        for item in group.get("items") or []:
+            if not isinstance(item, dict):
+                continue
+            lines.append(
+                "evidence_item: "
+                f"{item.get('label') or ''} | "
+                f"{item.get('display_page_label') or item.get('page_number') or ''} | "
+                f"type={item.get('evidence_type') or ''} | "
+                f"status={item.get('status') or ''}"
+            )
+    if details.get("next_action"):
+        lines.append(f"下一步建议: {details.get('next_action')}")
     return lines
 
 

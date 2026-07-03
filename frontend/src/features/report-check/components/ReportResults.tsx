@@ -17,7 +17,17 @@ import type { Finding, FindingSeverity } from "../../../entities/finding/types";
 import type { UserFacingFindingStatus } from "../../../entities/finding/types";
 import { REPORT_RULE_GROUPS, checkResultSeverity } from "../../../entities/report/types";
 import type { ReportSeverityFilter } from "../../../entities/report/types";
-import type { CheckResult, ComparisonDetails, ComparisonExtract, ComparisonField, TaskResult, TaskStatus } from "../../../entities/task/types";
+import type {
+  CheckResult,
+  ComparisonDetails,
+  ComparisonExtract,
+  ComparisonField,
+  ExplanationComparisonRow,
+  ExplanationDetails,
+  ExplanationEvidenceGroup,
+  TaskResult,
+  TaskStatus,
+} from "../../../entities/task/types";
 import { checkStatusLabel } from "../../../entities/task/types";
 import { AnimatedCounter } from "../../../shared/ui/AnimatedCounter";
 import { Badge } from "../../../shared/ui/Badge";
@@ -233,6 +243,7 @@ function CheckRow({ check }: { check: CheckResult }) {
   const tone = userFacingCheckTone(checkUserStatus, severity);
   const codexReviews = normalizeCodexReviews(check.codex_reviews);
   const groupedCodexReviews = groupCodexReviewsByFinding(check.findings, codexReviews);
+  const explanationDetails = check.metadata.explanation_details;
   const comparisonDetails = check.metadata.comparison_details;
 
   return (
@@ -256,16 +267,150 @@ function CheckRow({ check }: { check: CheckResult }) {
       </div>
       {expanded ? (
         <div className="details">
-          {comparisonDetails ? <ComparisonDetailsPanel details={comparisonDetails} /> : null}
+          {explanationDetails ? <ExplanationDetailsPanel details={explanationDetails} /> : null}
+          {!explanationDetails && comparisonDetails ? <ComparisonDetailsPanel details={comparisonDetails} /> : null}
           {check.findings.length > 0 ? (
             <FindingList findings={check.findings} reviewsByFindingId={groupedCodexReviews.byFindingId} />
-          ) : comparisonDetails ? null : (
+          ) : explanationDetails || comparisonDetails ? null : (
             <p className="muted">后端未返回 Finding。</p>
           )}
           <CodexReviewList reviews={groupedCodexReviews.unassociated} title="其他 Codex 审核意见" />
         </div>
       ) : null}
     </article>
+  );
+}
+
+function ExplanationDetailsPanel({ details }: { details: ExplanationDetails }) {
+  const rows = details.comparison_rows ?? [];
+  const sources = details.source_sections ?? [];
+  const groups = details.evidence_groups ?? [];
+  const decision = details.decision;
+
+  return (
+    <section className="comparison-details explanation-details" aria-label="核对明细">
+      <div className="comparison-details-head">
+        <div>
+          <p className="codex-review-list-title">核对依据</p>
+          <p className="comparison-title">核对明细</p>
+        </div>
+        {decision ? <Badge variant={userFacingCheckTone(decision.user_facing_status, "info")}>{decision.label || userFacingCheckLabel(decision.user_facing_status)}</Badge> : null}
+      </div>
+
+      <div className="explanation-summary-grid">
+        {details.check_goal ? (
+          <div>
+            <p className="detail-kicker">检查目的</p>
+            <p>{details.check_goal}</p>
+          </div>
+        ) : null}
+        {details.user_question ? (
+          <div>
+            <p className="detail-kicker">用户问题</p>
+            <p>{details.user_question}</p>
+          </div>
+        ) : null}
+        {details.overall_reason ? (
+          <div>
+            <p className="detail-kicker">判断理由</p>
+            <p>{details.overall_reason}</p>
+          </div>
+        ) : null}
+        {details.next_action ? (
+          <div>
+            <p className="detail-kicker">下一步建议</p>
+            <p>{details.next_action}</p>
+          </div>
+        ) : null}
+      </div>
+
+      {sources.length > 0 ? (
+        <div>
+          <p className="codex-review-list-title">摘录来源</p>
+          <div className="comparison-source-list">
+            {sources.map((source) => (
+              <span className="comparison-source" key={`${source.label}-${source.page_number ?? source.display_page_label ?? source.description}`}>
+                {source.label}
+                {source.display_page_label || source.page_number ? ` · ${source.display_page_label || `PDF 第 ${source.page_number} 页`}` : ""}
+                {source.description ? ` · ${source.description}` : ""}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {rows.length > 0 ? (
+        <div>
+          <p className="codex-review-list-title">比对明细</p>
+          <div className="comparison-table-wrap">
+            <table className="comparison-table">
+              <thead>
+                <tr>
+                  <th>字段</th>
+                  <th>左侧摘录</th>
+                  <th>右侧摘录</th>
+                  <th>状态</th>
+                  <th>说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, index) => (
+                  <ExplanationRow row={row} key={`${row.field}-${index}`} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {groups.length > 0 ? (
+        <div>
+          <p className="codex-review-list-title">证据链</p>
+          <div className="explanation-evidence-groups">
+            {groups.map((group) => (
+              <ExplanationEvidenceGroupCard group={group} key={group.title} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function ExplanationRow({ row }: { row: ExplanationComparisonRow }) {
+  return (
+    <tr className={`comparison-row comparison-row-${comparisonStatusTone(row.status)}`}>
+      <td>{row.field}</td>
+      <td>{formatLabeledValue(row.left_label, row.left_value)}</td>
+      <td>{formatLabeledValue(row.right_label, row.right_value)}</td>
+      <td>
+        <Badge variant={comparisonStatusTone(row.status)}>{comparisonStatusLabel(row.status)}</Badge>
+      </td>
+      <td>{row.reason || "无"}</td>
+    </tr>
+  );
+}
+
+function ExplanationEvidenceGroupCard({ group }: { group: ExplanationEvidenceGroup }) {
+  const items = group.items ?? [];
+  return (
+    <div className="explanation-evidence-group">
+      <p className="comparison-title">{group.title}</p>
+      {items.length > 0 ? (
+        <div className="explanation-evidence-list">
+          {items.map((item, index) => (
+            <span className="comparison-source" key={`${item.label}-${index}`}>
+              {item.label}
+              {item.display_page_label || item.page_number ? ` · ${item.display_page_label || `PDF 第 ${item.page_number} 页`}` : ""}
+              {item.evidence_type ? ` · ${item.evidence_type}` : ""}
+              {item.status ? ` · ${item.status}` : ""}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="muted">暂无结构化证据项。</p>
+      )}
+    </div>
   );
 }
 
@@ -350,6 +495,7 @@ function formatComparisonExtract(extract?: ComparisonExtract | null): string {
 function comparisonStatusLabel(status: string): string {
   if (status === "match") return "一致";
   if (status === "mismatch") return "不一致";
+  if (status === "missing") return "缺失";
   if (status === "missing_left") return "来源 A 缺失";
   if (status === "missing_right") return "来源 B 缺失";
   if (status === "needs_review") return "需复核";
@@ -360,7 +506,7 @@ function comparisonStatusLabel(status: string): string {
 
 function comparisonStatusTone(status: string): "success" | "danger" | "warn" | "info" {
   if (status === "match") return "success";
-  if (status === "mismatch" || status === "missing_left" || status === "missing_right") return "danger";
+  if (status === "mismatch" || status === "missing" || status === "missing_left" || status === "missing_right") return "danger";
   if (status === "needs_review") return "warn";
   return "info";
 }
@@ -447,4 +593,9 @@ function formatValue(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value);
+}
+
+function formatLabeledValue(label: string | null | undefined, value: unknown): string {
+  const text = value === null || value === undefined || value === "" ? "无" : formatValue(value);
+  return [label, text].filter(Boolean).join(" · ");
 }

@@ -53,6 +53,13 @@ def test_c07_passes_when_conforming_and_placeholder_results_expect_conforming() 
     assert result.findings == []
     assert result.metadata["groups"][0]["expected_conclusion"] == "符合"
     assert result.metadata["groups"][0]["decision_reason"] == "has_conforming_or_non_empty_result"
+    details = result.metadata["explanation_details"]
+    assert details["decision"]["user_facing_status"] == "passed"
+    assert "检验结果与单项结论" in details["check_goal"]
+    assert any(row["field"] == "序号" and row["left_value"] == "1" for row in details["comparison_rows"])
+    assert any(row["field"] == "检验结果 tokens" and "符合要求" in row["left_value"] for row in details["comparison_rows"])
+    assert any(group["title"] == "C07 检验项目组" for group in details["evidence_groups"])
+    assert "/Users/" not in str(details)
 
 
 def test_c07_passes_when_any_result_is_nonconforming_and_conclusion_is_nonconforming() -> None:
@@ -399,3 +406,7 @@ def test_c07_complex_leakage_current_matrix_outputs_review_needed_warn_not_error
     assert finding.metadata["complex_matrix_table"] is True
     assert "漏电流" in finding.metadata["complex_matrix_reason"]
     assert finding.metadata["needs_codex_review"] is True
+    details = result.metadata["explanation_details"]
+    assert details["decision"]["user_facing_status"] == "needs_review"
+    assert "复杂矩阵表" in str(details)
+    assert any(row["field"] == "complex_matrix_table" and row["left_value"] == "true" for row in details["comparison_rows"])

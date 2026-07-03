@@ -13,6 +13,14 @@ from app.domain.result import CheckResult
 from app.infrastructure.report.inspection_item_group_builder import build_inspection_item_groups
 from app.rules.report.common import PLACEHOLDER_MARKERS, compact, make_result
 from app.rules.report.context import CheckContext
+from app.rules.report.explanation_details import (
+    comparison_row,
+    decision_detail,
+    evidence_group,
+    evidence_item,
+    explanation_details,
+    source_section,
+)
 
 
 CHECK_ID = "C07"
@@ -119,6 +127,7 @@ def check_c07_item_conclusion(
             "groups": group_metadata,
             "group_builder_diagnostics": build_result.diagnostics,
             "ungrouped_row_count": len(build_result.ungrouped_rows),
+            "explanation_details": _build_explanation_details(group_metadata, findings),
         },
         pass_summary="检验项目单项结论逻辑一致",
         issue_summary=f"单项结论存在 {len(findings)} 项逻辑问题",
@@ -225,6 +234,8 @@ def _group_metadata(group: InspectionItemGroup, decision: ConclusionDecision, ac
         "display_item_no": group.display_item_no,
         "expected_conclusion": decision.expected,
         "actual_conclusion": actual,
+        "item_name": group.rows[0].item_name if group.rows else None,
+        "standard_clause": group.rows[0].standard_clause if group.rows else None,
         "effective_test_results": decision.result_values,
         "original_effective_test_results": list(group.original_effective_test_results),
         "recovered_result_tokens": list(group.recovered_result_tokens),
@@ -260,6 +271,8 @@ def _source_rows(group: InspectionItemGroup) -> list[dict[str, Any]]:
                 "result_values": list(item.result_values),
                 "single_conclusion": item.conclusion,
                 "remark": item.remark,
+                "item_name": item.item_name,
+                "standard_clause": item.standard_clause,
             }
         )
     return rows
@@ -402,6 +415,168 @@ def _group_evidence(group: InspectionItemGroup, decision: ConclusionDecision, ac
             )
         )
     return evidence_items
+
+
+def _build_explanation_details(
+    group_metadata: list[dict[str, Any]],
+    findings: list[Finding],
+) -> dict[str, Any]:
+    status, label, reason = _decision_from_findings(findings)
+    selected_groups = _selected_groups_for_explanation(group_metadata, findings)
+    selected_groups = [_with_finding_metadata(group, findings) for group in selected_groups]
+    rows: list[dict[str, Any]] = [
+        comparison_row(
+            field="项目组数量",
+            left_label="InspectionItemGroup",
+            left_value=len(group_metadata),
+            right_label="C07",
+            right_value="按同序号/续表聚合后判断",
+            status="match" if not findings else "needs_review",
+            reason="C07 基于聚合后的检验项目组判断检验结果与单项结论。",
+        )
+    ]
+    for group in selected_groups:
+        item_no = str(group.get("display_item_no") or group.get("item_no") or "")
+        pages = group.get("pages") or []
+        conclusion_status = "match" if group.get("expected_conclusion") == group.get("actual_conclusion") else "needs_review"
+        if group.get("complex_matrix_table"):
+            conclusion_status = "needs_review"
+        rows.extend(
+            [
+                comparison_row(
+                    field="序号",
+                    left_label="检验项目组",
+                    left_value=item_no,
+                    right_label="涉及页码",
+                    right_value=pages,
+                    status="match",
+                    reason=f"该项目组共 {group.get('group_row_count') or 0} 行。",
+                ),
+                comparison_row(
+                    field="检验结果 tokens",
+                    left_label="结构化检验结果",
+                    left_value=group.get("effective_test_results") or group.get("result_values"),
+                    right_label="推断原因",
+                    right_value=group.get("decision_reason"),
+                    status="match" if group.get("decision_reason") != "all_placeholders_or_blank" else "needs_review",
+                    reason="用于推断 expected conclusion 的检验结果 token。",
+                ),
+                comparison_row(
+                    field="单项结论 candidates",
+                    left_label="实际单项结论",
+                    left_value=group.get("actual_conclusion"),
+                    right_label="期望单项结论",
+                    right_value=group.get("expected_conclusion"),
+                    status=conclusion_status,
+                    reason=_group_reason(group),
+                ),
+                comparison_row(
+                    field="备注",
+                    left_label="备注摘录",
+                    left_value=_remarks(group),
+                    right_label="跨页续表",
+                    right_value=bool(group.get("continuation_markers")),
+                    status="match",
+                    reason="备注和续表信息用于辅助判断结构化抽取是否完整。",
+                ),
+                comparison_row(
+                    field="complex_matrix_table",
+                    left_label="复杂矩阵标记",
+                    left_value=bool(group.get("complex_matrix_table")),
+                    right_label="复核建议",
+                    right_value=group.get("complex_matrix_reason"),
+                    status="needs_review" if group.get("complex_matrix_table") else "not_applicable",
+                    reason=(
+                        "该项目为复杂矩阵表，需要查看矩阵结果列、单项结论列和跨页续表结构。"
+                        if group.get("complex_matrix_table")
+                        else "该项目未标记为复杂矩阵表。"
+                    ),
+                ),
+            ]
+        )
+    source_pages = sorted({page for group in group_metadata for page in (group.get("pages") or []) if page is not None})
+    return explanation_details(
+        check_goal="核对检验结果与单项结论是否一致。",
+        user_question="当前检验项目摘录了哪些结果 token、单项结论和备注？为什么通过、候选问题或需复核？",
+        overall_reason=reason,
+        source_sections=[
+            source_section(
+                label="检验项目表",
+                page_number=source_pages[0] if source_pages else None,
+                description="按序号和续表行聚合后的检验项目组。",
+            )
+        ],
+        comparison_rows=rows,
+        evidence_groups=[
+            evidence_group(
+                "C07 检验项目组",
+                [
+                    evidence_item(
+                        label=f"序号 {group.get('display_item_no') or group.get('item_no')}: {group.get('item_name') or ''}",
+                        page_number=(group.get("pages") or [None])[0],
+                        evidence_type="inspection_item_group",
+                        status="complex_matrix" if group.get("complex_matrix_table") else "review_target",
+                    )
+                    for group in selected_groups
+                ],
+            )
+        ],
+        decision=decision_detail(status, label, reason),
+        next_action="若显示复杂矩阵或抽取不确定，请查看该项目的表格视觉证据和 Codex 复核意见。",
+    )
+
+
+def _selected_groups_for_explanation(
+    group_metadata: list[dict[str, Any]],
+    findings: list[Finding],
+) -> list[dict[str, Any]]:
+    finding_item_numbers = {
+        str(finding.metadata.get("item_no") or finding.metadata.get("display_item_no") or "")
+        for finding in findings
+        if finding.metadata
+    }
+    if finding_item_numbers:
+        return [
+            group
+            for group in group_metadata
+            if str(group.get("item_no") or group.get("display_item_no") or "") in finding_item_numbers
+        ]
+    return group_metadata[:10]
+
+
+def _with_finding_metadata(group: dict[str, Any], findings: list[Finding]) -> dict[str, Any]:
+    item_no = str(group.get("item_no") or group.get("display_item_no") or "")
+    for finding in findings:
+        finding_item_no = str(finding.metadata.get("item_no") or finding.metadata.get("display_item_no") or "")
+        if finding_item_no == item_no:
+            return {**group, **finding.metadata}
+    return group
+
+
+def _decision_from_findings(findings: list[Finding]) -> tuple[str, str, str]:
+    if not findings:
+        return "passed", "通过", "该项目存在符合要求结果时单项结论为符合，或占位结果对应 /，逻辑一致。"
+    if any(finding.code == "CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX" for finding in findings):
+        return "needs_review", "需复核", "存在复杂矩阵表，需要专门查看矩阵结果列、单项结论列和跨页续表结构。"
+    if any(finding.severity == FindingSeverity.ERROR for finding in findings):
+        return "candidate_issue", "候选问题", f"规则发现 {len(findings)} 项单项结论候选逻辑问题。"
+    return "needs_review", "需复核", f"规则发现 {len(findings)} 项结构化表格抽取不确定项。"
+
+
+def _group_reason(group: dict[str, Any]) -> str:
+    if group.get("complex_matrix_table"):
+        return "复杂矩阵表不按普通 C07 单项结论逻辑直接裁决。"
+    if group.get("expected_conclusion") == group.get("actual_conclusion"):
+        return "检验结果 token 支持当前单项结论。"
+    return "结构化检验结果与单项结论存在候选不一致或需复核。"
+
+
+def _remarks(group: dict[str, Any]) -> list[str]:
+    remarks: list[str] = []
+    for row in group.get("source_rows") or []:
+        if isinstance(row, dict) and row.get("remark"):
+            remarks.append(str(row["remark"]))
+    return remarks
 
 
 __all__ = [

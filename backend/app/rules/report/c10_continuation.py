@@ -12,6 +12,14 @@ from app.domain.result import CheckResult
 from app.infrastructure.report.inspection_item_group_builder import build_inspection_item_groups
 from app.rules.report.common import make_result
 from app.rules.report.context import CheckContext
+from app.rules.report.explanation_details import (
+    comparison_row,
+    decision_detail,
+    evidence_group,
+    evidence_item,
+    explanation_details,
+    source_section,
+)
 
 
 CHECK_ID = "C10"
@@ -53,6 +61,7 @@ def check_c10_continuation(
                 "missing_context_rows": missing_context_rows,
                 "boundary_uncertain": True,
                 "group_builder_diagnostics": group_result.diagnostics,
+                "explanation_details": _build_explanation_details(group_result.groups, findings, missing_context_rows),
             },
             pass_summary="续表标记位置正确",
             issue_summary="续表标记缺少页码或页内行号信息，需人工复核",
@@ -78,6 +87,7 @@ def check_c10_continuation(
             "group_count": len(group_result.groups),
             "ungrouped_row_count": len(group_result.ungrouped_rows),
             "group_builder_diagnostics": group_result.diagnostics,
+            "explanation_details": _build_explanation_details(group_result.groups, findings, []),
         },
         pass_summary="续表标记位置正确",
         issue_summary=f"续表标记存在 {len(findings)} 项问题",
@@ -489,6 +499,94 @@ def _item_no(item: InspectionItem) -> str:
     if item.sequence is not None:
         return str(item.sequence)
     return ""
+
+
+def _build_explanation_details(
+    groups: list[InspectionItemGroup],
+    findings: list[Finding],
+    missing_context_rows: list[int],
+) -> dict[str, Any]:
+    markers = [row for row in _all_group_rows(groups) if row.has_continuation_marker]
+    pages = sorted({row.page for row in _all_group_rows(groups)})
+    if missing_context_rows:
+        status, label, reason = (
+            "needs_review",
+            "需复核",
+            f"有 {len(missing_context_rows)} 行缺少页码或页内行号，续表边界无法稳定判断。",
+        )
+    elif findings:
+        status, label, reason = (
+            "candidate_issue",
+            "候选问题",
+            f"续表标记存在 {len(findings)} 项候选位置或匹配问题。",
+        )
+    else:
+        status, label, reason = (
+            "passed",
+            "通过",
+            "所有续表标记均能对应到同一检验项目组。",
+        )
+    rows = [
+        comparison_row(
+            field="续表标记数量",
+            left_label="识别到的“续 X”",
+            left_value=len(markers),
+            right_label="检查页数",
+            right_value=len(pages),
+            status="match" if not findings and not missing_context_rows else "needs_review",
+            reason="续表标记必须出现在跨页项目组当前页首条相关行。",
+        ),
+        comparison_row(
+            field="缺少结构上下文行",
+            left_label="行索引",
+            left_value=missing_context_rows,
+            right_label="所需上下文",
+            right_value="page_number + row_index_in_page",
+            status="match" if not missing_context_rows else "needs_review",
+            reason="缺页码或页内行号时无法可靠判断续表边界。",
+        ),
+    ]
+    for finding in findings:
+        rows.append(
+            comparison_row(
+                field=finding.code,
+                left_label="实际标记",
+                left_value=finding.metadata.get("actual_marker"),
+                right_label="期望标记",
+                right_value=finding.metadata.get("expected_marker"),
+                status="mismatch",
+                reason=finding.message,
+            )
+        )
+    return explanation_details(
+        check_goal="核对跨页检验项目的“续 X”标记是否正确。",
+        user_question="识别到了哪些续表标记？它们是否能与上一页或同一项目组匹配？",
+        overall_reason=reason,
+        source_sections=[
+            source_section(
+                label="检验项目表续表行",
+                page_number=pages[0] if pages else None,
+                description="按页码和页内行号检查续表边界。",
+            )
+        ],
+        comparison_rows=rows,
+        evidence_groups=[
+            evidence_group(
+                "续表标记",
+                [
+                    evidence_item(
+                        label=f"续{row.continuation_number} / item {row.item_no}",
+                        page_number=row.page,
+                        evidence_type="continuation_marker",
+                        status="matched" if not findings else "candidate",
+                    )
+                    for row in markers
+                ],
+            )
+        ],
+        decision=decision_detail(status, label, reason),
+        next_action="如存在候选问题，请查看当前页首行与上一页末行是否属于同一检验项目组。",
+    )
 
 
 __all__ = ["CHECK_ID", "CHECK_NAME", "check_c10_continuation", "is_continuation_no"]

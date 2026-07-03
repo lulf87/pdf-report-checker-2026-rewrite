@@ -46,6 +46,12 @@ def test_c08_passes_when_result_conclusion_and_remark_have_text() -> None:
 
     assert result.status == CheckStatus.PASS
     assert result.findings == []
+    details = result.metadata["explanation_details"]
+    assert details["decision"]["user_facing_status"] == "passed"
+    assert "共检查 1 个项目组" in details["overall_reason"]
+    assert any(row["field"] == "检验结果" and row["status"] == "match" for row in details["comparison_rows"])
+    assert any(row["field"] == "缺失数量" and "检验结果: 0" in row["left_value"] for row in details["comparison_rows"])
+    assert "/Users/" not in str(details)
 
 
 def test_c08_reports_empty_test_result() -> None:

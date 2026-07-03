@@ -63,6 +63,14 @@ def test_c06_passes_when_component_has_chinese_label_caption() -> None:
     assert result.findings == []
     assert result.metadata["coverage"][0]["matching_strategy"] == "identity"
     assert result.metadata["coverage"][0]["matched_label_key"] == "label-1"
+    details = result.metadata["explanation_details"]
+    assert details["decision"]["user_facing_status"] == "passed"
+    fields = {row["field"]: row for row in details["comparison_rows"]}
+    assert fields["部件名称"]["status"] == "match"
+    assert fields["规格型号"]["status"] == "match"
+    assert fields["序列号批号"]["status"] == "match"
+    assert any(item["evidence_type"] == "label_caption" for group in details["evidence_groups"] for item in group["items"])
+    assert "/Users/" not in str(details)
 
 
 def test_c06_passes_when_component_has_chinese_label_sample_caption() -> None:
@@ -128,6 +136,10 @@ def test_c06_skips_supporting_equipment_by_default() -> None:
     assert result.findings == []
     assert result.metadata["coverage"][0]["sample_role"] == "supporting_equipment"
     assert result.metadata["coverage"][0]["matching_strategy"] == "supporting_equipment_skipped"
+    details = result.metadata["explanation_details"]
+    assert details["decision"]["user_facing_status"] == "passed"
+    assert any(row["status"] == "not_applicable" for row in details["comparison_rows"])
+    assert "本次检验配合使用设备" in str(details)
 
 
 def test_c06_distinguishes_same_name_components_by_non_empty_identity_fields() -> None:

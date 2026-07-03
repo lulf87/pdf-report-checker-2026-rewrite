@@ -21,6 +21,14 @@ from app.rules.report.common import (
     make_result,
 )
 from app.rules.report.context import CheckContext
+from app.rules.report.explanation_details import (
+    comparison_row,
+    decision_detail,
+    evidence_group,
+    evidence_item,
+    explanation_details,
+    source_section,
+)
 
 
 CHECK_ID = "C06"
@@ -84,6 +92,7 @@ def check_c06_label_coverage(
     context = context or CheckContext()
     findings: list[Finding] = []
     coverage: list[dict[str, Any]] = []
+    detail_rows: list[dict[str, Any]] = []
     candidates = _label_candidates(document)
     active_components: list[SampleComponent] = []
     name_counts = _component_name_counts(document.sample_components)
@@ -93,10 +102,32 @@ def check_c06_label_coverage(
             coverage.append(
                 _coverage_record(component, None, "unused_component_skipped", is_unused_component=True)
             )
+            detail_rows.append(
+                comparison_row(
+                    field=component.component_name or component.component_id,
+                    left_label="样品描述部件",
+                    left_value=component.component_name,
+                    right_label="中文标签覆盖规则",
+                    right_value=None,
+                    status="skipped",
+                    reason="该部件备注为本次检测未使用，中文标签覆盖规则已跳过。",
+                )
+            )
             continue
         if component_is_supporting_equipment(component):
             coverage.append(
                 _coverage_record(component, None, "supporting_equipment_skipped", is_unused_component=False)
+            )
+            detail_rows.append(
+                comparison_row(
+                    field=component.component_name or component.component_id,
+                    left_label="样品描述部件",
+                    left_value=component.component_name,
+                    right_label="中文标签覆盖规则",
+                    right_value=None,
+                    status="not_applicable",
+                    reason="该行来自本次检验配合使用设备表，默认不按主样品中文标签覆盖判错。",
+                )
             )
             continue
         active_components.append(component)
@@ -106,6 +137,17 @@ def check_c06_label_coverage(
         require_identity = name_counts.get(component.component_name or "", 0) > 1
         match = _find_label(component, candidates, used_candidate_ids, require_identity=require_identity)
         if match is None:
+            detail_rows.append(
+                comparison_row(
+                    field=component.component_name or component.component_id,
+                    left_label="样品描述联合键",
+                    left_value=build_component_key(component),
+                    right_label="中文标签 caption/OCR 候选",
+                    right_value=[candidate.caption_text for candidate in candidates],
+                    status="missing",
+                    reason="未找到可匹配该部件非空字段联合键的中文标签。",
+                )
+            )
             findings.append(_missing_label_finding(context, component, candidates))
             coverage.append(_coverage_record(component, None, None, is_unused_component=False))
             continue
@@ -113,6 +155,34 @@ def check_c06_label_coverage(
         candidate = match.candidate
         used_candidate_ids.add(candidate.label_id)
         coverage.append(_coverage_record(component, candidate, match.strategy, is_unused_component=False))
+        label_key = _label_key(candidate)
+        ocr_missing = candidate.label is not None and len(candidate.label.fields) == 0
+        for field_name in _KEY_FIELDS:
+            component_value = build_component_key(component).get(field_name)
+            label_value = label_key.get(field_name)
+            if ocr_missing:
+                status = "needs_review"
+                reason = "中文标签 caption 已匹配，但 OCR 未抽取到结构化字段，需视觉复核。"
+            elif _values_match(component_value, label_value):
+                status = "match"
+                reason = f"联合键字段匹配，匹配策略：{match.strategy}。"
+            elif is_no_value(component_value) or is_no_value(label_value):
+                status = "missing"
+                reason = "联合键一侧缺少可比对值。"
+            else:
+                status = "mismatch"
+                reason = "联合键字段不一致。"
+            detail_rows.append(
+                comparison_row(
+                    field=field_name,
+                    left_label=f"样品描述：{component.component_name or component.component_id}",
+                    left_value=component_value,
+                    right_label="中文标签 OCR/Caption",
+                    right_value=label_value,
+                    status=status,
+                    reason=reason,
+                )
+            )
         if candidate.is_low_confidence:
             findings.append(_uncertain_label_finding(context, component, match))
 
@@ -122,7 +192,15 @@ def check_c06_label_coverage(
             check_id=CHECK_ID,
             check_name=CHECK_NAME,
             findings=findings,
-            metadata={"coverage": coverage},
+            metadata={
+                "coverage": coverage,
+                "explanation_details": _build_explanation_details(
+                    document=document,
+                    findings=findings,
+                    detail_rows=detail_rows,
+                    candidates=candidates,
+                ),
+            },
             pass_summary="无需要中文标签覆盖的样品部件",
             empty_status=CheckStatus.SKIP,
         )
@@ -132,7 +210,15 @@ def check_c06_label_coverage(
         check_id=CHECK_ID,
         check_name=CHECK_NAME,
         findings=findings,
-        metadata={"coverage": coverage},
+        metadata={
+            "coverage": coverage,
+            "explanation_details": _build_explanation_details(
+                document=document,
+                findings=findings,
+                detail_rows=detail_rows,
+                candidates=candidates,
+            ),
+        },
         pass_summary="样品描述部件均有对应中文标签",
         issue_summary=f"中文标签覆盖存在 {len(findings)} 项缺失或需复核",
     )
@@ -383,6 +469,78 @@ def _candidate_metadata(candidate: _LabelCandidate) -> dict[str, Any]:
         "page_number": candidate.page_number,
         "ocr_confidence": candidate.confidence,
     }
+
+
+def _build_explanation_details(
+    *,
+    document: ReportDocument,
+    findings: list[Finding],
+    detail_rows: list[dict[str, Any]],
+    candidates: list[_LabelCandidate],
+) -> dict[str, Any]:
+    has_ocr_missing_match = any(row.get("status") == "needs_review" for row in detail_rows)
+    if has_ocr_missing_match and not findings:
+        status, label, reason = (
+            "needs_review",
+            "需复核",
+            "中文标签 caption 已匹配，但 OCR 未抽取到结构化字段，建议视觉复核标签本体。",
+        )
+    else:
+        status, label, reason = _decision_from_findings(findings, "样品描述部件均匹配到中文标签 caption/OCR。")
+    component_pages = sorted(
+        {
+            component.row_location.page_number
+            for component in document.sample_components
+            if component.row_location and component.row_location.page_number is not None
+        }
+    )
+    label_pages = sorted({candidate.page_number for candidate in candidates if candidate.page_number is not None})
+    sources = [
+        source_section(
+            label="样品描述表",
+            page_number=component_pages[0] if component_pages else None,
+            description="待核对中文标签覆盖的样品描述部件。",
+        )
+    ]
+    if label_pages:
+        sources.append(
+            source_section(
+                label="中文标签 caption/OCR",
+                page_number=label_pages[0],
+                description="中文标签样张 caption、OCR 字段或标签 caption 候选。",
+            )
+        )
+    return explanation_details(
+        check_goal="核对样品描述部件是否有对应中文标签 caption/OCR 覆盖。",
+        user_question="中文标签匹配使用了哪些联合键字段？caption 存在时 OCR 字段是否足够？",
+        overall_reason=reason,
+        source_sections=sources,
+        comparison_rows=detail_rows,
+        evidence_groups=[
+            evidence_group(
+                "中文标签 caption/OCR 候选",
+                [
+                    evidence_item(
+                        label=candidate.caption_text,
+                        page_number=candidate.page_number,
+                        evidence_type="label_caption",
+                        status="low_confidence" if candidate.is_low_confidence else "candidate",
+                    )
+                    for candidate in candidates
+                ],
+            )
+        ],
+        decision=decision_detail(status, label, reason),
+        next_action="若 caption 存在但 OCR 缺失，请查看中文标签样张图片或 Codex 视觉复核结果。",
+    )
+
+
+def _decision_from_findings(findings: list[Finding], pass_reason: str) -> tuple[str, str, str]:
+    if not findings:
+        return "passed", "通过", pass_reason
+    if any(finding.severity == FindingSeverity.ERROR for finding in findings):
+        return "candidate_issue", "候选问题", f"规则发现 {len(findings)} 项中文标签覆盖候选问题。"
+    return "needs_review", "需复核", f"规则发现 {len(findings)} 项中文标签 caption/OCR 证据需复核。"
 
 
 def _candidate_evidence(candidate: _LabelCandidate) -> list[Evidence]:

@@ -38,6 +38,11 @@ def test_c05_passes_when_photo_caption_subject_matches_component() -> None:
     assert result.metadata["coverage"][0]["matching_strategy"] == "exact"
     assert result.metadata["coverage"][0]["matched_captions"] == ["№1 消化道脉冲电场消融导管照片"]
     assert result.metadata["coverage"][0]["is_unused_component"] is False
+    details = result.metadata["explanation_details"]
+    assert details["decision"]["user_facing_status"] == "passed"
+    assert "非标签照片 caption" in details["check_goal"]
+    assert any(item["evidence_type"] == "photo_caption" for group in details["evidence_groups"] for item in group["items"])
+    assert "/Users/" not in str(details)
 
 
 def test_c05_passes_when_component_name_is_followed_by_allowed_connector_in_subject() -> None:
@@ -116,6 +121,10 @@ def test_c05_skips_supporting_equipment_by_default() -> None:
     assert result.findings == []
     assert result.metadata["coverage"][0]["sample_role"] == "supporting_equipment"
     assert result.metadata["coverage"][0]["matching_strategy"] == "supporting_equipment_skipped"
+    details = result.metadata["explanation_details"]
+    assert details["decision"]["user_facing_status"] == "passed"
+    assert any(row["status"] == "not_applicable" for row in details["comparison_rows"])
+    assert "本次检验配合使用设备" in str(details)
 
 
 def test_c05_warns_when_matching_caption_has_low_confidence() -> None:

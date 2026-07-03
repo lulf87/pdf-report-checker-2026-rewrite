@@ -292,6 +292,11 @@ def test_c04_skips_2797_like_supporting_equipment_without_label_missing_error() 
             "matching_strategy": "supporting_equipment_skipped",
         },
     ]
+    details = result.metadata["explanation_details"]
+    assert details["decision"]["user_facing_status"] == "passed"
+    assert any(row["status"] == "not_applicable" for row in details["comparison_rows"])
+    assert "本次检验配合使用设备表" in str(details)
+    assert "/Users/" not in str(details)
 
 
 def test_c04_label_caption_with_empty_ocr_fields_needs_visual_review_not_error() -> None:
@@ -318,6 +323,12 @@ def test_c04_label_caption_with_empty_ocr_fields_needs_visual_review_not_error()
     assert finding.metadata["user_facing_status"] == "needs_review"
     assert finding.metadata["label_caption_exists"] is True
     assert finding.metadata["matched_ocr_field_count"] == 0
+    details = result.metadata["explanation_details"]
+    assert details["decision"]["user_facing_status"] == "needs_review"
+    assert "标签样张存在，但 OCR 未抽取到可比对字段，需视觉复核" in str(details)
+    assert any(row["field"] == "规格型号" and row["status"] == "needs_review" for row in details["comparison_rows"])
+    assert any(group["title"] == "匹配到的中文标签样张" for group in details["evidence_groups"])
+    assert "/Users/" not in str(details)
 
 
 def test_c04_handles_flattened_merged_sample_description_rows() -> None:

@@ -845,6 +845,45 @@ p {
   color: var(--color-text);
 }
 
+.explanation-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.explanation-summary-grid > div,
+.explanation-evidence-group {
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.explanation-summary-grid p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.detail-kicker {
+  margin-bottom: 4px !important;
+  color: var(--color-text) !important;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.explanation-evidence-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.explanation-evidence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .comparison-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--color-border);
