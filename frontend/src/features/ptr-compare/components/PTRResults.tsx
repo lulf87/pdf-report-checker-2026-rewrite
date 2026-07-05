@@ -57,7 +57,7 @@ export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps
           ) : null}
           <Metric label="技术要求条款数" value={ptrDetails.requirements_count} />
           <Metric label="已覆盖" value={ptrDetails.covered_count} />
-          <Metric label="排除项" value={ptrDetails.scope_consistency?.excluded_topics?.length ?? 0} />
+          <Metric label="排除项" value={ptrDetails.excluded_items?.length ?? ptrDetails.scope_consistency?.excluded_topics?.length ?? 0} />
           <Metric label="未覆盖" value={ptrDetails.missing_count} tone={ptrDetails.missing_count > 0 ? "warn" : "info"} />
           <Metric label="结果不一致" value={ptrDetails.mismatch_count} tone={ptrDetails.mismatch_count > 0 ? "warn" : "info"} />
           <Metric label="需复核" value={ptrDetails.needs_review_count} tone={ptrDetails.needs_review_count > 0 ? "warn" : "info"} />

@@ -86,7 +86,13 @@ class PTRExtractor:
 
     def _is_later_top_level_chapter(self, line: str) -> bool:
         match = TOP_LEVEL_CHAPTER_RE.match(line)
-        return bool(match and match.group(1).isdigit() and int(match.group(1)) > 2)
+        if not match or not match.group(1).isdigit() or int(match.group(1)) <= 2:
+            return False
+        title = (match.group(2) or "").strip()
+        if not title:
+            return False
+        compact = re.sub(r"\s+", "", title)
+        return bool(any(keyword in compact for keyword in ("检验方法", "测试方法", "试验方法", "检验", "测试", "试验")))
 
     def _extract_clauses_from_page(self, page: PdfPage) -> list[PTRClause]:
         clauses: list[PTRClause] = []

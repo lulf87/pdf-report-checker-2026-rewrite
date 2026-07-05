@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.domain.common import Evidence, EvidenceMethod, SourceType
 from app.domain.finding import Finding, FindingSeverity, MissingEvidence
 from app.domain.ptr import PTRClause, PTRDocument, TableReference
+from app.rules.ptr.atomic_compare import table_for_clause
 
 
 def check_table_references(
@@ -18,7 +19,7 @@ def check_table_references(
             candidates = ptr_doc.get_tables_by_number(reference.table_number)
             if not candidates:
                 findings.append(_missing_table_finding(clause, reference, task_id))
-            elif len(candidates) > 1:
+            elif len(candidates) > 1 and table_for_clause(clause, ptr_doc) is None:
                 findings.append(_ambiguous_table_finding(clause, reference, candidates, task_id))
     return findings
 
@@ -77,4 +78,3 @@ def _clause_evidence(clause: PTRClause) -> Evidence:
         raw_text=clause.body_text,
         method=EvidenceMethod.PDF_TEXT,
     )
-

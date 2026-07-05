@@ -1,7 +1,14 @@
 import type { CodexReviewResult } from "../codexReview/types";
 import { normalizeCodexReviews } from "../codexReview/types";
 import type { DiffFragment, Finding, FindingSeverity } from "../finding/types";
-import type { CheckResult, PTRComparisonItem, PTRScopeConsistency, TaskResult, TaskStatus } from "../task/types";
+import type {
+  CheckResult,
+  PTRComparisonItem,
+  PTRExcludedComparisonItem,
+  PTRScopeConsistency,
+  TaskResult,
+  TaskStatus,
+} from "../task/types";
 
 export type PTRFilterMode = "all" | "issues";
 
@@ -46,7 +53,7 @@ export function toPTRClauseViewModels(result: TaskResult): PTRClauseViewModel[] 
   const details = result.metadata.ptr_comparison_details;
   if (details?.items?.length) {
     const codexReviews = result.check_results.flatMap((item) => normalizeCodexReviews(item.codex_reviews));
-    return details.items.map((item, index) => {
+    const included = details.items.map((item, index) => {
       const findings = result.findings.filter((finding) => findingMatchesPtrItem(finding, item));
       return {
         id: `PTR-${item.ptr_clause_id}-${index}`,
@@ -65,13 +72,27 @@ export function toPTRClauseViewModels(result: TaskResult): PTRClauseViewModel[] 
         scopeConsistency: details.scope_consistency ?? null,
       };
     });
+    const excluded = (details.excluded_items ?? []).map((item, index) => ({
+      id: `PTR-excluded-${item.ptr_clause_id}-${index}`,
+      checkId: item.ptr_clause_id,
+      title: item.ptr_title || "排除条款",
+      status: "skip" as CheckResult["status"],
+      severity: "info" as const,
+      summary: item.reason,
+      findings: [],
+      diffs: [],
+      codexReviews: [],
+      ptrItem: excludedToPtrItem(item),
+      scopeConsistency: details.scope_consistency ?? null,
+    }));
+    return [...included, ...excluded];
   }
   return result.check_results.map((item, index) => toPTRClauseViewModel(item, index));
 }
 
 export function isPTRIssue(clause: PTRClauseViewModel): boolean {
   if (clause.ptrItem) {
-    return !["covered_passed", "refuted"].includes(clause.ptrItem.coverage_status ?? clause.ptrItem.user_facing_status);
+    return !["covered_passed", "refuted", "excluded_by_scope"].includes(clause.ptrItem.coverage_status ?? clause.ptrItem.user_facing_status);
   }
   return clause.status === "fail" || clause.status === "review" || clause.status === "system_error";
 }
@@ -85,6 +106,7 @@ function findingMatchesPtrItem(finding: Finding, item: PTRComparisonItem): boole
 function ptrItemCheckStatus(item: PTRComparisonItem): CheckResult["status"] {
   const status = item.coverage_status ?? item.user_facing_status;
   if (status === "covered_passed" || status === "refuted") return "pass";
+  if (status === "excluded_by_scope") return "skip";
   if (status === "confirmed_error" || status === "audit_incomplete") return "fail";
   return "review";
 }
@@ -92,6 +114,32 @@ function ptrItemCheckStatus(item: PTRComparisonItem): CheckResult["status"] {
 function ptrItemSeverity(item: PTRComparisonItem): FindingSeverity | null {
   const status = item.coverage_status ?? item.user_facing_status;
   if (status === "confirmed_error" || status === "audit_incomplete") return "error";
-  if (status === "covered_passed" || status === "refuted") return "info";
+  if (status === "covered_passed" || status === "refuted" || status === "excluded_by_scope") return "info";
   return "warn";
+}
+
+function excludedToPtrItem(item: PTRExcludedComparisonItem): PTRComparisonItem {
+  return {
+    ptr_clause_id: item.ptr_clause_id,
+    ptr_title: item.ptr_title,
+    ptr_requirement_text: item.ptr_requirement_text,
+    report_matches: [],
+    external_standard_coverages: [],
+    atomic_requirements: [],
+    atomic_comparison_rows: [],
+    normalized_comparison: {
+      requirement_type: "excluded_by_scope",
+      expected: item.ptr_requirement_text,
+      actual: item.excluded_topic,
+      status: "not_applicable",
+    },
+    rule_status: item.status,
+    coverage_status: item.status,
+    user_facing_status: item.status,
+    final_status: "passed",
+    reason: item.reason,
+    evidence_refs: [],
+    search_keywords: [item.ptr_clause_id, item.ptr_title ?? ""].filter(Boolean),
+    candidate_report_items: [],
+  };
 }

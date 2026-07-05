@@ -217,6 +217,7 @@ export interface ExplanationDetails {
 export type PTRComparisonOverallStatus = "passed" | "needs_review" | "failed" | "audit_incomplete" | string;
 export type PTRComparisonUserFacingStatus =
   | "covered_passed"
+  | "coverage_only_needs_review"
   | "missing_in_report"
   | "value_mismatch"
   | "needs_review"
@@ -238,6 +239,8 @@ export interface PTRReportMatch {
   item_no?: string | null;
   page?: number | null;
   report_page?: number | null;
+  report_pages?: number[];
+  page_span?: [number, number] | null;
   standard_clause?: string | null;
   item_name?: string | null;
   standard_requirement?: string | null;
@@ -253,6 +256,37 @@ export interface PTRNormalizedComparison {
   unit?: string | null;
   operator?: string | null;
   status: "match" | "mismatch" | "needs_review" | string;
+}
+
+export interface PTRAtomicRequirement {
+  atomic_id: string;
+  clause_id: string;
+  label: string;
+  expected_text?: string | null;
+  expected_value?: number | null;
+  operator?: string | null;
+  unit?: string | null;
+  source: "ptr_text" | "ptr_table" | string;
+  table_number?: string | null;
+  table_title?: string | null;
+  table_key?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface PTRAtomicComparisonRow {
+  atomic_id: string;
+  clause_id: string;
+  label: string;
+  expected?: string | null;
+  actual?: string | null;
+  status: "match" | "mismatch" | "needs_review" | "not_applicable" | string;
+  reason?: string | null;
+  report_page?: number | null;
+  report_item_no?: string | null;
+  source: "ptr_text" | "ptr_table" | string;
+  table_number?: string | null;
+  table_title?: string | null;
+  table_key?: string | null;
 }
 
 export interface PTRScopeRange {
@@ -301,6 +335,9 @@ export interface PTRComparisonItem {
   ptr_requirement_text: string;
   report_matches: PTRReportMatch[];
   external_standard_coverage?: PTRExternalStandardCoverage | null;
+  external_standard_coverages?: PTRExternalStandardCoverage[];
+  atomic_requirements?: PTRAtomicRequirement[];
+  atomic_comparison_rows?: PTRAtomicComparisonRow[];
   normalized_comparison: PTRNormalizedComparison;
   rule_status: PTRComparisonUserFacingStatus;
   coverage_status?: PTRComparisonUserFacingStatus;
@@ -311,6 +348,16 @@ export interface PTRComparisonItem {
   evidence_refs: string[];
   search_keywords?: string[];
   candidate_report_items?: PTRReportMatch[];
+}
+
+export interface PTRExcludedComparisonItem {
+  ptr_clause_id: string;
+  ptr_title?: string | null;
+  ptr_requirement_text: string;
+  status: "excluded_by_scope" | string;
+  reason: string;
+  excluded_topic?: string | null;
+  evidence?: string | null;
 }
 
 export interface PTRComparisonDetails {
@@ -326,6 +373,7 @@ export interface PTRComparisonDetails {
   manual_review_required_count: number;
   refuted_findings_count: number;
   items: PTRComparisonItem[];
+  excluded_items?: PTRExcludedComparisonItem[];
 }
 
 export interface CheckResultMetadata extends Record<string, unknown> {

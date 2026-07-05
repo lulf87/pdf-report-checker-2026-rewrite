@@ -76,6 +76,54 @@ def test_report_scope_consistency_reports_external_standard_range_mismatch() -> 
     assert result.findings[0].metadata["standard"] == "GB 9706.1-2020"
 
 
+def test_report_scope_consistency_accepts_external_range_declared_standard_without_repeated_item_standard_names() -> None:
+    result = check_report_scope_consistency(
+        _scope(),
+        [
+            InspectionItem(sequence_raw="1", sequence=1, standard_clause=None, standard_requirement="通用安全项目起点", source_page=6),
+            InspectionItem(sequence_raw="118", sequence=118, standard_clause=None, standard_requirement="通用安全项目终点", source_page=45),
+            InspectionItem(sequence_raw="119", sequence=119, standard_clause=None, standard_requirement="专用安全项目起点", source_page=46),
+            InspectionItem(sequence_raw="156", sequence=156, standard_clause=None, standard_requirement="专用安全项目终点", source_page=98),
+            InspectionItem(sequence_raw="157", sequence=157, standard_clause="2.2", standard_requirement="心脏脉冲电场消融仪输出", source_page=99),
+            InspectionItem(sequence_raw="158", sequence=158, standard_clause="2.5", standard_requirement="电气安全", source_page=99),
+            InspectionItem(sequence_raw="159", sequence=159, standard_clause="2.6", standard_requirement="软件功能", source_page=99),
+        ],
+        task_id="task-scope-range-declared-standard",
+    )
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["scope_consistency"]["actual_report_scope"] == ["2.2", "2.5", "2.6"]
+
+
+def test_report_scope_consistency_ignores_external_standard_clause_that_contains_embedded_2x_number() -> None:
+    result = check_report_scope_consistency(
+        _scope(),
+        [
+            InspectionItem(sequence_raw="1", sequence=1, standard_clause=None, standard_requirement="通用安全项目起点", source_page=6),
+            InspectionItem(sequence_raw="118", sequence=118, standard_clause=None, standard_requirement="通用安全项目终点", source_page=45),
+            InspectionItem(sequence_raw="119", sequence=119, standard_clause=None, standard_requirement="专用安全项目起点", source_page=46),
+            InspectionItem(
+                sequence_raw="续\n129",
+                sequence=129,
+                is_continuation=True,
+                standard_clause="201.7.9.\n2.14",
+                standard_requirement="使用说明书还可见 201.15.4.101.1 和 201.15.4.101.2。",
+                source_page=85,
+            ),
+            InspectionItem(sequence_raw="156", sequence=156, standard_clause=None, standard_requirement="专用安全项目终点", source_page=98),
+            InspectionItem(sequence_raw="157", sequence=157, standard_clause="2.2", standard_requirement="心脏脉冲电场消融仪输出", source_page=99),
+            InspectionItem(sequence_raw="158", sequence=158, standard_clause="2.5", standard_requirement="电气安全", source_page=99),
+            InspectionItem(sequence_raw="159", sequence=159, standard_clause="2.6", standard_requirement="软件功能", source_page=99),
+        ],
+        task_id="task-scope-ignore-external-201",
+    )
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["scope_consistency"]["actual_report_scope"] == ["2.2", "2.5", "2.6"]
+
+
 def _scope() -> ReportInspectionScope:
     return ReportInspectionScope(
         declared_scope_items=["2.2", "2.5", "2.6"],

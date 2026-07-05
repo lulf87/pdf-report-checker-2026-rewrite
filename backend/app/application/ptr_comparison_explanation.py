@@ -7,7 +7,9 @@ from typing import Any
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.ptr import PTRClause, PTRDocument
 from app.domain.ptr_comparison import (
+    PTRAtomicComparisonRow,
     PTRComparisonDetails,
+    PTRExcludedComparisonItem,
     PTRComparisonItem,
     PTRComparisonOverallStatus,
     PTRDisplayFinalStatus,
@@ -15,10 +17,19 @@ from app.domain.ptr_comparison import (
     PTRReportMatch,
     PTRUserFacingStatus,
 )
+from app.domain.inspection_group import InspectionItemGroup
 from app.domain.report import InspectionItem, ReportDocument
 from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope
 from app.domain.result import CheckResult
 from app.domain.table import CanonicalTable, ParameterRecord
+from app.rules.ptr.atomic_compare import build_atomic_comparison_rows, build_atomic_requirements
+from app.rules.ptr.report_item_grouping import (
+    build_ptr_report_item_groups,
+    ptr_group_for_clause,
+    ptr_group_single_conclusion,
+    ptr_group_standard_requirement,
+    ptr_group_test_result,
+)
 
 
 CLAUSE_NUMBER_RE = re.compile(r"\d+(?:\.\d+)+")
@@ -40,6 +51,7 @@ REVIEW_CODES = {
     "PTR_TABLE_CANDIDATE_AMBIGUOUS",
     "PTR_TABLE_SEGMENT_AMBIGUOUS",
     "PTR_SCOPE_FILTER_REVIEW",
+    "PTR_CLAUSE_INVALID_MATCH_CANDIDATE",
 }
 PTR_CHECK_IDS = {"PTR_SCOPE", "PTR_CLAUSE", "PTR_TABLE"}
 
@@ -53,6 +65,7 @@ def build_ptr_comparison_details(
 ) -> PTRComparisonDetails:
     findings_by_clause = _findings_by_clause(check_results)
     report_candidates = _candidate_report_items(report_doc.inspection_items)
+    report_groups = build_ptr_report_item_groups(report_doc.inspection_items)
     report_scope = _report_inspection_scope(report_doc)
     scope_consistency = _scope_consistency_metadata(check_results, report_scope)
 
@@ -60,33 +73,49 @@ def build_ptr_comparison_details(
         _comparison_item(
             clause=clause,
             findings=findings_by_clause.get(str(clause.number), []),
-            report_matches=_report_matches_for_clause(str(clause.number), report_doc.inspection_items),
+            report_matches=_report_matches_for_clause(str(clause.number), report_groups),
             report_candidates=report_candidates,
-            external_coverage=_external_standard_coverage(clause, report_scope, report_doc.inspection_items),
+            external_coverages=_external_standard_coverages(clause, report_scope, report_doc.inspection_items),
             ptr_doc=ptr_doc,
             report_doc=report_doc,
         )
         for clause in included_clauses
     ]
-    return _details_from_items(items, scope_consistency=scope_consistency)
+    return _details_from_items(
+        items,
+        excluded_items=_excluded_items(ptr_doc=ptr_doc, check_results=check_results),
+        scope_consistency=scope_consistency,
+    )
 
 
 def _comparison_item(
     *,
     clause: PTRClause,
     findings: list[Finding],
-    report_matches: list[InspectionItem],
+    report_matches: list[InspectionItemGroup],
     report_candidates: list[InspectionItem],
-    external_coverage: dict[str, Any] | None,
+    external_coverages: list[dict[str, Any]],
     ptr_doc: PTRDocument,
     report_doc: ReportDocument,
 ) -> PTRComparisonItem:
     clause_number = str(clause.number)
+    atomic_requirements = build_atomic_requirements(clause, ptr_doc)
+    atomic_rows = build_atomic_comparison_rows(clause, ptr_doc, report_matches)
     selected_finding = _primary_finding(findings)
     rule_status = _rule_status(findings)
     user_status = _user_facing_status(findings)
+    if selected_finding is None:
+        atomic_status = _status_from_atomic_rows(
+            atomic_rows,
+            report_matches=report_matches,
+            external_coverages=external_coverages,
+        )
+        if atomic_status is not None:
+            rule_status = atomic_status
+            user_status = atomic_status
     final_status = _display_final_status(user_status)
     search_keywords = _search_keywords(clause)
+    external_coverage = external_coverages[0] if external_coverages else None
     candidate_items = [] if report_matches or external_coverage else [_report_match(item) for item in report_candidates[:5]]
 
     return PTRComparisonItem(
@@ -96,10 +125,14 @@ def _comparison_item(
         ptr_requirement_text=_safe_text(clause.body_text or clause.text_content or clause.full_text or ""),
         report_matches=[_report_match(item) for item in report_matches],
         external_standard_coverage=_safe_payload(external_coverage),
+        external_standard_coverages=_safe_payload(external_coverages),
+        atomic_requirements=_safe_payload(atomic_requirements),
+        atomic_comparison_rows=_safe_payload(atomic_rows),
         normalized_comparison=_normalized_comparison(
             clause=clause,
             report_matches=report_matches,
             external_coverage=external_coverage,
+            atomic_rows=atomic_rows,
             finding=selected_finding,
             ptr_doc=ptr_doc,
             report_doc=report_doc,
@@ -112,7 +145,8 @@ def _comparison_item(
             clause=clause,
             finding=selected_finding,
             report_matches=report_matches,
-            external_coverage=external_coverage,
+            external_coverages=external_coverages,
+            atomic_rows=atomic_rows,
             rule_status=rule_status,
             user_status=user_status,
             search_keywords=search_keywords,
@@ -125,7 +159,13 @@ def _comparison_item(
     )
 
 
-def _details_from_items(items: list[PTRComparisonItem], *, scope_consistency: dict[str, Any] | None = None) -> PTRComparisonDetails:
+def _details_from_items(
+    items: list[PTRComparisonItem],
+    *,
+    excluded_items: list[PTRExcludedComparisonItem] | None = None,
+    scope_consistency: dict[str, Any] | None = None,
+) -> PTRComparisonDetails:
+    excluded_items = excluded_items or []
     requirements_count = len(items)
     covered_count = sum(1 for item in items if item.user_facing_status in {PTRUserFacingStatus.COVERED_PASSED, PTRUserFacingStatus.REFUTED})
     missing_count = sum(1 for item in items if item.rule_status == PTRUserFacingStatus.MISSING_IN_REPORT and item.user_facing_status != PTRUserFacingStatus.REFUTED)
@@ -139,6 +179,7 @@ def _details_from_items(items: list[PTRComparisonItem], *, scope_consistency: di
         if item.user_facing_status
         in {
             PTRUserFacingStatus.NEEDS_REVIEW,
+            PTRUserFacingStatus.COVERAGE_ONLY_NEEDS_REVIEW,
             PTRUserFacingStatus.CANDIDATE_ISSUE,
             PTRUserFacingStatus.AUDIT_INCOMPLETE,
         }
@@ -169,6 +210,7 @@ def _details_from_items(items: list[PTRComparisonItem], *, scope_consistency: di
         manual_review_required_count=manual_review_required_count,
         refuted_findings_count=refuted_findings_count,
         items=items,
+        excluded_items=excluded_items,
     )
 
 
@@ -193,42 +235,47 @@ def _finding_clause_number(finding: Finding) -> str:
     return match.group(0) if match else ""
 
 
-def _report_item_clause_numbers(item: InspectionItem) -> list[str]:
-    text = " ".join([item.standard_clause or "", item.standard_requirement or ""])
-    return [number for number in dict.fromkeys(CLAUSE_NUMBER_RE.findall(text)) if number.startswith("2.")]
-
-
-def _report_matches_for_clause(clause_number: str, report_items: Sequence[InspectionItem]) -> list[InspectionItem]:
-    matches: list[InspectionItem] = []
-    for item in report_items:
-        if any(_related_clause_numbers(clause_number, report_number) for report_number in _report_item_clause_numbers(item)):
-            matches.append(item)
-    return matches
-
-
-def _related_clause_numbers(ptr_clause_number: str, report_clause_number: str) -> bool:
-    return (
-        ptr_clause_number == report_clause_number
-        or ptr_clause_number.startswith(report_clause_number + ".")
-        or report_clause_number.startswith(ptr_clause_number + ".")
-    )
+def _report_matches_for_clause(clause_number: str, report_groups: Sequence[InspectionItemGroup]) -> list[InspectionItemGroup]:
+    match = ptr_group_for_clause(clause_number, report_groups)
+    return [match] if match is not None else []
 
 
 def _candidate_report_items(report_items: Sequence[InspectionItem]) -> list[InspectionItem]:
     return list(report_items)
 
 
-def _report_match(item: InspectionItem) -> PTRReportMatch:
+def _report_match(item: InspectionItem | InspectionItemGroup) -> PTRReportMatch:
+    if isinstance(item, InspectionItemGroup):
+        return _report_group_match(item)
     item_no = item.sequence_raw or (str(item.sequence) if item.sequence is not None else None)
     return PTRReportMatch(
         item_no=_safe_text(item_no),
         report_page=item.source_page or (item.row_location.page_number if item.row_location else None),
+        report_pages=[item.source_page] if item.source_page is not None else [],
+        page_span=(item.source_page, item.source_page) if item.source_page is not None else None,
         standard_clause=_safe_text(item.standard_clause),
         item_name=_safe_text(item.item_name),
         standard_requirement=_safe_text(item.standard_requirement),
         test_result=_safe_text(item.test_result or "; ".join(item.result_values)),
         single_conclusion=_safe_text(item.conclusion),
         remark=_safe_text(item.remark),
+    )
+
+
+def _report_group_match(group: InspectionItemGroup) -> PTRReportMatch:
+    first_row = group.rows[0] if group.rows else None
+    pages = list(group.pages)
+    return PTRReportMatch(
+        item_no=_safe_text(group.display_item_no or group.item_no),
+        report_page=pages[0] if pages else None,
+        report_pages=pages,
+        page_span=(pages[0], pages[-1]) if pages else None,
+        standard_clause=_safe_text(first_row.standard_clause if first_row else None),
+        item_name=_safe_text(first_row.item_name if first_row else None),
+        standard_requirement=_safe_text(ptr_group_standard_requirement(group)),
+        test_result=_safe_text(ptr_group_test_result(group)),
+        single_conclusion=_safe_text(ptr_group_single_conclusion(group)),
+        remark=_safe_text(first_row.remark if first_row else None),
     )
 
 
@@ -316,17 +363,49 @@ def _display_final_status(user_status: PTRUserFacingStatus) -> PTRDisplayFinalSt
     return PTRDisplayFinalStatus.MANUAL_REVIEW_REQUIRED
 
 
+def _status_from_atomic_rows(
+    atomic_rows: list[PTRAtomicComparisonRow],
+    *,
+    report_matches: list[InspectionItemGroup],
+    external_coverages: list[dict[str, Any]],
+) -> PTRUserFacingStatus | None:
+    if atomic_rows:
+        statuses = {row.status for row in atomic_rows}
+        if "mismatch" in statuses:
+            return PTRUserFacingStatus.VALUE_MISMATCH
+        if "needs_review" in statuses:
+            return PTRUserFacingStatus.NEEDS_REVIEW
+        if statuses and statuses <= {"match", "not_applicable"}:
+            return PTRUserFacingStatus.COVERED_PASSED
+    if external_coverages:
+        return PTRUserFacingStatus.COVERED_PASSED
+    if report_matches:
+        return PTRUserFacingStatus.COVERAGE_ONLY_NEEDS_REVIEW
+    return None
+
+
 def _normalized_comparison(
     *,
     clause: PTRClause,
-    report_matches: list[InspectionItem],
+    report_matches: list[InspectionItemGroup],
     external_coverage: dict[str, Any] | None,
+    atomic_rows: list[PTRAtomicComparisonRow],
     finding: Finding | None,
     ptr_doc: PTRDocument,
     report_doc: ReportDocument,
 ) -> PTRNormalizedComparison:
     if finding is None:
-        actual = report_matches[0].standard_requirement if report_matches else (external_coverage or {}).get("standard")
+        if atomic_rows:
+            expected_values = [f"{row.label}:{row.expected}" for row in atomic_rows if row.expected]
+            actual_values = [f"{row.label}:{row.actual}" for row in atomic_rows if row.actual]
+            status = "match" if all(row.status in {"match", "not_applicable"} for row in atomic_rows) else "needs_review"
+            return PTRNormalizedComparison(
+                requirement_type="atomic_parameter_comparison",
+                expected=_safe_text("；".join(expected_values)),
+                actual=_safe_text("；".join(actual_values)),
+                status=status,
+            )
+        actual = ptr_group_standard_requirement(report_matches[0]) if report_matches else (external_coverage or {}).get("standard")
         return PTRNormalizedComparison(
             requirement_type="external_standard_coverage" if external_coverage else ("coverage" if report_matches else "unknown"),
             expected=_safe_text(clause.body_text or clause.text_content or clause.full_text or ""),
@@ -410,8 +489,9 @@ def _reason(
     *,
     clause: PTRClause,
     finding: Finding | None,
-    report_matches: list[InspectionItem],
-    external_coverage: dict[str, Any] | None,
+    report_matches: list[InspectionItemGroup],
+    external_coverages: list[dict[str, Any]],
+    atomic_rows: list[PTRAtomicComparisonRow],
     rule_status: PTRUserFacingStatus,
     user_status: PTRUserFacingStatus,
     search_keywords: list[str],
@@ -419,14 +499,23 @@ def _reason(
 ) -> str:
     title = _safe_text(clause.title) or f"PTR 条款 {clause.number}"
     if finding is None:
-        if external_coverage:
-            standard = external_coverage.get("standard")
-            start = external_coverage.get("start_item_no")
-            end = external_coverage.get("end_item_no")
-            return _safe_text(f"报告声明序号 {start}～{end} 为 {standard} 标准内容，可覆盖 {title} 相关外部标准要求。")
+        if atomic_rows:
+            if any(row.status == "needs_review" for row in atomic_rows):
+                if str(clause.number) == "2.6":
+                    return _safe_text("报告序号 159 覆盖软件功能总项，但表格功能明细需复核。")
+                return _safe_text(f"报告匹配项覆盖 {title}，但部分参数级证据需复核。")
+            if all(row.status in {"match", "not_applicable"} for row in atomic_rows):
+                item_no = report_matches[0].display_item_no or report_matches[0].item_no if report_matches else None
+                prefix = f"报告序号 {item_no} " if item_no else "报告检验项"
+                return _safe_text(f"{prefix}参数级比对满足 {title} 要求。")
+        if external_coverages:
+            coverage_text = "、".join(_external_coverage_summary(coverage) for coverage in external_coverages)
+            return _safe_text(f"报告声明{coverage_text}标准内容，可覆盖 {title} 相关外部标准要求。")
         if report_matches:
-            item_no = report_matches[0].sequence_raw or (str(report_matches[0].sequence) if report_matches[0].sequence is not None else "")
+            item_no = report_matches[0].display_item_no or report_matches[0].item_no
             prefix = f"报告序号 {item_no} " if item_no else "报告检验项"
+            if user_status == PTRUserFacingStatus.COVERAGE_ONLY_NEEDS_REVIEW:
+                return _safe_text(f"{prefix}仅证明 group 覆盖 {title}，尚未形成参数级原子比对，需复核。")
             return _safe_text(f"{prefix}覆盖{title}要求。")
         return _safe_text(f"未发现规则问题，但报告匹配项不足，需人工确认 {title}。")
 
@@ -585,30 +674,90 @@ def _scope_consistency_metadata(
     )
 
 
-def _external_standard_coverage(
+def _excluded_items(
+    *,
+    ptr_doc: PTRDocument,
+    check_results: Sequence[CheckResult],
+) -> list[PTRExcludedComparisonItem]:
+    decisions = _scope_decisions(check_results)
+    if not decisions:
+        return []
+    clauses_by_id = {clause.clause_id: clause for clause in ptr_doc.clauses}
+    result: list[PTRExcludedComparisonItem] = []
+    for decision in decisions:
+        if decision.get("included") is True or decision.get("reason") != "excluded_topic":
+            continue
+        clause = clauses_by_id.get(str(decision.get("clause_id") or ""))
+        if clause is None:
+            continue
+        topic = str(decision.get("evidence") or "")
+        result.append(
+            PTRExcludedComparisonItem(
+                ptr_clause_id=str(clause.number),
+                ptr_title=_safe_text(clause.title),
+                ptr_requirement_text=_safe_text(clause.body_text or clause.text_content or clause.full_text or "") or "",
+                status="excluded_by_scope",
+                reason=_excluded_reason(topic),
+                excluded_topic=_safe_text(topic),
+                evidence=_safe_text(decision.get("evidence")),
+            )
+        )
+    return result
+
+
+def _scope_decisions(check_results: Sequence[CheckResult]) -> list[dict[str, Any]]:
+    for result in check_results:
+        if result.check_id != "PTR_SCOPE":
+            continue
+        raw = result.metadata.get("decisions")
+        if not isinstance(raw, list):
+            return []
+        return [item for item in raw if isinstance(item, dict)]
+    return []
+
+
+def _excluded_reason(topic: str) -> str:
+    if "电磁兼容" in topic:
+        return "报告首页声明除电磁兼容性，且第5页说明电磁兼容性检验见 QW2025 第1540号。"
+    if topic:
+        return f"报告首页声明除{topic}，不参与本次比对。"
+    return "报告首页范围声明排除该条款，不参与本次比对。"
+
+
+def _external_coverage_summary(coverage: dict[str, Any]) -> str:
+    standard = coverage.get("standard")
+    start = coverage.get("start_item_no")
+    end = coverage.get("end_item_no")
+    return f"序号 {start}～{end} 为 {standard}"
+
+
+def _external_standard_coverages(
     clause: PTRClause,
     report_scope: ReportInspectionScope | None,
     report_items: Sequence[InspectionItem],
-) -> dict[str, Any] | None:
+) -> list[dict[str, Any]]:
     if report_scope is None:
-        return None
+        return []
     clause_text = _normalize_standard_text(" ".join([clause.title or "", clause.body_text or "", clause.full_text or ""]))
+    coverages: list[dict[str, Any]] = []
     for standard_range in report_scope.external_standard_ranges:
         if _normalize_standard_text(standard_range.standard) not in clause_text:
             continue
         range_items = _items_in_standard_range(report_items, standard_range)
-        return {
-            "standard": _safe_text(standard_range.standard),
-            "start_item_no": standard_range.start_item_no,
-            "end_item_no": standard_range.end_item_no,
-            "source_page": standard_range.source_page,
-            "source_text": _safe_text(standard_range.source_text),
-            "item_count": len(range_items),
-            "passed_count": sum(1 for item in range_items if _looks_passed(item)),
-            "review_count": sum(1 for item in range_items if not _looks_passed(item)),
-            "sample_items": [_report_match(item).model_dump(mode="json") for item in range_items[:5]],
-        }
-    return None
+        coverages.append(
+            {
+                "standard": _safe_text(standard_range.standard),
+                "start_item_no": standard_range.start_item_no,
+                "end_item_no": standard_range.end_item_no,
+                "source_page": standard_range.source_page,
+                "source_text": _safe_text(standard_range.source_text),
+                "item_count": len(range_items),
+                "passed_count": sum(1 for item in range_items if _looks_passed(item)),
+                "review_count": sum(1 for item in range_items if not _looks_passed(item)),
+                "sample_items": [_report_match(item).model_dump(mode="json") for item in range_items[:5]],
+            }
+        )
+    return coverages
 
 
 def _items_in_standard_range(

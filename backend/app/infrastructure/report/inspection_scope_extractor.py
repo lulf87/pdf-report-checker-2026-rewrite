@@ -13,7 +13,7 @@ EXCLUSION_PATTERNS = (
     re.compile(r"(?:不包括|不含|不检|排除)([^）)。；;]+)"),
 )
 EXTERNAL_RANGE_RE = re.compile(
-    r"序号\s*(\d+)\s*(?:[~～\-]|至|到)\s*(?:序号\s*)?(\d+)\s*为\s*((?:GB/T|GB|YY/T|YY)\s*\d+(?:\.\d+)*(?:-\d{4})?)",
+    r"序号\s*(\d+)\s*(?:[~～\-]|至|到)\s*(?:序号\s*)?(\d+)\s*为\s*((?:GB/T|GB|YY/T|YY)\s*\d+(?:\s*\.\s*\d+)*(?:\s*-\s*\d{4})?)",
     re.IGNORECASE,
 )
 
@@ -110,22 +110,39 @@ def _parse_external_standard_ranges(report: ReportDocument) -> list[ExternalStan
         return []
     ranges: list[ExternalStandardRange] = []
     for page in report.parsed_pdf.pages:
-        for line in _non_empty_lines(page.text):
-            for match in EXTERNAL_RANGE_RE.finditer(line):
-                ranges.append(
-                    ExternalStandardRange(
-                        start_item_no=match.group(1),
-                        end_item_no=match.group(2),
-                        standard=match.group(3).strip(),
-                        source_page=page.page_number,
-                        source_text=line,
-                    )
+        page_text = _normalize_page_text(page.text)
+        for match in EXTERNAL_RANGE_RE.finditer(page_text):
+            ranges.append(
+                ExternalStandardRange(
+                    start_item_no=match.group(1),
+                    end_item_no=match.group(2),
+                    standard=_normalize_standard(match.group(3)),
+                    source_page=page.page_number,
+                    source_text=_external_range_source_text(page_text, match),
                 )
+            )
     return ranges
 
 
-def _non_empty_lines(text: str) -> list[str]:
-    return [line.strip() for line in str(text or "").splitlines() if line.strip()]
+def _normalize_page_text(text: str) -> str:
+    value = re.sub(r"\s+", " ", str(text or "")).strip()
+    return _normalize_standard_punctuation(value)
+
+
+def _normalize_standard(value: str) -> str:
+    return _normalize_standard_punctuation(re.sub(r"\s+", " ", value or "").strip())
+
+
+def _normalize_standard_punctuation(value: str) -> str:
+    value = re.sub(r"(?<=\d)\s*\.\s*(?=\d)", ".", value)
+    value = re.sub(r"(?<=\d)\s*-\s*(?=\d)", "-", value)
+    return value
+
+
+def _external_range_source_text(page_text: str, match: re.Match[str]) -> str:
+    next_match = re.search(r"\s+序号\s*\d+", page_text[match.end() :])
+    end = match.end() + next_match.start() if next_match else len(page_text)
+    return page_text[match.start() : end].strip()
 
 
 def _max_end_item_no(ranges: list[ExternalStandardRange]) -> str | None:

@@ -27,11 +27,20 @@ from app.domain.evidence_package import (
     EvidenceTarget,
 )
 from app.domain.finding import Finding
+from app.domain.inspection_group import InspectionItemGroup
 from app.domain.ptr import PTRClause, PTRDocument, PTRTable
 from app.domain.report import InspectionItem, ReportDocument
 from app.domain.report_scope import ReportInspectionScope
 from app.domain.result import CheckResult
 from app.domain.table import CanonicalTable, ParameterRecord
+from app.rules.ptr.report_item_grouping import (
+    build_ptr_report_item_groups,
+    ptr_group_compact_rows,
+    ptr_group_for_clause,
+    ptr_group_single_conclusion,
+    ptr_group_standard_requirement,
+    ptr_group_test_result,
+)
 
 
 OLD_PROJECT_ROOT = "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.4.13"
@@ -41,6 +50,7 @@ REDACTED_PATH = "[redacted-path]"
 CLAUSE_CODES = {
     "PTR_CLAUSE_TEXT_MISMATCH",
     "PTR_CLAUSE_MISSING",
+    "PTR_CLAUSE_INVALID_MATCH_CANDIDATE",
 }
 TABLE_CODES = {
     "PTR_TABLE_MISSING",
@@ -275,6 +285,10 @@ class PtrCodexEvidenceBuilder:
         if clause is not None:
             self._add_item(items_by_ref, self._clause_item(clause), refs)
 
+        group_item = self._report_inspection_group_item_for_finding(finding, report_doc)
+        if group_item is not None:
+            self._add_item(items_by_ref, group_item, refs)
+
         for ptr_table in self._ptr_tables_for_finding(finding, ptr_doc):
             item = self._ptr_table_item(ptr_table)
             if item is not None:
@@ -470,6 +484,59 @@ class PtrCodexEvidenceBuilder:
             section="inspection_items",
             metadata={"source": "report_inspection_table"},
         )
+
+    def _report_inspection_group_item_for_finding(
+        self,
+        finding: Finding,
+        report_doc: ReportDocument,
+    ) -> EvidenceItem | None:
+        if finding.check_id != "PTR_CLAUSE" or not report_doc.inspection_items:
+            return None
+        group = self._report_inspection_group_for_finding(finding, report_doc)
+        if group is None:
+            return None
+        item_no = group.display_item_no or group.item_no
+        return EvidenceItem(
+            ref_id=f"report_inspection_group:{self._sanitize_text(item_no)}",
+            source_type=EvidenceSourceType.TABLE,
+            title=self._sanitize_text(f"Report inspection item group {item_no}"),
+            structured=self._safe_payload(
+                {
+                    "inspection_item_group": self._report_inspection_group_summary(group),
+                }
+            ),
+            page_number=group.pages[0] if group.pages else None,
+            section="inspection_item_group",
+            metadata={"source": "report_inspection_table", "item_no": item_no},
+        )
+
+    def _report_inspection_group_for_finding(
+        self,
+        finding: Finding,
+        report_doc: ReportDocument,
+    ) -> InspectionItemGroup | None:
+        groups = build_ptr_report_item_groups(report_doc.inspection_items)
+        item_no = str(finding.metadata.get("item_no") or "")
+        if item_no:
+            for group in groups:
+                if group.item_no == item_no or group.display_item_no == item_no:
+                    return group
+        clause_number = str(finding.metadata.get("clause_number") or "")
+        if clause_number:
+            return ptr_group_for_clause(clause_number, groups)
+        return None
+
+    def _report_inspection_group_summary(self, group: InspectionItemGroup) -> dict[str, Any]:
+        return {
+            "item_no": group.item_no,
+            "display_item_no": group.display_item_no,
+            "pages": list(group.pages),
+            "group_row_count": len(group.rows),
+            "standard_requirement": ptr_group_standard_requirement(group),
+            "test_result": ptr_group_test_result(group),
+            "single_conclusion": ptr_group_single_conclusion(group),
+            "compact_rows": ptr_group_compact_rows(group),
+        }
 
     def _clause_for_finding(self, finding: Finding, ptr_doc: PTRDocument) -> PTRClause | None:
         clause_number = str(finding.metadata.get("clause_number") or "")

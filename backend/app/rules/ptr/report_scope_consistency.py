@@ -153,8 +153,7 @@ def _external_standard_range_findings(
         range_items = _items_in_external_range(report_items, standard_range)
         start_present = any(_item_no(item) == standard_range.start_item_no for item in range_items)
         end_present = any(_item_no(item) == standard_range.end_item_no for item in range_items)
-        standard_present = any(_standard_matches(standard_range.standard, item) for item in range_items)
-        if start_present and end_present and standard_present:
+        if start_present and end_present:
             continue
         findings.append(
             Finding(
@@ -163,14 +162,14 @@ def _external_standard_range_findings(
                 check_id="PTR_REPORT_SCOPE",
                 severity=FindingSeverity.ERROR,
                 code="PTR_SCOPE_STANDARD_RANGE_MISMATCH",
-                message=f"报告声明序号 {standard_range.start_item_no}～{standard_range.end_item_no} 为 {standard_range.standard}，但实际检验表范围或标准名称不一致。",
+                message=f"报告声明序号 {standard_range.start_item_no}～{standard_range.end_item_no} 为 {standard_range.standard}，但实际检验表范围起止序号不一致。",
                 expected=standard_range.model_dump(mode="json"),
                 actual=[_report_item_summary(item) for item in range_items],
                 evidence=[_external_range_evidence(standard_range)],
                 missing_evidence=[
                     MissingEvidence(
                         label="报告实际检验表外部标准序号范围",
-                        reason="未同时确认范围起点、终点和标准名称。",
+                        reason="未同时确认范围起点和终点序号；标准名称以报告范围声明为准。",
                         expected_source=SourceType.REPORT,
                     )
                 ],
@@ -180,7 +179,7 @@ def _external_standard_range_findings(
                     "end_item_no": standard_range.end_item_no,
                     "start_present": start_present,
                     "end_present": end_present,
-                    "standard_present": standard_present,
+                    "standard_from_scope_declaration": True,
                 },
             )
         )
@@ -217,13 +216,27 @@ def _actual_direct_scope(report_scope: ReportInspectionScope, report_items: list
 
 
 def _direct_report_items(report_scope: ReportInspectionScope, report_items: list[InspectionItem]) -> list[InspectionItem]:
-    return [item for item in report_items if not _item_in_any_external_range(item, report_scope.external_standard_ranges)]
+    return [item for item in report_items if _is_direct_report_item(report_scope, item)]
+
+
+def _is_direct_report_item(report_scope: ReportInspectionScope, item: InspectionItem) -> bool:
+    item_no = _item_no_int(item)
+    direct_starts_after = _safe_int(report_scope.ptr_direct_content_starts_after)
+    if item_no is not None and direct_starts_after is not None:
+        return item_no > direct_starts_after
+    if item_no is not None and _item_no_in_any_external_range(item_no, report_scope.external_standard_ranges):
+        return False
+    return bool(_top_level_ptr_clause_number(item.standard_clause or ""))
 
 
 def _item_in_any_external_range(item: InspectionItem, ranges: list[ExternalStandardRange]) -> bool:
     item_no = _item_no_int(item)
     if item_no is None:
         return False
+    return _item_no_in_any_external_range(item_no, ranges)
+
+
+def _item_no_in_any_external_range(item_no: int, ranges: list[ExternalStandardRange]) -> bool:
     for standard_range in ranges:
         start = _safe_int(standard_range.start_item_no)
         end = _safe_int(standard_range.end_item_no)
@@ -259,11 +272,17 @@ def _range_contains(number_tuple: tuple[int, ...], scope_range: ReportScopeRange
 
 
 def _first_ptr_clause_number(item: InspectionItem) -> str:
-    text = " ".join([item.standard_clause or "", item.standard_requirement or ""])
-    for match in CLAUSE_NUMBER_RE.findall(text):
-        if match.startswith("2."):
-            return match
-    return ""
+    standard_clause = _top_level_ptr_clause_number(item.standard_clause or "")
+    if standard_clause:
+        return standard_clause
+    text = item.standard_requirement or ""
+    match = re.search(r"(?<![\d.])2\.\d+(?:\.\d+)*(?![\d.])", text)
+    return match.group(0) if match else ""
+
+
+def _top_level_ptr_clause_number(value: str) -> str:
+    text = re.sub(r"\s+", "", value or "")
+    return text if re.fullmatch(r"2(?:\.\d+)+", text) else ""
 
 
 def _root_scope_number(clause_number: str) -> str:
@@ -293,18 +312,6 @@ def _contains_topic(item_text: str, topic: str) -> bool:
             or f"{compact_topic}性" in item_text
         )
     )
-
-
-def _standard_matches(expected: str, item: InspectionItem) -> bool:
-    expected_norm = _normalize_standard(expected)
-    if not expected_norm:
-        return False
-    actual_text = " ".join([item.standard_clause or "", item.standard_requirement or "", item.item_name or ""])
-    return expected_norm in _normalize_standard(actual_text)
-
-
-def _normalize_standard(value: str) -> str:
-    return re.sub(r"\s+", "", str(value or "")).upper()
 
 
 def _scope_evidence(report_scope: ReportInspectionScope) -> Evidence:
@@ -359,7 +366,14 @@ def _item_no(item: InspectionItem) -> str | None:
 
 def _item_no_int(item: InspectionItem) -> int | None:
     value = _item_no(item)
-    return _safe_int(value)
+    parsed = _safe_int(value)
+    if parsed is not None:
+        return parsed
+    raw = re.sub(r"\s+", "", str(value or ""))
+    continuation = re.fullmatch(r"续(\d+)", raw)
+    if continuation:
+        return int(continuation.group(1))
+    return item.sequence
 
 
 def _safe_int(value: str | None) -> int | None:

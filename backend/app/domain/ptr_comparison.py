@@ -15,6 +15,7 @@ class PTRComparisonOverallStatus(StrEnum):
 
 class PTRUserFacingStatus(StrEnum):
     COVERED_PASSED = "covered_passed"
+    COVERAGE_ONLY_NEEDS_REVIEW = "coverage_only_needs_review"
     MISSING_IN_REPORT = "missing_in_report"
     VALUE_MISMATCH = "value_mismatch"
     NEEDS_REVIEW = "needs_review"
@@ -36,6 +37,8 @@ class PTRDisplayFinalStatus(StrEnum):
 class PTRReportMatch(BaseModel):
     item_no: str | None = None
     report_page: int | None = None
+    report_pages: list[int] = Field(default_factory=list)
+    page_span: tuple[int, int] | None = None
     standard_clause: str | None = None
     item_name: str | None = None
     standard_requirement: str | None = None
@@ -53,6 +56,37 @@ class PTRNormalizedComparison(BaseModel):
     status: str = "needs_review"
 
 
+class PTRAtomicRequirement(BaseModel):
+    atomic_id: str
+    clause_id: str
+    label: str
+    expected_text: str | None = None
+    expected_value: float | None = None
+    operator: str | None = None
+    unit: str | None = None
+    source: str = "ptr_text"
+    table_number: str | None = None
+    table_title: str | None = None
+    table_key: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class PTRAtomicComparisonRow(BaseModel):
+    atomic_id: str
+    clause_id: str
+    label: str
+    expected: str | None = None
+    actual: str | None = None
+    status: str = "needs_review"
+    reason: str | None = None
+    report_page: int | None = None
+    report_item_no: str | None = None
+    source: str = "ptr_text"
+    table_number: str | None = None
+    table_title: str | None = None
+    table_key: str | None = None
+
+
 class PTRComparisonItem(BaseModel):
     ptr_clause_id: str
     ptr_title: str | None = None
@@ -60,6 +94,9 @@ class PTRComparisonItem(BaseModel):
     ptr_requirement_text: str
     report_matches: list[PTRReportMatch] = Field(default_factory=list)
     external_standard_coverage: dict[str, Any] | None = None
+    external_standard_coverages: list[dict[str, Any]] = Field(default_factory=list)
+    atomic_requirements: list[PTRAtomicRequirement] = Field(default_factory=list)
+    atomic_comparison_rows: list[PTRAtomicComparisonRow] = Field(default_factory=list)
     normalized_comparison: PTRNormalizedComparison
     rule_status: PTRUserFacingStatus
     coverage_status: PTRUserFacingStatus
@@ -70,6 +107,16 @@ class PTRComparisonItem(BaseModel):
     evidence_refs: list[str] = Field(default_factory=list)
     search_keywords: list[str] = Field(default_factory=list)
     candidate_report_items: list[PTRReportMatch] = Field(default_factory=list)
+
+
+class PTRExcludedComparisonItem(BaseModel):
+    ptr_clause_id: str
+    ptr_title: str | None = None
+    ptr_requirement_text: str = ""
+    status: str = "excluded_by_scope"
+    reason: str
+    excluded_topic: str | None = None
+    evidence: str | None = None
 
 
 class PTRComparisonDetails(BaseModel):
@@ -85,11 +132,15 @@ class PTRComparisonDetails(BaseModel):
     manual_review_required_count: int = Field(default=0, ge=0)
     refuted_findings_count: int = Field(default=0, ge=0)
     items: list[PTRComparisonItem] = Field(default_factory=list)
+    excluded_items: list[PTRExcludedComparisonItem] = Field(default_factory=list)
 
 
 __all__ = [
     "PTRComparisonDetails",
+    "PTRAtomicComparisonRow",
+    "PTRAtomicRequirement",
     "PTRComparisonItem",
+    "PTRExcludedComparisonItem",
     "PTRComparisonOverallStatus",
     "PTRDisplayFinalStatus",
     "PTRNormalizedComparison",

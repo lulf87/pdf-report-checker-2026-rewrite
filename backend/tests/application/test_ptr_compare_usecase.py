@@ -521,12 +521,14 @@ def test_ptr_compare_usecase_attaches_ptr_comparison_details_for_covered_and_mis
     items = {item["ptr_clause_id"]: item for item in details["items"]}
 
     assert details["requirements_count"] == 2
-    assert details["covered_count"] == 1
+    assert details["covered_count"] == 0
     assert details["missing_count"] == 1
-    assert items["2.1"]["user_facing_status"] == "covered_passed"
+    assert details["needs_review_count"] == 1
+    assert items["2.1"]["user_facing_status"] == "coverage_only_needs_review"
     assert items["2.1"]["ptr_requirement_text"] == "外观应平整"
     assert items["2.1"]["report_matches"][0]["item_no"] == "1"
     assert items["2.1"]["report_matches"][0]["standard_requirement"] == "外观应平整"
+    assert items["2.1"]["atomic_comparison_rows"] == []
     assert items["2.2"]["rule_status"] == "missing_in_report"
     assert items["2.2"]["user_facing_status"] == "confirmed_error"
     assert items["2.2"]["final_status"] == "confirmed_error"
@@ -599,14 +601,70 @@ def test_ptr_compare_scope_aware_1539_like_report_passes_and_explains_scope(tmp_
 
     details = result.metadata["ptr_comparison_details"]
     assert details["scope_consistency"]["status"] == "passed"
+    assert details["requirements_count"] >= 9
     items = {item["ptr_clause_id"]: item for item in details["items"]}
     assert "2.5.2.2" not in items
     assert items["2.2.1"]["report_matches"][0]["item_no"] == "157"
-    assert items["2.2.1"]["report_matches"][0]["test_result"] == "3375 / 59 / 符合要求"
+    assert "3333V" in items["2.2.1"]["report_matches"][0]["standard_requirement"]
+    assert "57A" in items["2.2.1"]["report_matches"][0]["standard_requirement"]
+    assert "3375" in items["2.2.1"]["report_matches"][0]["test_result"]
+    assert "59" in items["2.2.1"]["report_matches"][0]["test_result"]
+    assert items["2.2.1"]["report_matches"][0]["single_conclusion"] == "符合"
+    assert items["2.2.1"]["report_matches"][0]["report_pages"] == [99, 100, 101]
     assert items["2.2.1"]["coverage_status"] == "covered_passed"
+    assert items["2.2.1"]["final_status"] != "confirmed_error"
+    assert "报告序号 157" in items["2.2.1"]["reason"]
+    atomic_by_id = {row["atomic_id"]: row for row in items["2.2.1"]["atomic_comparison_rows"]}
+    assert set(atomic_by_id) == {"2.2.1:voltage", "2.2.1:current"}
+    assert atomic_by_id["2.2.1:voltage"]["label"] == "电压"
+    assert atomic_by_id["2.2.1:voltage"]["expected"] == "≥3333 V（峰值）"
+    assert atomic_by_id["2.2.1:voltage"]["actual"] == "3375"
+    assert atomic_by_id["2.2.1:voltage"]["status"] == "match"
+    assert "3375 ≥ 3333" in atomic_by_id["2.2.1:voltage"]["reason"]
+    assert atomic_by_id["2.2.1:current"]["expected"] == "≥57 A（峰值）"
+    assert atomic_by_id["2.2.1:current"]["actual"] == "59"
+    assert atomic_by_id["2.2.1:current"]["status"] == "match"
+    assert "2.2.2" not in str(items["2.2.1"]["normalized_comparison"]["actual"])
+    assert "2.2.7" not in str(items["2.2.1"]["normalized_comparison"]["actual"])
+    waveform_rows = items["2.2.2"]["atomic_comparison_rows"]
+    assert {row["table_key"] for row in waveform_rows} == {"2.2.2:表6:波形参数"}
+    assert len(waveform_rows) >= 9
+    assert {row["label"] for row in waveform_rows} >= {"脉冲个数", "脉冲组数", "脉冲组间隔", "脉冲对间隔", "脉冲宽度", "脉冲相间隔", "波形类型", "正峰值/负峰值", "电流水平"}
+    assert items["2.2.2"]["coverage_status"] == "needs_review"
+    for clause_number in ("2.2.2", "2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7.1", "2.2.7.2"):
+        assert items[clause_number]["coverage_status"] in {"covered_passed", "needs_review"}
+        assert items[clause_number]["report_matches"][0]["item_no"] == "157"
+        assert items[clause_number]["report_matches"][0]["standard_clause"] == "2.2"
+        assert items[clause_number]["report_matches"][0]["item_no"] not in {"52", "65"}
+    group_157_result = items["2.2.1"]["report_matches"][0]["test_result"]
+    for value in ("3375", "59", "1μsec±20%", "430", "455", "260", "205", "1%", "159"):
+        assert value in group_157_result
     assert items["2.5.2.1"]["coverage_status"] == "covered_passed"
+    external_coverages = items["2.5.2.1"]["external_standard_coverages"]
+    assert [coverage["standard"] for coverage in external_coverages] == ["GB 9706.1-2020", "GB9706.202-2021"]
     assert "GB 9706.1-2020" in items["2.5.2.1"]["reason"]
+    assert "GB9706.202-2021" in items["2.5.2.1"]["reason"]
+    assert items["2.6"]["coverage_status"] in {"covered_passed", "needs_review"}
+    assert items["2.6"]["report_matches"][0]["item_no"] == "159"
+    assert items["2.6"]["report_matches"][0]["standard_clause"] == "2.6"
+    assert "14" not in {match["item_no"] for match in items["2.6"]["report_matches"]}
+    software_rows = items["2.6"]["atomic_comparison_rows"]
+    assert software_rows
+    assert {row["table_key"] for row in software_rows} == {"2.6:表6:软件功能"}
+    assert any(row["label"] == "射频消融仪 - 功率监测" for row in software_rows)
+    assert any(row["label"] == "心脏脉冲电场消融仪 - 温度监测" for row in software_rows)
+    assert items["2.6"]["coverage_status"] == "needs_review"
+    assert "表格功能明细需复核" in items["2.6"]["reason"]
+    excluded = {item["ptr_clause_id"]: item for item in details["excluded_items"]}
+    for clause_number in ("2.5.1.2", "2.5.2.2", "2.5.3.2"):
+        assert excluded[clause_number]["status"] == "excluded_by_scope"
+        assert "电磁兼容性" in excluded[clause_number]["reason"]
+    assert "2.14" not in scope_result.metadata["scope_consistency"]["actual_report_scope"]
+    assert "2.4" not in items
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+    for excluded_number in ("2.1", "2.3", "2.5.2.2", "2.7", "2.8"):
+        assert excluded_number not in items
+    assert not any(finding.metadata.get("clause_number") == "2.2.1" for finding in result.findings)
 
 
 def test_ptr_compare_scope_consistency_reports_declared_item_missing(tmp_path: Path) -> None:
@@ -1324,7 +1382,8 @@ def _run_scope_aware_usecase(
                 text=(
                     "型号规格或其他说明\n"
                     "序号 1～序号 118 为 GB 9706.1-2020 标准的内容\n"
-                    "序号 119～156 为 GB9706.202-2021 标准的内容"
+                    "序号 119～156 为 GB9706.\n"
+                    "202-2021 标准的内容"
                 ),
             ),
         ],
@@ -1336,7 +1395,6 @@ def _run_scope_aware_usecase(
         ptr_extractor=FakePTRExtractor(_scope_aware_ptr_document()),
         report_extractor=report_extractor or ScopeAwareReportExtractor(),
         inspection_table_extractor=inspection_table_extractor or ScopeAwareInspectionTableExtractor(),
-        clause_text_compare=NoopClauseCompare(),
         table_reference_compare=TrackingTableCompare(),
         codex_audit_service=FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN),
     )
@@ -1357,6 +1415,13 @@ def _scope_aware_ptr_document() -> PTRDocument:
     return PTRDocument(
         clauses=[
             PTRClause(
+                clause_id="ptr-2.1",
+                number=PTRClauseNumber.from_string("2.1"),
+                title="产品型号",
+                body_text="产品型号应符合产品技术要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
                 clause_id="ptr-2.2.1",
                 number=PTRClauseNumber.from_string("2.2.1"),
                 title="心脏脉冲电场消融仪输出",
@@ -1364,10 +1429,102 @@ def _scope_aware_ptr_document() -> PTRDocument:
                 scope_type=PTRScopeType.REQUIREMENT,
             ),
             PTRClause(
+                clause_id="ptr-2.2.2",
+                number=PTRClauseNumber.from_string("2.2.2"),
+                title="心脏脉冲电场消融仪输出波形图和波形参数",
+                body_text="心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满足表 6 的要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+                table_references=[
+                    TableReference(
+                        table_number="6",
+                        reference_text="表 6",
+                        context="波形参数",
+                        clause_id="ptr-2.2.2",
+                    )
+                ],
+            ),
+            PTRClause(
+                clause_id="ptr-2.2.3",
+                number=PTRClauseNumber.from_string("2.2.3"),
+                title="脉冲上升时间",
+                body_text="脉冲上升时间应不超过 700ns。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.2.4",
+                number=PTRClauseNumber.from_string("2.2.4"),
+                title="脉冲宽度",
+                body_text="脉冲宽度应符合产品技术要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.2.5",
+                number=PTRClauseNumber.from_string("2.2.5"),
+                title="脉冲衰减",
+                body_text="脉冲衰减应在 10%内。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.2.6",
+                number=PTRClauseNumber.from_string("2.2.6"),
+                title="最大输出能量",
+                body_text="单个脉冲最大输出能量应小于 258mJ。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.2.7",
+                number=PTRClauseNumber.from_string("2.2.7"),
+                title="保护功能",
+                body_text="心脏脉冲电场消融仪应具有温度超限保护和过流保护功能。",
+                scope_type=PTRScopeType.GROUP_CLAUSE,
+            ),
+            PTRClause(
+                clause_id="ptr-2.2.7.1",
+                number=PTRClauseNumber.from_string("2.2.7.1"),
+                title="温度超限保护",
+                body_text="心脏脉冲电场消融仪应具有温度超限保护功能。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.2.7.2",
+                number=PTRClauseNumber.from_string("2.2.7.2"),
+                title="过流保护",
+                body_text="心脏脉冲电场消融仪应具有过流保护功能。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.3",
+                number=PTRClauseNumber.from_string("2.3"),
+                title="外观",
+                body_text="外观应符合产品技术要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.4",
+                number=PTRClauseNumber.from_string("2.4"),
+                title="生物性能",
+                body_text="生物性能和生物相容性应符合产品技术要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.5.1.1",
+                number=PTRClauseNumber.from_string("2.5.1.1"),
+                title="电气安全",
+                body_text="电气安全应符合 GB 9706.1-2020 标准的要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.5.1.2",
+                number=PTRClauseNumber.from_string("2.5.1.2"),
+                title="电磁兼容性能",
+                body_text="电磁兼容性能应符合 YY 9706.102-2021 标准的要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
                 clause_id="ptr-2.5.2.1",
                 number=PTRClauseNumber.from_string("2.5.2.1"),
                 title="电气安全",
-                body_text="应符合 GB 9706.1-2020 标准的要求。",
+                body_text="应符合 GB 9706.1-2020 和 GB9706.202-2021 标准的要求。",
                 scope_type=PTRScopeType.REQUIREMENT,
             ),
             PTRClause(
@@ -1378,14 +1535,97 @@ def _scope_aware_ptr_document() -> PTRDocument:
                 scope_type=PTRScopeType.REQUIREMENT,
             ),
             PTRClause(
-                clause_id="ptr-2.6.1",
-                number=PTRClauseNumber.from_string("2.6.1"),
+                clause_id="ptr-2.5.3.1",
+                number=PTRClauseNumber.from_string("2.5.3.1"),
+                title="电气安全",
+                body_text="电气安全应符合 GB 9706.1-2020 和 GB9706.202-2021 标准的要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.5.3.2",
+                number=PTRClauseNumber.from_string("2.5.3.2"),
+                title="电磁兼容性",
+                body_text="电磁兼容性应符合 YY 9706.102-2021 标准的要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.6",
+                number=PTRClauseNumber.from_string("2.6"),
                 title="软件功能",
                 body_text="软件功能应符合产品技术要求。",
                 scope_type=PTRScopeType.REQUIREMENT,
+                table_references=[
+                    TableReference(
+                        table_number="6",
+                        reference_text="表 6",
+                        context="软件功能",
+                        clause_id="ptr-2.6",
+                    )
+                ],
+            ),
+            PTRClause(
+                clause_id="ptr-2.7",
+                number=PTRClauseNumber.from_string("2.7"),
+                title="环境试验",
+                body_text="环境试验应符合产品技术要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.8",
+                number=PTRClauseNumber.from_string("2.8"),
+                title="包装",
+                body_text="包装应符合产品技术要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
             ),
         ],
+        tables=[_scope_waveform_table(), _scope_software_table()],
     )
+
+
+def _scope_waveform_table() -> PTRTable:
+    return _ptr_table(
+        CanonicalTable(
+            table_id="ptr-2.2.2-table-6-waveform",
+            table_number="6",
+            caption="表 6 波形参数",
+            parameter_name_column="参数",
+            value_columns=["PULSE 3", "PF Reversible"],
+            parameter_records=[
+                ParameterRecord(parameter_name="脉冲个数", values={"PULSE 3": "1500", "PF Reversible": "1"}),
+                ParameterRecord(parameter_name="脉冲组数", values={"PULSE 3": "12", "PF Reversible": "1"}),
+                ParameterRecord(parameter_name="脉冲组间隔", values={"PULSE 3": "210±1 msec", "PF Reversible": "/"}),
+                ParameterRecord(parameter_name="脉冲对间隔", values={"PULSE 3": "1.12msec±4μsec", "PF Reversible": "/"}),
+                ParameterRecord(parameter_name="脉冲宽度", values={"PULSE 3": "0.9μsec±20%", "PF Reversible": "0.9μsec±20%"}),
+                ParameterRecord(parameter_name="脉冲相间隔", values={"PULSE 3": "1μsec±20%", "PF Reversible": "1μsec±20%"}),
+                ParameterRecord(parameter_name="波形类型", values={"PULSE 3": "三相", "PF Reversible": "双相"}),
+                ParameterRecord(parameter_name="正峰值/负峰值", values={"PULSE 3": "5±20%", "PF Reversible": "1±0.1"}),
+                ParameterRecord(parameter_name="电流水平", values={"PULSE 3": "1-100%", "PF Reversible": "1-100%"}),
+            ],
+        )
+    ).model_copy(update={"referenced_by_clause_ids": ["ptr-2.2.2"]})
+
+
+def _scope_software_table() -> PTRTable:
+    return _ptr_table(
+        CanonicalTable(
+            table_id="ptr-2.6-table-6-software",
+            table_number="6",
+            caption="表 6 软件功能",
+            parameter_name_column="功能",
+            value_columns=["要求"],
+            parameter_records=[
+                ParameterRecord(parameter_name="功率监测", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(parameter_name="阻抗监测", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(parameter_name="阻抗监测", dimensions={"组件": "心脏脉冲电场消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(parameter_name="温度监测", dimensions={"组件": "心脏脉冲电场消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(
+                    parameter_name="与射频消融仪、导管接口单元CIU通信",
+                    dimensions={"组件": "心脏脉冲电场消融仪"},
+                    values={"要求": "具备"},
+                ),
+            ],
+        )
+    ).model_copy(update={"referenced_by_clause_ids": ["ptr-2.6"]})
 
 
 def _scope_aware_report_items() -> list[InspectionItem]:
@@ -1418,6 +1658,50 @@ def _scope_aware_report_items() -> list[InspectionItem]:
             source_page=46,
         ),
         InspectionItem(
+            sequence_raw="14",
+            sequence=14,
+            standard_clause="5.5",
+            item_name="供电电压、电流类型、供电方式和频率",
+            standard_requirement="2.6 软件功能相关供电项目摘录。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=50,
+            row_index_in_page=1,
+        ),
+        InspectionItem(
+            sequence_raw="52",
+            sequence=52,
+            standard_clause="7.9",
+            item_name="随附文件",
+            standard_requirement="外部标准随附文件中引用 2.2.3 脉冲上升时间。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=60,
+            row_index_in_page=1,
+        ),
+        InspectionItem(
+            sequence_raw="65",
+            sequence=65,
+            standard_clause="9.2.2",
+            item_name="俘获区域",
+            standard_requirement="外部标准俘获区域说明中引用 2.2.1、2.2.4、2.2.5、2.2.6。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=70,
+            row_index_in_page=1,
+        ),
+        InspectionItem(
+            sequence_raw="续\n129",
+            sequence=129,
+            is_continuation=True,
+            standard_clause="201.7.9.\n2.14",
+            standard_requirement="使用说明书还可见 201.15.4.101.1 和 201.15.4.101.2。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=85,
+            row_index_in_page=1,
+        ),
+        InspectionItem(
             sequence_raw="156",
             sequence=156,
             standard_clause="GB9706.202-2021",
@@ -1430,10 +1714,77 @@ def _scope_aware_report_items() -> list[InspectionItem]:
             sequence_raw="157",
             sequence=157,
             standard_clause="2.2",
-            standard_requirement="心脏脉冲电场消融仪输出电压、电流应符合产品技术要求。",
-            test_result="3375 / 59 / 符合要求",
+            standard_requirement="2.2.1 心脏脉冲电场消融仪输出\n电压：3333V（峰值）\n单位：V",
+            test_result="3375",
+            result_values=["3375"],
             conclusion="符合",
             source_page=99,
+            row_index_in_page=3,
+        ),
+        InspectionItem(
+            sequence_raw="电流：57A（峰值）\n单位：A",
+            item_name="59",
+            standard_clause="/",
+            source_page=99,
+            row_index_in_page=4,
+        ),
+        InspectionItem(
+            sequence_raw="2.2.2 心脏脉冲电场消融仪输出波形图和波形参数",
+            standard_requirement="心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满足表 6 的要求。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=99,
+            row_index_in_page=5,
+        ),
+        InspectionItem(
+            sequence_raw="续\n157",
+            sequence=157,
+            is_continuation=True,
+            standard_clause="2.2",
+            standard_requirement="2.2.3 脉冲上升时间\n脉冲上升时间应不超过 700ns。",
+            test_result="430 / 455",
+            result_values=["430", "455"],
+            conclusion="符合",
+            source_page=100,
+            row_index_in_page=1,
+        ),
+        InspectionItem(
+            sequence_raw="2.2.4 脉冲宽度",
+            standard_requirement="脉冲宽度应符合产品技术要求。",
+            test_result="260 / 205 / 1μsec±20%",
+            result_values=["260", "205", "1μsec±20%"],
+            conclusion="符合",
+            source_page=100,
+            row_index_in_page=2,
+        ),
+        InspectionItem(
+            sequence_raw="续\n157",
+            sequence=157,
+            is_continuation=True,
+            standard_clause="2.2",
+            standard_requirement="2.2.5 脉冲衰减\n脉冲衰减应在 10%内。",
+            test_result="1%",
+            result_values=["1%"],
+            conclusion="符合",
+            source_page=101,
+            row_index_in_page=1,
+        ),
+        InspectionItem(
+            sequence_raw="2.2.6 最大输出能量",
+            standard_requirement="单个脉冲最大输出能量应小于 258mJ。",
+            test_result="159",
+            result_values=["159"],
+            conclusion="符合",
+            source_page=101,
+            row_index_in_page=2,
+        ),
+        InspectionItem(
+            sequence_raw="2.2.7 保护功能",
+            standard_requirement="温度超限保护和过流保护功能符合要求。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=101,
+            row_index_in_page=3,
         ),
         InspectionItem(
             sequence_raw="158",
@@ -1443,6 +1794,7 @@ def _scope_aware_report_items() -> list[InspectionItem]:
             test_result="符合要求",
             conclusion="符合",
             source_page=99,
+            row_index_in_page=6,
         ),
         InspectionItem(
             sequence_raw="159",
@@ -1452,6 +1804,7 @@ def _scope_aware_report_items() -> list[InspectionItem]:
             test_result="符合要求",
             conclusion="符合",
             source_page=99,
+            row_index_in_page=7,
         ),
     ]
 

@@ -61,3 +61,27 @@ def test_scope_filter_uses_report_clause_numbers_when_no_explicit_scope() -> Non
 
     assert result.included_clause_ids == ["ptr-2.1.2"]
     assert result.decisions[0].reason == "report_clause_present"
+
+
+def test_scope_filter_excludes_biocompatibility_and_emc_topics_inside_declared_scope() -> None:
+    document = PTRDocument(
+        clauses=[
+            _clause("2.4", "生物性能和生物相容性应符合相关标准。"),
+            _clause("2.5.2.1", "电气安全应符合 GB 9706.1-2020。"),
+            _clause("2.5.2.2", "电磁兼容性应符合 YY 9706.102-2021。"),
+        ]
+    )
+
+    result = filter_ptr_scope(
+        document,
+        ["检验项目：2.4、2.5（除生物相容性、电磁兼容性）"],
+    )
+
+    decisions = {decision.clause_number: decision for decision in result.decisions}
+    assert decisions["2.4"].included is False
+    assert decisions["2.4"].reason == "excluded_topic"
+    assert decisions["2.4"].evidence == "生物相容性"
+    assert decisions["2.5.2.1"].included is True
+    assert decisions["2.5.2.2"].included is False
+    assert decisions["2.5.2.2"].reason == "excluded_topic"
+    assert decisions["2.5.2.2"].evidence == "电磁兼容性"

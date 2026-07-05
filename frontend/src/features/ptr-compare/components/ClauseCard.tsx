@@ -10,7 +10,13 @@ import type { CodexReviewResult } from "../../../entities/codexReview/types";
 import type { Finding } from "../../../entities/finding/types";
 import { severityLabel, severityTone } from "../../../entities/finding/types";
 import type { PTRClauseViewModel } from "../../../entities/ptr/types";
-import type { PTRComparisonItem, PTRReportMatch, PTRScopeConsistency } from "../../../entities/task/types";
+import type {
+  PTRAtomicComparisonRow,
+  PTRComparisonItem,
+  PTRExternalStandardCoverage,
+  PTRReportMatch,
+  PTRScopeConsistency,
+} from "../../../entities/task/types";
 import { checkStatusLabel } from "../../../entities/task/types";
 import { Badge } from "../../../shared/ui/Badge";
 import { Button } from "../../../shared/ui/Button";
@@ -95,25 +101,29 @@ export function ClauseCard({ clause }: ClauseCardProps) {
 
 function PTRClausePreview({ item }: { item: PTRComparisonItem }) {
   const primaryMatch = item.report_matches[0];
+  const externalCoverages = externalCoverageList(item);
   return (
     <div className="comparison-source-list">
       <span className="comparison-source">PTR 摘录 · {truncate(item.ptr_requirement_text, 42)}</span>
-      {item.external_standard_coverage ? (
-        <span className="comparison-source">
-          外部标准覆盖 · {item.external_standard_coverage.standard || "未命名标准"}
-          {item.external_standard_coverage.start_item_no && item.external_standard_coverage.end_item_no
-            ? ` · 序号 ${item.external_standard_coverage.start_item_no}～${item.external_standard_coverage.end_item_no}`
-            : ""}
-        </span>
+      {externalCoverages.length > 0 ? (
+        externalCoverages.map((coverage, index) => (
+          <span className="comparison-source" key={`${coverage.standard ?? "standard"}-${index}`}>
+            外部标准覆盖 · {coverage.standard || "未命名标准"}
+            {coverage.start_item_no && coverage.end_item_no ? ` · 序号 ${coverage.start_item_no}～${coverage.end_item_no}` : ""}
+          </span>
+        ))
       ) : primaryMatch ? (
         <span className="comparison-source">
           报告匹配 · 序号 {primaryMatch.item_no || "未编号"}
-          {reportPage(primaryMatch) ? ` · 第 ${reportPage(primaryMatch)} 页` : ""}
+          {reportPageText(primaryMatch) ? ` · ${reportPageText(primaryMatch)}` : ""}
           {primaryMatch.test_result ? ` · ${primaryMatch.test_result}` : ""}
         </span>
       ) : (
         <span className="comparison-source">报告匹配 · 未找到对应检验项</span>
       )}
+      {item.atomic_comparison_rows?.length ? (
+        <span className="comparison-source">参数级比对 · {item.atomic_comparison_rows.length} 项</span>
+      ) : null}
       <span className="comparison-source">最终状态 · {ptrStatusLabel(item.coverage_status ?? item.user_facing_status)}</span>
     </div>
   );
@@ -138,7 +148,7 @@ function PTRExplanationDetails({
 }) {
   const comparison = item.normalized_comparison;
   const reportRows = item.report_matches.length > 0 ? item.report_matches : (item.candidate_report_items ?? []);
-  const externalCoverage = item.external_standard_coverage;
+  const externalCoverages = externalCoverageList(item);
   const displayStatus = item.coverage_status ?? item.user_facing_status;
 
   return (
@@ -170,10 +180,14 @@ function PTRExplanationDetails({
           {reportRows.length > 0 ? (
             <>
               {reportRows.map((match, index) => <ReportMatchLine key={`${match.item_no ?? "candidate"}-${index}`} match={match} />)}
-              {externalCoverage ? <ExternalCoverageLine coverage={externalCoverage} /> : null}
+              {externalCoverages.map((coverage, index) => (
+                <ExternalCoverageLine coverage={coverage} key={`${coverage.standard ?? "standard"}-${index}`} />
+              ))}
             </>
-          ) : externalCoverage ? (
-            <ExternalCoverageLine coverage={externalCoverage} />
+          ) : externalCoverages.length > 0 ? (
+            externalCoverages.map((coverage, index) => (
+              <ExternalCoverageLine coverage={coverage} key={`${coverage.standard ?? "standard"}-${index}`} />
+            ))
           ) : (
             <p>未找到报告匹配项。</p>
           )}
@@ -195,9 +209,54 @@ function PTRExplanationDetails({
         </section>
       </div>
 
+      {item.atomic_comparison_rows?.length ? <PTRAtomicComparisonTable rows={item.atomic_comparison_rows} /> : null}
       {diffs.length > 0 ? <DiffViewer diffs={diffs} fallbackText={legacyFallback} /> : null}
       <PTRTechnicalDetails findings={findings} groupedCodexReviews={groupedCodexReviews} reviews={reviews} />
     </div>
+  );
+}
+
+function PTRAtomicComparisonTable({ rows }: { rows: PTRAtomicComparisonRow[] }) {
+  return (
+    <section className="comparison-details" aria-label="参数级比对表">
+      <div className="comparison-details-head">
+        <div>
+          <p className="detail-kicker">参数级比对表</p>
+          <p className="comparison-title">Atomic requirements</p>
+        </div>
+      </div>
+      <div className="comparison-table-wrap">
+        <table className="comparison-table">
+          <thead>
+            <tr>
+              <th>参数</th>
+              <th>PTR 要求</th>
+              <th>报告结果</th>
+              <th>状态</th>
+              <th>说明</th>
+              <th>页码/序号</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr className={`comparison-row comparison-row-${ptrAtomicStatusTone(row.status)}`} key={row.atomic_id}>
+                <td>{row.label}</td>
+                <td>{row.expected || "无"}</td>
+                <td>{row.actual || "未稳定抽取"}</td>
+                <td>
+                  <Badge variant={ptrAtomicStatusTone(row.status)}>{ptrAtomicStatusLabel(row.status)}</Badge>
+                </td>
+                <td>{row.reason || row.table_key || "无"}</td>
+                <td>
+                  {row.report_page ? `第 ${row.report_page} 页` : ""}
+                  {row.report_item_no ? `${row.report_page ? " / " : ""}序号 ${row.report_item_no}` : ""}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -205,7 +264,7 @@ function ReportMatchLine({ match }: { match: PTRReportMatch }) {
   return (
     <p>
       序号 {match.item_no || "未编号"}
-      {reportPage(match) ? ` · 第 ${reportPage(match)} 页` : ""}
+      {reportPageText(match) ? ` · ${reportPageText(match)}` : ""}
       {match.standard_clause ? ` · 标准条款 ${match.standard_clause}` : ""}
       {match.item_name ? ` · ${match.item_name}` : ""}
       {match.standard_requirement ? ` · ${match.standard_requirement}` : ""}
@@ -215,7 +274,7 @@ function ReportMatchLine({ match }: { match: PTRReportMatch }) {
   );
 }
 
-function ExternalCoverageLine({ coverage }: { coverage: NonNullable<PTRComparisonItem["external_standard_coverage"]> }) {
+function ExternalCoverageLine({ coverage }: { coverage: PTRExternalStandardCoverage }) {
   return (
     <p>
       {coverage.standard || "外部标准"}
@@ -227,8 +286,20 @@ function ExternalCoverageLine({ coverage }: { coverage: NonNullable<PTRCompariso
   );
 }
 
+function externalCoverageList(item: PTRComparisonItem): PTRExternalStandardCoverage[] {
+  if (item.external_standard_coverages?.length) return item.external_standard_coverages;
+  return item.external_standard_coverage ? [item.external_standard_coverage] : [];
+}
+
 function reportPage(match: PTRReportMatch): number | null | undefined {
   return match.report_page ?? match.page;
+}
+
+function reportPageText(match: PTRReportMatch): string {
+  const pages = match.report_pages?.filter((page): page is number => typeof page === "number") ?? [];
+  if (pages.length > 1) return `第 ${pages[0]}-${pages[pages.length - 1]} 页`;
+  const page = reportPage(match);
+  return page ? `第 ${page} 页` : "";
 }
 
 function PTRTechnicalDetails({
@@ -278,6 +349,8 @@ function truncate(value: string, maxLength: number): string {
 
 function ptrStatusLabel(status: string): string {
   if (status === "covered_passed") return "已覆盖并满足要求";
+  if (status === "coverage_only_needs_review") return "仅覆盖，需参数级复核";
+  if (status === "excluded_by_scope") return "本次范围排除";
   if (status === "missing_in_report") return "报告中未找到";
   if (status === "value_mismatch") return "结果不一致";
   if (status === "needs_review") return "需人工复核";
@@ -290,8 +363,30 @@ function ptrStatusLabel(status: string): string {
 
 function ptrStatusTone(status: string): "success" | "danger" | "warn" | "info" | "accent" {
   if (status === "covered_passed" || status === "refuted") return "success";
+  if (status === "excluded_by_scope") return "info";
   if (status === "confirmed_error" || status === "audit_incomplete") return "danger";
-  if (status === "needs_review" || status === "candidate_issue" || status === "missing_in_report" || status === "value_mismatch") return "warn";
+  if (
+    status === "needs_review"
+    || status === "coverage_only_needs_review"
+    || status === "candidate_issue"
+    || status === "missing_in_report"
+    || status === "value_mismatch"
+  ) return "warn";
+  return "info";
+}
+
+function ptrAtomicStatusLabel(status: string): string {
+  if (status === "match") return "满足";
+  if (status === "mismatch") return "不满足";
+  if (status === "needs_review") return "需复核";
+  if (status === "not_applicable") return "不适用";
+  return status;
+}
+
+function ptrAtomicStatusTone(status: string): "success" | "danger" | "warn" | "info" {
+  if (status === "match") return "success";
+  if (status === "mismatch") return "danger";
+  if (status === "needs_review") return "warn";
   return "info";
 }
 

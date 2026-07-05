@@ -34,6 +34,78 @@ def test_clause_mismatch_finding_builds_ptr_clause_target() -> None:
     assert bundle.request.targets[0].finding_id == finding.id
 
 
+def test_clause_mismatch_finding_includes_grouped_report_item_evidence() -> None:
+    finding = _finding(
+        code="PTR_CLAUSE_TEXT_MISMATCH",
+        check_id="PTR_CLAUSE",
+        metadata={"clause_number": "2.2.1"},
+    )
+    ptr_doc = PTRDocument(
+        clauses=[
+            PTRClause(
+                clause_id="ptr-2.2.1",
+                number=PTRClauseNumber.from_string("2.2.1"),
+                title="心脏脉冲电场消融仪输出",
+                body_text="心脏脉冲电场消融仪输出电压、电流应符合产品技术要求。",
+            )
+        ]
+    )
+    report_doc = ReportDocument(
+        inspection_items=[
+            InspectionItem(
+                sequence_raw="157",
+                sequence=157,
+                standard_clause="2.2",
+                standard_requirement="2.2.1 心脏脉冲电场消融仪输出\n电压：3333V（峰值）",
+                test_result="3375",
+                result_values=["3375"],
+                conclusion="符合",
+                source_page=99,
+                row_index_in_page=3,
+            ),
+            InspectionItem(
+                sequence_raw="电流：57A（峰值）\n单位：A",
+                item_name="59",
+                standard_clause="/",
+                source_page=99,
+                row_index_in_page=4,
+            ),
+            InspectionItem(
+                sequence_raw="续\n157",
+                sequence=157,
+                is_continuation=True,
+                standard_clause="2.2",
+                standard_requirement="2.2.5 脉冲衰减应在 10%内。",
+                test_result="1%",
+                result_values=["1%"],
+                conclusion="符合",
+                source_page=101,
+                row_index_in_page=1,
+            ),
+        ]
+    )
+
+    bundle = PtrCodexEvidenceBuilder().build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=ptr_doc,
+        report_doc=report_doc,
+        check_results=[_check_result("PTR_CLAUSE", [finding])],
+    )
+
+    assert bundle is not None
+    items_by_ref = {item.ref_id: item for item in bundle.evidence_package.items}
+    group_item = items_by_ref["report_inspection_group:157"]
+    group = group_item.structured["inspection_item_group"]
+    assert group["item_no"] == "157"
+    assert group["pages"] == [99, 101]
+    assert "3333V" in group["standard_requirement"]
+    assert "57A" in group["standard_requirement"]
+    assert "3375" in group["test_result"]
+    assert "59" in group["test_result"]
+    assert group["single_conclusion"] == "符合"
+
+
 def test_table_value_mismatch_finding_builds_ptr_parameter_target() -> None:
     finding = _finding(
         code="PTR_TABLE_VALUE_MISMATCH",
