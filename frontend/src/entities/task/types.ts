@@ -235,6 +235,21 @@ export type PTRComparisonFinalStatus =
   | "audit_incomplete"
   | string;
 
+export interface PTRReportAtomicResult {
+  atomic_id: string;
+  clause_id: string;
+  label: string;
+  actual?: string | null;
+  unit?: string | null;
+  preset?: string | null;
+  report_item_no?: string | null;
+  report_page?: number | null;
+  source_text?: string | null;
+  confidence?: string | null;
+  diagnostics?: Record<string, unknown>[];
+  candidate_actuals?: string[];
+}
+
 export interface PTRReportMatch {
   item_no?: string | null;
   page?: number | null;
@@ -247,6 +262,7 @@ export interface PTRReportMatch {
   test_result?: string | null;
   single_conclusion?: string | null;
   remark?: string | null;
+  report_atomic_results?: PTRReportAtomicResult[];
 }
 
 export interface PTRNormalizedComparison {
@@ -277,13 +293,18 @@ export interface PTRAtomicComparisonRow {
   atomic_id: string;
   clause_id: string;
   label: string;
+  preset?: string | null;
   expected?: string | null;
   actual?: string | null;
-  status: "match" | "mismatch" | "needs_review" | "not_applicable" | string;
+  unit?: string | null;
+  candidate_actuals?: string[];
+  status: "match" | "mismatch" | "needs_review" | "candidate_found_needs_mapping" | "not_applicable" | string;
   reason?: string | null;
   report_page?: number | null;
   report_item_no?: string | null;
+  confidence?: string | null;
   source: "ptr_text" | "ptr_table" | string;
+  source_text?: string | null;
   table_number?: string | null;
   table_title?: string | null;
   table_key?: string | null;

@@ -6,7 +6,7 @@ from typing import Any
 
 from app.domain.inspection_group import InspectionItemGroup
 from app.domain.ptr import PTRClause, PTRDocument, PTRTable
-from app.domain.ptr_comparison import PTRAtomicComparisonRow, PTRAtomicRequirement
+from app.domain.ptr_comparison import PTRAtomicComparisonRow, PTRAtomicRequirement, PTRReportAtomicResult
 from app.domain.table import ParameterRecord
 from app.rules.ptr.report_item_grouping import ptr_group_text
 
@@ -107,7 +107,167 @@ def build_atomic_comparison_rows(
     if not requirements:
         return []
     group = report_matches[0] if report_matches else None
-    return [_comparison_row(requirement, group) for requirement in requirements]
+    report_atomic_results = build_report_atomic_results(group) if group is not None else []
+    rows: list[PTRAtomicComparisonRow] = []
+    for requirement in requirements:
+        bound_results = _report_results_for_requirement(requirement, report_atomic_results)
+        if bound_results:
+            rows.extend(_comparison_row(requirement, group, result) for result in bound_results)
+            continue
+        rows.append(_comparison_row(requirement, group))
+    return rows
+
+
+def build_report_atomic_results(group: InspectionItemGroup | None) -> list[PTRReportAtomicResult]:
+    if group is None:
+        return []
+    results: list[PTRReportAtomicResult] = []
+    item_no = group.display_item_no or group.item_no
+
+    for row in group.rows:
+        row_text = _row_text(row)
+        compact = _compact(row_text)
+        page = row.source_page or _first_page(group)
+
+        if "电压" in compact:
+            actual = _first_measurement_value(row)
+            if actual:
+                results.append(
+                    _report_atomic_result(
+                        atomic_id="2.2.1:voltage",
+                        clause_id="2.2.1",
+                        label="电压",
+                        actual=actual,
+                        unit="V",
+                        item_no=item_no,
+                        page=page,
+                        source_text=row_text,
+                        confidence="high",
+                        method="row_text_voltage",
+                    )
+                )
+
+        if "电流" in compact:
+            actual = _current_value(row)
+            if actual:
+                results.append(
+                    _report_atomic_result(
+                        atomic_id="2.2.1:current",
+                        clause_id="2.2.1",
+                        label="电流",
+                        actual=actual,
+                        unit="A",
+                        item_no=item_no,
+                        page=page,
+                        source_text=row_text,
+                        confidence="high",
+                        method="row_text_current",
+                    )
+                )
+
+        if "2.2.3" in compact or "上升" in compact:
+            values = _preset_values_from_row(row) or _numeric_values_from_row(row)
+            results.extend(
+                _preset_results(
+                    values,
+                    atomic_prefix="2.2.3:rise_time",
+                    clause_id="2.2.3",
+                    label="脉冲上升时间",
+                    unit="ns",
+                    item_no=item_no,
+                    page=page,
+                    source_text=row_text,
+                    method="row_text_rise_time",
+                )
+            )
+
+        if "2.2.4" in compact or "下降" in compact or "脉冲宽度" in compact:
+            values = _preset_values_from_row(row) or _numeric_values_from_row(row)[:2]
+            results.extend(
+                _preset_results(
+                    values,
+                    atomic_prefix="2.2.4:fall_time",
+                    clause_id="2.2.4",
+                    label="脉冲下降时间",
+                    unit="ns",
+                    item_no=item_no,
+                    page=page,
+                    source_text=row_text,
+                    method="row_text_fall_time",
+                )
+            )
+
+        if "2.2.5" in compact or "衰减" in compact:
+            actual = _first_measurement_value(row)
+            candidates = [] if actual else _candidate_values_from_row(row)
+            if actual or candidates:
+                results.append(
+                    _report_atomic_result(
+                        atomic_id="2.2.5:decay",
+                        clause_id="2.2.5",
+                        label="脉冲衰减",
+                        actual=actual,
+                        unit="%" if (actual and "%" in actual) or "%" in row_text else None,
+                        item_no=item_no,
+                        page=page,
+                        source_text=row_text,
+                        confidence="high" if actual else "medium",
+                        method="row_text_decay" if actual else "row_text_decay_candidate",
+                        candidate_actuals=candidates,
+                    )
+                )
+
+        if "2.2.6" in compact or "最大输出能量" in compact:
+            actual = _first_measurement_value(row)
+            candidates = [] if actual else _candidate_values_from_row(row)
+            if actual or candidates:
+                results.append(
+                    _report_atomic_result(
+                        atomic_id="2.2.6:max_energy",
+                        clause_id="2.2.6",
+                        label="单个脉冲最大输出能量",
+                        actual=actual,
+                        unit="mJ",
+                        item_no=item_no,
+                        page=page,
+                        source_text=row_text,
+                        confidence="high" if actual else "medium",
+                        method="row_text_max_energy" if actual else "row_text_max_energy_candidate",
+                        candidate_actuals=candidates,
+                    )
+                )
+
+        if "温度" in compact and "符合" in compact and "不符合" not in compact:
+            results.append(
+                _report_atomic_result(
+                    atomic_id="2.2.7.1:temperature_limit_protection",
+                    clause_id="2.2.7.1",
+                    label="温度超限保护",
+                    actual="符合要求",
+                    item_no=item_no,
+                    page=page,
+                    source_text=row_text,
+                    confidence="high",
+                    method="row_text_functional",
+                )
+            )
+
+        if "过流" in compact and "符合" in compact and "不符合" not in compact:
+            results.append(
+                _report_atomic_result(
+                    atomic_id="2.2.7.2:over_current_protection",
+                    clause_id="2.2.7.2",
+                    label="过流保护",
+                    actual="符合要求",
+                    item_no=item_no,
+                    page=page,
+                    source_text=row_text,
+                    confidence="high",
+                    method="row_text_functional",
+                )
+            )
+
+    return _unique_report_atomic_results(results)
 
 
 def table_key_for_clause_table(clause_number: str, table: PTRTable) -> str:
@@ -171,20 +331,47 @@ def _table_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtom
     ]
 
 
-def _comparison_row(requirement: PTRAtomicRequirement, group: InspectionItemGroup | None) -> PTRAtomicComparisonRow:
-    actual, page, item_no = _actual_for_requirement(requirement, group)
-    status, reason = _status_and_reason(requirement, actual, group)
+def _comparison_row(
+    requirement: PTRAtomicRequirement,
+    group: InspectionItemGroup | None,
+    report_atomic_result: PTRReportAtomicResult | None = None,
+) -> PTRAtomicComparisonRow:
+    if report_atomic_result is not None:
+        actual = report_atomic_result.actual
+        page = report_atomic_result.report_page or _first_page(group)
+        item_no = report_atomic_result.report_item_no or ((group.display_item_no or group.item_no) if group else None)
+        candidate_actuals = list(report_atomic_result.candidate_actuals)
+        confidence = report_atomic_result.confidence
+        source_text = report_atomic_result.source_text
+        preset = report_atomic_result.preset
+        unit = report_atomic_result.unit or requirement.unit
+        atomic_id = report_atomic_result.atomic_id
+    else:
+        actual, page, item_no = _actual_for_requirement(requirement, group)
+        candidate_actuals = []
+        confidence = None
+        source_text = None
+        preset = None
+        unit = requirement.unit
+        atomic_id = requirement.atomic_id
+
+    status, reason = _status_and_reason(requirement, actual, group, candidate_actuals=candidate_actuals)
     return PTRAtomicComparisonRow(
-        atomic_id=requirement.atomic_id,
+        atomic_id=atomic_id,
         clause_id=requirement.clause_id,
         label=requirement.label,
+        preset=preset,
         expected=_expected_display(requirement),
         actual=actual,
+        unit=unit,
+        candidate_actuals=candidate_actuals,
         status=status,
         reason=reason,
         report_page=page,
         report_item_no=item_no,
+        confidence=confidence,
         source=requirement.source,
+        source_text=source_text,
         table_number=requirement.table_number,
         table_title=requirement.table_title,
         table_key=requirement.table_key,
@@ -253,7 +440,13 @@ def _actual_subset(requirement: PTRAtomicRequirement, value: str) -> str:
     return text
 
 
-def _status_and_reason(requirement: PTRAtomicRequirement, actual: str | None, group: InspectionItemGroup | None) -> tuple[str, str]:
+def _status_and_reason(
+    requirement: PTRAtomicRequirement,
+    actual: str | None,
+    group: InspectionItemGroup | None,
+    *,
+    candidate_actuals: Sequence[str] | None = None,
+) -> tuple[str, str]:
     if requirement.source == "ptr_table":
         if requirement.clause_id == "2.6":
             item_no = (group.display_item_no or group.item_no) if group else "未编号"
@@ -263,8 +456,12 @@ def _status_and_reason(requirement: PTRAtomicRequirement, actual: str | None, gr
     if requirement.operator == "functional":
         if actual and "符合" in actual:
             return "match", "报告检验结果显示符合。"
+        if candidate_actuals:
+            return "candidate_found_needs_mapping", "报告中找到候选结果，但未完成结构化绑定。"
         return "needs_review", "报告功能性结果未能稳定抽取，需复核。"
     if actual is None:
+        if candidate_actuals:
+            return "candidate_found_needs_mapping", "报告中找到候选结果，但未完成结构化绑定。"
         return "needs_review", "报告结果未能稳定抽取，需复核。"
     actual_numbers = _numbers(actual)
     expected = requirement.expected_value
@@ -287,6 +484,228 @@ def _compare_numbers(values: list[float], expected: float, operator: str) -> boo
     if operator == ">":
         return all(value > expected for value in values)
     return False
+
+
+def _report_results_for_requirement(
+    requirement: PTRAtomicRequirement,
+    report_atomic_results: Sequence[PTRReportAtomicResult],
+) -> list[PTRReportAtomicResult]:
+    return [
+        result
+        for result in report_atomic_results
+        if result.atomic_id == requirement.atomic_id or result.atomic_id.startswith(f"{requirement.atomic_id}:")
+    ]
+
+
+def _report_atomic_result(
+    *,
+    atomic_id: str,
+    clause_id: str,
+    label: str,
+    actual: str | None,
+    item_no: str | None,
+    page: int | None,
+    source_text: str,
+    confidence: str,
+    method: str,
+    unit: str | None = None,
+    preset: str | None = None,
+    candidate_actuals: Sequence[str] | None = None,
+) -> PTRReportAtomicResult:
+    return PTRReportAtomicResult(
+        atomic_id=atomic_id,
+        clause_id=clause_id,
+        label=label,
+        actual=actual,
+        unit=unit,
+        preset=preset,
+        report_item_no=item_no,
+        report_page=page,
+        source_text=_safe_excerpt(source_text),
+        confidence=confidence,
+        candidate_actuals=list(candidate_actuals or []),
+        diagnostics=[
+            {
+                "method": method,
+                "confidence": confidence,
+                "source_text_excerpt": _safe_excerpt(source_text),
+            }
+        ],
+    )
+
+
+def _preset_results(
+    values: Sequence[str],
+    *,
+    atomic_prefix: str,
+    clause_id: str,
+    label: str,
+    unit: str,
+    item_no: str | None,
+    page: int | None,
+    source_text: str,
+    method: str,
+) -> list[PTRReportAtomicResult]:
+    cleaned = [_strip_unit(value) for value in values if _strip_unit(value)]
+    presets = [("pulse3", "PULSE3"), ("pf_reversible", "PF Reversible")]
+    results: list[PTRReportAtomicResult] = []
+    for index, (preset_slug, preset_label) in enumerate(presets):
+        actual = cleaned[index] if index < len(cleaned) else None
+        results.append(
+            _report_atomic_result(
+                atomic_id=f"{atomic_prefix}:{preset_slug}",
+                clause_id=clause_id,
+                label=label,
+                actual=actual,
+                unit=unit,
+                preset=preset_label,
+                item_no=item_no,
+                page=page,
+                source_text=source_text,
+                confidence="high" if actual is not None else "medium",
+                method=method if actual is not None else f"{method}_candidate_missing",
+                candidate_actuals=cleaned if actual is None else [],
+            )
+        )
+    return results
+
+
+def _unique_report_atomic_results(results: Sequence[PTRReportAtomicResult]) -> list[PTRReportAtomicResult]:
+    unique: dict[str, PTRReportAtomicResult] = {}
+    for result in results:
+        if result.atomic_id in unique and unique[result.atomic_id].actual:
+            continue
+        unique[result.atomic_id] = result
+    return list(unique.values())
+
+
+def _row_text(row) -> str:
+    return " ".join(
+        str(value or "")
+        for value in [
+            row.sequence_raw,
+            row.item_name,
+            row.standard_clause,
+            row.standard_requirement,
+            row.test_result,
+            row.conclusion,
+            row.remark,
+            row.metadata.get("row_text"),
+            row.metadata.get("source_text"),
+            row.metadata.get("table_row_text"),
+        ]
+    )
+
+
+def _numeric_values_from_row(row) -> list[str]:
+    sources = row.result_values or ([row.test_result] if row.test_result else [])
+    values: list[str] = []
+    for source in sources:
+        text = str(source or "")
+        if not text.strip():
+            continue
+        parts = re.split(r"\s*/\s*|；|;|，|,", text)
+        for part in parts:
+            cleaned = _strip_unit(part)
+            if cleaned and re.search(r"\d", cleaned):
+                values.append(cleaned)
+    if values:
+        return _unique_text(values)
+
+    source_text = _row_text(row)
+    marker_values = _result_marker_values(source_text)
+    if marker_values:
+        return marker_values
+    return _preset_values_from_text(source_text)
+
+
+def _preset_values_from_row(row) -> list[str]:
+    return _preset_values_from_text(_row_text(row))
+
+
+def _candidate_values_from_row(row) -> list[str]:
+    return _candidate_marker_values(_row_text(row))
+
+
+def _first_measurement_value(row) -> str | None:
+    values = _numeric_values_from_row(row)
+    return values[0] if values else None
+
+
+def _current_value(row) -> str | None:
+    if row.item_name:
+        item_name = str(row.item_name).strip()
+        if re.search(r"\d", item_name):
+            return _strip_unit(item_name)
+    return _first_measurement_value(row)
+
+
+def _strip_unit(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    text = re.sub(r"\s+", "", text)
+    match = re.search(r"[-+]?\d+(?:\.\d+)?", text)
+    return match.group(0) if match else text
+
+
+def _result_marker_values(value: str) -> list[str]:
+    text = str(value or "")
+    pattern = re.compile(r"(?:检验)?结果\s*[:：]?\s*([-+]?\d+(?:\.\d+)?)\s*(?:ns|mJ|%|V|A)?", re.IGNORECASE)
+    return _unique_text(match.group(1) for match in pattern.finditer(text))
+
+
+def _preset_marker_values(value: str) -> list[str]:
+    return _preset_values_from_text(value)
+
+
+def _preset_values_from_text(value: str) -> list[str]:
+    text = str(value or "")
+    preset_patterns = [
+        ("pulse3", r"PULSE\s*3|PULSE3"),
+        ("pf_reversible", r"PF\s*Reversi\s*ble|PFReversi\s*ble|PF\s*Reversible|PFReversible"),
+    ]
+    values_by_preset: dict[str, str] = {}
+    for preset_slug, preset_pattern in preset_patterns:
+        value_before = re.compile(
+            rf"([-+]?\d+(?:\.\d+)?)\s*(?:ns|mJ|%|V|A)?\s*(?:{preset_pattern})\s*预设",
+            re.IGNORECASE,
+        )
+        value_after = re.compile(
+            rf"(?:{preset_pattern})\s*预设[^\d\n]{{0,40}}(?:检验)?结果\s*[:：]?\s*([-+]?\d+(?:\.\d+)?)\s*(?:ns|mJ|%|V|A)?",
+            re.IGNORECASE,
+        )
+        loose_same_line_after = re.compile(
+            rf"(?:{preset_pattern})\s*预设[^\d\n]{{0,20}}([-+]?\d+(?:\.\d+)?)\s*(?:ns|mJ|%|V|A)?",
+            re.IGNORECASE,
+        )
+        for pattern in (value_after, value_before, loose_same_line_after):
+            match = pattern.search(text)
+            if match:
+                values_by_preset[preset_slug] = match.group(1)
+                break
+
+    return _unique_text(values_by_preset[preset_slug] for preset_slug, _ in preset_patterns if preset_slug in values_by_preset)
+
+
+def _candidate_marker_values(value: str) -> list[str]:
+    text = str(value or "")
+    pattern = re.compile(r"(?:候选值|候选结果|可见候选值)\s*[:：]?\s*([-+]?\d+(?:\.\d+)?)", re.IGNORECASE)
+    return _unique_text(match.group(1) for match in pattern.finditer(text))
+
+
+def _unique_text(values: Sequence[str]) -> list[str]:
+    result: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if text and text not in result:
+            result.append(text)
+    return result
+
+
+def _safe_excerpt(value: str, *, limit: int = 180) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    return text if len(text) <= limit else f"{text[:limit]}..."
 
 
 def _expected_display(requirement: PTRAtomicRequirement) -> str | None:
@@ -368,6 +787,7 @@ def _compact(value: str) -> str:
 __all__ = [
     "build_atomic_comparison_rows",
     "build_atomic_requirements",
+    "build_report_atomic_results",
     "table_for_clause",
     "table_key_for_clause_table",
 ]

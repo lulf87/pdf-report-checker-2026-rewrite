@@ -602,6 +602,11 @@ def test_ptr_compare_scope_aware_1539_like_report_passes_and_explains_scope(tmp_
     details = result.metadata["ptr_comparison_details"]
     assert details["scope_consistency"]["status"] == "passed"
     assert details["requirements_count"] >= 9
+    assert details["overall_status"] == "needs_review"
+    assert result.metadata["codex_audit"]["final_audit_status"] == "needs_manual_review"
+    assert result.summary.final_audit_status == "needs_manual_review"
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert any(finding.code.startswith("PTR_ATOMIC_RESULT_") for finding in ptr_table_result.findings)
     items = {item["ptr_clause_id"]: item for item in details["items"]}
     assert "2.5.2.2" not in items
     assert items["2.2.1"]["report_matches"][0]["item_no"] == "157"
@@ -624,6 +629,14 @@ def test_ptr_compare_scope_aware_1539_like_report_passes_and_explains_scope(tmp_
     assert atomic_by_id["2.2.1:current"]["expected"] == "≥57 A（峰值）"
     assert atomic_by_id["2.2.1:current"]["actual"] == "59"
     assert atomic_by_id["2.2.1:current"]["status"] == "match"
+    report_atomic_by_id = {
+        row["atomic_id"]: row
+        for row in items["2.2.1"]["report_matches"][0]["report_atomic_results"]
+    }
+    assert report_atomic_by_id["2.2.1:voltage"]["actual"] == "3375"
+    assert report_atomic_by_id["2.2.1:voltage"]["unit"] == "V"
+    assert report_atomic_by_id["2.2.1:current"]["actual"] == "59"
+    assert report_atomic_by_id["2.2.1:current"]["unit"] == "A"
     assert "2.2.2" not in str(items["2.2.1"]["normalized_comparison"]["actual"])
     assert "2.2.7" not in str(items["2.2.1"]["normalized_comparison"]["actual"])
     waveform_rows = items["2.2.2"]["atomic_comparison_rows"]
@@ -639,6 +652,53 @@ def test_ptr_compare_scope_aware_1539_like_report_passes_and_explains_scope(tmp_
     group_157_result = items["2.2.1"]["report_matches"][0]["test_result"]
     for value in ("3375", "59", "1μsec±20%", "430", "455", "260", "205", "1%", "159"):
         assert value in group_157_result
+    rise_rows = {row["atomic_id"]: row for row in items["2.2.3"]["atomic_comparison_rows"]}
+    assert set(rise_rows) == {"2.2.3:rise_time:pulse3", "2.2.3:rise_time:pf_reversible"}
+    assert rise_rows["2.2.3:rise_time:pulse3"]["preset"] == "PULSE3"
+    assert rise_rows["2.2.3:rise_time:pulse3"]["actual"] == "430"
+    assert rise_rows["2.2.3:rise_time:pulse3"]["unit"] == "ns"
+    assert rise_rows["2.2.3:rise_time:pulse3"]["status"] == "match"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["preset"] == "PF Reversible"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["actual"] == "455"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["unit"] == "ns"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["status"] == "match"
+    fall_rows = {row["atomic_id"]: row for row in items["2.2.4"]["atomic_comparison_rows"]}
+    assert set(fall_rows) == {"2.2.4:fall_time:pulse3", "2.2.4:fall_time:pf_reversible"}
+    assert fall_rows["2.2.4:fall_time:pulse3"]["preset"] == "PULSE3"
+    assert fall_rows["2.2.4:fall_time:pulse3"]["actual"] == "260"
+    assert fall_rows["2.2.4:fall_time:pulse3"]["unit"] == "ns"
+    assert fall_rows["2.2.4:fall_time:pulse3"]["status"] == "match"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["preset"] == "PF Reversible"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["actual"] == "205"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["unit"] == "ns"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["status"] == "match"
+    energy_rows = {row["atomic_id"]: row for row in items["2.2.6"]["atomic_comparison_rows"]}
+    assert energy_rows["2.2.6:max_energy"]["actual"] == "159"
+    assert energy_rows["2.2.6:max_energy"]["unit"] == "mJ"
+    assert energy_rows["2.2.6:max_energy"]["status"] == "match"
+    protection_rows = {
+        **{row["atomic_id"]: row for row in items["2.2.7.1"]["atomic_comparison_rows"]},
+        **{row["atomic_id"]: row for row in items["2.2.7.2"]["atomic_comparison_rows"]},
+    }
+    assert protection_rows["2.2.7.1:temperature_limit_protection"]["actual"] == "符合要求"
+    assert protection_rows["2.2.7.1:temperature_limit_protection"]["status"] == "match"
+    assert protection_rows["2.2.7.2:over_current_protection"]["actual"] == "符合要求"
+    assert protection_rows["2.2.7.2:over_current_protection"]["status"] == "match"
+    group_report_atomic = {
+        row["atomic_id"]: row
+        for row in items["2.2.3"]["report_matches"][0]["report_atomic_results"]
+    }
+    for atomic_id in (
+        "2.2.3:rise_time:pulse3",
+        "2.2.3:rise_time:pf_reversible",
+        "2.2.4:fall_time:pulse3",
+        "2.2.4:fall_time:pf_reversible",
+        "2.2.6:max_energy",
+        "2.2.7.1:temperature_limit_protection",
+        "2.2.7.2:over_current_protection",
+    ):
+        assert atomic_id in group_report_atomic
+        assert group_report_atomic[atomic_id]["confidence"] in {"high", "medium"}
     assert items["2.5.2.1"]["coverage_status"] == "covered_passed"
     external_coverages = items["2.5.2.1"]["external_standard_coverages"]
     assert [coverage["standard"] for coverage in external_coverages] == ["GB 9706.1-2020", "GB9706.202-2021"]
@@ -665,6 +725,173 @@ def test_ptr_compare_scope_aware_1539_like_report_passes_and_explains_scope(tmp_
     for excluded_number in ("2.1", "2.3", "2.5.2.2", "2.7", "2.8"):
         assert excluded_number not in items
     assert not any(finding.metadata.get("clause_number") == "2.2.1" for finding in result.findings)
+
+
+def test_ptr_compare_scope_aware_1539_binds_atomic_results_from_cross_line_source_text(tmp_path: Path) -> None:
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(_scope_aware_report_items_with_cross_line_atomic_source()),
+    )
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    rise_rows = {row["atomic_id"]: row for row in items["2.2.3"]["atomic_comparison_rows"]}
+    assert rise_rows["2.2.3:rise_time:pulse3"]["preset"] == "PULSE3"
+    assert rise_rows["2.2.3:rise_time:pulse3"]["actual"] == "430"
+    assert rise_rows["2.2.3:rise_time:pulse3"]["unit"] == "ns"
+    assert rise_rows["2.2.3:rise_time:pulse3"]["report_page"] == 100
+    assert rise_rows["2.2.3:rise_time:pulse3"]["status"] == "match"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["preset"] == "PF Reversible"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["actual"] == "455"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["unit"] == "ns"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["report_page"] == 100
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["status"] == "match"
+
+    fall_rows = {row["atomic_id"]: row for row in items["2.2.4"]["atomic_comparison_rows"]}
+    assert fall_rows["2.2.4:fall_time:pulse3"]["actual"] == "260"
+    assert fall_rows["2.2.4:fall_time:pulse3"]["unit"] == "ns"
+    assert fall_rows["2.2.4:fall_time:pulse3"]["report_page"] == 100
+    assert fall_rows["2.2.4:fall_time:pulse3"]["status"] == "match"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["actual"] == "205"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["unit"] == "ns"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["report_page"] == 100
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["status"] == "match"
+
+    energy_rows = {row["atomic_id"]: row for row in items["2.2.6"]["atomic_comparison_rows"]}
+    assert energy_rows["2.2.6:max_energy"]["actual"] == "159"
+    assert energy_rows["2.2.6:max_energy"]["unit"] == "mJ"
+    assert energy_rows["2.2.6:max_energy"]["report_page"] == 101
+    assert energy_rows["2.2.6:max_energy"]["status"] == "match"
+
+    protection_rows = {
+        **{row["atomic_id"]: row for row in items["2.2.7.1"]["atomic_comparison_rows"]},
+        **{row["atomic_id"]: row for row in items["2.2.7.2"]["atomic_comparison_rows"]},
+    }
+    assert protection_rows["2.2.7.1:temperature_limit_protection"]["actual"] == "符合要求"
+    assert protection_rows["2.2.7.1:temperature_limit_protection"]["report_page"] == 101
+    assert protection_rows["2.2.7.2:over_current_protection"]["actual"] == "符合要求"
+    assert protection_rows["2.2.7.2:over_current_protection"]["report_page"] == 101
+
+    report_atomic = {
+        row["atomic_id"]: row
+        for row in items["2.2.3"]["report_matches"][0]["report_atomic_results"]
+    }
+    assert "PFReversi ble 预设" in report_atomic["2.2.3:rise_time:pf_reversible"]["source_text"]
+    assert report_atomic["2.2.4:fall_time:pf_reversible"]["confidence"] == "high"
+    assert details["overall_status"] == "needs_review"
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_ptr_compare_scope_aware_1539_binds_atomic_results_when_value_precedes_preset(tmp_path: Path) -> None:
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(
+            _scope_aware_report_items_with_value_before_preset_atomic_source()
+        ),
+    )
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    rise_rows = {row["atomic_id"]: row for row in items["2.2.3"]["atomic_comparison_rows"]}
+    assert rise_rows["2.2.3:rise_time:pulse3"]["preset"] == "PULSE3"
+    assert rise_rows["2.2.3:rise_time:pulse3"]["actual"] == "430"
+    assert rise_rows["2.2.3:rise_time:pulse3"]["unit"] == "ns"
+    assert rise_rows["2.2.3:rise_time:pulse3"]["report_page"] == 100
+    assert rise_rows["2.2.3:rise_time:pulse3"]["status"] == "match"
+    assert "430 PULSE3" in rise_rows["2.2.3:rise_time:pulse3"]["source_text"]
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["preset"] == "PF Reversible"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["actual"] == "455"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["unit"] == "ns"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["report_page"] == 100
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["status"] == "match"
+    assert "455 PFReversible" in rise_rows["2.2.3:rise_time:pf_reversible"]["source_text"]
+
+    fall_rows = {row["atomic_id"]: row for row in items["2.2.4"]["atomic_comparison_rows"]}
+    assert fall_rows["2.2.4:fall_time:pulse3"]["preset"] == "PULSE3"
+    assert fall_rows["2.2.4:fall_time:pulse3"]["actual"] == "260"
+    assert fall_rows["2.2.4:fall_time:pulse3"]["unit"] == "ns"
+    assert fall_rows["2.2.4:fall_time:pulse3"]["report_page"] == 100
+    assert fall_rows["2.2.4:fall_time:pulse3"]["status"] == "match"
+    assert "260 PULSE 3" in fall_rows["2.2.4:fall_time:pulse3"]["source_text"]
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["preset"] == "PF Reversible"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["actual"] == "205"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["unit"] == "ns"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["report_page"] == 100
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["status"] == "match"
+    assert "205 PF Reversible" in fall_rows["2.2.4:fall_time:pf_reversible"]["source_text"]
+    assert items["2.2.3"]["coverage_status"] == "covered_passed"
+    assert items["2.2.4"]["coverage_status"] == "covered_passed"
+
+
+def test_ptr_compare_atomic_unbound_generates_codex_required_finding_and_final_status(tmp_path: Path) -> None:
+    audit_service = FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN)
+
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(
+            _scope_aware_report_items_with_unbound_energy_and_value_before_preset_source()
+        ),
+        codex_audit_service=audit_service,
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    atomic_finding = next(
+        finding
+        for finding in ptr_table_result.findings
+        if finding.code == "PTR_ATOMIC_RESULT_UNBOUND"
+        and finding.metadata.get("atomic_id") == "2.2.6:max_energy"
+    )
+    assert atomic_finding.metadata["clause_number"] == "2.2.6"
+    assert atomic_finding.metadata["atomic_id"] == "2.2.6:max_energy"
+    assert atomic_finding.metadata["item_no"] == "157"
+    assert atomic_finding.metadata["codex_required"] is True
+    assert atomic_finding.metadata["final_status"] == "manual_review_required"
+    assert ptr_table_result.codex_reviews
+    assert ptr_table_result.codex_reviews[0].target.finding_code == "PTR_ATOMIC_RESULT_UNBOUND"
+    assert ptr_table_result.codex_reviews[0].target.target_type.value == "ptr_parameter"
+    assert result.metadata["codex_audit"]["final_audit_status"] == "needs_manual_review"
+    assert result.summary.final_audit_status == "needs_manual_review"
+
+    request, evidence_package = audit_service.calls[0]
+    assert request.targets[0].finding_code == "PTR_ATOMIC_RESULT_UNBOUND"
+    group_items = [item for item in evidence_package.items if item.ref_id == "report_inspection_group:157"]
+    assert group_items
+    group = group_items[0].structured["inspection_item_group"]
+    assert group["item_no"] == "157"
+    assert group["pages"] == [99, 100, 101]
+    assert any(row["sequence_raw"] == "2.2.6 最大输出能量" for row in group["compact_rows"])
+    page100_source = json.dumps(
+        [row for row in group["source_rows"] if row["page_number"] == 100],
+        ensure_ascii=False,
+    )
+    for expected_text in ("430", "455", "260", "205", "PULSE3", "PF Reversible"):
+        assert expected_text in page100_source
+    assert any("159" in value for value in atomic_finding.metadata["candidate_actuals"])
+
+
+def test_ptr_compare_atomic_unbound_confirm_stays_manual_review_not_confirmed_error(tmp_path: Path) -> None:
+    audit_service = FakePtrCodexAuditService(verdict=CodexReviewVerdict.CONFIRM)
+
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(_scope_aware_report_items_with_unbound_energy()),
+        codex_audit_service=audit_service,
+    )
+
+    details = result.metadata["ptr_comparison_details"]
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    atomic_finding = next(
+        finding
+        for finding in ptr_table_result.findings
+        if finding.code == "PTR_ATOMIC_RESULT_UNBOUND"
+        and finding.metadata.get("atomic_id") == "2.2.6:max_energy"
+    )
+    assert atomic_finding.metadata["codex_verdict"] == "confirm"
+    assert atomic_finding.metadata["final_status"] == "manual_review_required"
+    assert atomic_finding.metadata["user_facing_status"] == "needs_review"
+    assert result.summary.confirmed_errors_count == 0
+    assert details["confirmed_errors_count"] == 0
+    assert result.summary.final_audit_status == "needs_manual_review"
 
 
 def test_ptr_compare_scope_consistency_reports_declared_item_missing(tmp_path: Path) -> None:
@@ -1369,7 +1596,10 @@ def _run_scope_aware_usecase(
     *,
     report_extractor: ScopeAwareReportExtractor | None = None,
     inspection_table_extractor: ScopeAwareInspectionTableExtractor | None = None,
+    codex_audit_service=None,
 ):
+    if codex_audit_service is None:
+        codex_audit_service = FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN)
     task_service = TaskService()
     report_pdf = ParsedPdf(
         file_id="report-1539-like",
@@ -1396,7 +1626,7 @@ def _run_scope_aware_usecase(
         report_extractor=report_extractor or ScopeAwareReportExtractor(),
         inspection_table_extractor=inspection_table_extractor or ScopeAwareInspectionTableExtractor(),
         table_reference_compare=TrackingTableCompare(),
-        codex_audit_service=FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN),
+        codex_audit_service=codex_audit_service,
     )
 
     status = usecase.run(
@@ -1807,6 +2037,164 @@ def _scope_aware_report_items() -> list[InspectionItem]:
             row_index_in_page=7,
         ),
     ]
+
+
+def _scope_aware_report_items_with_cross_line_atomic_source() -> list[InspectionItem]:
+    items = []
+    for item in _scope_aware_report_items():
+        raw = item.sequence_raw or ""
+        if raw.startswith("续") and "2.2.3" in (item.standard_requirement or ""):
+            items.append(
+                item.model_copy(
+                    update={
+                        "test_result": None,
+                        "result_values": [],
+                        "metadata": {
+                            "row_text": (
+                                "续 157 2.2.3 脉冲上升时间\n"
+                                "PULSE3 预设 检验结果 430 ns\n"
+                                "PFReversi\n"
+                                "ble 预设 检验结果 455 ns\n"
+                                "单项结论 符合"
+                            )
+                        },
+                    }
+                )
+            )
+            continue
+        if raw.startswith("2.2.4"):
+            items.append(
+                item.model_copy(
+                    update={
+                        "test_result": None,
+                        "result_values": [],
+                        "metadata": {
+                            "row_text": (
+                                "2.2.4 脉冲下降时间\n"
+                                "PULSE 3 预设 检验结果 260 ns\n"
+                                "PF Reversible 预设 检验结果 205 ns\n"
+                                "单项结论 符合"
+                            )
+                        },
+                    }
+                )
+            )
+            continue
+        if raw.startswith("2.2.6"):
+            items.append(
+                item.model_copy(
+                    update={
+                        "test_result": None,
+                        "result_values": [],
+                        "metadata": {
+                            "row_text": (
+                                "2.2.6 最大输出能量\n"
+                                "单个脉冲最大输出能量应小于 258mJ。\n"
+                                "检验结果 159 mJ\n"
+                                "单项结论 符合"
+                            )
+                        },
+                    }
+                )
+            )
+            continue
+        items.append(item)
+    return items
+
+
+def _scope_aware_report_items_with_value_before_preset_atomic_source() -> list[InspectionItem]:
+    items = []
+    for item in _scope_aware_report_items():
+        raw = item.sequence_raw or ""
+        if raw.startswith("续") and "2.2.3" in (item.standard_requirement or ""):
+            items.append(
+                item.model_copy(
+                    update={
+                        "test_result": None,
+                        "result_values": [],
+                        "metadata": {
+                            "row_text": (
+                                "续 157 2.2.3 脉冲上升时间\n"
+                                "430 PULSE3 预设\n"
+                                "455 PFReversible 预设\n"
+                                "单项结论 符合"
+                            )
+                        },
+                    }
+                )
+            )
+            continue
+        if raw.startswith("2.2.4"):
+            items.append(
+                item.model_copy(
+                    update={
+                        "test_result": None,
+                        "result_values": [],
+                        "metadata": {
+                            "row_text": (
+                                "2.2.4 脉冲下降时间\n"
+                                "260 PULSE 3 预设\n"
+                                "205 PF Reversible 预设\n"
+                                "单项结论 符合"
+                            )
+                        },
+                    }
+                )
+            )
+            continue
+        items.append(item)
+    return items
+
+
+def _scope_aware_report_items_with_unbound_energy() -> list[InspectionItem]:
+    items = []
+    for item in _scope_aware_report_items():
+        raw = item.sequence_raw or ""
+        if raw.startswith("2.2.6"):
+            items.append(
+                item.model_copy(
+                    update={
+                        "test_result": None,
+                        "result_values": [],
+                        "metadata": {
+                            "row_text": (
+                                "2.2.6 最大输出能量\n"
+                                "报告中可见候选值 159，但未能稳定对应到检验结果列。\n"
+                                "单项结论 符合"
+                            )
+                        },
+                    }
+                )
+            )
+            continue
+        items.append(item)
+    return items
+
+
+def _scope_aware_report_items_with_unbound_energy_and_value_before_preset_source() -> list[InspectionItem]:
+    items = _scope_aware_report_items_with_value_before_preset_atomic_source()
+    result = []
+    for item in items:
+        raw = item.sequence_raw or ""
+        if raw.startswith("2.2.6"):
+            result.append(
+                item.model_copy(
+                    update={
+                        "test_result": None,
+                        "result_values": [],
+                        "metadata": {
+                            "row_text": (
+                                "2.2.6 最大输出能量\n"
+                                "报告中可见候选值 159，但未能稳定对应到检验结果列。\n"
+                                "单项结论 符合"
+                            )
+                        },
+                    }
+                )
+            )
+            continue
+        result.append(item)
+    return result
 
 
 def _ptr_document(*, ptr_table: CanonicalTable | None, extra_tables: list[PTRTable]) -> PTRDocument:

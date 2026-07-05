@@ -22,7 +22,7 @@ from app.domain.report import InspectionItem, ReportDocument
 from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope
 from app.domain.result import CheckResult
 from app.domain.table import CanonicalTable, ParameterRecord
-from app.rules.ptr.atomic_compare import build_atomic_comparison_rows, build_atomic_requirements
+from app.rules.ptr.atomic_compare import build_atomic_comparison_rows, build_atomic_requirements, build_report_atomic_results
 from app.rules.ptr.report_item_grouping import (
     build_ptr_report_item_groups,
     ptr_group_for_clause,
@@ -48,6 +48,8 @@ MISMATCH_CODES = {
     "PTR_TABLE_TOLERANCE_MISMATCH",
 }
 REVIEW_CODES = {
+    "PTR_ATOMIC_RESULT_NEEDS_REVIEW",
+    "PTR_ATOMIC_RESULT_UNBOUND",
     "PTR_TABLE_CANDIDATE_AMBIGUOUS",
     "PTR_TABLE_SEGMENT_AMBIGUOUS",
     "PTR_SCOPE_FILTER_REVIEW",
@@ -276,6 +278,7 @@ def _report_group_match(group: InspectionItemGroup) -> PTRReportMatch:
         test_result=_safe_text(ptr_group_test_result(group)),
         single_conclusion=_safe_text(ptr_group_single_conclusion(group)),
         remark=_safe_text(first_row.remark if first_row else None),
+        report_atomic_results=_safe_payload(build_report_atomic_results(group)),
     )
 
 
@@ -373,7 +376,7 @@ def _status_from_atomic_rows(
         statuses = {row.status for row in atomic_rows}
         if "mismatch" in statuses:
             return PTRUserFacingStatus.VALUE_MISMATCH
-        if "needs_review" in statuses:
+        if "needs_review" in statuses or "candidate_found_needs_mapping" in statuses:
             return PTRUserFacingStatus.NEEDS_REVIEW
         if statuses and statuses <= {"match", "not_applicable"}:
             return PTRUserFacingStatus.COVERED_PASSED

@@ -45,6 +45,7 @@ class PTRReportMatch(BaseModel):
     test_result: str | None = None
     single_conclusion: str | None = None
     remark: str | None = None
+    report_atomic_results: list["PTRReportAtomicResult"] = Field(default_factory=list)
 
 
 class PTRNormalizedComparison(BaseModel):
@@ -75,16 +76,36 @@ class PTRAtomicComparisonRow(BaseModel):
     atomic_id: str
     clause_id: str
     label: str
+    preset: str | None = None
     expected: str | None = None
     actual: str | None = None
+    unit: str | None = None
+    candidate_actuals: list[str] = Field(default_factory=list)
     status: str = "needs_review"
     reason: str | None = None
     report_page: int | None = None
     report_item_no: str | None = None
+    confidence: str | None = None
     source: str = "ptr_text"
+    source_text: str | None = None
     table_number: str | None = None
     table_title: str | None = None
     table_key: str | None = None
+
+
+class PTRReportAtomicResult(BaseModel):
+    atomic_id: str
+    clause_id: str
+    label: str
+    actual: str | None = None
+    unit: str | None = None
+    preset: str | None = None
+    report_item_no: str | None = None
+    report_page: int | None = None
+    source_text: str | None = None
+    confidence: str | None = None
+    diagnostics: list[dict[str, Any]] = Field(default_factory=list)
+    candidate_actuals: list[str] = Field(default_factory=list)
 
 
 class PTRComparisonItem(BaseModel):
@@ -145,5 +166,6 @@ __all__ = [
     "PTRDisplayFinalStatus",
     "PTRNormalizedComparison",
     "PTRReportMatch",
+    "PTRReportAtomicResult",
     "PTRUserFacingStatus",
 ]

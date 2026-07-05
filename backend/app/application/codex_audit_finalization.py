@@ -15,6 +15,10 @@ FINAL_STATUS_MANUAL_REVIEW_REQUIRED = "manual_review_required"
 FINAL_STATUS_SUGGESTED_ADDITIONAL_FINDING = "suggested_additional_finding"
 FINAL_STATUS_OUT_OF_SCOPE = "out_of_scope"
 FINAL_STATUS_SUMMARY_ONLY = "summary_only"
+EXTRACTION_BINDING_REVIEW_CODES = {
+    "PTR_ATOMIC_RESULT_NEEDS_REVIEW",
+    "PTR_ATOMIC_RESULT_UNBOUND",
+}
 
 
 def final_status_for_verdict(verdict: str | None) -> str:
@@ -49,6 +53,9 @@ def annotate_candidate_findings_with_codex_status(
         finding.metadata["codex_verdict"] = verdict
         _copy_visual_review_metadata(finding, review)
         final_status = final_status_for_verdict(verdict)
+        if finding.code in EXTRACTION_BINDING_REVIEW_CODES and verdict == "confirm":
+            final_status = FINAL_STATUS_MANUAL_REVIEW_REQUIRED
+            finding.metadata["finalization_reason"] = "CODEX_CONFIRMED_EXTRACTION_BINDING_UNRESOLVED"
         diagnostic = _defensive_finalization_diagnostic(finding, review, verdict)
         if diagnostic is not None:
             if diagnostic == "CODEX_CONFIRMED_UNUSED_COMPONENT_GAP":

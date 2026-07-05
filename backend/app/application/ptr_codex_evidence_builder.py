@@ -41,6 +41,7 @@ from app.rules.ptr.report_item_grouping import (
     ptr_group_standard_requirement,
     ptr_group_test_result,
 )
+from app.rules.ptr.atomic_compare import build_report_atomic_results
 
 
 OLD_PROJECT_ROOT = "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.4.13"
@@ -57,6 +58,8 @@ TABLE_CODES = {
     "PTR_TABLE_CANDIDATE_AMBIGUOUS",
 }
 PARAMETER_CODES = {
+    "PTR_ATOMIC_RESULT_NEEDS_REVIEW",
+    "PTR_ATOMIC_RESULT_UNBOUND",
     "PTR_TABLE_VALUE_MISMATCH",
     "PTR_TABLE_UNIT_MISMATCH",
     "PTR_TABLE_PARAM_MISSING",
@@ -490,7 +493,7 @@ class PtrCodexEvidenceBuilder:
         finding: Finding,
         report_doc: ReportDocument,
     ) -> EvidenceItem | None:
-        if finding.check_id != "PTR_CLAUSE" or not report_doc.inspection_items:
+        if not _finding_can_use_report_group(finding) or not report_doc.inspection_items:
             return None
         group = self._report_inspection_group_for_finding(finding, report_doc)
         if group is None:
@@ -536,7 +539,24 @@ class PtrCodexEvidenceBuilder:
             "test_result": ptr_group_test_result(group),
             "single_conclusion": ptr_group_single_conclusion(group),
             "compact_rows": ptr_group_compact_rows(group),
+            "source_rows": self._report_inspection_group_source_rows(group),
+            "report_atomic_results": self._safe_payload(build_report_atomic_results(group)),
+            "diagnostics": self._safe_payload(group.diagnostics),
         }
+
+    def _report_inspection_group_source_rows(self, group: InspectionItemGroup) -> list[dict[str, Any]]:
+        return [
+            {
+                "page_number": row.source_page,
+                "row_index": row.row_index_in_page,
+                "sequence_raw": row.sequence_raw,
+                "row_text": row.metadata.get("row_text") or _inspection_row_text(row),
+                "source_text": row.metadata.get("source_text") or _inspection_row_text(row),
+                "table_row_text": row.metadata.get("table_row_text"),
+                "combined_row_text": row.metadata.get("combined_row_text") or _inspection_row_text(row),
+            }
+            for row in group.rows
+        ]
 
     def _clause_for_finding(self, finding: Finding, ptr_doc: PTRDocument) -> PTRClause | None:
         clause_number = str(finding.metadata.get("clause_number") or "")
@@ -729,6 +749,26 @@ def _coerce_canonical_tables(value: Any) -> list[CanonicalTable]:
     if isinstance(canonical_table, CanonicalTable):
         return [canonical_table]
     return []
+
+
+def _inspection_row_text(row: InspectionItem) -> str:
+    values = [
+        row.sequence_raw,
+        row.item_name,
+        row.standard_clause,
+        row.standard_requirement,
+        row.test_result,
+        row.conclusion,
+        row.remark,
+    ]
+    return " ".join(str(value).strip() for value in values if str(value or "").strip())
+
+
+def _finding_can_use_report_group(finding: Finding) -> bool:
+    return finding.check_id == "PTR_CLAUSE" or finding.code in {
+        "PTR_ATOMIC_RESULT_NEEDS_REVIEW",
+        "PTR_ATOMIC_RESULT_UNBOUND",
+    }
 
 
 def _utc_now() -> datetime:

@@ -194,7 +194,16 @@ function PTRExplanationDetails({
         </section>
         <section>
           <p className="detail-kicker">比对明细</p>
-          <p>{formatComparisonLine(comparison.expected, comparison.actual, comparison.operator, comparison.unit)}</p>
+          <p>
+            {formatComparisonLine(
+              comparison.expected,
+              comparison.actual,
+              comparison.operator,
+              comparison.unit,
+              comparison.requirement_type,
+              comparison.status,
+            )}
+          </p>
           <p>
             {comparison.requirement_type} · {comparison.status}
           </p>
@@ -230,6 +239,7 @@ function PTRAtomicComparisonTable({ rows }: { rows: PTRAtomicComparisonRow[] }) 
           <thead>
             <tr>
               <th>参数</th>
+              <th>预设</th>
               <th>PTR 要求</th>
               <th>报告结果</th>
               <th>状态</th>
@@ -241,8 +251,9 @@ function PTRAtomicComparisonTable({ rows }: { rows: PTRAtomicComparisonRow[] }) 
             {rows.map((row) => (
               <tr className={`comparison-row comparison-row-${ptrAtomicStatusTone(row.status)}`} key={row.atomic_id}>
                 <td>{row.label}</td>
+                <td>{row.preset || "不适用"}</td>
                 <td>{row.expected || "无"}</td>
-                <td>{row.actual || "未稳定抽取"}</td>
+                <td>{formatAtomicActual(row)}</td>
                 <td>
                   <Badge variant={ptrAtomicStatusTone(row.status)}>{ptrAtomicStatusLabel(row.status)}</Badge>
                 </td>
@@ -329,12 +340,32 @@ function PTRTechnicalDetails({
   );
 }
 
-function formatComparisonLine(expected: unknown, actual: unknown, operator?: string | null, unit?: string | null): string {
+function formatAtomicActual(row: PTRAtomicComparisonRow): string {
+  const actual = typeof row.actual === "string" ? row.actual.trim() : "";
+  if (actual) {
+    const unit = row.unit?.trim();
+    return unit && !actual.includes(unit) ? `${actual} ${unit}` : actual;
+  }
+  const candidates = row.candidate_actuals?.filter((value) => value.trim()) ?? [];
+  if (candidates.length > 0) return `候选值：${candidates.join("、")}，待绑定确认`;
+  if (row.status === "needs_review" || row.status === "candidate_found_needs_mapping") return "未完成结构化抽取";
+  return "未返回报告结果";
+}
+
+function formatComparisonLine(
+  expected: unknown,
+  actual: unknown,
+  operator?: string | null,
+  unit?: string | null,
+  requirementType?: string | null,
+  status?: string | null,
+): string {
   const expectedText = formatValue(expected);
   const actualText = formatValue(actual);
   const operatorText = operator ? `；操作符 ${operator}` : "";
   const unitText = unit ? `；单位 ${unit}` : "";
-  return `期望 ${expectedText || "无"}；实际 ${actualText || "无"}${operatorText}${unitText}`;
+  const fallbackActual = requirementType === "atomic_parameter_comparison" && status === "needs_review" ? "未完成结构化抽取" : "无";
+  return `期望 ${expectedText || "无"}；实际 ${actualText || fallbackActual}${operatorText}${unitText}`;
 }
 
 function formatValue(value: unknown): string {
@@ -379,6 +410,7 @@ function ptrAtomicStatusLabel(status: string): string {
   if (status === "match") return "满足";
   if (status === "mismatch") return "不满足";
   if (status === "needs_review") return "需复核";
+  if (status === "candidate_found_needs_mapping") return "候选待绑定";
   if (status === "not_applicable") return "不适用";
   return status;
 }
@@ -386,7 +418,7 @@ function ptrAtomicStatusLabel(status: string): string {
 function ptrAtomicStatusTone(status: string): "success" | "danger" | "warn" | "info" {
   if (status === "match") return "success";
   if (status === "mismatch") return "danger";
-  if (status === "needs_review") return "warn";
+  if (status === "needs_review" || status === "candidate_found_needs_mapping") return "warn";
   return "info";
 }
 

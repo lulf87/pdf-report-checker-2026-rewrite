@@ -34,6 +34,7 @@ from app.infrastructure.report.inspection_table_extractor import InspectionTable
 from app.infrastructure.report.parameter_table_extractor import ReportParameterTableExtractor
 from app.infrastructure.storage.local_file_store import LocalFileStore
 from app.rules.ptr.clause_text_compare import compare_clause_texts
+from app.rules.ptr.atomic_result_check import check_atomic_result_bindings
 from app.rules.ptr.parameter_compare import compare_parameter_tables
 from app.rules.ptr.report_scope_consistency import check_report_scope_consistency
 from app.rules.ptr.scope_filter import ScopeFilterResult, filter_ptr_scope
@@ -318,6 +319,14 @@ class PTRCompareUseCase:
             self._parameter_table_findings(
                 ptr_doc=ptr_doc,
                 report_doc=report_doc,
+                clauses=direct_compare_clauses,
+                task_id=task_id,
+            )
+        )
+        table_findings.extend(
+            check_atomic_result_bindings(
+                ptr_doc,
+                report_doc.inspection_items,
                 clauses=direct_compare_clauses,
                 task_id=task_id,
             )
