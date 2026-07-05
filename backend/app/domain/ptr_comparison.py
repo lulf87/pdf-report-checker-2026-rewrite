@@ -59,8 +59,10 @@ class PTRComparisonItem(BaseModel):
     ptr_page: int | None = None
     ptr_requirement_text: str
     report_matches: list[PTRReportMatch] = Field(default_factory=list)
+    external_standard_coverage: dict[str, Any] | None = None
     normalized_comparison: PTRNormalizedComparison
     rule_status: PTRUserFacingStatus
+    coverage_status: PTRUserFacingStatus
     user_facing_status: PTRUserFacingStatus
     final_status: PTRDisplayFinalStatus
     reason: str
@@ -73,6 +75,7 @@ class PTRComparisonItem(BaseModel):
 class PTRComparisonDetails(BaseModel):
     overall_status: PTRComparisonOverallStatus
     overall_summary: str
+    scope_consistency: dict[str, Any] | None = None
     requirements_count: int = Field(default=0, ge=0)
     covered_count: int = Field(default=0, ge=0)
     missing_count: int = Field(default=0, ge=0)

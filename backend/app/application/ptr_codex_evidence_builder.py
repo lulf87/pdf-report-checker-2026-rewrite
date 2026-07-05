@@ -28,7 +28,8 @@ from app.domain.evidence_package import (
 )
 from app.domain.finding import Finding
 from app.domain.ptr import PTRClause, PTRDocument, PTRTable
-from app.domain.report import ReportDocument
+from app.domain.report import InspectionItem, ReportDocument
+from app.domain.report_scope import ReportInspectionScope
 from app.domain.result import CheckResult
 from app.domain.table import CanonicalTable, ParameterRecord
 
@@ -52,6 +53,12 @@ PARAMETER_CODES = {
     "PTR_TABLE_CONDITION_MISMATCH",
     "PTR_TABLE_TOLERANCE_MISMATCH",
     "PTR_TABLE_SEGMENT_AMBIGUOUS",
+}
+REPORT_SCOPE_CODES = {
+    "PTR_SCOPE_DECLARED_ITEM_MISSING_IN_REPORT",
+    "PTR_SCOPE_UNDECLARED_REPORT_ITEM",
+    "PTR_SCOPE_EXCLUDED_TOPIC_PRESENT",
+    "PTR_SCOPE_STANDARD_RANGE_MISMATCH",
 }
 
 
@@ -201,7 +208,7 @@ class PtrCodexEvidenceBuilder:
         findings: list[Finding] = []
         for result in check_results:
             for finding in result.findings:
-                if finding.check_id not in {"PTR_CLAUSE", "PTR_TABLE", "PTR_SCOPE"}:
+                if finding.check_id not in {"PTR_CLAUSE", "PTR_TABLE", "PTR_SCOPE", "PTR_REPORT_SCOPE"}:
                     continue
                 if not self.target_selection.allows(finding):
                     continue
@@ -233,6 +240,8 @@ class PtrCodexEvidenceBuilder:
             return CodexReviewTargetType.PTR_PARAMETER
         if finding.code in TABLE_CODES:
             return CodexReviewTargetType.PTR_TABLE
+        if finding.check_id == "PTR_REPORT_SCOPE" or finding.code in REPORT_SCOPE_CODES:
+            return CodexReviewTargetType.INSPECTION_ITEM
         if finding.code in CLAUSE_CODES or finding.check_id in {"PTR_CLAUSE", "PTR_SCOPE"}:
             return CodexReviewTargetType.PTR_CLAUSE
         if finding.check_id == "PTR_TABLE":
@@ -258,6 +267,9 @@ class PtrCodexEvidenceBuilder:
             self._rule_context_item(finding),
             refs,
         )
+
+        for item in self._report_scope_items_for_finding(finding, report_doc):
+            self._add_item(items_by_ref, item, refs)
 
         clause = self._clause_for_finding(finding, ptr_doc)
         if clause is not None:
@@ -386,6 +398,79 @@ class PtrCodexEvidenceBuilder:
             metadata={"table_id": table.table_id, "table_number": table.table_number, "source": "report"},
         )
 
+    def _report_scope_items_for_finding(self, finding: Finding, report_doc: ReportDocument) -> list[EvidenceItem]:
+        report_scope = self._report_inspection_scope(report_doc)
+        if report_scope is None:
+            return []
+        return [
+            self._report_scope_declaration_item(report_scope),
+            self._report_scope_external_ranges_item(report_scope, report_doc),
+            self._report_scope_inspection_items_item(finding, report_doc),
+        ]
+
+    def _report_scope_declaration_item(self, report_scope: ReportInspectionScope) -> EvidenceItem:
+        return EvidenceItem(
+            ref_id="report_scope:declaration",
+            source_type=EvidenceSourceType.REPORT_FIELD,
+            title="Report homepage inspection scope declaration",
+            text=self._sanitize_text(report_scope.source_text or ""),
+            structured=self._safe_payload(
+                {
+                    "declared_scope_items": report_scope.declared_scope_items,
+                    "declared_scope_ranges": [item.model_dump(mode="json") for item in report_scope.declared_scope_ranges],
+                    "excluded_topics": report_scope.excluded_topics,
+                    "source_page": report_scope.source_page,
+                    "source_text": report_scope.source_text,
+                    "ptr_direct_content_starts_after": report_scope.ptr_direct_content_starts_after,
+                }
+            ),
+            page_number=report_scope.source_page,
+            section="report_scope",
+            metadata={"source": "report_homepage", "field_name": "检验项目"},
+        )
+
+    def _report_scope_external_ranges_item(
+        self,
+        report_scope: ReportInspectionScope,
+        report_doc: ReportDocument,
+    ) -> EvidenceItem:
+        ranges = []
+        for item in report_scope.external_standard_ranges:
+            range_items = self._inspection_items_in_range(report_doc.inspection_items, item.start_item_no, item.end_item_no)
+            ranges.append(
+                {
+                    **item.model_dump(mode="json"),
+                    "item_count": len(range_items),
+                    "passed_count": sum(1 for report_item in range_items if self._inspection_item_passed(report_item)),
+                    "sample_items": [self._inspection_item_summary(report_item) for report_item in range_items[: self.max_table_records]],
+                }
+            )
+        return EvidenceItem(
+            ref_id="report_scope:external_standard_ranges",
+            source_type=EvidenceSourceType.METADATA,
+            title="Report external standard sequence ranges",
+            structured=self._safe_payload({"external_standard_ranges": ranges}),
+            section="external_standard_ranges",
+            metadata={"source": "report_model_spec_or_notes"},
+        )
+
+    def _report_scope_inspection_items_item(self, finding: Finding, report_doc: ReportDocument) -> EvidenceItem:
+        items = self._inspection_items_for_scope_finding(finding, report_doc.inspection_items)
+        return EvidenceItem(
+            ref_id="report_scope:inspection_items",
+            source_type=EvidenceSourceType.TABLE,
+            title="Report inspection table items relevant to scope",
+            structured=self._safe_payload(
+                {
+                    "items": [self._inspection_item_summary(item) for item in items[: self.max_table_records]],
+                    "item_count": len(items),
+                    "truncated": len(items) > self.max_table_records,
+                }
+            ),
+            section="inspection_items",
+            metadata={"source": "report_inspection_table"},
+        )
+
     def _clause_for_finding(self, finding: Finding, ptr_doc: PTRDocument) -> PTRClause | None:
         clause_number = str(finding.metadata.get("clause_number") or "")
         if clause_number:
@@ -416,6 +501,75 @@ class PtrCodexEvidenceBuilder:
         for key in ("canonical_tables", "parameter_tables", "ptr_compare_tables"):
             tables.extend(_coerce_canonical_tables(report_doc.metadata.get(key)))
         return tables
+
+    def _report_inspection_scope(self, report_doc: ReportDocument) -> ReportInspectionScope | None:
+        raw_scope = report_doc.metadata.get("inspection_scope")
+        if isinstance(raw_scope, ReportInspectionScope):
+            return raw_scope
+        if isinstance(raw_scope, dict):
+            return ReportInspectionScope.model_validate(raw_scope)
+        return None
+
+    def _inspection_items_for_scope_finding(
+        self,
+        finding: Finding,
+        report_items: list[InspectionItem],
+    ) -> list[InspectionItem]:
+        item_no = str(finding.metadata.get("item_no") or "")
+        clause_number = str(finding.metadata.get("clause_number") or "")
+        if item_no:
+            matched = [item for item in report_items if self._inspection_item_no(item) == item_no]
+            if matched:
+                return matched
+        if clause_number:
+            matched = [
+                item
+                for item in report_items
+                if clause_number in " ".join([item.standard_clause or "", item.standard_requirement or ""])
+            ]
+            if matched:
+                return matched
+        return list(report_items)
+
+    def _inspection_items_in_range(
+        self,
+        report_items: list[InspectionItem],
+        start_item_no: str,
+        end_item_no: str,
+    ) -> list[InspectionItem]:
+        start = self._safe_int(start_item_no)
+        end = self._safe_int(end_item_no)
+        if start is None or end is None:
+            return []
+        return [
+            item
+            for item in report_items
+            if (item_no := self._safe_int(self._inspection_item_no(item))) is not None and start <= item_no <= end
+        ]
+
+    def _inspection_item_summary(self, item: InspectionItem) -> dict[str, Any]:
+        return {
+            "item_no": self._inspection_item_no(item),
+            "page": item.source_page,
+            "standard_clause": item.standard_clause,
+            "standard_requirement": item.standard_requirement,
+            "test_result": item.test_result,
+            "single_conclusion": item.conclusion,
+            "remark": item.remark,
+        }
+
+    def _inspection_item_passed(self, item: InspectionItem) -> bool:
+        text = " ".join([item.test_result or "", item.conclusion or "", *item.result_values])
+        return "符合" in text and "不符合" not in text
+
+    def _inspection_item_no(self, item: InspectionItem) -> str | None:
+        return item.sequence_raw or (str(item.sequence) if item.sequence is not None else None)
+
+    def _safe_int(self, value: str | None) -> int | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return int(text) if text.isdigit() else None
 
     def _table_summary(self, table: CanonicalTable, *, source: str) -> dict[str, Any]:
         records = [self._record_summary(record) for record in table.parameter_records[: self.max_table_records]]
@@ -452,6 +606,8 @@ class PtrCodexEvidenceBuilder:
             return EvidencePackageKind.PTR_CLAUSE_REVIEW
         if target_types == {CodexReviewTargetType.PTR_PARAMETER}:
             return EvidencePackageKind.PTR_PARAMETER_REVIEW
+        if target_types == {CodexReviewTargetType.INSPECTION_ITEM}:
+            return EvidencePackageKind.INSPECTION_ITEM_REVIEW
         return EvidencePackageKind.PTR_TABLE_REVIEW
 
     def _target_summary(self, finding: Finding) -> str:

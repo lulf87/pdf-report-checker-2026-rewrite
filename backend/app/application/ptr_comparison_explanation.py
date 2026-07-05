@@ -16,6 +16,7 @@ from app.domain.ptr_comparison import (
     PTRUserFacingStatus,
 )
 from app.domain.report import InspectionItem, ReportDocument
+from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope
 from app.domain.result import CheckResult
 from app.domain.table import CanonicalTable, ParameterRecord
 
@@ -51,21 +52,23 @@ def build_ptr_comparison_details(
     check_results: Sequence[CheckResult],
 ) -> PTRComparisonDetails:
     findings_by_clause = _findings_by_clause(check_results)
-    report_matches_by_clause = _report_matches_by_clause(report_doc.inspection_items)
     report_candidates = _candidate_report_items(report_doc.inspection_items)
+    report_scope = _report_inspection_scope(report_doc)
+    scope_consistency = _scope_consistency_metadata(check_results, report_scope)
 
     items = [
         _comparison_item(
             clause=clause,
             findings=findings_by_clause.get(str(clause.number), []),
-            report_matches=report_matches_by_clause.get(str(clause.number), []),
+            report_matches=_report_matches_for_clause(str(clause.number), report_doc.inspection_items),
             report_candidates=report_candidates,
+            external_coverage=_external_standard_coverage(clause, report_scope, report_doc.inspection_items),
             ptr_doc=ptr_doc,
             report_doc=report_doc,
         )
         for clause in included_clauses
     ]
-    return _details_from_items(items)
+    return _details_from_items(items, scope_consistency=scope_consistency)
 
 
 def _comparison_item(
@@ -74,6 +77,7 @@ def _comparison_item(
     findings: list[Finding],
     report_matches: list[InspectionItem],
     report_candidates: list[InspectionItem],
+    external_coverage: dict[str, Any] | None,
     ptr_doc: PTRDocument,
     report_doc: ReportDocument,
 ) -> PTRComparisonItem:
@@ -83,7 +87,7 @@ def _comparison_item(
     user_status = _user_facing_status(findings)
     final_status = _display_final_status(user_status)
     search_keywords = _search_keywords(clause)
-    candidate_items = [] if report_matches else [_report_match(item) for item in report_candidates[:5]]
+    candidate_items = [] if report_matches or external_coverage else [_report_match(item) for item in report_candidates[:5]]
 
     return PTRComparisonItem(
         ptr_clause_id=clause_number,
@@ -91,20 +95,24 @@ def _comparison_item(
         ptr_page=clause.location.page_number if clause.location else None,
         ptr_requirement_text=_safe_text(clause.body_text or clause.text_content or clause.full_text or ""),
         report_matches=[_report_match(item) for item in report_matches],
+        external_standard_coverage=_safe_payload(external_coverage),
         normalized_comparison=_normalized_comparison(
             clause=clause,
             report_matches=report_matches,
+            external_coverage=external_coverage,
             finding=selected_finding,
             ptr_doc=ptr_doc,
             report_doc=report_doc,
         ),
         rule_status=rule_status,
+        coverage_status=user_status,
         user_facing_status=user_status,
         final_status=final_status,
         reason=_reason(
             clause=clause,
             finding=selected_finding,
             report_matches=report_matches,
+            external_coverage=external_coverage,
             rule_status=rule_status,
             user_status=user_status,
             search_keywords=search_keywords,
@@ -117,7 +125,7 @@ def _comparison_item(
     )
 
 
-def _details_from_items(items: list[PTRComparisonItem]) -> PTRComparisonDetails:
+def _details_from_items(items: list[PTRComparisonItem], *, scope_consistency: dict[str, Any] | None = None) -> PTRComparisonDetails:
     requirements_count = len(items)
     covered_count = sum(1 for item in items if item.user_facing_status in {PTRUserFacingStatus.COVERED_PASSED, PTRUserFacingStatus.REFUTED})
     missing_count = sum(1 for item in items if item.rule_status == PTRUserFacingStatus.MISSING_IN_REPORT and item.user_facing_status != PTRUserFacingStatus.REFUTED)
@@ -151,6 +159,7 @@ def _details_from_items(items: list[PTRComparisonItem]) -> PTRComparisonDetails:
             f"本次共比对 {requirements_count} 条技术要求，其中 {covered_count} 条已覆盖，"
             f"{needs_review_count} 条需复核，{missing_count} 条未覆盖。"
         ),
+        scope_consistency=_safe_payload(scope_consistency),
         requirements_count=requirements_count,
         covered_count=covered_count,
         missing_count=missing_count,
@@ -184,17 +193,25 @@ def _finding_clause_number(finding: Finding) -> str:
     return match.group(0) if match else ""
 
 
-def _report_matches_by_clause(report_items: Sequence[InspectionItem]) -> dict[str, list[InspectionItem]]:
-    matches: dict[str, list[InspectionItem]] = {}
+def _report_item_clause_numbers(item: InspectionItem) -> list[str]:
+    text = " ".join([item.standard_clause or "", item.standard_requirement or ""])
+    return [number for number in dict.fromkeys(CLAUSE_NUMBER_RE.findall(text)) if number.startswith("2.")]
+
+
+def _report_matches_for_clause(clause_number: str, report_items: Sequence[InspectionItem]) -> list[InspectionItem]:
+    matches: list[InspectionItem] = []
     for item in report_items:
-        for number in _report_item_clause_numbers(item):
-            matches.setdefault(number, []).append(item)
+        if any(_related_clause_numbers(clause_number, report_number) for report_number in _report_item_clause_numbers(item)):
+            matches.append(item)
     return matches
 
 
-def _report_item_clause_numbers(item: InspectionItem) -> list[str]:
-    text = " ".join([item.standard_clause or "", item.standard_requirement or ""])
-    return list(dict.fromkeys(CLAUSE_NUMBER_RE.findall(text)))
+def _related_clause_numbers(ptr_clause_number: str, report_clause_number: str) -> bool:
+    return (
+        ptr_clause_number == report_clause_number
+        or ptr_clause_number.startswith(report_clause_number + ".")
+        or report_clause_number.startswith(ptr_clause_number + ".")
+    )
 
 
 def _candidate_report_items(report_items: Sequence[InspectionItem]) -> list[InspectionItem]:
@@ -303,17 +320,18 @@ def _normalized_comparison(
     *,
     clause: PTRClause,
     report_matches: list[InspectionItem],
+    external_coverage: dict[str, Any] | None,
     finding: Finding | None,
     ptr_doc: PTRDocument,
     report_doc: ReportDocument,
 ) -> PTRNormalizedComparison:
     if finding is None:
-        actual = report_matches[0].standard_requirement if report_matches else None
+        actual = report_matches[0].standard_requirement if report_matches else (external_coverage or {}).get("standard")
         return PTRNormalizedComparison(
-            requirement_type="coverage" if report_matches else "unknown",
+            requirement_type="external_standard_coverage" if external_coverage else ("coverage" if report_matches else "unknown"),
             expected=_safe_text(clause.body_text or clause.text_content or clause.full_text or ""),
             actual=_safe_text(actual),
-            status="match" if report_matches else "needs_review",
+            status="match" if report_matches or external_coverage else "needs_review",
         )
 
     expected = _safe_value(finding.expected)
@@ -393,6 +411,7 @@ def _reason(
     clause: PTRClause,
     finding: Finding | None,
     report_matches: list[InspectionItem],
+    external_coverage: dict[str, Any] | None,
     rule_status: PTRUserFacingStatus,
     user_status: PTRUserFacingStatus,
     search_keywords: list[str],
@@ -400,6 +419,11 @@ def _reason(
 ) -> str:
     title = _safe_text(clause.title) or f"PTR 条款 {clause.number}"
     if finding is None:
+        if external_coverage:
+            standard = external_coverage.get("standard")
+            start = external_coverage.get("start_item_no")
+            end = external_coverage.get("end_item_no")
+            return _safe_text(f"报告声明序号 {start}～{end} 为 {standard} 标准内容，可覆盖 {title} 相关外部标准要求。")
         if report_matches:
             item_no = report_matches[0].sequence_raw or (str(report_matches[0].sequence) if report_matches[0].sequence is not None else "")
             prefix = f"报告序号 {item_no} " if item_no else "报告检验项"
@@ -479,6 +503,18 @@ def _safe_value(value: Any) -> Any:
     return _safe_text(str(value))
 
 
+def _safe_payload(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _safe_payload(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_safe_payload(item) for item in value]
+    if isinstance(value, tuple):
+        return [_safe_payload(item) for item in value]
+    if isinstance(value, str):
+        return _safe_text(value)
+    return value
+
+
 def _safe_text(value: Any) -> str | None:
     if value is None:
         return None
@@ -514,6 +550,104 @@ def _numeric_unit(value: Any) -> str | None:
 
 def _looks_numeric(value: Any) -> bool:
     return bool(re.search(r"\d", str(value or "")))
+
+
+def _report_inspection_scope(report_doc: ReportDocument) -> ReportInspectionScope | None:
+    raw_scope = report_doc.metadata.get("inspection_scope")
+    if isinstance(raw_scope, ReportInspectionScope):
+        return raw_scope
+    if isinstance(raw_scope, dict):
+        return ReportInspectionScope.model_validate(raw_scope)
+    return None
+
+
+def _scope_consistency_metadata(
+    check_results: Sequence[CheckResult],
+    report_scope: ReportInspectionScope | None,
+) -> dict[str, Any] | None:
+    for result in check_results:
+        if result.check_id == "PTR_REPORT_SCOPE":
+            value = result.metadata.get("scope_consistency")
+            return _safe_payload(value) if isinstance(value, dict) else None
+    if report_scope is None:
+        return None
+    return _safe_payload(
+        {
+            "status": "needs_review",
+            "declared_scope": list(report_scope.declared_scope_items),
+            "declared_scope_ranges": [item.model_dump(mode="json") for item in report_scope.declared_scope_ranges],
+            "actual_report_scope": [],
+            "external_standard_ranges": [item.model_dump(mode="json") for item in report_scope.external_standard_ranges],
+            "excluded_topics": list(report_scope.excluded_topics),
+            "ptr_direct_content_starts_after": report_scope.ptr_direct_content_starts_after,
+            "reason": "未运行报告检验范围一致性规则。",
+        }
+    )
+
+
+def _external_standard_coverage(
+    clause: PTRClause,
+    report_scope: ReportInspectionScope | None,
+    report_items: Sequence[InspectionItem],
+) -> dict[str, Any] | None:
+    if report_scope is None:
+        return None
+    clause_text = _normalize_standard_text(" ".join([clause.title or "", clause.body_text or "", clause.full_text or ""]))
+    for standard_range in report_scope.external_standard_ranges:
+        if _normalize_standard_text(standard_range.standard) not in clause_text:
+            continue
+        range_items = _items_in_standard_range(report_items, standard_range)
+        return {
+            "standard": _safe_text(standard_range.standard),
+            "start_item_no": standard_range.start_item_no,
+            "end_item_no": standard_range.end_item_no,
+            "source_page": standard_range.source_page,
+            "source_text": _safe_text(standard_range.source_text),
+            "item_count": len(range_items),
+            "passed_count": sum(1 for item in range_items if _looks_passed(item)),
+            "review_count": sum(1 for item in range_items if not _looks_passed(item)),
+            "sample_items": [_report_match(item).model_dump(mode="json") for item in range_items[:5]],
+        }
+    return None
+
+
+def _items_in_standard_range(
+    report_items: Sequence[InspectionItem],
+    standard_range: ExternalStandardRange,
+) -> list[InspectionItem]:
+    start = _safe_int(standard_range.start_item_no)
+    end = _safe_int(standard_range.end_item_no)
+    if start is None or end is None:
+        return []
+    return [
+        item
+        for item in report_items
+        if (item_no := _item_no_int(item)) is not None and start <= item_no <= end
+    ]
+
+
+def _item_no_int(item: InspectionItem) -> int | None:
+    value = item.sequence_raw or (str(item.sequence) if item.sequence is not None else None)
+    if value is None:
+        return None
+    text = str(value).strip()
+    return int(text) if text.isdigit() else None
+
+
+def _safe_int(value: str | None) -> int | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return int(text) if text.isdigit() else None
+
+
+def _looks_passed(item: InspectionItem) -> bool:
+    text = " ".join([item.test_result or "", item.conclusion or "", *item.result_values])
+    return "符合" in text and "不符合" not in text
+
+
+def _normalize_standard_text(value: str) -> str:
+    return re.sub(r"\s+", "", value or "").upper()
 
 
 __all__ = ["build_ptr_comparison_details"]

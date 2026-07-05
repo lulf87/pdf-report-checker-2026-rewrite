@@ -236,6 +236,7 @@ export type PTRComparisonFinalStatus =
 
 export interface PTRReportMatch {
   item_no?: string | null;
+  page?: number | null;
   report_page?: number | null;
   standard_clause?: string | null;
   item_name?: string | null;
@@ -246,12 +247,51 @@ export interface PTRReportMatch {
 }
 
 export interface PTRNormalizedComparison {
-  requirement_type: "numeric_limit" | "text_requirement" | "coverage" | "unknown" | string;
+  requirement_type: "numeric_limit" | "text_requirement" | "coverage" | "external_standard_coverage" | "unknown" | string;
   expected?: unknown;
   actual?: unknown;
   unit?: string | null;
   operator?: string | null;
   status: "match" | "mismatch" | "needs_review" | string;
+}
+
+export interface PTRScopeRange {
+  start: string;
+  end: string;
+  source_text: string;
+}
+
+export interface PTRExternalStandardRange {
+  start_item_no: string;
+  end_item_no: string;
+  standard: string;
+  source_page?: number | null;
+  source_text: string;
+}
+
+export interface PTRScopeConsistency {
+  status: "passed" | "failed" | "needs_review" | string;
+  declared_scope?: string[];
+  declared_scope_ranges?: PTRScopeRange[];
+  actual_report_scope?: string[];
+  external_standard_ranges?: PTRExternalStandardRange[];
+  excluded_topics?: string[];
+  ptr_direct_content_starts_after?: string | null;
+  source_page?: number | null;
+  source_text?: string | null;
+  reason?: string | null;
+}
+
+export interface PTRExternalStandardCoverage {
+  standard?: string | null;
+  start_item_no?: string | null;
+  end_item_no?: string | null;
+  source_page?: number | null;
+  source_text?: string | null;
+  item_count?: number;
+  passed_count?: number;
+  review_count?: number;
+  sample_items?: PTRReportMatch[];
 }
 
 export interface PTRComparisonItem {
@@ -260,8 +300,10 @@ export interface PTRComparisonItem {
   ptr_page?: number | null;
   ptr_requirement_text: string;
   report_matches: PTRReportMatch[];
+  external_standard_coverage?: PTRExternalStandardCoverage | null;
   normalized_comparison: PTRNormalizedComparison;
   rule_status: PTRComparisonUserFacingStatus;
+  coverage_status?: PTRComparisonUserFacingStatus;
   user_facing_status: PTRComparisonUserFacingStatus;
   final_status: PTRComparisonFinalStatus;
   reason: string;
@@ -274,6 +316,7 @@ export interface PTRComparisonItem {
 export interface PTRComparisonDetails {
   overall_status: PTRComparisonOverallStatus;
   overall_summary: string;
+  scope_consistency?: PTRScopeConsistency | null;
   requirements_count: number;
   covered_count: number;
   missing_count: number;

@@ -138,9 +138,6 @@ def _decide_clause(
     if clause.scope_type in EXCLUDED_SCOPE_TYPES:
         return ScopeDecision(clause_id=clause.clause_id, clause_number=clause_number, included=False, reason="scope_type_excluded")
 
-    if EXTERNAL_STANDARD_RE.search(body_compact):
-        return ScopeDecision(clause_id=clause.clause_id, clause_number=clause_number, included=False, reason="external_standard")
-
     for topic in excluded_topics:
         topic_compact = _compact(topic)
         reduced = topic_compact.rstrip("性")
@@ -157,6 +154,15 @@ def _decide_clause(
                 evidence=topic,
             )
 
+    if _is_unscoped_external_reference(body_compact):
+        return ScopeDecision(clause_id=clause.clause_id, clause_number=clause_number, included=False, reason="external_standard")
+
+    if rules:
+        clause_tuple = _parse_number(clause_number)
+        if any(_tuple_in_rule(clause_tuple, rule) for rule in rules):
+            return ScopeDecision(clause_id=clause.clause_id, clause_number=clause_number, included=True, reason="declared_scope")
+        return ScopeDecision(clause_id=clause.clause_id, clause_number=clause_number, included=False, reason="outside_declared_scope")
+
     if clause_number in report_clause_numbers or any(
         clause_number.startswith(report_number + ".") or report_number.startswith(clause_number + ".")
         for report_number in report_clause_numbers
@@ -165,10 +171,6 @@ def _decide_clause(
 
     if not rules:
         return ScopeDecision(clause_id=clause.clause_id, clause_number=clause_number, included=True, reason="no_explicit_scope")
-
-    clause_tuple = _parse_number(clause_number)
-    if any(_tuple_in_rule(clause_tuple, rule) for rule in rules):
-        return ScopeDecision(clause_id=clause.clause_id, clause_number=clause_number, included=True, reason="declared_scope")
 
     return ScopeDecision(clause_id=clause.clause_id, clause_number=clause_number, included=False, reason="outside_declared_scope")
 
@@ -206,3 +208,9 @@ def _parse_number(value: str) -> tuple[int, ...]:
 
 def _compact(value: str) -> str:
     return re.sub(r"\s+", "", value or "")
+
+
+def _is_unscoped_external_reference(compact_text: str) -> bool:
+    if not EXTERNAL_STANDARD_RE.search(compact_text):
+        return False
+    return not any(keyword in compact_text for keyword in ("应符合", "应满足", "应按", "符合"))

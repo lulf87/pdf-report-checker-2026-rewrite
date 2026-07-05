@@ -18,7 +18,7 @@ from app.domain.common import Evidence, EvidenceMethod, SourceType
 from app.domain.evidence_package import EvidencePackage
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.pdf import ParsedPdf, PdfPage, PdfTable
-from app.domain.ptr import PTRClause, PTRClauseNumber, PTRDocument, PTRTable, TableReference
+from app.domain.ptr import PTRClause, PTRClauseNumber, PTRDocument, PTRScopeType, PTRTable, TableReference
 from app.domain.report import InspectionItem, InspectionTable, ReportDocument, ReportField, ThirdPageInfo
 from app.domain.result import CheckStatus
 from app.domain.table import CanonicalTable, ParameterRecord
@@ -282,6 +282,28 @@ class ExplodingPtrCodexAuditService:
         raise RuntimeError("codex audit service exploded")
 
 
+class ScopeAwareReportExtractor:
+    def __init__(self, scope_text: str = "2.2、2.5、2.6（除生物相容性、电磁兼容性）") -> None:
+        self.scope_text = scope_text
+
+    def extract(self, parsed_pdf: ParsedPdf) -> ReportDocument:
+        scope_field = ReportField(name="检验项目", value=self.scope_text, metadata={"items": [self.scope_text]})
+        return ReportDocument(
+            parsed_pdf=parsed_pdf,
+            third_page=ThirdPageInfo(fields=[scope_field]),
+            fields=[scope_field],
+        )
+
+
+class ScopeAwareInspectionTableExtractor:
+    def __init__(self, items: list[InspectionItem] | None = None) -> None:
+        self.items = items if items is not None else _scope_aware_report_items()
+
+    def extract_table(self, parsed_pdf: ParsedPdf) -> InspectionTable:
+        del parsed_pdf
+        return InspectionTable(table_id="report-inspection-table", items=self.items)
+
+
 def test_ptr_compare_usecase_saves_parses_filters_compares_and_completes_task(tmp_path: Path) -> None:
     task_service = TaskService()
     parser = FakePdfParser()
@@ -313,7 +335,7 @@ def test_ptr_compare_usecase_saves_parses_filters_compares_and_completes_task(tm
     )
 
     assert status.task_type == TaskType.PTR_COMPARE
-    assert status.status == TaskState.COMPLETED
+    assert status.status == TaskState.COMPLETED, status.error_message
     assert status.progress == 100
     assert [path.name for path in parser.paths] == ["ptr.pdf", "report.pdf"]
     assert ptr_extractor.parsed[0].file_name == "ptr.pdf"
@@ -427,7 +449,7 @@ def test_ptr_compare_usecase_process_submitted_task_updates_progress_and_complet
 
     status = usecase.process_task(submitted.task_id)
 
-    assert status.status == TaskState.COMPLETED
+    assert status.status == TaskState.COMPLETED, status.error_message
     assert status.progress == 100
     assert status.result_ref == submitted.task_id
     assert [path.name for path in parser.paths] == ["ptr.pdf", "report.pdf"]
@@ -561,6 +583,95 @@ def test_ptr_compare_usecase_ptr_comparison_details_include_numeric_expected_act
         "operator": "≤",
         "status": "mismatch",
     }
+
+
+def test_ptr_compare_scope_aware_1539_like_report_passes_and_explains_scope(tmp_path: Path) -> None:
+    result = _run_scope_aware_usecase(tmp_path)
+
+    scope_result = _check_result(result, "PTR_REPORT_SCOPE")
+    assert scope_result.status == CheckStatus.PASS
+    assert scope_result.findings == []
+    assert scope_result.metadata["scope_consistency"]["status"] == "passed"
+    assert scope_result.metadata["scope_consistency"]["declared_scope"] == ["2.2", "2.5", "2.6"]
+    assert scope_result.metadata["scope_consistency"]["actual_report_scope"] == ["2.2", "2.5", "2.6"]
+    assert scope_result.metadata["scope_consistency"]["excluded_topics"] == ["生物相容性", "电磁兼容性"]
+    assert scope_result.metadata["scope_consistency"]["ptr_direct_content_starts_after"] == "156"
+
+    details = result.metadata["ptr_comparison_details"]
+    assert details["scope_consistency"]["status"] == "passed"
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    assert "2.5.2.2" not in items
+    assert items["2.2.1"]["report_matches"][0]["item_no"] == "157"
+    assert items["2.2.1"]["report_matches"][0]["test_result"] == "3375 / 59 / 符合要求"
+    assert items["2.2.1"]["coverage_status"] == "covered_passed"
+    assert items["2.5.2.1"]["coverage_status"] == "covered_passed"
+    assert "GB 9706.1-2020" in items["2.5.2.1"]["reason"]
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_ptr_compare_scope_consistency_reports_declared_item_missing(tmp_path: Path) -> None:
+    report_items = [item for item in _scope_aware_report_items() if item.standard_clause != "2.6"]
+
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(report_items),
+    )
+
+    scope_result = _check_result(result, "PTR_REPORT_SCOPE")
+    assert scope_result.status == CheckStatus.FAIL
+    assert _finding_codes(scope_result) == ["PTR_SCOPE_DECLARED_ITEM_MISSING_IN_REPORT"]
+    assert scope_result.findings[0].metadata["clause_number"] == "2.6"
+    assert result.metadata["ptr_comparison_details"]["scope_consistency"]["status"] == "failed"
+
+
+def test_ptr_compare_scope_consistency_reports_undeclared_report_item(tmp_path: Path) -> None:
+    report_items = [
+        *_scope_aware_report_items(),
+        InspectionItem(
+            sequence_raw="160",
+            sequence=160,
+            standard_clause="2.7",
+            standard_requirement="额外项目",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=100,
+        ),
+    ]
+
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(report_items),
+    )
+
+    scope_result = _check_result(result, "PTR_REPORT_SCOPE")
+    assert scope_result.status == CheckStatus.FAIL
+    assert _finding_codes(scope_result) == ["PTR_SCOPE_UNDECLARED_REPORT_ITEM"]
+    assert scope_result.findings[0].metadata["clause_number"] == "2.7"
+
+
+def test_ptr_compare_scope_consistency_reports_excluded_topic_present(tmp_path: Path) -> None:
+    report_items = [
+        *_scope_aware_report_items(),
+        InspectionItem(
+            sequence_raw="160",
+            sequence=160,
+            standard_clause="2.5.2.2",
+            standard_requirement="电磁兼容性应符合 YY 9706.102-2021。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=100,
+        ),
+    ]
+
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(report_items),
+    )
+
+    scope_result = _check_result(result, "PTR_REPORT_SCOPE")
+    assert scope_result.status == CheckStatus.FAIL
+    assert _finding_codes(scope_result) == ["PTR_SCOPE_EXCLUDED_TOPIC_PRESENT"]
+    assert scope_result.findings[0].metadata["excluded_topic"] == "电磁兼容性"
 
 
 def test_ptr_compare_usecase_includes_parameter_unit_mismatch_in_final_result(tmp_path: Path) -> None:
@@ -1144,7 +1255,7 @@ def _run_parameter_compare_usecase(
         audit_options=audit_options,
     )
 
-    assert status.status == TaskState.COMPLETED
+    assert status.status == TaskState.COMPLETED, status.error_message
     return task_service.get_result(status.task_id)
 
 
@@ -1193,6 +1304,156 @@ def _run_parameter_compare_task(
     )
 
     return task_service, status
+
+
+def _run_scope_aware_usecase(
+    tmp_path: Path,
+    *,
+    report_extractor: ScopeAwareReportExtractor | None = None,
+    inspection_table_extractor: ScopeAwareInspectionTableExtractor | None = None,
+):
+    task_service = TaskService()
+    report_pdf = ParsedPdf(
+        file_id="report-1539-like",
+        file_name="report.pdf",
+        page_count=100,
+        pages=[
+            PdfPage(page_number=3, text="检验项目：2.2、2.5、2.6（除生物相容性、电磁兼容性）"),
+            PdfPage(
+                page_number=5,
+                text=(
+                    "型号规格或其他说明\n"
+                    "序号 1～序号 118 为 GB 9706.1-2020 标准的内容\n"
+                    "序号 119～156 为 GB9706.202-2021 标准的内容"
+                ),
+            ),
+        ],
+    )
+    usecase = PTRCompareUseCase(
+        task_service=task_service,
+        file_store=LocalFileStore(tmp_path),
+        pdf_parser=FakePdfParser({"report.pdf": report_pdf}),
+        ptr_extractor=FakePTRExtractor(_scope_aware_ptr_document()),
+        report_extractor=report_extractor or ScopeAwareReportExtractor(),
+        inspection_table_extractor=inspection_table_extractor or ScopeAwareInspectionTableExtractor(),
+        clause_text_compare=NoopClauseCompare(),
+        table_reference_compare=TrackingTableCompare(),
+        codex_audit_service=FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN),
+    )
+
+    status = usecase.run(
+        ptr_file_name="ptr.pdf",
+        ptr_content=b"%PDF-1.4 ptr",
+        report_file_name="report.pdf",
+        report_content=b"%PDF-1.4 report",
+        content_type="application/pdf",
+    )
+
+    assert status.status == TaskState.COMPLETED, status.error_message
+    return task_service.get_result(status.task_id)
+
+
+def _scope_aware_ptr_document() -> PTRDocument:
+    return PTRDocument(
+        clauses=[
+            PTRClause(
+                clause_id="ptr-2.2.1",
+                number=PTRClauseNumber.from_string("2.2.1"),
+                title="心脏脉冲电场消融仪输出",
+                body_text="心脏脉冲电场消融仪输出电压、电流应符合产品技术要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.5.2.1",
+                number=PTRClauseNumber.from_string("2.5.2.1"),
+                title="电气安全",
+                body_text="应符合 GB 9706.1-2020 标准的要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.5.2.2",
+                number=PTRClauseNumber.from_string("2.5.2.2"),
+                title="电磁兼容性",
+                body_text="电磁兼容性应符合 YY 9706.102-2021 标准的要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+            PTRClause(
+                clause_id="ptr-2.6.1",
+                number=PTRClauseNumber.from_string("2.6.1"),
+                title="软件功能",
+                body_text="软件功能应符合产品技术要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+            ),
+        ],
+    )
+
+
+def _scope_aware_report_items() -> list[InspectionItem]:
+    return [
+        InspectionItem(
+            sequence_raw="1",
+            sequence=1,
+            standard_clause="GB 9706.1-2020",
+            standard_requirement="GB 9706.1-2020 标准通用安全要求。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=6,
+        ),
+        InspectionItem(
+            sequence_raw="118",
+            sequence=118,
+            standard_clause="GB 9706.1-2020",
+            standard_requirement="GB 9706.1-2020 标准通用安全要求。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=45,
+        ),
+        InspectionItem(
+            sequence_raw="119",
+            sequence=119,
+            standard_clause="GB9706.202-2021",
+            standard_requirement="GB9706.202-2021 标准专用安全要求。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=46,
+        ),
+        InspectionItem(
+            sequence_raw="156",
+            sequence=156,
+            standard_clause="GB9706.202-2021",
+            standard_requirement="GB9706.202-2021 标准专用安全要求。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=98,
+        ),
+        InspectionItem(
+            sequence_raw="157",
+            sequence=157,
+            standard_clause="2.2",
+            standard_requirement="心脏脉冲电场消融仪输出电压、电流应符合产品技术要求。",
+            test_result="3375 / 59 / 符合要求",
+            conclusion="符合",
+            source_page=99,
+        ),
+        InspectionItem(
+            sequence_raw="158",
+            sequence=158,
+            standard_clause="2.5",
+            standard_requirement="电气安全应符合产品技术要求。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=99,
+        ),
+        InspectionItem(
+            sequence_raw="159",
+            sequence=159,
+            standard_clause="2.6",
+            standard_requirement="软件功能应符合产品技术要求。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=99,
+        ),
+    ]
 
 
 def _ptr_document(*, ptr_table: CanonicalTable | None, extra_tables: list[PTRTable]) -> PTRDocument:

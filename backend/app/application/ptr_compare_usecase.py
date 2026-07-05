@@ -22,17 +22,20 @@ from app.domain.finding import Finding, FindingSeverity
 from app.domain.pdf import ParsedPdf
 from app.domain.ptr import PTRClause, PTRDocument
 from app.domain.report import InspectionItem, InspectionTable, ReportDocument
+from app.domain.report_scope import ReportInspectionScope
 from app.domain.result import CheckResult, CheckStatus
 from app.domain.table import CanonicalTable
 from app.domain.task import TaskState, TaskStatus, TaskType
 from app.infrastructure.pdf.pymupdf_parser import PyMuPDFParser
 from app.infrastructure.ptr.ptr_extractor import PTRExtractor
 from app.infrastructure.report.field_extractor import FieldExtractor
+from app.infrastructure.report.inspection_scope_extractor import ReportInspectionScopeExtractor
 from app.infrastructure.report.inspection_table_extractor import InspectionTableExtractor
 from app.infrastructure.report.parameter_table_extractor import ReportParameterTableExtractor
 from app.infrastructure.storage.local_file_store import LocalFileStore
 from app.rules.ptr.clause_text_compare import compare_clause_texts
 from app.rules.ptr.parameter_compare import compare_parameter_tables
+from app.rules.ptr.report_scope_consistency import check_report_scope_consistency
 from app.rules.ptr.scope_filter import ScopeFilterResult, filter_ptr_scope
 from app.rules.ptr.table_candidate_selector import TableCandidateSelection, select_report_table_candidate
 from app.rules.ptr.table_reference_compare import check_table_references
@@ -58,6 +61,11 @@ class ReportExtractor(Protocol):
 
 class ReportInspectionTableExtractor(Protocol):
     def extract_table(self, parsed_pdf: ParsedPdf) -> InspectionTable | None:
+        ...
+
+
+class InspectionScopeExtractor(Protocol):
+    def extract(self, report: ReportDocument) -> ReportInspectionScope:
         ...
 
 
@@ -146,6 +154,7 @@ class PTRCompareUseCase:
         ptr_extractor: PTRDocumentExtractor | None = None,
         report_extractor: ReportExtractor | None = None,
         inspection_table_extractor: ReportInspectionTableExtractor | None = None,
+        inspection_scope_extractor: InspectionScopeExtractor | None = None,
         parameter_table_extractor: ReportParameterTableExtractorProtocol | None = None,
         scope_filter: ScopeFilter = filter_ptr_scope,
         clause_text_compare: ClauseTextCompare = compare_clause_texts,
@@ -164,6 +173,7 @@ class PTRCompareUseCase:
         self.ptr_extractor = ptr_extractor or PTRExtractor()
         self.report_extractor = report_extractor or FieldExtractor()
         self.inspection_table_extractor = inspection_table_extractor or InspectionTableExtractor()
+        self.inspection_scope_extractor = inspection_scope_extractor or ReportInspectionScopeExtractor()
         self.parameter_table_extractor = parameter_table_extractor or ReportParameterTableExtractor()
         self.scope_filter = scope_filter
         self.clause_text_compare = clause_text_compare
@@ -279,8 +289,9 @@ class PTRCompareUseCase:
         self.task_service.update_progress(task_id, progress=35, current_step="extracting ptr and report documents")
         ptr_doc = self.ptr_extractor.extract(ptr_pdf)
         report_doc = self._build_report_document(report_pdf)
+        report_scope = self._report_inspection_scope(report_doc)
 
-        scope_texts = self._inspection_scope_texts(report_doc)
+        scope_texts = [report_scope.source_text] if report_scope.source_text else self._inspection_scope_texts(report_doc)
         report_clause_numbers = self._report_clause_numbers(report_doc.inspection_items)
         scope_result = self.scope_filter(
             ptr_doc,
@@ -288,25 +299,33 @@ class PTRCompareUseCase:
             report_clause_numbers=report_clause_numbers,
         )
         included_clauses = self._included_main_requirement_clauses(ptr_doc, scope_result)
+        direct_compare_clauses = [
+            clause for clause in included_clauses if not _clause_covered_by_external_standard(clause, report_scope)
+        ]
 
         self.task_service.update_progress(task_id, progress=70, current_step="running ptr comparison rules")
         clause_findings = self.clause_text_compare(
-            included_clauses,
+            direct_compare_clauses,
             report_doc.inspection_items,
             task_id=task_id,
         )
         table_findings = self.table_reference_compare(
             ptr_doc,
-            clauses=included_clauses,
+            clauses=direct_compare_clauses,
             task_id=task_id,
         )
         table_findings.extend(
             self._parameter_table_findings(
                 ptr_doc=ptr_doc,
                 report_doc=report_doc,
-                clauses=included_clauses,
+                clauses=direct_compare_clauses,
                 task_id=task_id,
             )
+        )
+        report_scope_check_result = check_report_scope_consistency(
+            report_scope,
+            report_doc.inspection_items,
+            task_id=task_id,
         )
 
         check_results = [
@@ -327,6 +346,7 @@ class PTRCompareUseCase:
                 pass_summary="PTR 表格引用和参数一致",
                 issue_summary="PTR 表格引用或参数存在差异或需复核",
             ),
+            report_scope_check_result,
         ]
         self._attach_codex_reviews(
             task_id=task_id,
@@ -340,7 +360,7 @@ class PTRCompareUseCase:
         codex_audit_metadata = finalize_codex_audit(
             check_results,
             target_selection=builder.target_selection,
-            is_reviewable_finding=lambda finding: finding.check_id in {"PTR_CLAUSE", "PTR_TABLE", "PTR_SCOPE"},
+            is_reviewable_finding=lambda finding: finding.check_id in {"PTR_CLAUSE", "PTR_TABLE", "PTR_SCOPE", "PTR_REPORT_SCOPE"},
         )
         ptr_comparison_details = build_ptr_comparison_details(
             ptr_doc=ptr_doc,
@@ -360,6 +380,7 @@ class PTRCompareUseCase:
                 "source": "ptr_compare_usecase",
                 "included_clause_count": len(included_clauses),
                 "scope": scope_result.model_dump(mode="json"),
+                "scope_consistency": report_scope_check_result.metadata.get("scope_consistency"),
                 "audit_options_source": "user_override" if options.has_user_override else "default",
                 "audit_options": options.to_metadata(),
                 "effective_audit_options": _effective_audit_options_metadata(builder, scheduler, codex_audit_service),
@@ -376,6 +397,8 @@ class PTRCompareUseCase:
             document.inspection_table = inspection_table
             document.inspection_items = list(inspection_table.items)
         self._attach_report_canonical_tables(document, parsed_pdf)
+        inspection_scope = self.inspection_scope_extractor.extract(document)
+        document.metadata["inspection_scope"] = inspection_scope.model_dump(mode="json")
         return document
 
     def _attach_report_canonical_tables(self, document: ReportDocument, parsed_pdf: ParsedPdf) -> None:
@@ -406,6 +429,16 @@ class PTRCompareUseCase:
             for value in (item.standard_clause, item.standard_requirement):
                 numbers.update(CLAUSE_NUMBER_RE.findall(value or ""))
         return numbers
+
+    def _report_inspection_scope(self, report_doc: ReportDocument) -> ReportInspectionScope:
+        raw_scope = report_doc.metadata.get("inspection_scope")
+        if isinstance(raw_scope, ReportInspectionScope):
+            return raw_scope
+        if isinstance(raw_scope, dict):
+            return ReportInspectionScope.model_validate(raw_scope)
+        scope = self.inspection_scope_extractor.extract(report_doc)
+        report_doc.metadata["inspection_scope"] = scope.model_dump(mode="json")
+        return scope
 
     def _included_main_requirement_clauses(
         self,
@@ -649,8 +682,21 @@ def _attach_reviews_to_check_results(
 
 def _attach_ptr_comparison_details(check_results: list[CheckResult], details: dict[str, Any]) -> None:
     for result in check_results:
-        if result.check_id in {"PTR_SCOPE", "PTR_CLAUSE", "PTR_TABLE"}:
+        if result.check_id in {"PTR_SCOPE", "PTR_CLAUSE", "PTR_TABLE", "PTR_REPORT_SCOPE"}:
             result.metadata["ptr_comparison_details"] = details
+
+
+def _clause_covered_by_external_standard(clause: PTRClause, report_scope: ReportInspectionScope) -> bool:
+    if not report_scope.external_standard_ranges:
+        return False
+    text = _normalize_standard_text(" ".join([clause.title or "", clause.body_text or "", clause.full_text or ""]))
+    if not text:
+        return False
+    return any(_normalize_standard_text(item.standard) in text for item in report_scope.external_standard_ranges)
+
+
+def _normalize_standard_text(value: str) -> str:
+    return re.sub(r"\s+", "", value or "").upper()
 
 
 def _raise_for_required_codex_audit_failure(reviews: list[CodexReviewResult]) -> None:

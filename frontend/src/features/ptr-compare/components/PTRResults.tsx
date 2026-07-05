@@ -47,8 +47,17 @@ export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps
 
       {ptrDetails ? (
         <div className="metric-grid">
+          {ptrDetails.scope_consistency ? (
+            <StatusMetric
+              label="报告检验范围核对"
+              reason={ptrDetails.scope_consistency.reason}
+              tone={scopeStatusTone(ptrDetails.scope_consistency.status)}
+              value={scopeStatusLabel(ptrDetails.scope_consistency.status)}
+            />
+          ) : null}
           <Metric label="技术要求条款数" value={ptrDetails.requirements_count} />
           <Metric label="已覆盖" value={ptrDetails.covered_count} />
+          <Metric label="排除项" value={ptrDetails.scope_consistency?.excluded_topics?.length ?? 0} />
           <Metric label="未覆盖" value={ptrDetails.missing_count} tone={ptrDetails.missing_count > 0 ? "warn" : "info"} />
           <Metric label="结果不一致" value={ptrDetails.mismatch_count} tone={ptrDetails.mismatch_count > 0 ? "warn" : "info"} />
           <Metric label="需复核" value={ptrDetails.needs_review_count} tone={ptrDetails.needs_review_count > 0 ? "warn" : "info"} />
@@ -109,6 +118,39 @@ function Metric({ label, value, tone = "info" }: { label: string; value: number;
       </p>
     </GlassCard>
   );
+}
+
+function StatusMetric({
+  label,
+  value,
+  reason,
+  tone = "info",
+}: {
+  label: string;
+  value: string;
+  reason?: string | null;
+  tone?: "info" | "danger" | "warn";
+}) {
+  return (
+    <GlassCard className={`metric-card ${tone === "danger" ? "issue-danger" : tone === "warn" ? "issue-warn" : ""}`}>
+      <p className="muted">{label}</p>
+      <p className="metric-value">{value}</p>
+      {reason ? <p className="muted">{reason}</p> : null}
+    </GlassCard>
+  );
+}
+
+function scopeStatusLabel(status: string): string {
+  if (status === "passed") return "通过";
+  if (status === "failed") return "不一致";
+  if (status === "needs_review") return "需复核";
+  return status;
+}
+
+function scopeStatusTone(status: string): "info" | "danger" | "warn" {
+  if (status === "passed") return "info";
+  if (status === "failed") return "danger";
+  return "warn";
 }
 
 function finalResultBadge(result: TaskResult, ptrDetails?: PTRComparisonDetails): { label: string; variant: "success" | "danger" | "warn" | "info" } {

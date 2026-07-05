@@ -6,7 +6,8 @@ from app.domain.common import Evidence, EvidenceMethod, SourceType
 from app.domain.evidence_package import EvidencePackageKind, EvidenceSourceType
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.ptr import PTRClause, PTRClauseNumber, PTRDocument, PTRTable, TableReference
-from app.domain.report import ReportDocument
+from app.domain.report import InspectionItem, ReportDocument
+from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope
 from app.domain.result import CheckResult, CheckStatus
 from app.domain.table import CanonicalTable, ParameterRecord
 from app.domain.task import TaskType
@@ -70,6 +71,32 @@ def test_scope_finding_builds_ptr_clause_target_when_scope_rule_outputs_finding(
     assert bundle is not None
     assert bundle.request.targets[0].target_type is CodexReviewTargetType.PTR_CLAUSE
     assert bundle.evidence_package.targets[0].metadata["source"] == "ptr_compare_usecase"
+
+
+def test_report_scope_finding_builds_inspection_item_target_with_scope_evidence() -> None:
+    finding = _finding(
+        code="PTR_SCOPE_UNDECLARED_REPORT_ITEM",
+        check_id="PTR_REPORT_SCOPE",
+        metadata={"clause_number": "2.7", "item_no": "160"},
+    )
+
+    bundle = PtrCodexEvidenceBuilder().build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=_ptr_document(),
+        report_doc=_report_scope_document(),
+        check_results=[_check_result("PTR_REPORT_SCOPE", [finding])],
+    )
+
+    assert bundle is not None
+    assert bundle.request.targets[0].target_type is CodexReviewTargetType.INSPECTION_ITEM
+    items_by_ref = {item.ref_id: item for item in bundle.evidence_package.items}
+    assert "report_scope:declaration" in items_by_ref
+    assert items_by_ref["report_scope:declaration"].structured["declared_scope_items"] == ["2.2", "2.5", "2.6"]
+    assert "report_scope:external_standard_ranges" in items_by_ref
+    assert items_by_ref["report_scope:external_standard_ranges"].structured["external_standard_ranges"][0]["standard"] == "GB 9706.1-2020"
+    assert "report_scope:inspection_items" in items_by_ref
+    assert items_by_ref["report_scope:inspection_items"].structured["items"][-1]["item_no"] == "160"
 
 
 def test_package_contains_finding_clause_ptr_table_and_report_table_evidence() -> None:
@@ -445,6 +472,34 @@ def _report_document(report_tables: list[CanonicalTable] | None = None) -> Repor
             "canonical_tables": report_tables
             or [_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])]
         }
+    )
+
+
+def _report_scope_document() -> ReportDocument:
+    scope = ReportInspectionScope(
+        declared_scope_items=["2.2", "2.5", "2.6"],
+        excluded_topics=["生物相容性", "电磁兼容性"],
+        source_page=3,
+        source_text="2.2、2.5、2.6（除生物相容性、电磁兼容性）",
+        external_standard_ranges=[
+            ExternalStandardRange(
+                start_item_no="1",
+                end_item_no="118",
+                standard="GB 9706.1-2020",
+                source_page=5,
+                source_text="序号 1～序号 118 为 GB 9706.1-2020 标准的内容",
+            )
+        ],
+        ptr_direct_content_starts_after="118",
+    )
+    return ReportDocument(
+        inspection_items=[
+            InspectionItem(sequence_raw="157", sequence=157, standard_clause="2.2", standard_requirement="输出", test_result="符合要求", conclusion="符合", source_page=99),
+            InspectionItem(sequence_raw="158", sequence=158, standard_clause="2.5", standard_requirement="电气安全", test_result="符合要求", conclusion="符合", source_page=99),
+            InspectionItem(sequence_raw="159", sequence=159, standard_clause="2.6", standard_requirement="软件功能", test_result="符合要求", conclusion="符合", source_page=99),
+            InspectionItem(sequence_raw="160", sequence=160, standard_clause="2.7", standard_requirement="额外项目", test_result="符合要求", conclusion="符合", source_page=100),
+        ],
+        metadata={"inspection_scope": scope.model_dump(mode="json")},
     )
 
 

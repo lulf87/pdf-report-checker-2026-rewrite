@@ -29,7 +29,7 @@ def test_scope_filter_includes_declared_range_and_explains_exclusions() -> None:
     assert decisions["2.9.1"].reason == "outside_declared_scope"
 
 
-def test_scope_filter_keeps_report_present_clause_when_third_page_range_missed_it() -> None:
+def test_scope_filter_does_not_let_report_clause_override_explicit_scope() -> None:
     document = PTRDocument(
         clauses=[
             _clause("2.1.2", "脉冲幅度应符合表1中的数值。"),
@@ -42,6 +42,22 @@ def test_scope_filter_keeps_report_present_clause_when_third_page_range_missed_i
         report_clause_numbers={"2.1.2"},
     )
 
+    assert result.included_clause_ids == []
+    assert result.decisions[0].reason == "outside_declared_scope"
+
+
+def test_scope_filter_uses_report_clause_numbers_when_no_explicit_scope() -> None:
+    document = PTRDocument(
+        clauses=[
+            _clause("2.1.2", "脉冲幅度应符合表1中的数值。"),
+        ]
+    )
+
+    result = filter_ptr_scope(
+        document,
+        [],
+        report_clause_numbers={"2.1.2"},
+    )
+
     assert result.included_clause_ids == ["ptr-2.1.2"]
     assert result.decisions[0].reason == "report_clause_present"
-
