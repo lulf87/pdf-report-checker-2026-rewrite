@@ -800,6 +800,83 @@ p {
   border-top: 1px solid var(--color-border);
 }
 
+.final-review-panel {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(116, 215, 200, 0.28);
+  border-radius: var(--radius-md);
+  background: rgba(116, 215, 200, 0.055);
+}
+
+.final-review-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.final-review-summary {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.final-review-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.final-review-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.final-review-stat strong {
+  color: var(--color-text);
+  font-size: 1rem;
+}
+
+.final-review-stat-success strong {
+  color: var(--color-success);
+}
+
+.final-review-stat-danger strong {
+  color: var(--color-danger);
+}
+
+.final-review-stat-warn strong {
+  color: var(--color-warning);
+}
+
+.technical-details {
+  margin-top: 12px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.technical-details > summary {
+  cursor: pointer;
+  padding: 10px 0;
+  color: var(--color-text);
+  font-weight: 800;
+}
+
+.technical-details-body {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 4px;
+}
+
 .comparison-details {
   display: grid;
   gap: 10px;

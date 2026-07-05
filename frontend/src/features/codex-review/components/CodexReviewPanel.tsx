@@ -32,7 +32,7 @@ export function CodexReviewOverview({ reviews }: CodexReviewOverviewProps) {
       </div>
       <div className="codex-summary-grid" aria-label="Codex 审核统计">
         <CodexSummaryItem label="确认" value={summary.confirm} />
-        <CodexSummaryItem label="可能误报" value={summary.refute} />
+        <CodexSummaryItem label="候选已排除" value={summary.refute} />
         <CodexSummaryItem label="人工复核" value={summary.uncertain} />
         <CodexSummaryItem label="新增建议" value={summary.add_finding} />
         <CodexSummaryItem label="失败/跳过" value={summary.failed_or_skipped} />

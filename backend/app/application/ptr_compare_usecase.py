@@ -14,6 +14,7 @@ from app.application.codex_audit_finalization import (
 from app.application.codex_audit_options import CodexAuditOptions
 from app.application.codex_audit_scheduler import CodexAuditJob, CodexAuditScheduler
 from app.application.ptr_codex_evidence_builder import PtrCodexEvidenceBuilder
+from app.application.ptr_comparison_explanation import build_ptr_comparison_details
 from app.application.task_service import TaskService
 from app.domain.codex_review import CodexReviewError, CodexReviewRequest, CodexReviewResult, CodexReviewStatus
 from app.domain.evidence_package import EvidencePackage
@@ -23,7 +24,7 @@ from app.domain.ptr import PTRClause, PTRDocument
 from app.domain.report import InspectionItem, InspectionTable, ReportDocument
 from app.domain.result import CheckResult, CheckStatus
 from app.domain.table import CanonicalTable
-from app.domain.task import TaskStatus, TaskType
+from app.domain.task import TaskState, TaskStatus, TaskType
 from app.infrastructure.pdf.pymupdf_parser import PyMuPDFParser
 from app.infrastructure.ptr.ptr_extractor import PTRExtractor
 from app.infrastructure.report.field_extractor import FieldExtractor
@@ -186,14 +187,37 @@ class PTRCompareUseCase:
         content_type: str | None = None,
         audit_options: CodexAuditOptions | dict[str, Any] | None = None,
     ) -> TaskStatus:
+        task = self.submit(
+            ptr_file_name=ptr_file_name,
+            ptr_content=ptr_content,
+            ptr_content_type=ptr_content_type,
+            report_file_name=report_file_name,
+            report_content=report_content,
+            report_content_type=report_content_type,
+            content_type=content_type,
+            audit_options=audit_options,
+        )
+        if task.status != TaskState.PROCESSING:
+            return task
+        return self.process_task(task.task_id)
+
+    def submit(
+        self,
+        *,
+        ptr_file_name: str,
+        ptr_content: bytes,
+        report_file_name: str,
+        report_content: bytes,
+        ptr_content_type: str = "application/pdf",
+        report_content_type: str = "application/pdf",
+        content_type: str | None = None,
+        audit_options: CodexAuditOptions | dict[str, Any] | None = None,
+    ) -> TaskStatus:
         options = CodexAuditOptions.from_raw(audit_options)
         task = self.task_service.create_task(
             TaskType.PTR_COMPARE,
             metadata={"audit_options": options.to_metadata(), "audit_options_source": "user_override" if options.has_user_override else "default"},
         )
-        builder = self._builder_for_audit_options(options)
-        scheduler = self._scheduler_for_audit_options(options)
-        codex_audit_service = self._codex_audit_service_for_audit_options(options)
         try:
             ptr_stored = self.file_store.save_upload(
                 task_id=task.task_id,
@@ -210,96 +234,139 @@ class PTRCompareUseCase:
                 category="report",
             )
             self.task_service.set_input_files(task.task_id, [ptr_stored.input_file, report_stored.input_file])
-            self.task_service.start_task(task.task_id, current_step="parsing ptr and report pdfs", progress=5)
-
-            ptr_pdf = self.pdf_parser.parse(ptr_stored.path)
-            report_pdf = self.pdf_parser.parse(report_stored.path)
-
-            self.task_service.update_progress(task.task_id, progress=35, current_step="extracting ptr and report documents")
-            ptr_doc = self.ptr_extractor.extract(ptr_pdf)
-            report_doc = self._build_report_document(report_pdf)
-
-            scope_texts = self._inspection_scope_texts(report_doc)
-            report_clause_numbers = self._report_clause_numbers(report_doc.inspection_items)
-            scope_result = self.scope_filter(
-                ptr_doc,
-                scope_texts,
-                report_clause_numbers=report_clause_numbers,
-            )
-            included_clauses = self._included_main_requirement_clauses(ptr_doc, scope_result)
-
-            self.task_service.update_progress(task.task_id, progress=70, current_step="running ptr comparison rules")
-            clause_findings = self.clause_text_compare(
-                included_clauses,
-                report_doc.inspection_items,
-                task_id=task.task_id,
-            )
-            table_findings = self.table_reference_compare(
-                ptr_doc,
-                clauses=included_clauses,
-                task_id=task.task_id,
-            )
-            table_findings.extend(
-                self._parameter_table_findings(
-                    ptr_doc=ptr_doc,
-                    report_doc=report_doc,
-                    clauses=included_clauses,
-                    task_id=task.task_id,
-                )
-            )
-
-            check_results = [
-                self._scope_check_result(task.task_id, scope_result, included_clauses),
-                self._finding_check_result(
-                    task.task_id,
-                    check_id="PTR_CLAUSE",
-                    check_name="PTR 条款正文一致性",
-                    findings=clause_findings,
-                    pass_summary="PTR 条款正文一致",
-                    issue_summary="PTR 条款正文存在差异或需复核",
-                ),
-                self._finding_check_result(
-                    task.task_id,
-                    check_id="PTR_TABLE",
-                    check_name="PTR 表格引用和参数一致性",
-                    findings=table_findings,
-                    pass_summary="PTR 表格引用和参数一致",
-                    issue_summary="PTR 表格引用或参数存在差异或需复核",
-                ),
-            ]
-            self._attach_codex_reviews(
-                task_id=task.task_id,
-                ptr_doc=ptr_doc,
-                report_doc=report_doc,
-                check_results=check_results,
-                evidence_builder=builder,
-                scheduler=scheduler,
-                codex_audit_service=codex_audit_service,
-            )
-            codex_audit_metadata = finalize_codex_audit(
-                check_results,
-                target_selection=builder.target_selection,
-                is_reviewable_finding=lambda finding: finding.check_id in {"PTR_CLAUSE", "PTR_TABLE", "PTR_SCOPE"},
-            )
-            return self.task_service.complete_task(
-                task.task_id,
-                check_results,
-                diagnostics=list(ptr_doc.diagnostics)
-                + list(report_doc.diagnostics)
-                + list(ptr_pdf.diagnostics)
-                + list(report_pdf.diagnostics),
-                metadata={
-                    "source": "ptr_compare_usecase",
-                    "included_clause_count": len(included_clauses),
-                    "scope": scope_result.model_dump(mode="json"),
-                    "audit_options_source": "user_override" if options.has_user_override else "default",
-                    "audit_options": options.to_metadata(),
-                    "effective_audit_options": _effective_audit_options_metadata(builder, scheduler, codex_audit_service),
-                    "codex_audit": codex_audit_metadata,
-                },
-            )
+            return self.task_service.start_task(task.task_id, current_step="queued ptr compare", progress=1)
         except Exception as exc:
             return self.task_service.fail_task(task.task_id, str(exc))
+
+    def process_task(self, task_id: str) -> TaskStatus:
+        try:
+            ptr_pdf_path, report_pdf_path = self._stored_upload_paths_for_task(task_id)
+            return self._process_stored_upload(
+                task_id=task_id,
+                ptr_pdf_path=ptr_pdf_path,
+                report_pdf_path=report_pdf_path,
+            )
+        except Exception as exc:
+            return self.task_service.fail_task(task_id, str(exc))
+
+    def _stored_upload_paths_for_task(self, task_id: str) -> tuple[Path, Path]:
+        task = self.task_service.get_task(task_id)
+        if len(task.input_files) < 2:
+            raise ValueError("PTR compare task requires both PTR and report input files.")
+        ptr_file, report_file = task.input_files[0], task.input_files[1]
+        return (
+            self.file_store.get_upload_path(task_id=task_id, file_name=ptr_file.file_name, category="ptr"),
+            self.file_store.get_upload_path(task_id=task_id, file_name=report_file.file_name, category="report"),
+        )
+
+    def _process_stored_upload(
+        self,
+        *,
+        task_id: str,
+        ptr_pdf_path: Path,
+        report_pdf_path: Path,
+    ) -> TaskStatus:
+        task = self.task_service.get_task(task_id)
+        options = CodexAuditOptions.from_raw(task.metadata.get("audit_options"))
+        builder = self._builder_for_audit_options(options)
+        scheduler = self._scheduler_for_audit_options(options)
+        codex_audit_service = self._codex_audit_service_for_audit_options(options)
+        self.task_service.start_task(task_id, current_step="parsing ptr and report pdfs", progress=5)
+
+        ptr_pdf = self.pdf_parser.parse(ptr_pdf_path)
+        report_pdf = self.pdf_parser.parse(report_pdf_path)
+
+        self.task_service.update_progress(task_id, progress=35, current_step="extracting ptr and report documents")
+        ptr_doc = self.ptr_extractor.extract(ptr_pdf)
+        report_doc = self._build_report_document(report_pdf)
+
+        scope_texts = self._inspection_scope_texts(report_doc)
+        report_clause_numbers = self._report_clause_numbers(report_doc.inspection_items)
+        scope_result = self.scope_filter(
+            ptr_doc,
+            scope_texts,
+            report_clause_numbers=report_clause_numbers,
+        )
+        included_clauses = self._included_main_requirement_clauses(ptr_doc, scope_result)
+
+        self.task_service.update_progress(task_id, progress=70, current_step="running ptr comparison rules")
+        clause_findings = self.clause_text_compare(
+            included_clauses,
+            report_doc.inspection_items,
+            task_id=task_id,
+        )
+        table_findings = self.table_reference_compare(
+            ptr_doc,
+            clauses=included_clauses,
+            task_id=task_id,
+        )
+        table_findings.extend(
+            self._parameter_table_findings(
+                ptr_doc=ptr_doc,
+                report_doc=report_doc,
+                clauses=included_clauses,
+                task_id=task_id,
+            )
+        )
+
+        check_results = [
+            self._scope_check_result(task_id, scope_result, included_clauses),
+            self._finding_check_result(
+                task_id,
+                check_id="PTR_CLAUSE",
+                check_name="PTR 条款正文一致性",
+                findings=clause_findings,
+                pass_summary="PTR 条款正文一致",
+                issue_summary="PTR 条款正文存在差异或需复核",
+            ),
+            self._finding_check_result(
+                task_id,
+                check_id="PTR_TABLE",
+                check_name="PTR 表格引用和参数一致性",
+                findings=table_findings,
+                pass_summary="PTR 表格引用和参数一致",
+                issue_summary="PTR 表格引用或参数存在差异或需复核",
+            ),
+        ]
+        self._attach_codex_reviews(
+            task_id=task_id,
+            ptr_doc=ptr_doc,
+            report_doc=report_doc,
+            check_results=check_results,
+            evidence_builder=builder,
+            scheduler=scheduler,
+            codex_audit_service=codex_audit_service,
+        )
+        codex_audit_metadata = finalize_codex_audit(
+            check_results,
+            target_selection=builder.target_selection,
+            is_reviewable_finding=lambda finding: finding.check_id in {"PTR_CLAUSE", "PTR_TABLE", "PTR_SCOPE"},
+        )
+        ptr_comparison_details = build_ptr_comparison_details(
+            ptr_doc=ptr_doc,
+            report_doc=report_doc,
+            included_clauses=included_clauses,
+            check_results=check_results,
+        ).model_dump(mode="json")
+        _attach_ptr_comparison_details(check_results, ptr_comparison_details)
+        return self.task_service.complete_task(
+            task_id,
+            check_results,
+            diagnostics=list(ptr_doc.diagnostics)
+            + list(report_doc.diagnostics)
+            + list(ptr_pdf.diagnostics)
+            + list(report_pdf.diagnostics),
+            metadata={
+                "source": "ptr_compare_usecase",
+                "included_clause_count": len(included_clauses),
+                "scope": scope_result.model_dump(mode="json"),
+                "audit_options_source": "user_override" if options.has_user_override else "default",
+                "audit_options": options.to_metadata(),
+                "effective_audit_options": _effective_audit_options_metadata(builder, scheduler, codex_audit_service),
+                "codex_audit": codex_audit_metadata,
+                "ptr_comparison_details": ptr_comparison_details,
+            },
+        )
 
     def _build_report_document(self, parsed_pdf: ParsedPdf) -> ReportDocument:
         document = self.report_extractor.extract(parsed_pdf)
@@ -578,6 +645,12 @@ def _attach_reviews_to_check_results(
         if target_result is None:
             continue
         target_result.codex_reviews.append(review)
+
+
+def _attach_ptr_comparison_details(check_results: list[CheckResult], details: dict[str, Any]) -> None:
+    for result in check_results:
+        if result.check_id in {"PTR_SCOPE", "PTR_CLAUSE", "PTR_TABLE"}:
+            result.metadata["ptr_comparison_details"] = details
 
 
 def _raise_for_required_codex_audit_failure(reviews: list[CodexReviewResult]) -> None:

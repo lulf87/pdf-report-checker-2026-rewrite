@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { formatCodexRuntimeError } from "../../../entities/codexReview/types";
 import type { AuditOptions, TaskResult, TaskStatus } from "../../../entities/task/types";
 import { Button } from "../../../shared/ui/Button";
 import { FileUpload, type FileUploadFile } from "../../../shared/ui/FileUpload";
@@ -26,8 +27,10 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
   const [task, setTask] = useState<TaskStatus | null>(null);
   const [message, setMessage] = useState<string>("上传并创建任务");
   const [error, setError] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const lastTaskRef = useRef<TaskStatus | null>(null);
+  const activeRunIdRef = useRef(0);
 
   useEffect(() => {
     const storedSession = loadTaskSession("ptr_compare");
@@ -37,26 +40,27 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
       lastTaskRef.current = storedSession.task;
       setTask(storedSession.task);
       setMessage(storedSession.message ?? "上次任务失败");
-      setError(storedSession.error ?? storedSession.task.error_message ?? "上次 PTR 核对失败");
+      showTaskError(storedSession.task.error_message ?? storedSession.error ?? "上次 PTR 核对失败");
       return;
     }
 
     let cancelled = false;
     const restoreTask = async () => {
+      const runId = ++activeRunIdRef.current;
       setBusy(true);
-      setError(null);
+      clearError();
       setTask(storedSession.task);
       setMessage("正在恢复上次 PTR 核对任务...");
 
       try {
         const latestTask = await getPTRCompareTask(storedSession.task.task_id);
-        if (cancelled) return;
+        if (cancelled || !isActiveRun(runId)) return;
         rememberTask(latestTask, "正在恢复上次 PTR 核对任务...");
 
         if (latestTask.status === "error") {
           const nextError = latestTask.error_message || "上次 PTR 核对失败";
           rememberTask(latestTask, "上次任务失败", nextError);
-          setError(nextError);
+          showTaskError(nextError);
           setBusy(false);
           return;
         }
@@ -65,14 +69,15 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
           latestTask.status === "completed"
             ? await getPTRCompareResult(latestTask.task_id)
             : await waitForPTRCompareResult(latestTask.task_id, (nextTask) => {
-                if (!cancelled) rememberTask(nextTask, "正在恢复上次 PTR 核对任务...");
+                if (!cancelled && isActiveRun(runId)) rememberTask(nextTask, "正在恢复上次 PTR 核对任务...");
               });
-        if (cancelled) return;
+        if (cancelled || !isActiveRun(runId)) return;
         const finalTask = latestTask.status === "completed" ? latestTask : await getPTRCompareTask(latestTask.task_id);
+        if (cancelled || !isActiveRun(runId)) return;
         rememberTask(finalTask, "PTR 核对已完成");
         onComplete(finalTask, result);
       } catch (restoreError) {
-        if (cancelled) return;
+        if (cancelled || !isActiveRun(runId)) return;
         const nextError = restoreError instanceof Error ? restoreError.message : "无法恢复上次 PTR 核对任务";
         clearRestoredTask(nextError);
       }
@@ -84,12 +89,16 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
     };
   }, []);
 
+  function isActiveRun(runId: number): boolean {
+    return activeRunIdRef.current === runId;
+  }
+
   function clearRestoredTask(nextError: string) {
     clearTaskSession("ptr_compare");
     lastTaskRef.current = null;
     setTask(null);
     setMessage("上传并创建任务");
-    setError(nextError);
+    showTaskError(nextError);
     setBusy(false);
   }
 
@@ -98,32 +107,49 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
     const reportFile = files[1]?.file;
     if (!ptrFile || !reportFile) {
       setError("请同时上传 PTR PDF 和检验报告 PDF");
+      setErrorDetail(null);
       return;
     }
 
+    const runId = ++activeRunIdRef.current;
     setBusy(true);
-    setError(null);
+    clearError();
     setMessage("正在上传文件...");
 
     try {
       const createdTask = await uploadPTRCompareFiles(ptrFile, reportFile, compactAuditOptions(auditOptions));
+      if (!isActiveRun(runId)) return;
       rememberTask(createdTask, "正在处理 PTR 核对任务...");
       const result =
         createdTask.status === "completed"
           ? await getPTRCompareResult(createdTask.task_id)
           : await waitForPTRCompareResult(createdTask.task_id, (nextTask) =>
-              rememberTask(nextTask, "正在处理 PTR 核对任务..."),
+              isActiveRun(runId) ? rememberTask(nextTask, "正在处理 PTR 核对任务...") : undefined,
             );
+      if (!isActiveRun(runId)) return;
       const finalTask = createdTask.status === "completed" ? createdTask : await getPTRCompareTask(createdTask.task_id);
+      if (!isActiveRun(runId)) return;
       rememberTask(finalTask, "PTR 核对已完成");
       onComplete(finalTask, result);
     } catch (uploadError) {
-      const nextError = uploadError instanceof Error ? uploadError.message : "PTR 核对失败";
-      if (lastTaskRef.current) rememberTask(lastTaskRef.current, "PTR 核对失败", nextError);
-      setError(nextError);
+      if (!isActiveRun(runId)) return;
+      const rawError = lastTaskRef.current?.error_message ?? (uploadError instanceof Error ? uploadError.message : "PTR 核对失败");
+      if (lastTaskRef.current) rememberTask(lastTaskRef.current, "PTR 核对失败", rawError);
+      showTaskError(rawError);
     } finally {
-      setBusy(false);
+      if (isActiveRun(runId)) setBusy(false);
     }
+  }
+
+  function resetForReupload() {
+    activeRunIdRef.current += 1;
+    clearTaskSession("ptr_compare");
+    lastTaskRef.current = null;
+    setTask(null);
+    setFiles([]);
+    setMessage("上传并创建任务");
+    clearError();
+    setBusy(false);
   }
 
   function rememberTask(nextTask: TaskStatus, nextMessage: string, nextError: string | null = null) {
@@ -131,6 +157,17 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
     setTask(nextTask);
     setMessage(nextMessage);
     saveTaskSession("ptr_compare", nextTask, { message: nextMessage, error: nextError });
+  }
+
+  function clearError() {
+    setError(null);
+    setErrorDetail(null);
+  }
+
+  function showTaskError(rawError: string) {
+    const formatted = formatCodexRuntimeError(rawError, "ptr_compare");
+    setError(formatted.message);
+    setErrorDetail(formatted.detail ?? null);
   }
 
   return (
@@ -224,6 +261,12 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
             </div>
           </details>
           {error ? <p className="form-error">{error}</p> : null}
+          {errorDetail ? (
+            <details className="advanced-audit-settings">
+              <summary>高级详情</summary>
+              <pre>{errorDetail}</pre>
+            </details>
+          ) : null}
           <div className="button-row">
             <Button disabled={busy} onClick={onBack} variant="secondary">
               返回
@@ -235,7 +278,14 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
         </GlassCard>
       </section>
 
-      <ProgressOverlay error={error} message={message} task={task} visible={busy} />
+      <ProgressOverlay
+        error={error}
+        message={message}
+        onReset={resetForReupload}
+        resetLabel="重新上传"
+        task={task}
+        visible={busy}
+      />
     </>
   );
 }

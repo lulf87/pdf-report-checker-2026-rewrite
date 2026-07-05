@@ -79,9 +79,10 @@ def _payload_to_lines(payload: dict[str, Any], title: str) -> list[str]:
         f"legacy_fail_count: {summary['fail_count']}",
         f"legacy_error_count: {summary['error_count']}",
         f"legacy_warn_count: {summary['warn_count']}",
-        "",
-        "Check Results",
     ]
+
+    lines.extend(_ptr_comparison_detail_lines(payload))
+    lines.extend(["", "Check Results"])
 
     for result in payload["check_results"]:
         lines.extend(
@@ -96,7 +97,7 @@ def _payload_to_lines(payload: dict[str, Any], title: str) -> list[str]:
         )
         lines.extend(_comparison_detail_lines(result))
 
-    lines.extend(["", "Findings"])
+    lines.extend(["", "技术详情附录", "Findings"])
     if not payload["findings"]:
         lines.append("No findings")
     for finding in payload["findings"]:
@@ -127,6 +128,88 @@ def _payload_to_lines(payload: dict[str, Any], title: str) -> list[str]:
         lines.extend(["", "Diagnostics"])
         lines.extend(str(item) for item in payload["diagnostics"])
     return lines
+
+
+def _ptr_comparison_detail_lines(payload: dict[str, Any]) -> list[str]:
+    details = _ptr_comparison_details(payload)
+    if not isinstance(details, dict):
+        return []
+
+    lines = [
+        "",
+        "技术要求与报告比对摘要",
+        f"overall_status: {details.get('overall_status') or ''}",
+        f"overall_summary: {details.get('overall_summary') or ''}",
+        f"requirements_count: {details.get('requirements_count') or 0}",
+        f"covered_count: {details.get('covered_count') or 0}",
+        f"missing_count: {details.get('missing_count') or 0}",
+        f"mismatch_count: {details.get('mismatch_count') or 0}",
+        f"needs_review_count: {details.get('needs_review_count') or 0}",
+        f"confirmed_errors_count: {details.get('confirmed_errors_count') or 0}",
+        f"manual_review_required_count: {details.get('manual_review_required_count') or 0}",
+        f"refuted_findings_count: {details.get('refuted_findings_count') or 0}",
+    ]
+    items = details.get("items") or []
+    if not isinstance(items, list):
+        return lines
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        lines.extend(
+            [
+                "",
+                f"PTR 条款 {item.get('ptr_clause_id') or ''} {item.get('ptr_title') or ''}".strip(),
+                f"PTR 摘录: {item.get('ptr_requirement_text') or ''}",
+            ]
+        )
+        matches = item.get("report_matches") or []
+        if isinstance(matches, list) and matches:
+            for match in matches:
+                if not isinstance(match, dict):
+                    continue
+                lines.append(
+                    "报告匹配项: "
+                    f"序号 {match.get('item_no') or ''}；"
+                    f"页码 {match.get('report_page') or ''}；"
+                    f"标准条款 {match.get('standard_clause') or ''}；"
+                    f"检验结果 {match.get('test_result') or ''}；"
+                    f"单项结论 {match.get('single_conclusion') or ''}"
+                )
+        else:
+            candidates = item.get("candidate_report_items") or []
+            candidate_count = len(candidates) if isinstance(candidates, list) else 0
+            lines.append(f"报告匹配项: 未找到；候选项数量 {candidate_count}")
+        comparison = item.get("normalized_comparison") if isinstance(item.get("normalized_comparison"), dict) else {}
+        lines.extend(
+            [
+                f"比对结论: {item.get('user_facing_status') or ''}",
+                (
+                    "比对明细: "
+                    f"expected={comparison.get('expected') or ''}; "
+                    f"actual={comparison.get('actual') or ''}; "
+                    f"operator={comparison.get('operator') or ''}; "
+                    f"unit={comparison.get('unit') or ''}; "
+                    f"status={comparison.get('status') or ''}"
+                ),
+                f"判断理由: {item.get('reason') or ''}",
+            ]
+        )
+    return lines
+
+
+def _ptr_comparison_details(payload: dict[str, Any]) -> dict[str, Any] | None:
+    metadata = payload.get("metadata") or {}
+    details = metadata.get("ptr_comparison_details") if isinstance(metadata, dict) else None
+    if isinstance(details, dict):
+        return details
+    for result in payload.get("check_results") or []:
+        if not isinstance(result, dict):
+            continue
+        result_metadata = result.get("metadata") or {}
+        details = result_metadata.get("ptr_comparison_details") if isinstance(result_metadata, dict) else None
+        if isinstance(details, dict):
+            return details
+    return None
 
 
 def _stringify(value: Any) -> str:

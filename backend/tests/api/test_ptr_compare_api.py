@@ -12,8 +12,9 @@ class FakePTRCompareUseCase:
     def __init__(self, task_service: TaskService) -> None:
         self.task_service = task_service
         self.calls: list[dict[str, object]] = []
+        self.processed_task_ids: list[str] = []
 
-    def run(
+    def submit(
         self,
         *,
         ptr_file_name: str,
@@ -42,12 +43,16 @@ class FakePTRCompareUseCase:
                 InputFileRef(file_id="report-file", file_name=report_file_name, content_type=report_content_type),
             ],
         )
-        self.task_service.start_task(task.task_id, current_step="fake ptr compare")
+        return self.task_service.start_task(task.task_id, current_step="queued fake ptr compare", progress=1)
+
+    def process_task(self, task_id: str) -> object:
+        self.processed_task_ids.append(task_id)
+        self.task_service.update_progress(task_id, progress=70, current_step="fake ptr compare")
         self.task_service.complete_task(
-            task.task_id,
+            task_id,
             [
                 CheckResult(
-                    task_id=task.task_id,
+                    task_id=task_id,
                     check_id="PTR_CLAUSE",
                     check_name="PTR 条款正文一致性",
                     status=CheckStatus.PASS,
@@ -56,7 +61,7 @@ class FakePTRCompareUseCase:
             ],
             diagnostics=["fake ptr usecase"],
         )
-        return self.task_service.get_task(task.task_id)
+        return self.task_service.get_task(task_id)
 
 
 def _client_with_fake_usecase() -> tuple[TestClient, FakePTRCompareUseCase]:
@@ -68,7 +73,7 @@ def _client_with_fake_usecase() -> tuple[TestClient, FakePTRCompareUseCase]:
     return TestClient(app), fake_usecase
 
 
-def test_ptr_compare_upload_creates_task_through_usecase_and_exposes_result() -> None:
+def test_ptr_compare_upload_returns_processing_task_then_background_exposes_result() -> None:
     client, fake_usecase = _client_with_fake_usecase()
 
     response = client.post(
@@ -82,7 +87,9 @@ def test_ptr_compare_upload_creates_task_through_usecase_and_exposes_result() ->
     assert response.status_code == 200
     payload = response.json()
     task_id = payload["task_id"]
-    assert payload["status"] == TaskState.COMPLETED
+    assert payload["status"] == TaskState.PROCESSING
+    assert payload["progress"] == 1
+    assert payload["current_step"] == "queued fake ptr compare"
     assert payload["task_type"] == TaskType.PTR_COMPARE
     assert {item["file_name"] for item in payload["input_files"]} == {"ptr.pdf", "report.pdf"}
     assert fake_usecase.calls == [
@@ -96,6 +103,11 @@ def test_ptr_compare_upload_creates_task_through_usecase_and_exposes_result() ->
             "audit_options": None,
         }
     ]
+    assert fake_usecase.processed_task_ids == [task_id]
+
+    status_response = client.get(f"/api/tasks/{task_id}")
+    assert status_response.status_code == 200
+    assert status_response.json()["status"] == TaskState.COMPLETED
 
     result_response = client.get(f"/api/tasks/{task_id}/result")
     assert result_response.status_code == 200

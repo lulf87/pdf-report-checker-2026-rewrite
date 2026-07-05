@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -135,6 +136,31 @@ class TrackingScopeFilter:
                     reason="outside_declared_scope",
                 ),
             ],
+        )
+
+
+class IncludeAllScopeFilter:
+    def __call__(
+        self,
+        ptr_doc: PTRDocument,
+        inspection_scope_texts: list[str],
+        *,
+        report_clause_numbers: set[str] | None = None,
+    ) -> ScopeFilterResult:
+        del inspection_scope_texts, report_clause_numbers
+        decisions = [
+            ScopeDecision(
+                clause_id=clause.clause_id,
+                clause_number=str(clause.number),
+                included=True,
+                reason="test_include_all",
+            )
+            for clause in ptr_doc.clauses
+        ]
+        return ScopeFilterResult(
+            included_clause_ids=[clause.clause_id for clause in ptr_doc.clauses],
+            excluded_clause_ids=[],
+            decisions=decisions,
         )
 
 
@@ -340,6 +366,79 @@ def test_ptr_compare_usecase_converts_processing_errors_to_task_error(tmp_path: 
     assert task_service.get_task(status.task_id).error_message == "Invalid PDF file: ptr.pdf"
 
 
+def test_ptr_compare_usecase_submit_creates_processing_task_without_parsing(tmp_path: Path) -> None:
+    task_service = TaskService()
+    file_store = LocalFileStore(tmp_path)
+    parser = FakePdfParser()
+    usecase = PTRCompareUseCase(
+        task_service=task_service,
+        file_store=file_store,
+        pdf_parser=parser,
+        ptr_extractor=FakePTRExtractor(),
+        report_extractor=FakeReportFieldExtractor(),
+        inspection_table_extractor=FakeInspectionTableExtractor(),
+        scope_filter=TrackingScopeFilter(),
+        clause_text_compare=TrackingClauseCompare(),
+        table_reference_compare=TrackingTableCompare(),
+        codex_audit_service=FakePtrCodexAuditService(),
+    )
+
+    status = usecase.submit(
+        ptr_file_name="ptr.pdf",
+        ptr_content=b"%PDF-1.4 ptr",
+        report_file_name="report.pdf",
+        report_content=b"%PDF-1.4 report",
+        content_type="application/pdf",
+    )
+
+    assert status.status == TaskState.PROCESSING
+    assert status.progress == 1
+    assert status.current_step == "queued ptr compare"
+    assert {file.file_name for file in status.input_files} == {"ptr.pdf", "report.pdf"}
+    assert file_store.get_upload_path(task_id=status.task_id, file_name="ptr.pdf", category="ptr").exists()
+    assert file_store.get_upload_path(task_id=status.task_id, file_name="report.pdf", category="report").exists()
+    assert parser.paths == []
+
+
+def test_ptr_compare_usecase_process_submitted_task_updates_progress_and_completes(tmp_path: Path) -> None:
+    task_service = TaskService()
+    parser = FakePdfParser()
+    ptr_extractor = FakePTRExtractor()
+    report_extractor = FakeReportFieldExtractor()
+    usecase = PTRCompareUseCase(
+        task_service=task_service,
+        file_store=LocalFileStore(tmp_path),
+        pdf_parser=parser,
+        ptr_extractor=ptr_extractor,
+        report_extractor=report_extractor,
+        inspection_table_extractor=FakeInspectionTableExtractor(),
+        scope_filter=TrackingScopeFilter(),
+        clause_text_compare=TrackingClauseCompare(),
+        table_reference_compare=TrackingTableCompare(),
+        codex_audit_service=FakePtrCodexAuditService(),
+    )
+    submitted = usecase.submit(
+        ptr_file_name="ptr.pdf",
+        ptr_content=b"%PDF-1.4 ptr",
+        report_file_name="report.pdf",
+        report_content=b"%PDF-1.4 report",
+        content_type="application/pdf",
+    )
+
+    status = usecase.process_task(submitted.task_id)
+
+    assert status.status == TaskState.COMPLETED
+    assert status.progress == 100
+    assert status.result_ref == submitted.task_id
+    assert [path.name for path in parser.paths] == ["ptr.pdf", "report.pdf"]
+    assert ptr_extractor.parsed[0].file_name == "ptr.pdf"
+    assert report_extractor.parsed[0].file_name == "report.pdf"
+    result = task_service.get_result(submitted.task_id)
+    assert result.task_id == submitted.task_id
+    assert result.task_type == TaskType.PTR_COMPARE
+    assert result.check_results[0].check_id == "PTR_SCOPE"
+
+
 def test_ptr_compare_usecase_includes_parameter_value_mismatch_in_final_result(tmp_path: Path) -> None:
     result = _run_parameter_compare_usecase(
         tmp_path,
@@ -354,6 +453,114 @@ def test_ptr_compare_usecase_includes_parameter_value_mismatch_in_final_result(t
     assert ptr_table_result.findings[0].actual == "0.5"
     assert result.summary.error_count == 1
     assert result.metadata["source"] == "ptr_compare_usecase"
+
+
+def test_ptr_compare_usecase_attaches_ptr_comparison_details_for_covered_and_missing_items(tmp_path: Path) -> None:
+    task_service = TaskService()
+    ptr_doc = PTRDocument(
+        clauses=[
+            PTRClause(
+                clause_id="ptr-2.1",
+                number=PTRClauseNumber.from_string("2.1"),
+                title="外观",
+                body_text="外观应平整",
+            ),
+            PTRClause(
+                clause_id="ptr-2.2",
+                number=PTRClauseNumber.from_string("2.2"),
+                title="尺寸",
+                body_text="尺寸应符合要求",
+            ),
+        ],
+    )
+
+    usecase = PTRCompareUseCase(
+        task_service=task_service,
+        file_store=LocalFileStore(tmp_path),
+        pdf_parser=FakePdfParser(),
+        ptr_extractor=FakePTRExtractor(ptr_doc),
+        report_extractor=FakeReportFieldExtractor(),
+        inspection_table_extractor=FakeInspectionTableExtractor(),
+        scope_filter=IncludeAllScopeFilter(),
+        table_reference_compare=TrackingTableCompare(),
+        codex_audit_service=FakePtrCodexAuditService(verdict=CodexReviewVerdict.CONFIRM),
+    )
+
+    status = usecase.run(
+        ptr_file_name="ptr.pdf",
+        ptr_content=b"%PDF-1.4 ptr",
+        report_file_name="report.pdf",
+        report_content=b"%PDF-1.4 report",
+        content_type="application/pdf",
+    )
+
+    result = task_service.get_result(status.task_id)
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+
+    assert details["requirements_count"] == 2
+    assert details["covered_count"] == 1
+    assert details["missing_count"] == 1
+    assert items["2.1"]["user_facing_status"] == "covered_passed"
+    assert items["2.1"]["ptr_requirement_text"] == "外观应平整"
+    assert items["2.1"]["report_matches"][0]["item_no"] == "1"
+    assert items["2.1"]["report_matches"][0]["standard_requirement"] == "外观应平整"
+    assert items["2.2"]["rule_status"] == "missing_in_report"
+    assert items["2.2"]["user_facing_status"] == "confirmed_error"
+    assert items["2.2"]["final_status"] == "confirmed_error"
+    assert "报告中未找到" in items["2.2"]["reason"]
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_ptr_compare_usecase_ptr_comparison_details_map_codex_verdicts(tmp_path: Path) -> None:
+    expectations = [
+        (CodexReviewVerdict.CONFIRM, "confirmed_error", "confirmed_error"),
+        (CodexReviewVerdict.REFUTE, "refuted", "refuted"),
+        (CodexReviewVerdict.UNCERTAIN, "needs_review", "manual_review_required"),
+    ]
+
+    for verdict, user_status, final_status in expectations:
+        result = _run_parameter_compare_usecase(
+            tmp_path,
+            ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度", "0.4")]),
+            report_tables=[_canonical_table("report-table-1", "1", [_record("脉冲宽度", "0.5")])],
+            codex_audit_enabled=True,
+            codex_audit_service=FakePtrCodexAuditService(verdict=verdict),
+        )
+
+        item = result.metadata["ptr_comparison_details"]["items"][0]
+        assert item["user_facing_status"] == user_status
+        assert item["final_status"] == final_status
+
+
+def test_ptr_compare_usecase_ptr_comparison_details_include_numeric_expected_actual_operator_and_unit(tmp_path: Path) -> None:
+    result = _run_parameter_compare_usecase(
+        tmp_path,
+        ptr_table=_canonical_table(
+            "ptr-table-1",
+            "1",
+            [_record("输入功率", "≤110%", values={"限值": "≤110%"})],
+        ),
+        report_tables=[
+            _canonical_table(
+                "report-table-1",
+                "1",
+                [_record("输入功率", "120%", values={"限值": "120%"})],
+            )
+        ],
+        codex_audit_enabled=True,
+        codex_audit_service=FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN),
+    )
+
+    comparison = result.metadata["ptr_comparison_details"]["items"][0]["normalized_comparison"]
+    assert comparison == {
+        "requirement_type": "numeric_limit",
+        "expected": "≤110%",
+        "actual": "120%",
+        "unit": "%",
+        "operator": "≤",
+        "status": "mismatch",
+    }
 
 
 def test_ptr_compare_usecase_includes_parameter_unit_mismatch_in_final_result(tmp_path: Path) -> None:

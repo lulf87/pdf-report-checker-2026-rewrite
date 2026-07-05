@@ -121,7 +121,9 @@ def test_ptr_compare_upload_result_and_json_export_include_clause_table_and_para
     task_payload = create_response.json()
     task_id = task_payload["task_id"]
     assert task_payload["task_type"] == TaskType.PTR_COMPARE
-    assert task_payload["status"] == TaskState.COMPLETED
+    assert task_payload["status"] == TaskState.PROCESSING
+    assert task_payload["progress"] == 1
+    assert task_payload["current_step"] == "queued ptr compare"
     assert {item["file_name"] for item in task_payload["input_files"]} == {"ptr.pdf", "report.pdf"}
 
     status_response = client.get(f"/api/tasks/{task_id}")

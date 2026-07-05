@@ -34,6 +34,8 @@ def export_check_results_to_xlsx(
         ("Evidence", _evidence_rows(payload)),
         ("ComparisonDetails", _comparison_detail_rows(payload)),
         ("check_explanations", _explanation_detail_rows(payload)),
+        ("ptr_comparison_summary", _ptr_comparison_summary_rows(payload)),
+        ("ptr_comparison_details", _ptr_comparison_detail_rows(payload)),
     ]
 
     buffer = io.BytesIO()
@@ -249,6 +251,102 @@ def _explanation_page_numbers(details: dict[str, Any]) -> str:
             if isinstance(item, dict) and item.get("page_number") is not None:
                 pages.append(str(item["page_number"]))
     return ", ".join(dict.fromkeys(pages))
+
+
+def _ptr_comparison_summary_rows(payload: dict[str, Any]) -> list[list[Any]]:
+    rows = [["field", "value"]]
+    details = _ptr_comparison_details(payload)
+    if not isinstance(details, dict):
+        return rows
+    for key in (
+        "overall_status",
+        "overall_summary",
+        "requirements_count",
+        "covered_count",
+        "missing_count",
+        "mismatch_count",
+        "needs_review_count",
+        "confirmed_errors_count",
+        "manual_review_required_count",
+        "refuted_findings_count",
+    ):
+        rows.append([key, details.get(key) or 0 if key.endswith("_count") else details.get(key) or ""])
+    return rows
+
+
+def _ptr_comparison_detail_rows(payload: dict[str, Any]) -> list[list[Any]]:
+    rows = [
+        [
+            "ptr_clause_id",
+            "ptr_title",
+            "ptr_page",
+            "ptr_requirement_text",
+            "report_item_no",
+            "report_page",
+            "report_standard_clause",
+            "report_test_result",
+            "report_conclusion",
+            "expected",
+            "actual",
+            "status",
+            "reason",
+            "user_facing_status",
+            "final_status",
+        ]
+    ]
+    details = _ptr_comparison_details(payload)
+    if not isinstance(details, dict):
+        return rows
+    items = details.get("items") or []
+    if not isinstance(items, list):
+        return rows
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        matches = item.get("report_matches") if isinstance(item.get("report_matches"), list) else []
+        if not matches:
+            rows.append(_ptr_comparison_detail_row(item, {}))
+            continue
+        for match in matches:
+            if isinstance(match, dict):
+                rows.append(_ptr_comparison_detail_row(item, match))
+    return rows
+
+
+def _ptr_comparison_detail_row(item: dict[str, Any], match: dict[str, Any]) -> list[Any]:
+    comparison = item.get("normalized_comparison") if isinstance(item.get("normalized_comparison"), dict) else {}
+    return [
+        item.get("ptr_clause_id") or "",
+        item.get("ptr_title") or "",
+        item.get("ptr_page") or "",
+        item.get("ptr_requirement_text") or "",
+        match.get("item_no") or "",
+        match.get("report_page") or "",
+        match.get("standard_clause") or "",
+        match.get("test_result") or "",
+        match.get("single_conclusion") or "",
+        comparison.get("expected") or "",
+        comparison.get("actual") or "",
+        comparison.get("status") or "",
+        item.get("reason") or "",
+        item.get("user_facing_status") or "",
+        item.get("final_status") or "",
+    ]
+
+
+def _ptr_comparison_details(payload: dict[str, Any]) -> dict[str, Any] | None:
+    metadata = payload.get("metadata") or {}
+    details = metadata.get("ptr_comparison_details") if isinstance(metadata, dict) else None
+    if isinstance(details, dict):
+        return details
+    for result in payload.get("check_results") or []:
+        if not isinstance(result, dict):
+            continue
+        result_metadata = result.get("metadata") or {}
+        details = result_metadata.get("ptr_comparison_details") if isinstance(result_metadata, dict) else None
+        if isinstance(details, dict):
+            return details
+    return None
 
 
 def _cell_value(value: Any) -> str:

@@ -105,10 +105,10 @@ export type CodexFinalStatus =
   | "pending";
 
 export const CODEX_VERDICT_LABELS: Record<CodexReviewVerdict, string> = {
-  confirm: "Codex 已确认",
-  refute: "Codex 认为可能误报",
-  uncertain: "需人工复核",
-  add_finding: "Codex 建议新增问题",
+  confirm: "复审确认问题",
+  refute: "候选问题已排除",
+  uncertain: "仍需人工复核",
+  add_finding: "复审建议新增问题",
 };
 
 export const CODEX_STATUS_LABELS: Record<CodexReviewStatus, string> = {
@@ -125,58 +125,76 @@ export const CODEX_CONFIDENCE_LABELS: Record<CodexReviewConfidence, string> = {
   low: "低",
 };
 
-export const CODEX_MISSING_TARGET_USER_MESSAGE =
+export type CodexRuntimeErrorContext = "report_check" | "ptr_compare";
+
+export const CODEX_MISSING_TARGET_REPORT_USER_MESSAGE =
   "LLM 复核未完成：本次规则核对已完成，但 LLM/Codex 未返回所有候选项的复核结果。请重试，或关闭 LLM 增强识别查看规则初筛结果。这不是报告确认错误。";
-export const CODEX_TIMEOUT_USER_MESSAGE =
+export const CODEX_TIMEOUT_REPORT_USER_MESSAGE =
   "LLM 复核超时：本次规则核对已完成，但 LLM/Codex 复核批次在限定时间内没有返回。请重试，或关闭 LLM 增强识别查看规则初筛结果。这不是报告确认错误。";
-export const CODEX_CLI_UNAVAILABLE_USER_MESSAGE =
+export const CODEX_CLI_UNAVAILABLE_REPORT_USER_MESSAGE =
   "本机 Codex CLI 不可用：本次规则核对已完成，但本机 LLM/Codex 复核环境未能启动。请检查 Codex CLI 后重试，或关闭 LLM 增强识别查看规则初筛结果。这不是报告确认错误。";
+export const CODEX_MISSING_TARGET_PTR_USER_MESSAGE =
+  "LLM/Codex 复核未完成：本次 PTR 规则核对已完成，但复核没有返回所有候选项。请重试，或在高级审核设置中缩小复核范围后再试。这不是报告确认错误。";
+export const CODEX_TIMEOUT_PTR_USER_MESSAGE =
+  "LLM/Codex 复核超时：本次 PTR 规则核对已完成，但复核批次在限定时间内没有返回。请重试，或在高级审核设置中增大超时/缩小复核范围后再试。这不是报告确认错误。";
+export const CODEX_CLI_UNAVAILABLE_PTR_USER_MESSAGE =
+  "本机 Codex CLI 不可用：本次 PTR 规则核对已完成，但本机 LLM/Codex 复核环境未能启动。请检查 Codex CLI 后重试。这不是报告确认错误。";
+
+export const CODEX_MISSING_TARGET_USER_MESSAGE = CODEX_MISSING_TARGET_REPORT_USER_MESSAGE;
+export const CODEX_TIMEOUT_USER_MESSAGE = CODEX_TIMEOUT_REPORT_USER_MESSAGE;
+export const CODEX_CLI_UNAVAILABLE_USER_MESSAGE = CODEX_CLI_UNAVAILABLE_REPORT_USER_MESSAGE;
 
 export interface UserFacingCodexError {
   message: string;
   detail?: string | null;
 }
 
-export function formatCodexRuntimeError(rawError: string | null | undefined): UserFacingCodexError {
+export function formatCodexRuntimeError(
+  rawError: string | null | undefined,
+  context: CodexRuntimeErrorContext = "report_check",
+): UserFacingCodexError {
   const raw = rawError?.trim() ?? "";
   if (isMissingTargetError(raw)) {
     return {
-      message: CODEX_MISSING_TARGET_USER_MESSAGE,
+      message: codexRuntimeMessages(context).missingTarget,
       detail: raw,
     };
   }
   if (isTimeoutError(raw)) {
     return {
-      message: CODEX_TIMEOUT_USER_MESSAGE,
+      message: codexRuntimeMessages(context).timeout,
       detail: raw,
     };
   }
   if (isCliUnavailableError(raw)) {
     return {
-      message: CODEX_CLI_UNAVAILABLE_USER_MESSAGE,
+      message: codexRuntimeMessages(context).cliUnavailable,
       detail: raw,
     };
   }
   return { message: raw || "报告自检失败", detail: null };
 }
 
-export function formatCodexReviewError(error: CodexReviewError): UserFacingCodexError {
+export function formatCodexReviewError(
+  error: CodexReviewError,
+  context: CodexRuntimeErrorContext = "report_check",
+): UserFacingCodexError {
   const raw = [error.code, error.message, error.detail].filter(Boolean).join(": ");
   if (error.code === "CODEX_OUTPUT_MISSING_TARGET" || isMissingTargetError(raw)) {
     return {
-      message: CODEX_MISSING_TARGET_USER_MESSAGE,
+      message: codexRuntimeMessages(context).missingTarget,
       detail: raw,
     };
   }
   if (error.code === "CODEX_TIMEOUT" || isTimeoutError(raw)) {
     return {
-      message: CODEX_TIMEOUT_USER_MESSAGE,
+      message: codexRuntimeMessages(context).timeout,
       detail: raw,
     };
   }
   if (error.code === "CODEX_CLI_UNAVAILABLE" || isCliUnavailableError(raw)) {
     return {
-      message: CODEX_CLI_UNAVAILABLE_USER_MESSAGE,
+      message: codexRuntimeMessages(context).cliUnavailable,
       detail: raw,
     };
   }
@@ -261,6 +279,11 @@ export function findingCodexFinalStatus(
   const metadataStatus = metadataString(finding.metadata, "final_status");
   if (isCodexFinalStatus(metadataStatus)) return metadataStatus;
 
+  const userFacingStatus = metadataString(finding.metadata, "user_facing_status");
+  if (userFacingStatus === "refuted") return "refuted";
+  if (userFacingStatus === "confirmed_error") return "confirmed";
+  if (userFacingStatus === "needs_review") return "manual_review_required";
+
   const review = normalizeCodexReviews(reviews).find((item) => item.status === "succeeded" && item.verdict);
   if (review?.verdict === "confirm") return "confirmed";
   if (review?.verdict === "refute") return "refuted";
@@ -270,13 +293,13 @@ export function findingCodexFinalStatus(
 }
 
 export function codexFinalStatusLabel(status: CodexFinalStatus): string {
-  if (status === "confirmed") return "Codex 已确认";
-  if (status === "refuted") return "Codex 已反驳";
+  if (status === "confirmed") return "复审确认问题";
+  if (status === "refuted") return "候选问题已排除";
   if (status === "manual_review_required") return "人工复核";
-  if (status === "suggested_additional_finding") return "Codex 建议新增";
+  if (status === "suggested_additional_finding") return "复审建议新增";
   if (status === "out_of_scope") return "本次未覆盖";
   if (status === "summary_only") return "摘要目标";
-  return "待 Codex 审核";
+  return "待 LLM/Codex 复审";
 }
 
 export function codexFinalStatusTone(status: CodexFinalStatus): "success" | "danger" | "warn" | "info" | "accent" {
@@ -323,11 +346,30 @@ function isMissingTargetError(value: string): boolean {
 }
 
 function isTimeoutError(value: string): boolean {
-  return value.includes("CODEX_TIMEOUT") || value.includes("timed out") || value.includes("超时");
+  return value.includes("CODEX_TIMEOUT") || value.includes("timed out");
 }
 
 function isCliUnavailableError(value: string): boolean {
   return value.includes("CODEX_CLI_UNAVAILABLE") || value.includes("Codex CLI unavailable");
+}
+
+function codexRuntimeMessages(context: CodexRuntimeErrorContext): {
+  missingTarget: string;
+  timeout: string;
+  cliUnavailable: string;
+} {
+  if (context === "ptr_compare") {
+    return {
+      missingTarget: CODEX_MISSING_TARGET_PTR_USER_MESSAGE,
+      timeout: CODEX_TIMEOUT_PTR_USER_MESSAGE,
+      cliUnavailable: CODEX_CLI_UNAVAILABLE_PTR_USER_MESSAGE,
+    };
+  }
+  return {
+    missingTarget: CODEX_MISSING_TARGET_REPORT_USER_MESSAGE,
+    timeout: CODEX_TIMEOUT_REPORT_USER_MESSAGE,
+    cliUnavailable: CODEX_CLI_UNAVAILABLE_REPORT_USER_MESSAGE,
+  };
 }
 
 function isCodexFinalStatus(value: string | null): value is CodexFinalStatus {

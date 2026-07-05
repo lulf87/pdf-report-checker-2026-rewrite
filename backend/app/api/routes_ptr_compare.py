@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 
 from app.api.routes_tasks import get_app_settings, get_task_service
 from app.api.schemas.task import TaskStatusResponse
@@ -9,6 +9,7 @@ from app.application.codex_runtime_factory import build_ptr_compare_usecase
 from app.application.ptr_compare_usecase import PTRCompareUseCase
 from app.application.task_service import TaskService
 from app.core.config import Settings
+from app.domain.task import TaskState
 
 
 router = APIRouter(tags=["PTR Compare"])
@@ -23,6 +24,7 @@ def get_ptr_compare_usecase(
 
 @router.post("/api/tasks/ptr-compare", response_model=TaskStatusResponse)
 async def create_ptr_compare_task(
+    background_tasks: BackgroundTasks,
     ptr_file: UploadFile = File(..., description="PTR PDF file"),
     report_file: UploadFile = File(..., description="Inspection report PDF file"),
     included_check_ids: str | None = Form(default=None),
@@ -37,7 +39,7 @@ async def create_ptr_compare_task(
     _validate_pdf_upload(report_file)
     ptr_content = await ptr_file.read()
     report_content = await report_file.read()
-    return usecase.run(
+    task = usecase.submit(
         ptr_file_name=ptr_file.filename or "ptr.pdf",
         ptr_content=ptr_content,
         ptr_content_type=ptr_file.content_type or "application/pdf",
@@ -55,6 +57,9 @@ async def create_ptr_compare_task(
             }
         ),
     )
+    if task.status == TaskState.PROCESSING:
+        background_tasks.add_task(usecase.process_task, task.task_id)
+    return task
 
 
 def _validate_pdf_upload(file: UploadFile) -> None:

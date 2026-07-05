@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 
 import type { PTRFilterMode } from "../../../entities/ptr/types";
-import { toPTRClauseViewModel } from "../../../entities/ptr/types";
-import type { TaskResult, TaskStatus } from "../../../entities/task/types";
+import { toPTRClauseViewModels } from "../../../entities/ptr/types";
+import type { PTRComparisonDetails, TaskResult, TaskStatus } from "../../../entities/task/types";
 import { normalizeCodexReviews } from "../../../entities/codexReview/types";
 import { CodexReviewOverview } from "../../codex-review/components/CodexReviewPanel";
 import { AnimatedCounter } from "../../../shared/ui/AnimatedCounter";
@@ -22,10 +22,11 @@ export interface PTRResultsProps {
 export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps) {
   const [filter, setFilter] = useState<PTRFilterMode>("issues");
   const [exportError, setExportError] = useState<string | null>(null);
-  const resultBadge = finalResultBadge(result);
+  const ptrDetails = result.metadata.ptr_comparison_details;
+  const resultBadge = finalResultBadge(result, ptrDetails);
   const clauses = useMemo(
-    () => result.check_results.map((item, index) => toPTRClauseViewModel(item, index)),
-    [result.check_results],
+    () => toPTRClauseViewModels(result),
+    [result],
   );
   const codexReviews = useMemo(
     () => result.check_results.flatMap((item) => normalizeCodexReviews(item.codex_reviews)),
@@ -44,15 +45,27 @@ export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps
         <Badge variant={resultBadge.variant}>{resultBadge.label}</Badge>
       </header>
 
-      <div className="metric-grid">
-        <Metric label="候选错误" value={result.summary.candidate_errors_count} tone="warn" />
-        <Metric label="确认错误" value={result.summary.confirmed_errors_count} tone="danger" />
-        <Metric label="人工复核" value={result.summary.manual_review_required_count} tone="warn" />
-        <Metric label="已反驳候选" value={result.summary.refuted_findings_count} />
-        {result.summary.out_of_scope_findings_count > 0 ? (
-          <Metric label="本次未覆盖" value={result.summary.out_of_scope_findings_count} />
-        ) : null}
-      </div>
+      {ptrDetails ? (
+        <div className="metric-grid">
+          <Metric label="技术要求条款数" value={ptrDetails.requirements_count} />
+          <Metric label="已覆盖" value={ptrDetails.covered_count} />
+          <Metric label="未覆盖" value={ptrDetails.missing_count} tone={ptrDetails.missing_count > 0 ? "warn" : "info"} />
+          <Metric label="结果不一致" value={ptrDetails.mismatch_count} tone={ptrDetails.mismatch_count > 0 ? "warn" : "info"} />
+          <Metric label="需复核" value={ptrDetails.needs_review_count} tone={ptrDetails.needs_review_count > 0 ? "warn" : "info"} />
+          <Metric label="确认问题" value={ptrDetails.confirmed_errors_count} tone={ptrDetails.confirmed_errors_count > 0 ? "danger" : "info"} />
+          <Metric label="候选已排除" value={ptrDetails.refuted_findings_count} />
+        </div>
+      ) : (
+        <div className="metric-grid">
+          <Metric label="候选错误" value={result.summary.candidate_errors_count} tone="warn" />
+          <Metric label="确认错误" value={result.summary.confirmed_errors_count} tone="danger" />
+          <Metric label="人工复核" value={result.summary.manual_review_required_count} tone="warn" />
+          <Metric label="已反驳候选" value={result.summary.refuted_findings_count} />
+          {result.summary.out_of_scope_findings_count > 0 ? (
+            <Metric label="本次未覆盖" value={result.summary.out_of_scope_findings_count} />
+          ) : null}
+        </div>
+      )}
 
       <CodexAuditScopeNotice metadata={result.metadata} />
 
@@ -98,7 +111,19 @@ function Metric({ label, value, tone = "info" }: { label: string; value: number;
   );
 }
 
-function finalResultBadge(result: TaskResult): { label: string; variant: "success" | "danger" | "warn" | "info" } {
+function finalResultBadge(result: TaskResult, ptrDetails?: PTRComparisonDetails): { label: string; variant: "success" | "danger" | "warn" | "info" } {
+  if (ptrDetails?.overall_status === "passed") {
+    return { label: "最终结论：通过", variant: "success" };
+  }
+  if (ptrDetails?.overall_status === "needs_review") {
+    return { label: "最终结论：需复核", variant: "warn" };
+  }
+  if (ptrDetails?.overall_status === "failed") {
+    return { label: "最终结论：不通过", variant: "danger" };
+  }
+  if (ptrDetails?.overall_status === "audit_incomplete") {
+    return { label: "最终结论：复审未完成", variant: "danger" };
+  }
   if (result.summary.final_audit_status === "audit_failed") {
     return { label: "Codex 审核未完成", variant: "danger" };
   }

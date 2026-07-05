@@ -214,9 +214,85 @@ export interface ExplanationDetails {
   next_action?: string | null;
 }
 
+export type PTRComparisonOverallStatus = "passed" | "needs_review" | "failed" | "audit_incomplete" | string;
+export type PTRComparisonUserFacingStatus =
+  | "covered_passed"
+  | "missing_in_report"
+  | "value_mismatch"
+  | "needs_review"
+  | "candidate_issue"
+  | "refuted"
+  | "confirmed_error"
+  | "audit_incomplete"
+  | string;
+export type PTRComparisonFinalStatus =
+  | "passed"
+  | "confirmed_error"
+  | "manual_review_required"
+  | "refuted"
+  | "candidate_issue"
+  | "audit_incomplete"
+  | string;
+
+export interface PTRReportMatch {
+  item_no?: string | null;
+  report_page?: number | null;
+  standard_clause?: string | null;
+  item_name?: string | null;
+  standard_requirement?: string | null;
+  test_result?: string | null;
+  single_conclusion?: string | null;
+  remark?: string | null;
+}
+
+export interface PTRNormalizedComparison {
+  requirement_type: "numeric_limit" | "text_requirement" | "coverage" | "unknown" | string;
+  expected?: unknown;
+  actual?: unknown;
+  unit?: string | null;
+  operator?: string | null;
+  status: "match" | "mismatch" | "needs_review" | string;
+}
+
+export interface PTRComparisonItem {
+  ptr_clause_id: string;
+  ptr_title?: string | null;
+  ptr_page?: number | null;
+  ptr_requirement_text: string;
+  report_matches: PTRReportMatch[];
+  normalized_comparison: PTRNormalizedComparison;
+  rule_status: PTRComparisonUserFacingStatus;
+  user_facing_status: PTRComparisonUserFacingStatus;
+  final_status: PTRComparisonFinalStatus;
+  reason: string;
+  next_action?: string | null;
+  evidence_refs: string[];
+  search_keywords?: string[];
+  candidate_report_items?: PTRReportMatch[];
+}
+
+export interface PTRComparisonDetails {
+  overall_status: PTRComparisonOverallStatus;
+  overall_summary: string;
+  requirements_count: number;
+  covered_count: number;
+  missing_count: number;
+  mismatch_count: number;
+  needs_review_count: number;
+  confirmed_errors_count: number;
+  manual_review_required_count: number;
+  refuted_findings_count: number;
+  items: PTRComparisonItem[];
+}
+
 export interface CheckResultMetadata extends Record<string, unknown> {
   comparison_details?: ComparisonDetails;
   explanation_details?: ExplanationDetails;
+  ptr_comparison_details?: PTRComparisonDetails;
+}
+
+export interface TaskResultMetadata extends Record<string, unknown> {
+  ptr_comparison_details?: PTRComparisonDetails;
 }
 
 export interface CheckResult {
@@ -241,7 +317,7 @@ export interface TaskResult {
   findings: Finding[];
   input_files: InputFileRef[];
   diagnostics: string[];
-  metadata: Record<string, unknown>;
+  metadata: TaskResultMetadata;
 }
 
 export type TaskModuleState = "ready" | "pending";

@@ -34,7 +34,7 @@ export async function waitForPTRCompareResult(
   taskId: string,
   onStatus: (task: TaskStatus) => void,
   intervalMs = 1000,
-  timeoutMs = 60000,
+  timeoutMs = 60 * 60 * 1000,
 ): Promise<TaskResult> {
   const startedAt = Date.now();
 

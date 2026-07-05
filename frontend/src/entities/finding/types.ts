@@ -99,7 +99,7 @@ export function findingUserFacingStatus(
 
 export function findingUserFacingStatusLabel(status: UserFacingFindingStatus, finding?: Finding): string {
   if (status === "confirmed_error") return "确认错误";
-  if (status === "refuted") return "已反驳";
+  if (status === "refuted") return "候选问题已排除";
   if (status === "candidate_issue") return "候选问题";
   if (status === "passed") return "通过";
   if (finding?.code === "CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN") return "表格抽取不确定/需视觉复核";
