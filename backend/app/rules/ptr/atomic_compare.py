@@ -138,6 +138,28 @@ SOFTWARE_FUNCTION_REQUIREMENTS: tuple[tuple[str, str], ...] = (
     ("心脏脉冲电场消融仪", "温度监测"),
     ("心脏脉冲电场消融仪", "与射频消融仪、导管接口单元CIU通信"),
 )
+SOFTWARE_COMPONENTS: tuple[str, ...] = (
+    "心脏脉冲电场消融仪",
+    "射频消融仪",
+    "控制器",
+    "脚踏开关",
+    "灌注泵",
+)
+SOFTWARE_FUNCTION_ALIASES: dict[str, tuple[str, ...]] = {
+    "控制应用启动和停止": ("控制应用启动和停止", "控制射频消融或脉冲电场消融应用的启动和停止", "启动和停止"),
+    "灌注泵流量监测": ("灌注泵流量监测", "流量监测"),
+    "模式选择": ("模式选择", "射频消融或脉冲电场消融模式选择"),
+    "与心脏脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器、三维导航通信": (
+        "与心脏脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器、三维导航通信",
+        "与脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器和电生理三维导航系统通信",
+        "与脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器、三维导航通信",
+    ),
+    "参数显示与控制": ("参数显示与控制",),
+    "显示能量输送状态": ("显示能量输送状态",),
+    "显示消融图": ("显示消融图",),
+    "预设选择": ("预设选择",),
+    "与射频消融仪、导管接口单元CIU通信": ("与射频消融仪、导管接口单元CIU通信",),
+}
 
 
 def build_atomic_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtomicRequirement]:
@@ -626,6 +648,8 @@ def _status_and_reason(
         if actual is None:
             item_no = (group.display_item_no or group.item_no) if group else "未编号"
             return "needs_review", f"报告序号 {item_no} 未稳定展开表格参数结果，需复核。"
+        if requirement.clause_id == "2.2.2" and _waveform_report_actual_satisfies(requirement.expected_text, actual):
+            return "match", "报告表 6 波形参数结果满足 PTR 要求。"
         if _table_value_matches(requirement.expected_text, actual):
             return "match", "报告表格结果与 PTR 表格要求一致。"
         return "mismatch", f"报告结果 {actual} 与 PTR 要求 {requirement.expected_text or '无'} 不一致。"
@@ -851,16 +875,14 @@ def _waveform_table_atomic_results(
     del group
     results: list[PTRReportAtomicResult] = []
     for parameter_name, parameter_slug in WAVEFORM_TABLE_PARAMETERS:
-        parameter_window = _waveform_parameter_window(window, parameter_name)
-        if not parameter_window:
-            continue
         expected_values = _scope_waveform_expected_values(parameter_name)
         for preset_slug, preset_label in WAVEFORM_PRESETS:
             expected_text = expected_values.get(preset_slug)
             if _is_not_applicable_text(expected_text):
                 continue
-            actual = _waveform_actual_from_parameter_window(
-                parameter_window,
+            actual, source_text = _waveform_actual_from_window(
+                window,
+                parameter_name=parameter_name,
                 expected_text=expected_text,
                 preset_slug=preset_slug,
             )
@@ -875,7 +897,7 @@ def _waveform_table_atomic_results(
                     preset=preset_label,
                     item_no=item_no,
                     page=page,
-                    source_text=parameter_window,
+                    source_text=source_text,
                     confidence="high",
                     method="group_clause_window_waveform_table",
                     full_group_text=full_group_text,
@@ -916,23 +938,24 @@ def _software_requirement_window(group_text: str, requirement: PTRAtomicRequirem
     parameter_name = str(requirement.metadata.get("parameter_name") or requirement.label or "")
     dimensions = requirement.metadata.get("dimensions") if isinstance(requirement.metadata, dict) else {}
     component = str(dimensions.get("组件") or "") if isinstance(dimensions, dict) else ""
-    parameter_key = _compact_for_match(parameter_name)
+    parameter_keys = [_compact_for_match(alias) for alias in _software_function_aliases(parameter_name)]
     component_key = _compact_for_match(component)
-    best_line = ""
-    for line in str(group_text or "").splitlines():
-        line_key = _compact_for_match(line)
-        if not parameter_key or parameter_key not in line_key:
+    for current_component, window in _software_context_windows(group_text):
+        if component and current_component != component:
             continue
-        if component_key and component_key not in line_key:
+        window_key = _compact_for_match(window)
+        if any(parameter_key and parameter_key in window_key for parameter_key in parameter_keys):
+            return window.strip()
+    for _current_component, window in _software_context_windows(group_text):
+        window_key = _compact_for_match(window)
+        if component_key and component_key not in window_key:
             continue
-        best_line = line.strip()
-        break
-    if best_line:
-        return best_line
+        if any(parameter_key and parameter_key in window_key for parameter_key in parameter_keys):
+            return window.strip()
     label_key = _compact_for_match(requirement.label)
-    for line in str(group_text or "").splitlines():
-        if label_key and label_key in _compact_for_match(line):
-            return line.strip()
+    for _current_component, window in _software_context_windows(group_text):
+        if label_key and label_key in _compact_for_match(window):
+            return window.strip()
     return ""
 
 
@@ -942,13 +965,67 @@ def _software_actual_from_window(window: str) -> str | None:
         return None
     if "不符合" in text:
         return "不符合"
+    dash_match = re.search(r"[-—－]{2,}|／|(?<!\S)/(?!\S)", text)
+    conform_index = min((index for index in (text.find("符合要求"), text.find("符合")) if index >= 0), default=-1)
+    if dash_match and (conform_index < 0 or dash_match.start() < conform_index):
+        return "——"
     if "符合要求" in text or "符合" in text:
         return "符合要求"
-    if re.search(r"[-—－]{2,}|／|(?<!\S)/(?!\S)", text):
-        return "——"
     if "不适用" in text:
         return "不适用"
     return None
+
+
+def _software_function_aliases(parameter_name: str) -> tuple[str, ...]:
+    aliases = SOFTWARE_FUNCTION_ALIASES.get(parameter_name)
+    if aliases:
+        return aliases
+    return (parameter_name,)
+
+
+def _software_context_windows(group_text: str) -> list[tuple[str | None, str]]:
+    lines = [line.strip() for line in str(group_text or "").splitlines() if line.strip()]
+    windows: list[tuple[str | None, str]] = []
+    current_component: str | None = None
+    for index, line in enumerate(lines):
+        declared_component = _software_declared_component(line)
+        if declared_component is None and _could_be_component_fragment(line):
+            declared_component = _software_declared_component(" ".join(lines[index : index + 2]))
+        if declared_component is not None:
+            current_component = declared_component
+        window = " ".join(lines[index : index + 2])
+        windows.append((current_component, window))
+    return windows
+
+
+def _software_declared_component(value: str) -> str | None:
+    text = str(value or "")
+    if not text.strip():
+        return None
+    for component in SOFTWARE_COMPONENTS:
+        pattern = _loose_component_pattern(component)
+        match = pattern.search(text)
+        if match is None:
+            continue
+        prefix = text[: match.start()].strip()
+        if prefix and not prefix.endswith(("组件", "：", ":", "；", ";")):
+            continue
+        suffix = text[match.end() : match.end() + 1]
+        if suffix and re.match(r"[\u4e00-\u9fffA-Za-z0-9]", suffix):
+            continue
+        return component
+    return None
+
+
+def _could_be_component_fragment(value: str) -> bool:
+    key = _compact_for_match(value)
+    if not key:
+        return False
+    return any(_compact_for_match(component).startswith(key) for component in SOFTWARE_COMPONENTS)
+
+
+def _loose_component_pattern(component: str) -> re.Pattern[str]:
+    return re.compile(r"\s*".join(re.escape(char) for char in component))
 
 
 def _page_for_software_requirement(
@@ -1396,6 +1473,34 @@ def _table_value_matches(expected: str | None, actual: str | None) -> bool:
     return bool(expected_text) and expected_text == actual_text
 
 
+def _waveform_report_actual_satisfies(expected: str | None, actual: str | None) -> bool:
+    expected_text = str(expected or "").strip()
+    actual_text = str(actual or "").strip()
+    if not expected_text or not actual_text or "不符合" in actual_text:
+        return False
+    if "符合" in actual_text:
+        return True
+    if _table_value_matches(expected_text, actual_text):
+        return True
+    tolerance = _expected_tolerance(expected_text)
+    if tolerance is None:
+        return False
+    actual_values = _signed_numbers(actual_text)
+    return bool(actual_values) and all(abs(value) <= tolerance for value in actual_values)
+
+
+def _expected_tolerance(expected: str) -> float | None:
+    match = re.search(r"±\s*(\d+(?:\.\d+)?)", str(expected or ""))
+    return float(match.group(1)) if match else None
+
+
+def _signed_numbers(value: str) -> list[float]:
+    return [
+        float(re.sub(r"\s+", "", match).replace("＋", "+").replace("－", "-"))
+        for match in re.findall(r"[+＋\-－]\s*\d+(?:\.\d+)?", value or "")
+    ]
+
+
 def _normalize_table_value(value: str | None) -> str:
     text = str(value or "")
     text = text.replace("μ", "u").replace("µ", "u")
@@ -1471,22 +1576,123 @@ def _waveform_parameter_window(window: str, parameter_name: str) -> str:
     return text[start:end].strip()
 
 
-def _waveform_actual_from_parameter_window(
-    parameter_window: str,
+def _waveform_actual_from_window(
+    window: str,
     *,
+    parameter_name: str,
     expected_text: str | None,
     preset_slug: str,
-) -> str | None:
+) -> tuple[str | None, str]:
     if not expected_text:
+        return None, ""
+    scoped_text = _waveform_preset_scope(window, preset_slug)
+    search_texts = [text for text in (scoped_text, window) if text]
+    for search_text in _unique_text(search_texts):
+        for parameter_chunk in _waveform_parameter_chunks(search_text, parameter_name):
+            actual = _waveform_actual_from_parameter_chunk(parameter_chunk, expected_text=expected_text)
+            if actual is not None:
+                return actual, parameter_chunk
+    return None, scoped_text or window
+
+
+def _waveform_preset_scope(window: str, preset_slug: str) -> str:
+    text = str(window or "")
+    markers = list(_waveform_preset_marker_pattern().finditer(text))
+    for index, marker in enumerate(markers):
+        if _preset_slug(marker.group("preset")) != preset_slug:
+            continue
+        end = markers[index + 1].start() if index + 1 < len(markers) else len(text)
+        section = text[marker.start() : end].strip()
+        if any(parameter_name in section for parameter_name, _slug_value in WAVEFORM_TABLE_PARAMETERS):
+            return section
+    return ""
+
+
+def _waveform_preset_marker_pattern() -> re.Pattern[str]:
+    return re.compile(
+        r"(?P<preset>PULSE\s*3|PULSE3|PF\s*Reversi\s*ble|PFReversi\s*ble|PF\s*Reversible|PFReversible)\s*预\s*设",
+        re.IGNORECASE,
+    )
+
+
+def _waveform_parameter_chunks(window: str, parameter_name: str) -> list[str]:
+    text = str(window or "")
+    starts = [match.start() for match in re.finditer(re.escape(parameter_name), text)]
+    chunks: list[str] = []
+    for start in starts:
+        end = len(text)
+        for next_parameter, _slug_value in WAVEFORM_TABLE_PARAMETERS:
+            if next_parameter == parameter_name:
+                continue
+            index = text.find(next_parameter, start + len(parameter_name))
+            if index >= 0:
+                end = min(end, index)
+        next_preset = _waveform_preset_marker_pattern().search(text, start + len(parameter_name))
+        if next_preset is not None:
+            end = min(end, next_preset.start())
+        next_clause = _clause_header_pattern("2.2.3").search(text, start + len(parameter_name))
+        if next_clause is not None:
+            end = min(end, next_clause.start())
+        chunk = text[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
+    return _unique_text(chunks)
+
+
+def _waveform_actual_from_parameter_chunk(parameter_chunk: str, *, expected_text: str) -> str | None:
+    expected_match = _expected_value_pattern(expected_text).search(parameter_chunk)
+    if not expected_match:
         return None
-    normalized_expected = _normalize_table_value(expected_text)
-    if normalized_expected and normalized_expected in _normalize_table_value(parameter_window):
-        return expected_text
-    preset_values = _preset_values_by_slug_from_text(parameter_window)
-    preset_actual = preset_values.get(preset_slug)
-    if preset_actual:
-        return preset_actual
+    actual = _waveform_result_token(parameter_chunk[expected_match.end() :])
+    if actual:
+        return actual
+    return expected_text
+
+
+def _expected_value_pattern(expected_text: str) -> re.Pattern[str]:
+    text = str(expected_text or "").strip()
+    if text == "1":
+        return re.compile(r"(?<![\d.])1(?![\d.])")
+    parts: list[str] = []
+    for char in text:
+        if char.isspace():
+            parts.append(r"\s*")
+        elif char in {"μ", "µ", "u", "U"}:
+            parts.append(r"[μµuU]")
+        elif char == "±":
+            parts.append(r"\s*±\s*")
+        elif char in {"-", "－", "—", "~", "～"}:
+            parts.append(r"\s*[-－—~～]\s*")
+        elif char == "%":
+            parts.append(r"\s*%")
+        else:
+            parts.append(re.escape(char))
+    return re.compile("".join(parts), re.IGNORECASE)
+
+
+def _waveform_result_token(value: str) -> str | None:
+    text = str(value or "").splitlines()[0] if str(value or "").splitlines() else ""
+    if not text.strip():
+        return None
+    if "不符合" in text:
+        return "不符合"
+    if "符合要求" in text or re.search(r"(?<!不)符合", text):
+        return "符合要求"
+    range_match = re.search(
+        r"((?<!\d)[+＋\-－]\s*\d+(?:\.\d+)?\s*%?\s*[~～至-]\s*[+＋\-－]?\s*\d+(?:\.\d+)?\s*%?)",
+        text,
+    )
+    if range_match:
+        return _clean_signed_actual(range_match.group(1))
+    signed_match = re.search(r"((?<!\d)[+＋\-－]\s*\d+(?:\.\d+)?\s*(?:%|msec|ms|μsec|µsec|usec)?)", text, re.IGNORECASE)
+    if signed_match:
+        return _clean_signed_actual(signed_match.group(1))
     return None
+
+
+def _clean_signed_actual(value: str) -> str:
+    text = re.sub(r"\s+", "", str(value or ""))
+    return text.replace("＋", "+").replace("－", "-")
 
 
 def _display_operator(operator: str | None) -> str:

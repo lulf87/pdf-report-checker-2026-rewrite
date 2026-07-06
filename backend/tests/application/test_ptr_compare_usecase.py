@@ -1089,6 +1089,81 @@ def test_ptr_compare_scope_aware_1539_table_atomic_rows_override_refuted_missing
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
 
+def test_ptr_compare_scope_aware_1539_binds_real_report_waveform_and_software_table_rows(tmp_path: Path) -> None:
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        extra_report_pages=_scope_aware_report_item_157_real_waveform_and_159_full_page_text_pages(),
+    )
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+
+    waveform_rows = {
+        row["atomic_id"]: row
+        for row in items["2.2.2"]["atomic_comparison_rows"]
+    }
+    assert waveform_rows["2.2.2:pulse_phase_interval:pulse3"]["actual"] == "-13%～-8%"
+    assert waveform_rows["2.2.2:pulse_phase_interval:pulse3"]["status"] == "match"
+    assert waveform_rows["2.2.2:waveform_type:pulse3"]["actual"] == "符合要求"
+    assert waveform_rows["2.2.2:waveform_type:pulse3"]["status"] == "match"
+    assert waveform_rows["2.2.2:peak_ratio:pulse3"]["actual"] == "-9%"
+    assert waveform_rows["2.2.2:peak_ratio:pulse3"]["status"] == "match"
+    assert waveform_rows["2.2.2:current_level:pulse3"]["actual"] == "符合要求"
+    assert waveform_rows["2.2.2:current_level:pulse3"]["status"] == "match"
+    assert waveform_rows["2.2.2:pulse_count:pf_reversible"]["actual"] == "符合要求"
+    assert waveform_rows["2.2.2:pulse_count:pf_reversible"]["status"] == "match"
+    assert waveform_rows["2.2.2:pulse_group_count:pf_reversible"]["actual"] == "符合要求"
+    assert waveform_rows["2.2.2:pulse_group_count:pf_reversible"]["status"] == "match"
+    assert waveform_rows["2.2.2:pulse_width:pf_reversible"]["actual"] == "+1%"
+    assert waveform_rows["2.2.2:pulse_width:pf_reversible"]["status"] == "match"
+    assert waveform_rows["2.2.2:pulse_phase_interval:pf_reversible"]["actual"] == "+11%"
+    assert waveform_rows["2.2.2:pulse_phase_interval:pf_reversible"]["status"] == "match"
+    assert waveform_rows["2.2.2:waveform_type:pf_reversible"]["actual"] == "符合要求"
+    assert waveform_rows["2.2.2:waveform_type:pf_reversible"]["status"] == "match"
+    assert waveform_rows["2.2.2:peak_ratio:pf_reversible"]["actual"] == "+0.02"
+    assert waveform_rows["2.2.2:peak_ratio:pf_reversible"]["status"] == "match"
+    assert waveform_rows["2.2.2:current_level:pf_reversible"]["actual"] == "符合要求"
+    assert waveform_rows["2.2.2:current_level:pf_reversible"]["status"] == "match"
+    assert waveform_rows["2.2.2:pulse_group_interval:pf_reversible"]["status"] == "not_applicable"
+    assert waveform_rows["2.2.2:pulse_pair_interval:pf_reversible"]["status"] == "not_applicable"
+    assert all(row["status"] in {"match", "not_applicable"} for row in waveform_rows.values())
+
+    software_rows = {
+        row["label"]: row
+        for row in items["2.6"]["atomic_comparison_rows"]
+    }
+    for label in (
+        "射频消融仪 - 温度监测",
+        "射频消融仪 - 控制应用启动和停止",
+        "射频消融仪 - 灌注泵流量监测",
+        "射频消融仪 - 模式选择",
+        "射频消融仪 - 接触质量监测",
+    ):
+        assert software_rows[label]["actual"] == "——"
+        assert software_rows[label]["status"] == "not_applicable"
+        assert "不适用" in software_rows[label]["reason"]
+    assert software_rows["心脏脉冲电场消融仪 - 与射频消融仪、导管接口单元CIU通信"]["actual"] == "符合要求"
+    assert software_rows["心脏脉冲电场消融仪 - 与射频消融仪、导管接口单元CIU通信"]["status"] == "match"
+    assert all(row["status"] in {"match", "not_applicable"} for row in software_rows.values())
+
+    energy_row = {
+        row["atomic_id"]: row
+        for row in items["2.2.6"]["atomic_comparison_rows"]
+    }["2.2.6:max_energy"]
+    assert energy_row["actual"] == "159"
+    assert energy_row["unit"] == "mJ"
+    assert energy_row["status"] == "match"
+
+    assert items["2.2.2"]["coverage_status"] == "covered_passed"
+    assert items["2.6"]["coverage_status"] == "covered_passed"
+    assert details["confirmed_errors_count"] == 0
+    assert details["manual_review_required_count"] == 0
+    assert details["overall_status"] == "passed"
+    assert result.metadata["codex_audit"]["final_audit_status"] == "passed"
+    assert result.summary.final_audit_status == "passed"
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
 def test_ptr_compare_scope_aware_1539_fall_time_ignores_item_no_when_pf_reversible_value_follows_marker() -> None:
     page_text_by_page = {
         100: (
@@ -2146,6 +2221,20 @@ def _scope_software_table() -> PTRTable:
             parameter_records=[
                 ParameterRecord(parameter_name="功率监测", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
                 ParameterRecord(parameter_name="阻抗监测", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(parameter_name="温度监测", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(parameter_name="控制应用启动和停止", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(parameter_name="灌注泵流量监测", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(parameter_name="模式选择", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(parameter_name="接触质量监测", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(
+                    parameter_name="与心脏脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器、三维导航通信",
+                    dimensions={"组件": "射频消融仪"},
+                    values={"要求": "具备"},
+                ),
+                ParameterRecord(parameter_name="参数显示与控制", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(parameter_name="显示能量输送状态", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(parameter_name="显示消融图", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
+                ParameterRecord(parameter_name="预设选择", dimensions={"组件": "射频消融仪"}, values={"要求": "具备"}),
                 ParameterRecord(parameter_name="阻抗监测", dimensions={"组件": "心脏脉冲电场消融仪"}, values={"要求": "具备"}),
                 ParameterRecord(parameter_name="温度监测", dimensions={"组件": "心脏脉冲电场消融仪"}, values={"要求": "具备"}),
                 ParameterRecord(
@@ -2595,6 +2684,16 @@ def _scope_aware_report_item_157_and_159_page_text_pages() -> list[PdfPage]:
         "组件 功能 报告结果\n"
         "射频消融仪 功率监测 ——\n"
         "射频消融仪 阻抗监测 ——\n"
+        "射频消融仪 温度监测 ——\n"
+        "控制射频消融或脉冲电场消融应用的启动和停止 ——\n"
+        "灌注泵流量监测 ——\n"
+        "射频消融或脉冲电场消融模式选择 ——\n"
+        "接触质量监测 ——\n"
+        "与脉冲电场消融仪、导管接口单元 CIU、灌注泵、控制器和电生理三维导航系统通信 ——\n"
+        "参数显示与控制，包括阻抗、流量、功率、时间、能量、温度和电流水平 ——\n"
+        "显示能量输送状态 ——\n"
+        "显示消融图 ——\n"
+        "预设选择 ——\n"
         "心脏脉冲电场消融仪 阻抗监测 符合要求\n"
         "心脏脉冲电场消融仪 温度监测 符合要求\n"
         "心脏脉冲电场消融仪 与射频消融仪、导管接口单元CIU通信 符合要求\n"
@@ -2603,6 +2702,86 @@ def _scope_aware_report_item_157_and_159_page_text_pages() -> list[PdfPage]:
     return [
         pages[0].model_copy(update={"text": f"{pages[0].text}{software_table_text}"}),
         *pages[1:],
+    ]
+
+
+def _scope_aware_report_item_157_real_waveform_and_159_full_page_text_pages() -> list[PdfPage]:
+    return [
+        PdfPage(
+            page_number=99,
+            text=(
+                "157 2.2 心脏脉冲电场消融仪输出\n"
+                "2.2.1 心脏脉冲电场消融仪输出 电压：3333V（峰值） 检验结果 3375\n"
+                "电流：57A（峰值） 检验结果 59 单项结论 符合\n"
+                "2.2.2 心脏脉冲电场消融仪输出波形图和波形参数\n"
+                "表 6 波形参数\n"
+                "PULSE3 预设\n"
+                "脉冲个数 1500 符合要求\n"
+                "脉冲组数 12 符合要求\n"
+                "脉冲组间隔 210±1 msec +0msec\n"
+                "脉冲对间隔 1.12msec±4μsec +1μsec\n"
+                "脉冲宽度 0.9μsec±20% -5%\n"
+                "脉冲相间隔 1μsec±20% -13%～-8%\n"
+                "波形类型 三相 符合要求\n"
+                "正峰值/负峰值 5±20% -9%\n"
+                "电流水平 1-100% 符合要求\n"
+                "PFReversible 预设\n"
+                "脉冲个数 1 符合要求\n"
+                "脉冲组数 1 符合要求\n"
+                "脉冲组间隔 / ——\n"
+                "脉冲对间隔 / ——\n"
+                "脉冲宽度 0.9μsec±20% +1%\n"
+                "脉冲相间隔 1μsec±20% +11%\n"
+                "波形类型 双相 符合要求\n"
+                "正峰值/负峰值 1±0.1 +0.02\n"
+                "电流水平 1-100% 符合要求\n"
+                "单项结论 符合\n"
+                "159 2.6 软件功能\n"
+                "表 6 软件功能\n"
+                "组件 功能 报告结果\n"
+                "射频消融仪 功率监测 ——\n"
+                "阻抗监测 ——\n"
+                "温度监测 ——\n"
+                "控制射频消融或脉冲电场消融应用的启动和停止 ——\n"
+                "灌注泵流量监测 ——\n"
+                "射频消融或脉冲电场消融模式选择 ——\n"
+                "接触质量监测 ——\n"
+                "与脉冲电场消融仪、导管接口单元 CIU、灌注泵、控制器和电生理三维导航系统通信 ——\n"
+                "参数显示与控制，包括阻抗、流量、功率、时间、能量、温度和电流水平 ——\n"
+                "显示能量输送状态 ——\n"
+                "显示消融图 ——\n"
+                "预设选择 ——\n"
+                "心脏脉冲电场消融仪 阻抗监测 符合要求\n"
+                "温度监测 符合要求\n"
+                "与射频消融仪、导管接口单元 CIU 通信 符合要求\n"
+                "单项结论 符合"
+            ),
+        ),
+        PdfPage(
+            page_number=100,
+            text=(
+                "续 157\n"
+                "2.2.3 脉冲上升时间\n"
+                "430 PULSE3 预设\n"
+                "455 PFReversi\n"
+                "ble 预设\n"
+                "2.2.4 脉冲下降时间\n"
+                "260 PULSE3 预设\n"
+                "205 PFReversible 预设\n"
+                "单项结论 符合"
+            ),
+        ),
+        PdfPage(
+            page_number=101,
+            text=(
+                "续 157\n"
+                "2.2.5 脉冲衰减 检验结果 1%\n"
+                "2.2.6 最大输出能量\n"
+                "单个脉冲最大输出能量应小于 258mJ。\n"
+                "检验结果 159 mJ\n"
+                "2.2.7 保护功能 温度超限保护和过流保护功能符合要求。"
+            ),
+        ),
     ]
 
 
