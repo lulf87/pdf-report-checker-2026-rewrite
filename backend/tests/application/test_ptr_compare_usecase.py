@@ -366,6 +366,48 @@ class FieldComparisonPtrCodexAuditService:
         return results
 
 
+class ReasoningOnlyPtrCodexAuditService:
+    def __init__(
+        self,
+        reasonings_by_atomic_id: dict[str, str],
+        *,
+        uncertain_atomic_ids: set[str] | None = None,
+    ) -> None:
+        self.reasonings_by_atomic_id = reasonings_by_atomic_id
+        self.uncertain_atomic_ids = uncertain_atomic_ids or set()
+        self.calls: list[tuple] = []
+        self.runner = SimpleNamespace(config=SimpleNamespace(timeout_seconds=900))
+
+    def with_timeout_seconds(self, timeout_seconds: int) -> "ReasoningOnlyPtrCodexAuditService":
+        del timeout_seconds
+        return self
+
+    def review(self, request, evidence_package: EvidencePackage) -> list[CodexReviewResult]:
+        self.calls.append((request, evidence_package))
+        results: list[CodexReviewResult] = []
+        for target in request.targets:
+            atomic_id = str(target.metadata.get("atomic_id") or "") or _atomic_id_from_finding_id(target.finding_id or "")
+            verdict = CodexReviewVerdict.UNCERTAIN if atomic_id in self.uncertain_atomic_ids else CodexReviewVerdict.REFUTE
+            results.append(
+                CodexReviewResult(
+                    review_id=f"fake-codex-reasoning:{target.target_id}",
+                    request_id=request.request_id,
+                    task_id=request.task_id,
+                    target=target,
+                    status=CodexReviewStatus.SUCCEEDED,
+                    verdict=verdict,
+                    confidence=CodexReviewConfidence.MEDIUM,
+                    reasoning_summary=self.reasonings_by_atomic_id.get(
+                        atomic_id,
+                        f"Codex 复审认为 {atomic_id} 的未绑定候选不成立，报告证据可解释该项。",
+                    ),
+                    evidence_refs=[ref.ref_id for ref in target.evidence_refs],
+                    metadata={},
+                )
+            )
+        return results
+
+
 def _atomic_id_from_finding_id(finding_id: str) -> str:
     marker = ":PTR_ATOMIC:"
     if marker not in finding_id:
@@ -1262,6 +1304,39 @@ def test_ptr_compare_codex_field_comparisons_backfill_refuted_atomic_rows(tmp_pa
     assert "/Users/" not in json.dumps(result.metadata["ptr_comparison_details"], ensure_ascii=False)
 
 
+def test_ptr_compare_codex_refuted_reasoning_backfills_waveform_rows_without_field_comparisons(tmp_path: Path) -> None:
+    audit_service = ReasoningOnlyPtrCodexAuditService(
+        {
+            "2.2.2:peak_ratio:pf_reversible": "PF Reversible 正峰值/负峰值：报告中可见 1±0.1 / +0.02，候选未绑定问题不成立。",
+            "2.2.2:current_level:pulse3": "PULSE3 电流水平：报告中可见 1-100% / 符合要求，候选未绑定问题不成立。",
+            "2.2.2:current_level:pf_reversible": "PF Reversible 电流水平：报告中可见 1-100% / 符合要求，候选未绑定问题不成立。",
+        }
+    )
+
+    result = _run_scope_aware_usecase(tmp_path, codex_audit_service=audit_service)
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    waveform_item = items["2.2.2"]
+    waveform_rows = {
+        row["atomic_id"]: row
+        for row in waveform_item["atomic_comparison_rows"]
+    }
+    assert waveform_rows["2.2.2:peak_ratio:pf_reversible"]["actual"] == "+0.02"
+    assert waveform_rows["2.2.2:peak_ratio:pf_reversible"]["status"] == "refuted_candidate_resolved"
+    assert waveform_rows["2.2.2:peak_ratio:pf_reversible"]["source"] == "codex_review"
+    assert "1±0.1 / +0.02" in waveform_rows["2.2.2:peak_ratio:pf_reversible"]["reason"]
+    assert waveform_rows["2.2.2:current_level:pulse3"]["actual"] == "符合要求"
+    assert waveform_rows["2.2.2:current_level:pulse3"]["status"] == "refuted_candidate_resolved"
+    assert waveform_rows["2.2.2:current_level:pf_reversible"]["actual"] == "符合要求"
+    assert waveform_rows["2.2.2:current_level:pf_reversible"]["status"] == "refuted_candidate_resolved"
+    assert not any(row["status"] == "needs_review" for row in waveform_rows.values())
+    assert waveform_item["coverage_status"] == "covered_passed"
+    assert waveform_item["final_status"] == "passed"
+    assert details["confirmed_errors_count"] == 0
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
 def test_ptr_compare_codex_field_backfill_keeps_only_one_uncertain_software_row_in_review(tmp_path: Path) -> None:
     uncertain_atomic_id = (
         "2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信"
@@ -1292,6 +1367,46 @@ def test_ptr_compare_codex_field_backfill_keeps_only_one_uncertain_software_row_
     assert software_item["final_status"] == "manual_review_required"
     assert "仅剩 1 项需人工复核" in software_item["reason"]
 
+    assert details["confirmed_errors_count"] == 0
+    assert details["manual_review_required_count"] == 1
+    assert result.summary.confirmed_errors_count == 0
+    assert result.summary.manual_review_required_count == 1
+    assert result.summary.final_audit_status == "needs_manual_review"
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_ptr_compare_codex_refuted_reasoning_keeps_only_one_software_row_in_review(tmp_path: Path) -> None:
+    uncertain_atomic_id = (
+        "2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信"
+    )
+    reasonings = _codex_reasonings_for_default_unbound_scope_rows()
+    reasonings.pop(uncertain_atomic_id, None)
+    audit_service = ReasoningOnlyPtrCodexAuditService(
+        reasonings,
+        uncertain_atomic_ids={uncertain_atomic_id},
+    )
+
+    result = _run_scope_aware_usecase(tmp_path, codex_audit_service=audit_service)
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    software_item = items["2.6"]
+    software_rows = {
+        row["atomic_id"]: row
+        for row in software_item["atomic_comparison_rows"]
+    }
+    needs_review_rows = [row for row in software_rows.values() if row["status"] == "needs_review"]
+    assert [row["atomic_id"] for row in needs_review_rows] == [uncertain_atomic_id]
+    refuted_row = software_rows["2.6:table6:射频消融仪---温度监测"]
+    assert refuted_row["actual"] == "——"
+    assert refuted_row["status"] == "not_applicable"
+    assert refuted_row["source"] == "codex_review"
+    assert software_rows["2.6:table6:心脏脉冲电场消融仪---温度监测"]["actual"] == "符合要求"
+    assert software_rows["2.6:table6:心脏脉冲电场消融仪---温度监测"]["status"] == "refuted_candidate_resolved"
+    assert software_item["coverage_status"] == "needs_review"
+    assert software_item["final_status"] == "manual_review_required"
+    assert "仅剩 1 项需人工复核" in software_item["reason"]
+    assert "射频消融仪 - 与心脏脉冲电场消融仪" in software_item["reason"]
     assert details["confirmed_errors_count"] == 0
     assert details["manual_review_required_count"] == 1
     assert result.summary.confirmed_errors_count == 0
@@ -2958,6 +3073,25 @@ def _codex_comparisons_for_default_unbound_scope_rows() -> dict[str, dict[str, s
             "reasoning": f"Codex 复审识别 {component} 的 {function_name} 报告结果为 {observed}。",
         }
     return comparisons
+
+
+def _codex_reasonings_for_default_unbound_scope_rows() -> dict[str, str]:
+    reasonings: dict[str, str] = {}
+    for atomic_id, comparison in _codex_comparisons_for_default_unbound_scope_rows().items():
+        field_name = comparison["field_name"]
+        expected = comparison["expected_value"]
+        observed = comparison["observed_value"]
+        reasonings[atomic_id] = f"{field_name}：报告中可见 {expected} / {observed}，候选未绑定问题不成立。"
+    reasonings["2.2.2:peak_ratio:pf_reversible"] = (
+        "PF Reversible 正峰值/负峰值：报告中可见 1±0.1 / +0.02，候选未绑定问题不成立。"
+    )
+    reasonings["2.2.2:current_level:pulse3"] = (
+        "PULSE3 电流水平：报告中可见 1-100% / 符合要求，候选未绑定问题不成立。"
+    )
+    reasonings["2.2.2:current_level:pf_reversible"] = (
+        "PF Reversible 电流水平：报告中可见 1-100% / 符合要求，候选未绑定问题不成立。"
+    )
+    return reasonings
 
 
 def _scope_aware_report_items_with_unbound_energy() -> list[InspectionItem]:

@@ -168,6 +168,10 @@ def _metadata_str(finding: Finding, key: str) -> str | None:
 
 
 def _copy_visual_review_metadata(finding: Finding, review: CodexReviewResult) -> None:
+    if review.reasoning_summary:
+        finding.metadata["codex_reasoning_summary"] = review.reasoning_summary
+    if "atomic_id" not in finding.metadata and review.target.metadata.get("atomic_id"):
+        finding.metadata["atomic_id"] = review.target.metadata["atomic_id"]
     if "observed_label_fields" in review.metadata:
         finding.metadata["codex_observed_label_fields"] = review.metadata["observed_label_fields"]
     if "field_comparisons" in review.metadata:

@@ -361,6 +361,7 @@ function formatAtomicActual(row: PTRAtomicComparisonRow): string {
   const candidates = row.candidate_actuals?.filter((value) => value.trim()) ?? [];
   if (candidates.length > 0) return `候选值：${candidates.join("、")}，待绑定确认`;
   if (row.status === "needs_review" || row.status === "candidate_found_needs_mapping") return "未完成结构化抽取";
+  if (row.status === "candidate_refuted" || row.status === "refuted_candidate_resolved") return "候选已排除，见说明";
   return "未返回报告结果";
 }
 
@@ -424,11 +425,13 @@ function ptrAtomicStatusLabel(status: string): string {
   if (status === "needs_review") return "需复核";
   if (status === "candidate_found_needs_mapping") return "候选待绑定";
   if (status === "not_applicable") return "不适用";
+  if (status === "candidate_refuted" || status === "refuted_candidate_resolved") return "候选已排除";
   return status;
 }
 
 function ptrAtomicStatusTone(status: string): "success" | "danger" | "warn" | "info" {
   if (status === "match") return "success";
+  if (status === "candidate_refuted" || status === "refuted_candidate_resolved") return "success";
   if (status === "mismatch") return "danger";
   if (status === "needs_review" || status === "candidate_found_needs_mapping") return "warn";
   return "info";

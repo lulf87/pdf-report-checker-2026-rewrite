@@ -62,6 +62,12 @@ EXTRACTION_BINDING_REVIEW_CODES = {
     "PTR_ATOMIC_RESULT_NEEDS_REVIEW",
     "PTR_ATOMIC_RESULT_UNBOUND",
 }
+RESOLVED_ATOMIC_STATUSES = {
+    "match",
+    "not_applicable",
+    "candidate_refuted",
+    "refuted_candidate_resolved",
+}
 
 
 def build_ptr_comparison_details(
@@ -409,7 +415,7 @@ def _status_from_atomic_rows(
             return PTRUserFacingStatus.VALUE_MISMATCH
         if "needs_review" in statuses or "candidate_found_needs_mapping" in statuses:
             return PTRUserFacingStatus.NEEDS_REVIEW
-        if statuses and statuses <= {"match", "not_applicable"}:
+        if statuses and statuses <= RESOLVED_ATOMIC_STATUSES:
             return PTRUserFacingStatus.COVERED_PASSED
     if external_coverages:
         return PTRUserFacingStatus.COVERED_PASSED
@@ -431,18 +437,24 @@ def _atomic_rows_with_codex_field_comparison_backfills(
             continue
         if finding.metadata.get("final_status") != "refuted":
             continue
-        atomic_id = str(finding.metadata.get("atomic_id") or "")
+        atomic_id = _finding_atomic_id(finding)
         row = rows_by_id.get(atomic_id)
         if row is None:
             continue
         comparison = _codex_matching_field_comparison(finding)
-        if comparison is None:
-            continue
-        actual = _safe_text(comparison.get("observed_value"))
-        if not actual:
-            continue
-        status = _codex_backfill_row_status(actual, comparison)
-        reason = _safe_text(comparison.get("reasoning")) or "Codex 复审识别报告结果与 PTR 要求一致。"
+        reasoning = _codex_reasoning_summary(finding)
+        if comparison is not None:
+            actual = _safe_text(comparison.get("observed_value"))
+            if not actual:
+                continue
+            status = _codex_backfill_row_status(actual, comparison)
+            reason = _safe_text(comparison.get("reasoning")) or reasoning or "Codex 复审识别报告结果与 PTR 要求一致。"
+        else:
+            if not reasoning:
+                continue
+            actual = _actual_from_codex_reasoning(row, reasoning)
+            status = _codex_reasoning_backfill_row_status(actual)
+            reason = reasoning
         updates[atomic_id] = row.model_copy(
             update={
                 "actual": actual,
@@ -459,6 +471,18 @@ def _atomic_rows_with_codex_field_comparison_backfills(
     if not updates:
         return atomic_rows
     return [updates.get(row.atomic_id, row) for row in atomic_rows]
+
+
+def _finding_atomic_id(finding: Finding) -> str:
+    metadata_value = finding.metadata.get("atomic_id")
+    if isinstance(metadata_value, str) and metadata_value.strip():
+        return metadata_value.strip()
+    marker = ":PTR_ATOMIC:"
+    if marker not in finding.id:
+        return ""
+    suffix = finding.id.split(marker, 1)[1]
+    suffix = suffix.rsplit(":unbound", 1)[0]
+    return suffix.split(":", 1)[1] if ":" in suffix else suffix
 
 
 def _codex_matching_field_comparison(finding: Finding) -> dict[str, Any] | None:
@@ -479,6 +503,55 @@ def _codex_backfill_row_status(actual: str, comparison: dict[str, Any]) -> str:
         return "not_applicable"
     status = str(comparison.get("status") or "").strip().lower()
     return status if status in {"match", "mismatch", "needs_review", "not_applicable"} else "match"
+
+
+def _codex_reasoning_summary(finding: Finding) -> str | None:
+    for key in ("codex_reasoning_summary", "reasoning_summary", "codex_reasoning"):
+        value = finding.metadata.get(key)
+        if isinstance(value, str) and value.strip():
+            return _safe_text(value.strip())
+    return None
+
+
+def _codex_reasoning_backfill_row_status(actual: str | None) -> str:
+    actual_text = str(actual or "").strip()
+    if actual_text in {"/", "／", "-", "—", "——", "不适用", "NA", "N/A"}:
+        return "not_applicable"
+    if actual_text:
+        return "refuted_candidate_resolved"
+    return "candidate_refuted"
+
+
+def _actual_from_codex_reasoning(row: PTRAtomicComparisonRow, reasoning: str) -> str | None:
+    text = " ".join(str(reasoning or "").split())
+    if not text:
+        return None
+    evidence_text = text.split("报告中可见", 1)[1] if "报告中可见" in text else text
+    evidence_text = re.split(r"[。；;，,]", evidence_text, maxsplit=1)[0].strip()
+    if not evidence_text:
+        return None
+    slash_parts = [part.strip() for part in re.split(r"\s*[／/]\s*", evidence_text) if part.strip()]
+    if len(slash_parts) >= 2:
+        return _clean_reasoning_actual(slash_parts[-1])
+    if "符合要求" in evidence_text:
+        return "符合要求"
+    for marker in ("不适用", "——", "—", "/"):
+        if marker in evidence_text:
+            return marker
+    expected = str(row.expected or "").strip()
+    numeric_candidates = re.findall(r"[-+]?\d+(?:\.\d+)?(?:\s*[±~～-]\s*[-+]?\d+(?:\.\d+)?)?\s*[A-Za-zμΩ%°]*", evidence_text)
+    for candidate in numeric_candidates:
+        cleaned = _clean_reasoning_actual(candidate)
+        if cleaned and cleaned != expected:
+            return cleaned
+    return None
+
+
+def _clean_reasoning_actual(value: str) -> str | None:
+    text = str(value or "").strip()
+    text = re.split(r"\s*(?:候选|因此|，|。|；|;|,)", text, maxsplit=1)[0].strip()
+    text = text.strip("：:（）()[]【】")
+    return _safe_text(text) if text else None
 
 
 def _atomic_rows_override_extraction_binding_findings(
@@ -519,7 +592,7 @@ def _normalized_comparison(
         if atomic_rows:
             expected_values = [f"{row.label}:{row.expected}" for row in atomic_rows if row.expected]
             actual_values = [f"{row.label}:{row.actual}" for row in atomic_rows if row.actual]
-            status = "match" if all(row.status in {"match", "not_applicable"} for row in atomic_rows) else "needs_review"
+            status = "match" if all(row.status in RESOLVED_ATOMIC_STATUSES for row in atomic_rows) else "needs_review"
             return PTRNormalizedComparison(
                 requirement_type="atomic_parameter_comparison",
                 expected=_safe_text("；".join(expected_values)),
@@ -621,7 +694,7 @@ def _reason(
     title = _safe_text(clause.title) or f"PTR 条款 {clause.number}"
     if finding is None:
         if atomic_rows:
-            if any(row.status == "needs_review" for row in atomic_rows):
+            if any(row.status in {"needs_review", "candidate_found_needs_mapping"} for row in atomic_rows):
                 if str(clause.number) == "2.6":
                     review_count = sum(1 for row in atomic_rows if row.status in {"needs_review", "candidate_found_needs_mapping"})
                     if review_count == 1:
@@ -633,7 +706,7 @@ def _reason(
                         return _safe_text(f"报告序号 159 覆盖软件功能总项，仅剩 1 项需人工复核{label}。")
                     return _safe_text(f"报告序号 159 覆盖软件功能总项，但仍有 {review_count} 项表格功能明细需复核。")
                 return _safe_text(f"报告匹配项覆盖 {title}，但部分参数级证据需复核。")
-            if all(row.status in {"match", "not_applicable"} for row in atomic_rows):
+            if all(row.status in RESOLVED_ATOMIC_STATUSES for row in atomic_rows):
                 item_no = report_matches[0].display_item_no or report_matches[0].item_no if report_matches else None
                 prefix = f"报告序号 {item_no} " if item_no else "报告检验项"
                 return _safe_text(f"{prefix}参数级比对满足 {title} 要求。")
