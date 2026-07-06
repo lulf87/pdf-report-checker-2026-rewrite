@@ -46,6 +46,8 @@ def test_ptr_compare_pm3562_real_sample_scope_and_direct_items(tmp_path: Path) -
     assert "ptr-2.1" not in included_ids
     assert set(expected_clause_ids) <= set(items)
     assert "2.1" not in items
+    coverage_rows = [row for item in items.values() for row in item["coverage_comparison_rows"]]
+    assert len(coverage_rows) >= 17
 
     scope_metadata = _check_result(result, "PTR_REPORT_SCOPE").metadata["scope_consistency"]
     assert scope_metadata["status"] == "passed"
@@ -77,12 +79,15 @@ def test_ptr_compare_pm3562_real_sample_scope_and_direct_items(tmp_path: Path) -
 
     item_222 = items["2.2.2"]
     assert item_222["final_status"] == "passed"
+    assert item_222["coverage_comparison_rows"][0]["report_item_no"] == "50"
     assert item_222["report_matches"][0]["item_no"] == "50"
     for token in ("VVI", "70", "7.5", "0.6", "325"):
         assert token in _compact(item_222["report_matches"][0]["test_result"])
 
     item_23 = items["2.3"]
     assert item_23["final_status"] == "passed"
+    assert item_23["coverage_comparison_rows"][0]["report_item_no"] == "51"
+    assert "PVC" in item_23["coverage_comparison_rows"][0]["reason"]
     assert item_23["report_matches"][0]["item_no"] == "51"
     assert "PVC" in item_23["ptr_requirement_text"]
     assert "PVC" in item_23["report_matches"][0]["standard_requirement"]
@@ -100,6 +105,9 @@ def test_ptr_compare_pm3562_real_sample_scope_and_direct_items(tmp_path: Path) -
 
     item_282 = items["2.8.2"]
     assert item_282["final_status"] == "passed"
+    assert item_282["coverage_comparison_rows"][0]["report_item_no"] == "54"
+    assert "0.884" in item_282["coverage_comparison_rows"][0]["report_result"]
+    assert "0.993" in item_282["coverage_comparison_rows"][0]["report_result"]
     assert item_282["report_matches"][0]["item_no"] == "54"
     assert "0.884" in item_282["report_matches"][0]["test_result"]
     assert "0.993" in item_282["report_matches"][0]["test_result"]

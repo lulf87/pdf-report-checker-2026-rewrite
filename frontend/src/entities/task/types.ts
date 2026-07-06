@@ -310,6 +310,20 @@ export interface PTRAtomicComparisonRow {
   table_key?: string | null;
 }
 
+export interface PTRCoverageComparisonRow {
+  ptr_clause_id: string;
+  ptr_title?: string | null;
+  ptr_requirement?: string | null;
+  report_item_no?: string | null;
+  report_page?: number | null;
+  report_standard_clause?: string | null;
+  report_requirement_excerpt?: string | null;
+  report_result?: string | null;
+  report_conclusion?: string | null;
+  status: PTRComparisonUserFacingStatus | string;
+  reason?: string | null;
+}
+
 export interface PTRScopeRange {
   start: string;
   end: string;
@@ -359,6 +373,7 @@ export interface PTRComparisonItem {
   external_standard_coverages?: PTRExternalStandardCoverage[];
   atomic_requirements?: PTRAtomicRequirement[];
   atomic_comparison_rows?: PTRAtomicComparisonRow[];
+  coverage_comparison_rows?: PTRCoverageComparisonRow[];
   normalized_comparison: PTRNormalizedComparison;
   rule_status: PTRComparisonUserFacingStatus;
   coverage_status?: PTRComparisonUserFacingStatus;

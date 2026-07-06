@@ -101,6 +101,9 @@ def test_excel_exporter_includes_ptr_comparison_summary_and_details_sheets() -> 
     assert "covered_count" in summary_text
     assert "ptr_clause_id" in details_text
     assert "report_item_no" in details_text
+    assert "ptr_requirement" in details_text
+    assert "report_requirement_excerpt" in details_text
+    assert "report_result" in details_text
     assert "2.1" in details_text
     assert "输入功率应≤110%。" in details_text
     assert "40%; 46%; 12%" in details_text
@@ -135,6 +138,21 @@ def _ptr_comparison_details() -> dict:
                         "test_result": "40%; 46%; 12%",
                         "single_conclusion": "符合",
                         "remark": "",
+                    }
+                ],
+                "coverage_comparison_rows": [
+                    {
+                        "ptr_clause_id": "2.1",
+                        "ptr_title": "输入功率",
+                        "ptr_requirement": "输入功率应≤110%。",
+                        "report_item_no": "11",
+                        "report_page": 19,
+                        "report_standard_clause": "4.11",
+                        "report_requirement_excerpt": "输入功率应≤110%。",
+                        "report_result": "40%; 46%; 12%",
+                        "report_conclusion": "符合",
+                        "status": "covered_passed",
+                        "reason": "报告序号 11 覆盖输入功率要求。",
                     }
                 ],
                 "normalized_comparison": {

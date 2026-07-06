@@ -67,6 +67,8 @@ def test_pdf_exporter_includes_ptr_comparison_summary_and_clause_details() -> No
     assert "PTR条款2.1输入功率" in compact_text
     assert "PTR摘录:输入功率应≤110%。" in compact_text
     assert "报告匹配项:序号11" in compact_text
+    assert "条款覆盖对比:" in text
+    assert "报告结果40%;46%;12%" in compact_text
     assert "比对结论:covered_passed" in compact_text
     assert "判断理由:报告序号11覆盖输入功率要求。" in compact_text
 
@@ -99,6 +101,21 @@ def _ptr_comparison_details() -> dict:
                         "test_result": "40%; 46%; 12%",
                         "single_conclusion": "符合",
                         "remark": "",
+                    }
+                ],
+                "coverage_comparison_rows": [
+                    {
+                        "ptr_clause_id": "2.1",
+                        "ptr_title": "输入功率",
+                        "ptr_requirement": "输入功率应≤110%。",
+                        "report_item_no": "11",
+                        "report_page": 19,
+                        "report_standard_clause": "4.11",
+                        "report_requirement_excerpt": "输入功率应≤110%。",
+                        "report_result": "40%; 46%; 12%",
+                        "report_conclusion": "符合",
+                        "status": "covered_passed",
+                        "reason": "报告序号 11 覆盖输入功率要求。",
                     }
                 ],
                 "normalized_comparison": {

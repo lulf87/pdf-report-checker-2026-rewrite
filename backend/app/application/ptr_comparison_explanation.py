@@ -10,6 +10,7 @@ from app.domain.ptr import PTRClause, PTRDocument
 from app.domain.ptr_comparison import (
     PTRAtomicComparisonRow,
     PTRComparisonDetails,
+    PTRCoverageComparisonRow,
     PTRExcludedComparisonItem,
     PTRComparisonItem,
     PTRComparisonOverallStatus,
@@ -147,17 +148,35 @@ def _comparison_item(
     search_keywords = _search_keywords(clause)
     external_coverage = external_coverages[0] if external_coverages else None
     candidate_items = [] if report_matches or external_coverage else [_report_match(item) for item in report_candidates[:5]]
+    report_match_payloads = [_report_match(item, page_text_by_page=page_text_by_page) for item in report_matches]
+    reason = _reason(
+        clause=clause,
+        finding=display_finding,
+        report_matches=report_matches,
+        external_coverages=external_coverages,
+        atomic_rows=atomic_rows,
+        rule_status=rule_status,
+        user_status=user_status,
+        search_keywords=search_keywords,
+        candidate_items=candidate_items,
+    )
 
     return PTRComparisonItem(
         ptr_clause_id=clause_number,
         ptr_title=_safe_text(clause.title),
         ptr_page=clause.location.page_number if clause.location else None,
         ptr_requirement_text=_safe_text(clause.body_text or clause.text_content or clause.full_text or ""),
-        report_matches=[_report_match(item, page_text_by_page=page_text_by_page) for item in report_matches],
+        report_matches=report_match_payloads,
         external_standard_coverage=_safe_payload(external_coverage),
         external_standard_coverages=_safe_payload(external_coverages),
         atomic_requirements=_safe_payload(atomic_requirements),
         atomic_comparison_rows=_safe_payload(atomic_rows),
+        coverage_comparison_rows=_coverage_comparison_rows(
+            clause=clause,
+            report_matches=report_match_payloads,
+            status=user_status,
+            reason=reason,
+        ),
         normalized_comparison=_normalized_comparison(
             clause=clause,
             report_matches=report_matches,
@@ -171,22 +190,59 @@ def _comparison_item(
         coverage_status=user_status,
         user_facing_status=user_status,
         final_status=final_status,
-        reason=_reason(
-            clause=clause,
-            finding=display_finding,
-            report_matches=report_matches,
-            external_coverages=external_coverages,
-            atomic_rows=atomic_rows,
-            rule_status=rule_status,
-            user_status=user_status,
-            search_keywords=search_keywords,
-            candidate_items=candidate_items,
-        ),
+        reason=reason,
         next_action=_next_action(rule_status, user_status),
         evidence_refs=_evidence_refs(findings),
         search_keywords=search_keywords,
         candidate_report_items=candidate_items,
     )
+
+
+def _coverage_comparison_rows(
+    *,
+    clause: PTRClause,
+    report_matches: Sequence[PTRReportMatch],
+    status: PTRUserFacingStatus,
+    reason: str,
+) -> list[PTRCoverageComparisonRow]:
+    rows: list[PTRCoverageComparisonRow] = []
+    clause_number = str(clause.number)
+    ptr_requirement = _safe_text(clause.body_text or clause.text_content or clause.full_text or "")
+    for match in report_matches:
+        row_reason = _coverage_row_reason(clause, match, reason)
+        rows.append(
+            PTRCoverageComparisonRow(
+                ptr_clause_id=clause_number,
+                ptr_title=_safe_text(clause.title),
+                ptr_requirement=ptr_requirement,
+                report_item_no=match.item_no,
+                report_page=match.report_page,
+                report_standard_clause=match.standard_clause,
+                report_requirement_excerpt=_excerpt(match.standard_requirement),
+                report_result=match.test_result,
+                report_conclusion=match.single_conclusion,
+                status=status.value if hasattr(status, "value") else str(status),
+                reason=row_reason,
+            )
+        )
+    return rows
+
+
+def _coverage_row_reason(clause: PTRClause, match: PTRReportMatch, fallback: str) -> str:
+    clause_number = str(clause.number)
+    item_no = match.item_no or "未编号"
+    title = _safe_text(clause.title) or f"PTR 条款 {clause_number}"
+    evidence = _compact(" ".join([match.standard_requirement or "", match.test_result or "", match.remark or ""])).lower()
+    if clause_number == "2.3" and "pvc" in evidence and "反应" in evidence:
+        return _safe_text(f"报告序号 {item_no} 按仅检 PVC 反应覆盖{title}要求。") or fallback
+    return fallback
+
+
+def _excerpt(value: str | None, *, max_length: int = 500) -> str | None:
+    text = _safe_text(value)
+    if text is None:
+        return None
+    return text if len(text) <= max_length else f"{text[:max_length]}..."
 
 
 def _details_from_items(

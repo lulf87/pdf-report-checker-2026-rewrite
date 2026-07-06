@@ -279,15 +279,13 @@ def _ptr_comparison_detail_rows(payload: dict[str, Any]) -> list[list[Any]]:
         [
             "ptr_clause_id",
             "ptr_title",
-            "ptr_page",
-            "ptr_requirement_text",
+            "ptr_requirement",
             "report_item_no",
             "report_page",
             "report_standard_clause",
-            "report_test_result",
+            "report_requirement_excerpt",
+            "report_result",
             "report_conclusion",
-            "expected",
-            "actual",
             "status",
             "reason",
             "user_facing_status",
@@ -303,6 +301,12 @@ def _ptr_comparison_detail_rows(payload: dict[str, Any]) -> list[list[Any]]:
     for item in items:
         if not isinstance(item, dict):
             continue
+        coverage_rows = item.get("coverage_comparison_rows") if isinstance(item.get("coverage_comparison_rows"), list) else []
+        if coverage_rows:
+            for coverage_row in coverage_rows:
+                if isinstance(coverage_row, dict):
+                    rows.append(_ptr_coverage_comparison_detail_row(item, coverage_row))
+            continue
         matches = item.get("report_matches") if isinstance(item.get("report_matches"), list) else []
         if not matches:
             rows.append(_ptr_comparison_detail_row(item, {}))
@@ -314,21 +318,36 @@ def _ptr_comparison_detail_rows(payload: dict[str, Any]) -> list[list[Any]]:
 
 
 def _ptr_comparison_detail_row(item: dict[str, Any], match: dict[str, Any]) -> list[Any]:
-    comparison = item.get("normalized_comparison") if isinstance(item.get("normalized_comparison"), dict) else {}
     return [
         item.get("ptr_clause_id") or "",
         item.get("ptr_title") or "",
-        item.get("ptr_page") or "",
         item.get("ptr_requirement_text") or "",
         match.get("item_no") or "",
         match.get("report_page") or "",
         match.get("standard_clause") or "",
+        match.get("standard_requirement") or "",
         match.get("test_result") or "",
         match.get("single_conclusion") or "",
-        comparison.get("expected") or "",
-        comparison.get("actual") or "",
-        comparison.get("status") or "",
+        item.get("coverage_status") or item.get("user_facing_status") or "",
         item.get("reason") or "",
+        item.get("user_facing_status") or "",
+        item.get("final_status") or "",
+    ]
+
+
+def _ptr_coverage_comparison_detail_row(item: dict[str, Any], row: dict[str, Any]) -> list[Any]:
+    return [
+        row.get("ptr_clause_id") or item.get("ptr_clause_id") or "",
+        row.get("ptr_title") or item.get("ptr_title") or "",
+        row.get("ptr_requirement") or item.get("ptr_requirement_text") or "",
+        row.get("report_item_no") or "",
+        row.get("report_page") or "",
+        row.get("report_standard_clause") or "",
+        row.get("report_requirement_excerpt") or "",
+        row.get("report_result") or "",
+        row.get("report_conclusion") or "",
+        row.get("status") or "",
+        row.get("reason") or item.get("reason") or "",
         item.get("user_facing_status") or "",
         item.get("final_status") or "",
     ]

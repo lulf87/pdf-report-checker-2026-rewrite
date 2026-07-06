@@ -13,6 +13,7 @@ import type { PTRClauseViewModel } from "../../../entities/ptr/types";
 import type {
   PTRAtomicComparisonRow,
   PTRComparisonItem,
+  PTRCoverageComparisonRow,
   PTRExternalStandardCoverage,
   PTRReportMatch,
   PTRScopeConsistency,
@@ -123,6 +124,8 @@ function PTRClausePreview({ item }: { item: PTRComparisonItem }) {
       )}
       {item.atomic_comparison_rows?.length ? (
         <span className="comparison-source">参数级比对 · {item.atomic_comparison_rows.length} 项</span>
+      ) : item.coverage_comparison_rows?.length ? (
+        <span className="comparison-source">条款覆盖对比 · {item.coverage_comparison_rows.length} 项</span>
       ) : null}
       <span className="comparison-source">最终状态 · {ptrStatusLabel(item.coverage_status ?? item.user_facing_status)}</span>
     </div>
@@ -218,7 +221,11 @@ function PTRExplanationDetails({
         </section>
       </div>
 
-      {item.atomic_comparison_rows?.length ? <PTRAtomicComparisonTable rows={item.atomic_comparison_rows} /> : null}
+      {item.atomic_comparison_rows?.length ? (
+        <PTRAtomicComparisonTable rows={item.atomic_comparison_rows} />
+      ) : item.coverage_comparison_rows?.length ? (
+        <PTRCoverageComparisonTable rows={item.coverage_comparison_rows} />
+      ) : null}
       {diffs.length > 0 ? <DiffViewer diffs={diffs} fallbackText={legacyFallback} /> : null}
       <PTRTechnicalDetails findings={findings} groupedCodexReviews={groupedCodexReviews} reviews={reviews} />
     </div>
@@ -266,6 +273,59 @@ function PTRAtomicComparisonTable({ rows }: { rows: PTRAtomicComparisonRow[] }) 
                   {row.report_page ? `第 ${row.report_page} 页` : ""}
                   {row.report_item_no ? `${row.report_page ? " / " : ""}序号 ${row.report_item_no}` : ""}
                 </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function PTRCoverageComparisonTable({ rows }: { rows: PTRCoverageComparisonRow[] }) {
+  return (
+    <section className="comparison-details" aria-label="条款覆盖对比表">
+      <div className="comparison-details-head">
+        <div>
+          <p className="detail-kicker">条款覆盖对比表</p>
+          <p className="comparison-title">PTR 条款与报告检验项目对应关系</p>
+        </div>
+      </div>
+      <div className="comparison-table-wrap">
+        <table className="comparison-table">
+          <thead>
+            <tr>
+              <th>PTR 条款</th>
+              <th>PTR 要求</th>
+              <th>报告序号</th>
+              <th>报告条款</th>
+              <th>报告结果</th>
+              <th>单项结论</th>
+              <th>状态</th>
+              <th>说明</th>
+              <th>页码</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr className={`comparison-row comparison-row-${ptrStatusTone(row.status)}`} key={`${row.ptr_clause_id}-${row.report_item_no ?? index}`}>
+                <td>
+                  {row.ptr_clause_id}
+                  {row.ptr_title ? ` · ${row.ptr_title}` : ""}
+                </td>
+                <td>{row.ptr_requirement || "未返回 PTR 摘录"}</td>
+                <td>{row.report_item_no || "未编号"}</td>
+                <td>
+                  {row.report_standard_clause || "未标注"}
+                  {row.report_requirement_excerpt ? ` · ${row.report_requirement_excerpt}` : ""}
+                </td>
+                <td>{row.report_result || "未返回报告结果"}</td>
+                <td>{row.report_conclusion || "未返回结论"}</td>
+                <td>
+                  <Badge variant={ptrStatusTone(row.status)}>{ptrStatusLabel(row.status)}</Badge>
+                </td>
+                <td>{row.reason || "报告检验项目覆盖该 PTR 要求。"}</td>
+                <td>{row.report_page ? `第 ${row.report_page} 页` : ""}</td>
               </tr>
             ))}
           </tbody>

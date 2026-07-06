@@ -834,6 +834,15 @@ def test_ptr_compare_pm3562_scope_table_and_pvc_only_semantics(tmp_path: Path) -
     details = result.metadata["ptr_comparison_details"]
     items = {item["ptr_clause_id"]: item for item in details["items"]}
     assert {"2.2.2", "2.6", "2.7", "2.8.2"} <= set(items)
+    coverage_rows = [row for item in items.values() for row in item["coverage_comparison_rows"]]
+    assert len(coverage_rows) >= 17
+    assert items["2.2.2"]["coverage_comparison_rows"][0]["report_item_no"] == "50"
+    assert items["2.2.2"]["coverage_comparison_rows"][0]["status"] == "covered_passed"
+    assert items["2.3"]["coverage_comparison_rows"][0]["report_item_no"] == "51"
+    assert "PVC" in items["2.3"]["coverage_comparison_rows"][0]["reason"]
+    assert items["2.8.2"]["coverage_comparison_rows"][0]["report_item_no"] == "54"
+    assert "0.884" in items["2.8.2"]["coverage_comparison_rows"][0]["report_result"]
+    assert "0.993" in items["2.8.2"]["coverage_comparison_rows"][0]["report_result"]
     assert items["2.2.2"]["report_matches"][0]["item_no"] == "50"
     for token in ("VVI", "70min⁻¹", "7.5V/7.5V", "0.6ms/0.6ms", "325ms*"):
         assert token in items["2.2.2"]["report_matches"][0]["test_result"]

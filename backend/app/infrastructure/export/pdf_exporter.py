@@ -179,6 +179,26 @@ def _ptr_comparison_detail_lines(payload: dict[str, Any]) -> list[str]:
             candidates = item.get("candidate_report_items") or []
             candidate_count = len(candidates) if isinstance(candidates, list) else 0
             lines.append(f"报告匹配项: 未找到；候选项数量 {candidate_count}")
+        coverage_rows = item.get("coverage_comparison_rows") or []
+        if isinstance(coverage_rows, list) and coverage_rows:
+            lines.append("条款覆盖对比:")
+            for row in coverage_rows:
+                if not isinstance(row, dict):
+                    continue
+                lines.extend(
+                    [
+                        (
+                            "coverage_row: "
+                            f"PTR {row.get('ptr_clause_id') or ''}；"
+                            f"报告序号 {row.get('report_item_no') or ''}；"
+                            f"报告页码 {row.get('report_page') or ''}；"
+                            f"标准条款 {row.get('report_standard_clause') or ''}"
+                        ),
+                        f"coverage_result: 报告结果 {row.get('report_result') or ''}；单项结论 {row.get('report_conclusion') or ''}",
+                        f"coverage_status: {row.get('status') or ''}",
+                        f"coverage_reason: {row.get('reason') or ''}",
+                    ]
+                )
         comparison = item.get("normalized_comparison") if isinstance(item.get("normalized_comparison"), dict) else {}
         lines.extend(
             [

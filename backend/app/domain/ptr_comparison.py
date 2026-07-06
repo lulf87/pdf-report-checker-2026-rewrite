@@ -93,6 +93,20 @@ class PTRAtomicComparisonRow(BaseModel):
     table_key: str | None = None
 
 
+class PTRCoverageComparisonRow(BaseModel):
+    ptr_clause_id: str
+    ptr_title: str | None = None
+    ptr_requirement: str | None = None
+    report_item_no: str | None = None
+    report_page: int | None = None
+    report_standard_clause: str | None = None
+    report_requirement_excerpt: str | None = None
+    report_result: str | None = None
+    report_conclusion: str | None = None
+    status: str = "needs_review"
+    reason: str | None = None
+
+
 class PTRReportAtomicResult(BaseModel):
     atomic_id: str
     clause_id: str
@@ -118,6 +132,7 @@ class PTRComparisonItem(BaseModel):
     external_standard_coverages: list[dict[str, Any]] = Field(default_factory=list)
     atomic_requirements: list[PTRAtomicRequirement] = Field(default_factory=list)
     atomic_comparison_rows: list[PTRAtomicComparisonRow] = Field(default_factory=list)
+    coverage_comparison_rows: list[PTRCoverageComparisonRow] = Field(default_factory=list)
     normalized_comparison: PTRNormalizedComparison
     rule_status: PTRUserFacingStatus
     coverage_status: PTRUserFacingStatus
@@ -160,6 +175,7 @@ __all__ = [
     "PTRComparisonDetails",
     "PTRAtomicComparisonRow",
     "PTRAtomicRequirement",
+    "PTRCoverageComparisonRow",
     "PTRComparisonItem",
     "PTRExcludedComparisonItem",
     "PTRComparisonOverallStatus",
