@@ -37,6 +37,13 @@ from app.infrastructure.storage.local_file_store import LocalFileStore
 from app.rules.ptr.clause_text_compare import compare_clause_texts
 from app.rules.ptr.atomic_result_check import check_atomic_result_bindings
 from app.rules.ptr.parameter_compare import compare_parameter_tables
+from app.rules.ptr.report_item_grouping import (
+    build_ptr_report_item_groups,
+    ptr_group_for_clause,
+    ptr_group_single_conclusion,
+    ptr_group_standard_requirement,
+    ptr_group_test_result,
+)
 from app.rules.ptr.report_scope_consistency import check_report_scope_consistency
 from app.rules.ptr.scope_filter import ScopeFilterResult, filter_ptr_scope
 from app.rules.ptr.table_candidate_selector import TableCandidateSelection, select_report_table_candidate
@@ -294,7 +301,7 @@ class PTRCompareUseCase:
         report_scope = self._report_inspection_scope(report_doc)
         page_text_by_page = report_page_text_by_page(report_doc)
 
-        scope_texts = [report_scope.source_text] if report_scope.source_text else self._inspection_scope_texts(report_doc)
+        scope_texts = self._scope_filter_texts(report_scope, report_doc)
         report_clause_numbers = self._report_clause_numbers(report_doc.inspection_items)
         scope_result = self.scope_filter(
             ptr_doc,
@@ -334,6 +341,7 @@ class PTRCompareUseCase:
                 page_text_by_page=page_text_by_page,
             )
         )
+        table_findings = self._resolve_table_missing_with_report_coverage(table_findings, report_doc.inspection_items)
         report_scope_check_result = check_report_scope_consistency(
             report_scope,
             report_doc.inspection_items,
@@ -435,6 +443,32 @@ class PTRCompareUseCase:
                 values.append(field.value.strip())
         return _dedupe(values)
 
+    def _scope_filter_texts(self, report_scope: ReportInspectionScope, report_doc: ReportDocument) -> list[str]:
+        structured_text = self._structured_scope_text(report_scope)
+        values: list[str] = []
+        if structured_text:
+            values.append(structured_text)
+        if report_scope.source_text and report_scope.source_text.strip():
+            values.append(report_scope.source_text.strip())
+        values.extend(self._inspection_scope_texts(report_doc))
+        return _dedupe(values)
+
+    def _structured_scope_text(self, report_scope: ReportInspectionScope) -> str | None:
+        parts: list[str] = []
+        for scope_range in report_scope.declared_scope_ranges:
+            start = str(scope_range.start or "").strip()
+            end = str(scope_range.end or "").strip()
+            if start and end:
+                parts.append(f"{start}～{end}")
+        parts.extend(str(item).strip() for item in report_scope.declared_scope_items if str(item or "").strip())
+        if not parts:
+            return None
+
+        text = "、".join(_dedupe(parts))
+        if report_scope.excluded_topics:
+            text = f"{text}（除{'、'.join(report_scope.excluded_topics)}）"
+        return text
+
     def _report_clause_numbers(self, report_items: list[InspectionItem]) -> set[str]:
         numbers: set[str] = set()
         for item in report_items:
@@ -451,6 +485,63 @@ class PTRCompareUseCase:
         scope = self.inspection_scope_extractor.extract(report_doc)
         report_doc.metadata["inspection_scope"] = scope.model_dump(mode="json")
         return scope
+
+    def _resolve_table_missing_with_report_coverage(
+        self,
+        findings: list[Finding],
+        report_items: list[InspectionItem],
+    ) -> list[Finding]:
+        if not findings:
+            return findings
+        report_groups = build_ptr_report_item_groups(report_items)
+        return [
+            finding
+            for finding in findings
+            if not self._table_2_1_missing_has_report_coverage(finding, report_groups)
+            and not self._table_2_2_pvc_only_missing_has_report_coverage(finding, report_groups)
+        ]
+
+    def _table_2_1_missing_has_report_coverage(self, finding: Finding, report_groups: list) -> bool:
+        if finding.code != "PTR_TABLE_MISSING":
+            return False
+        if str(finding.metadata.get("table_number") or "") != "2-1":
+            return False
+        clause_number = str(finding.metadata.get("clause_number") or "").strip()
+        if not re.fullmatch(r"2\.1\.\d+", clause_number):
+            return False
+        group = ptr_group_for_clause(clause_number, report_groups)
+        if group is None:
+            return False
+        evidence_text = " ".join(
+            [
+                ptr_group_standard_requirement(group),
+                ptr_group_test_result(group),
+                ptr_group_single_conclusion(group) or "",
+            ]
+        )
+        compact = re.sub(r"\s+", "", evidence_text)
+        return "表2-1" in compact and "符合" in compact and "不符合" not in compact
+
+    def _table_2_2_pvc_only_missing_has_report_coverage(self, finding: Finding, report_groups: list) -> bool:
+        if finding.code != "PTR_TABLE_MISSING":
+            return False
+        if str(finding.metadata.get("table_number") or "") != "2-2":
+            return False
+        if str(finding.metadata.get("clause_number") or "").strip() != "2.3":
+            return False
+        group = ptr_group_for_clause("2.3", report_groups)
+        if group is None:
+            return False
+        evidence_text = " ".join(
+            [
+                ptr_group_standard_requirement(group),
+                ptr_group_test_result(group),
+                ptr_group_single_conclusion(group) or "",
+                " ".join(row.remark or "" for row in group.rows),
+            ]
+        )
+        compact = re.sub(r"\s+", "", evidence_text).lower()
+        return "仅检" in compact and "pvc" in compact and "反应" in compact and "符合" in compact and "不符合" not in compact
 
     def _included_main_requirement_clauses(
         self,

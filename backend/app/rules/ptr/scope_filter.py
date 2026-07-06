@@ -189,6 +189,8 @@ def _tuple_in_rule(clause: tuple[int, ...], rule: ScopeRule) -> bool:
     start, end = rule.start, rule.end
     if start == end:
         return clause[: len(start)] == start
+    if len(clause) < min(len(start), len(end)):
+        return False
 
     common_prefix_len = 0
     for left, right in zip(start, end, strict=False):

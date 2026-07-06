@@ -103,6 +103,8 @@ def ptr_group_standard_requirement(group: InspectionItemGroup) -> str:
             values.append(row.standard_requirement)
         if _looks_like_shifted_parameter_row(row) and row.sequence_raw:
             values.append(row.sequence_raw)
+        elif _looks_like_limit_result_payload_row(row) and row.sequence_raw:
+            values.append(row.sequence_raw)
         elif _looks_like_clause_payload(row.sequence_raw or ""):
             values.append(row.sequence_raw or "")
     return _join_unique(values)
@@ -120,6 +122,8 @@ def ptr_group_test_results(group: InspectionItemGroup) -> list[str]:
         elif row.test_result:
             values.append(row.test_result)
         if _looks_like_shifted_parameter_row(row) and _is_result_like(row.item_name):
+            values.append(row.item_name or "")
+        if _looks_like_limit_result_payload_row(row) and _is_result_like(row.item_name):
             values.append(row.item_name or "")
         values.extend(_preset_payload_result_values(row))
     return _unique_non_empty(values)
@@ -215,7 +219,20 @@ def _looks_like_shifted_parameter_row(item: InspectionItem) -> bool:
 
 
 def _looks_like_group_payload_row(item: InspectionItem) -> bool:
-    return _looks_like_shifted_parameter_row(item) or _looks_like_clause_payload(item.sequence_raw or "")
+    return (
+        _looks_like_shifted_parameter_row(item)
+        or _looks_like_limit_result_payload_row(item)
+        or _looks_like_clause_payload(item.sequence_raw or "")
+    )
+
+
+def _looks_like_limit_result_payload_row(item: InspectionItem) -> bool:
+    return bool(
+        item.sequence_raw
+        and re.search(r"[≤>=<>]", item.sequence_raw)
+        and _is_result_like(item.item_name)
+        and not _meaningful_standard_clause(item.standard_clause)
+    )
 
 
 def _looks_like_clause_payload(value: str) -> bool:

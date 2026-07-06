@@ -20,6 +20,7 @@ from app.domain.finding import Finding, FindingSeverity
 from app.domain.pdf import ParsedPdf, PdfPage, PdfTable
 from app.domain.ptr import PTRClause, PTRClauseNumber, PTRDocument, PTRScopeType, PTRTable, TableReference
 from app.domain.report import InspectionItem, InspectionTable, ReportDocument, ReportField, ThirdPageInfo
+from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope, ReportScopeRange
 from app.domain.result import CheckStatus
 from app.domain.table import CanonicalTable, ParameterRecord
 from app.domain.task import TaskState, TaskType
@@ -450,12 +451,52 @@ class ScopeAwareInspectionTableExtractor:
 
 
 class PM3562ReportExtractor:
+    def __init__(self, scope_text: str | None = None) -> None:
+        self.scope_text = scope_text
+
     def extract(self, parsed_pdf: ParsedPdf) -> ReportDocument:
         del parsed_pdf
-        scope_field = ReportField(name="检验项目", value=_pm3562_scope_text(), metadata={"items": [_pm3562_scope_text()]})
+        scope_text = self.scope_text or _pm3562_scope_text()
+        scope_field = ReportField(name="检验项目", value=scope_text, metadata={"items": [scope_text]})
         return ReportDocument(
             third_page=ThirdPageInfo(fields=[scope_field]),
             fields=[scope_field],
+        )
+
+
+class PM3562InspectionScopeExtractor:
+    def __init__(self, source_text: str | None = None) -> None:
+        self.source_text = source_text
+
+    def extract(self, report: ReportDocument) -> ReportInspectionScope:
+        del report
+        return ReportInspectionScope(
+            declared_scope_items=["2.2.2", "2.3", "2.6", "2.7", "2.8.2"],
+            declared_scope_ranges=[ReportScopeRange(start="2.1.1", end="2.1.12", source_text=_pm3562_scope_text())],
+            scope_modifiers=[{"clause": "2.3", "only": ["PVC 反应", "PVC Response"], "source_text": "仅检 PVC 反应"}],
+            excluded_topics=[
+                "有源植入式医疗器械对外部除颤器造成损坏的防护",
+                "GB 16174.2-2024 中 21.2",
+                "有源植入式医疗器械对非电离电磁辐射的防护",
+            ],
+            source_text=self.source_text or _pm3562_scope_text(),
+            external_standard_ranges=[
+                ExternalStandardRange(
+                    start_item_no="1",
+                    end_item_no="24",
+                    standard="GB 16174.1-2024",
+                    source_page=5,
+                    source_text="序号 1～24 为 GB 16174.1-2024 标准的内容",
+                ),
+                ExternalStandardRange(
+                    start_item_no="25",
+                    end_item_no="37",
+                    standard="GB 16174.2-2024",
+                    source_page=5,
+                    source_text="序号 25～37 为 GB 16174.2-2024 标准的内容",
+                ),
+            ],
+            ptr_direct_content_starts_after="37",
         )
 
 
@@ -794,6 +835,8 @@ def test_ptr_compare_pm3562_scope_table_and_pvc_only_semantics(tmp_path: Path) -
     items = {item["ptr_clause_id"]: item for item in details["items"]}
     assert {"2.2.2", "2.6", "2.7", "2.8.2"} <= set(items)
     assert items["2.2.2"]["report_matches"][0]["item_no"] == "50"
+    for token in ("VVI", "70min⁻¹", "7.5V/7.5V", "0.6ms/0.6ms", "325ms*"):
+        assert token in items["2.2.2"]["report_matches"][0]["test_result"]
     assert items["2.3"]["report_matches"][0]["item_no"] == "51"
     assert "仅检 PVC 反应" in items["2.3"]["report_matches"][0]["remark"]
     assert items["2.6"]["report_matches"][0]["item_no"] == "52"
@@ -818,6 +861,64 @@ def test_ptr_compare_pm3562_scope_table_and_pvc_only_semantics(tmp_path: Path) -
     assert result.summary.confirmed_errors_count == 0
     assert result.summary.manual_review_required_count == 0
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_ptr_compare_pm3562_ptr_scope_uses_structured_scope_when_source_text_is_incomplete(tmp_path: Path) -> None:
+    result = _run_pm3562_usecase(
+        tmp_path,
+        report_scope_text=_pm3562_incomplete_scope_text(),
+        inspection_scope_extractor=PM3562InspectionScopeExtractor(source_text=_pm3562_incomplete_scope_text()),
+    )
+
+    ptr_scope = _check_result(result, "PTR_SCOPE")
+    included = set(ptr_scope.metadata["included_clause_ids"])
+    assert {"ptr-2.2.2", "ptr-2.6", "ptr-2.7", "ptr-2.8.2"} <= included
+
+    scope_metadata = _check_result(result, "PTR_REPORT_SCOPE").metadata["scope_consistency"]
+    assert scope_metadata["declared_scope"] == ["2.2.2", "2.3", "2.6", "2.7", "2.8.2"]
+    assert scope_metadata["scope_modifiers"] == [
+        {"clause": "2.3", "only": ["PVC 反应", "PVC Response"], "source_text": "仅检 PVC 反应"}
+    ]
+    assert scope_metadata["excluded_topics"] == [
+        "有源植入式医疗器械对外部除颤器造成损坏的防护",
+        "GB 16174.2-2024 中 21.2",
+        "有源植入式医疗器械对非电离电磁辐射的防护",
+    ]
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    assert {"2.2.2", "2.6", "2.7", "2.8.2"} <= set(items)
+    assert items["2.3"]["final_status"] == "passed"
+    assert "PVC Response" in items["2.3"]["ptr_requirement_text"]
+    assert "VIP" in items["2.3"]["ptr_requirement_text"]
+    assert "MR Conditional" in items["2.3"]["ptr_requirement_text"]
+    assert details["confirmed_errors_count"] == 0
+    assert details["manual_review_required_count"] == 0
+
+
+def test_ptr_compare_pm3562_table_2_1_missing_is_resolved_by_report_item_coverage(tmp_path: Path) -> None:
+    result = _run_pm3562_usecase(
+        tmp_path,
+        ptr_doc=_pm3562_ptr_document(include_table_2_1=False),
+    )
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert not any(
+        finding.code == "PTR_TABLE_MISSING"
+        and finding.metadata.get("table_number") == "2-1"
+        and str(finding.metadata.get("clause_number") or "").startswith("2.1.")
+        for finding in ptr_table_result.findings
+    )
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    for index in range(1, 13):
+        item = items[f"2.1.{index}"]
+        assert item["coverage_status"] == "covered_passed"
+        assert item["report_matches"][0]["item_no"] == str(index + 37)
+        assert item["report_matches"][0]["single_conclusion"] == "符合"
+    assert details["confirmed_errors_count"] == 0
+    assert details["manual_review_required_count"] == 0
 
 
 def test_ptr_compare_scope_aware_1539_like_report_passes_and_explains_scope(tmp_path: Path) -> None:
@@ -2302,14 +2403,21 @@ def _run_parameter_compare_task(
     return task_service, status
 
 
-def _run_pm3562_usecase(tmp_path: Path):
+def _run_pm3562_usecase(
+    tmp_path: Path,
+    *,
+    report_scope_text: str | None = None,
+    inspection_scope_extractor=None,
+    ptr_doc: PTRDocument | None = None,
+):
     task_service = TaskService()
+    scope_text = report_scope_text or _pm3562_scope_text()
     report_pdf = ParsedPdf(
         file_id="report-pm3562-like",
         file_name="report.pdf",
         page_count=30,
         pages=[
-            PdfPage(page_number=1, text=f"检验项目：{_pm3562_scope_text()}"),
+            PdfPage(page_number=1, text=f"检验项目：{scope_text}"),
             PdfPage(
                 page_number=5,
                 text=(
@@ -2324,9 +2432,10 @@ def _run_pm3562_usecase(tmp_path: Path):
         task_service=task_service,
         file_store=LocalFileStore(tmp_path),
         pdf_parser=FakePdfParser({"4788draft.pdf": report_pdf}),
-        ptr_extractor=FakePTRExtractor(_pm3562_ptr_document()),
-        report_extractor=PM3562ReportExtractor(),
+        ptr_extractor=FakePTRExtractor(ptr_doc or _pm3562_ptr_document()),
+        report_extractor=PM3562ReportExtractor(scope_text),
         inspection_table_extractor=PM3562InspectionTableExtractor(),
+        inspection_scope_extractor=inspection_scope_extractor,
         codex_audit_service=FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN),
     )
 
@@ -2403,7 +2512,11 @@ def _pm3562_scope_text() -> str:
     )
 
 
-def _pm3562_ptr_document() -> PTRDocument:
+def _pm3562_incomplete_scope_text() -> str:
+    return "2.1.1～2.1.12、2.3（仅检 PVC 反应）"
+
+
+def _pm3562_ptr_document(*, include_table_2_1: bool = True) -> PTRDocument:
     clauses = [
         *[
             PTRClause(
@@ -2427,7 +2540,7 @@ def _pm3562_ptr_document() -> PTRDocument:
             clause_id="ptr-2.2.2",
             number=PTRClauseNumber.from_string("2.2.2"),
             title="紧急起搏模式",
-            body_text="紧急起搏模式应符合要求。",
+            body_text="紧急起搏模式应符合要求：VVI、70min⁻¹、7.5V/7.5V、0.6ms/0.6ms、325ms*。",
             scope_type=PTRScopeType.REQUIREMENT,
         ),
         PTRClause(
@@ -2436,7 +2549,16 @@ def _pm3562_ptr_document() -> PTRDocument:
             title="特殊功能",
             body_text=(
                 "特殊功能应符合表 2-2 的要求。\n"
+                "VIP：应支持。\n"
+                "SyncAV：应支持。\n"
+                "QuickOpt：应支持。\n"
+                "Measure RV-LV conduction time：应支持。\n"
+                "VectSelect Quartet：应支持。\n"
+                "Lead Impedance Monitoring：应支持。\n"
+                "AutoVect Select：应支持。\n"
+                "Diagnostic Histograms：应支持。\n"
                 "PVC 反应 / PVC Response：应支持。\n"
+                "MR Conditional：应支持。\n"
                 "Atrial ACap：应支持。\n"
                 "AF Suppression：应支持。"
             ),
@@ -2473,7 +2595,9 @@ def _pm3562_ptr_document() -> PTRDocument:
                 title="表2-1 起搏参数",
                 caption="表2-1 起搏参数",
             )
-        ],
+        ]
+        if include_table_2_1
+        else [],
     )
 
 
@@ -2537,8 +2661,8 @@ def _pm3562_report_items() -> list[InspectionItem]:
                 sequence=50,
                 standard_clause="2.2.2",
                 item_name="紧急起搏模式",
-                standard_requirement="紧急起搏模式应符合要求。",
-                test_result="符合要求",
+                standard_requirement="紧急起搏模式应符合要求：VVI、70min⁻¹、7.5V/7.5V、0.6ms/0.6ms、325ms*。",
+                test_result="VVI；70min⁻¹；7.5V/7.5V；0.6ms/0.6ms；325ms*；符合要求",
                 conclusion="符合",
                 source_page=21,
                 row_index_in_page=50,

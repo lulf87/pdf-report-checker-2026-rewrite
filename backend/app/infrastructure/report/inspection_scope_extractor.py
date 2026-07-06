@@ -23,7 +23,7 @@ class ReportInspectionScopeExtractor:
 
     def extract(self, report: ReportDocument) -> ReportInspectionScope:
         scope_field = _first_scope_field(report)
-        source_text = _field_text(scope_field) if scope_field is not None else None
+        source_text = _best_scope_source_text(report, scope_field)
         declared_items, declared_ranges = _parse_declared_scope(source_text or "")
         scope_modifiers, clause_exclusions = _parse_clause_parentheticals(source_text or "")
         excluded_topics = _parse_excluded_topics(source_text or "")
@@ -64,6 +64,49 @@ def _field_text(field: ReportField | None) -> str | None:
         text = "、".join(str(item).strip() for item in items if str(item or "").strip())
         return text or None
     return None
+
+
+def _best_scope_source_text(report: ReportDocument, scope_field: ReportField | None) -> str | None:
+    field_text = _field_text(scope_field)
+    page_text = _scope_text_from_page(report, scope_field)
+    if _is_more_complete_scope_text(page_text, field_text):
+        return page_text
+    return field_text
+
+
+def _scope_text_from_page(report: ReportDocument, scope_field: ReportField | None) -> str | None:
+    if report.parsed_pdf is None:
+        return None
+    page_number = scope_field.location.page_number if scope_field and scope_field.location else None
+    pages = [page for page in report.parsed_pdf.pages if page_number is None or page.page_number == page_number]
+    for page in pages:
+        text = str(page.text or "")
+        match = re.search(r"检\s*验\s*项\s*目", text)
+        if not match:
+            continue
+        rest = text[match.end() :]
+        end_match = re.search(r"\n\s*检\s*验\s*依\s*据|\n\s*检\s*验\s*结\s*论|\n\s*备\s*注", rest)
+        snippet = rest[: end_match.start()] if end_match else rest[:500]
+        normalized = re.sub(r"\s+", " ", snippet).strip(" ：:;；")
+        if normalized:
+            return normalized
+    return None
+
+
+def _is_more_complete_scope_text(candidate: str | None, current: str | None) -> bool:
+    candidate_text = str(candidate or "").strip()
+    current_text = str(current or "").strip()
+    if not candidate_text:
+        return False
+    if not current_text:
+        return True
+    if len(candidate_text) <= len(current_text):
+        return False
+    if "（除" in current_text and "）" not in current_text and "）" in candidate_text:
+        return True
+    candidate_numbers = set(SCOPE_NUMBER_RE.findall(candidate_text))
+    current_numbers = set(SCOPE_NUMBER_RE.findall(current_text))
+    return bool(current_numbers and current_numbers <= candidate_numbers and len(candidate_text) > len(current_text) + 10)
 
 
 def _parse_declared_scope(text: str) -> tuple[list[str], list[ReportScopeRange]]:
@@ -135,6 +178,7 @@ def _split_scope_topics(value: str) -> list[str]:
 def _normalize_scope_topic(value: str) -> str:
     text = str(value or "").strip("()（） \t\r\n")
     text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])", "", text)
     text = re.sub(r"\bGB\s+(\d)", r"GB \1", text, flags=re.IGNORECASE)
     return text.strip()
 

@@ -18,7 +18,9 @@ from app.domain.table import CanonicalTable, ParameterRecord
 from app.infrastructure.table.table_normalizer import TableNormalizer
 
 
-CLAUSE_LINE_RE = re.compile(r"^(2(?:\.\d+){0,3})(?:[\.．、。]?\s*)(.+?)\s*$")
+CLAUSE_WITH_TITLE_RE = re.compile(r"^(2(?:\.\d+){0,3})(?:(?:[、。]\s*)|\s+)(.+?)\s*$")
+CLAUSE_DOT_TITLE_RE = re.compile(r"^(2(?:\.\d+){0,3})[\.．]\s+(.+?)\s*$")
+CLAUSE_NUMBER_ONLY_RE = re.compile(r"^(2(?:\.\d+){0,3})\s*$")
 TOP_LEVEL_CHAPTER_RE = re.compile(r"^([1-9]\d*)\s*(?:[\.．、。]?\s*)([\u4e00-\u9fffA-Za-z].*)?$")
 TABLE_REFERENCE_RE = re.compile(r"(?:见\s*表|符合\s*表|按\s*表|表)\s*([A-Za-z]?\d+(?:\s*[-‑－–—]\s*\d+)?)")
 DIRECT_REQUIREMENT_MARKERS = ("应", "不应", "不得", "符合", "至少", "不低于", "不高于", "大于", "小于")
@@ -38,11 +40,18 @@ class PTRExtractor:
 
         clauses: list[PTRClause] = []
         page_by_number = {page.page_number: page for page in parsed_pdf.pages}
+        previous_clause: PTRClause | None = None
         for page_number in chapter_pages:
             page = page_by_number.get(page_number)
             if page is None:
                 continue
-            clauses.extend(self._extract_clauses_from_page(page))
+            leading_text = self._leading_text_before_first_clause(page)
+            if previous_clause is not None and leading_text:
+                self._append_clause_text(previous_clause, leading_text)
+            page_clauses = self._extract_clauses_from_page(page)
+            clauses.extend(page_clauses)
+            if page_clauses:
+                previous_clause = page_clauses[-1]
 
         clauses = self._deduplicate_clauses(clauses)
         self._link_hierarchy(clauses)
@@ -50,6 +59,7 @@ class PTRExtractor:
 
         tables = self._extract_tables(parsed_pdf)
         tables = self._merge_continuation_tables(tables)
+        self._attach_referenced_table_text(clauses, tables)
         table_references = [ref for clause in clauses for ref in clause.table_references]
 
         return PTRDocument(
@@ -67,8 +77,8 @@ class PTRExtractor:
         for page in parsed_pdf.pages:
             lines = [line.strip() for line in (page.text or "").splitlines() if line.strip()]
             has_chapter2 = any(self._is_chapter2_start(line) for line in lines[:12])
-            has_deep_chapter2_clause = any(re.match(r"^2\.\d+(?:\.\d+)*", line) for line in lines)
-            has_next_top_chapter = any(self._is_later_top_level_chapter(line) for line in lines[:12])
+            has_deep_chapter2_clause = any(self._parse_clause_line(line) is not None for line in lines)
+            has_next_top_chapter = any(self._is_later_top_level_chapter_at(lines, index) for index in range(len(lines)))
 
             if not started and (has_chapter2 or has_deep_chapter2_clause):
                 started = True
@@ -94,6 +104,20 @@ class PTRExtractor:
         compact = re.sub(r"\s+", "", title)
         return bool(any(keyword in compact for keyword in ("检验方法", "测试方法", "试验方法", "检验", "测试", "试验")))
 
+    def _is_later_top_level_chapter_at(self, lines: list[str], index: int) -> bool:
+        line = lines[index] if 0 <= index < len(lines) else ""
+        if self._is_later_top_level_chapter(line):
+            return True
+        match = re.fullmatch(r"([3-9]\d*)", line or "")
+        if not match:
+            return False
+        for next_line in lines[index + 1 : index + 4]:
+            compact = re.sub(r"\s+", "", next_line or "")
+            if not compact:
+                continue
+            return bool(any(keyword in compact for keyword in ("检验方法", "测试方法", "试验方法", "检验", "测试", "试验")))
+        return False
+
     def _extract_clauses_from_page(self, page: PdfPage) -> list[PTRClause]:
         clauses: list[PTRClause] = []
         current_number: PTRClauseNumber | None = None
@@ -102,6 +126,10 @@ class PTRExtractor:
         current_buffer: list[str] = []
         current_start_line = 0
         current_refs: dict[str, TableReference] = {}
+        pending_number: PTRClauseNumber | None = None
+        pending_line = ""
+        pending_start_line = 0
+        pending_refs: dict[str, TableReference] = {}
 
         def flush() -> None:
             nonlocal current_number, current_line, current_content, current_buffer, current_refs
@@ -135,28 +163,52 @@ class PTRExtractor:
                 )
             )
 
-        for line_index, raw_line in enumerate((page.text or "").splitlines()):
-            line = raw_line.strip()
-            if not line:
+        lines = [(index, raw_line.strip()) for index, raw_line in enumerate((page.text or "").splitlines()) if raw_line.strip()]
+        line_values = [line for _, line in lines]
+        for ordinal, (line_index, line) in enumerate(lines):
+            if self._is_page_marker(line):
                 continue
-            if re.fullmatch(r"\d+\s*/\s*\d+", line):
-                continue
-            if self._is_later_top_level_chapter(line):
+            if self._is_later_top_level_chapter_at(line_values, ordinal):
                 flush()
                 current_number = None
                 current_buffer = []
                 current_refs = {}
-                continue
+                break
 
-            match = CLAUSE_LINE_RE.match(line)
-            if match:
+            parsed = self._parse_clause_line(line)
+            if parsed is not None:
                 flush()
-                current_number = PTRClauseNumber.from_string(match.group(1))
-                current_content = match.group(2).strip()
+                number_text, content, number_only = parsed
+                current_number = None
+                current_buffer = []
+                current_refs = {}
+                pending_number = None
+                pending_refs = {}
+                if number_only:
+                    pending_number = PTRClauseNumber.from_string(number_text)
+                    pending_line = line
+                    pending_start_line = line_index
+                    pending_refs = self._extract_table_references(line, pending_number, page.page_number)
+                    continue
+                current_number = PTRClauseNumber.from_string(number_text)
+                current_content = content
                 current_line = line
                 current_start_line = line_index
                 current_buffer = [current_content]
                 current_refs = self._extract_table_references(line, current_number, page.page_number)
+                continue
+
+            if pending_number is not None:
+                current_number = pending_number
+                current_content = line
+                current_line = f"{pending_line} {line}".strip()
+                current_start_line = pending_start_line
+                current_buffer = [current_content]
+                current_refs = dict(pending_refs)
+                for key, ref in self._extract_table_references(line, current_number, page.page_number).items():
+                    current_refs.setdefault(key, ref)
+                pending_number = None
+                pending_refs = {}
                 continue
 
             if current_number is not None:
@@ -166,6 +218,59 @@ class PTRExtractor:
 
         flush()
         return clauses
+
+    def _parse_clause_line(self, line: str) -> tuple[str, str, bool] | None:
+        text = (line or "").strip()
+        if not text or self._is_page_marker(text):
+            return None
+
+        match = CLAUSE_DOT_TITLE_RE.match(text) or CLAUSE_WITH_TITLE_RE.match(text)
+        if match:
+            number, content = match.group(1), match.group(2).strip()
+            if self._looks_like_clause_title(content):
+                return number, content, False
+            return None
+
+        match = CLAUSE_NUMBER_ONLY_RE.match(text)
+        if match:
+            return match.group(1), "", True
+        return None
+
+    def _looks_like_clause_title(self, value: str) -> bool:
+        text = str(value or "").strip()
+        compact = re.sub(r"\s+", "", text)
+        if not compact:
+            return False
+        if re.fullmatch(r"[-+]?\d+(?:\.\d+)?(?:[A-Za-zμΩ°/%]+)?", compact):
+            return False
+        if re.fullmatch(r"[A-Za-zμΩ°/%]+", compact):
+            return False
+        return bool(re.search(r"[\u4e00-\u9fff]", text) or len(compact) >= 4)
+
+    def _leading_text_before_first_clause(self, page: PdfPage) -> str:
+        values: list[str] = []
+        lines = [line.strip() for line in (page.text or "").splitlines() if line.strip()]
+        for index, line in enumerate(lines):
+            if self._is_page_marker(line):
+                continue
+            if self._is_later_top_level_chapter_at(lines, index):
+                break
+            if self._parse_clause_line(line) is not None:
+                break
+            values.append(line)
+        return "\n".join(_unique_non_empty(values))
+
+    def _append_clause_text(self, clause: PTRClause, text: str) -> None:
+        addition = str(text or "").strip()
+        if not addition or addition in (clause.body_text or ""):
+            return
+        clause.body_text = "\n".join(part for part in [clause.body_text, addition] if part).strip()
+        clause.text_content = clause.body_text
+        clause.full_text = f"{clause.number} {clause.body_text}".strip()
+        clause.metadata["cross_page_leading_text_attached"] = True
+
+    def _is_page_marker(self, line: str) -> bool:
+        return bool(re.fullmatch(r"\d+\s*/\s*\d+", line or ""))
 
     def _extract_table_references(
         self,
@@ -209,6 +314,68 @@ class PTRExtractor:
             if len(clause.body_text.strip()) > len(best_by_number[key].body_text.strip()):
                 best_by_number[key] = clause
         return [best_by_number[key] for key in order]
+
+    def _attach_referenced_table_text(self, clauses: list[PTRClause], tables: list[PTRTable]) -> None:
+        if not clauses or not tables:
+            return
+        tables_by_number: dict[str, list[PTRTable]] = {}
+        for table in tables:
+            number = self._normalize_table_reference_number(table.table_number or "")
+            if not number:
+                continue
+            tables_by_number.setdefault(number, []).append(table)
+
+        for clause in clauses:
+            chunks: list[str] = []
+            attached_table_ids: list[str] = []
+            for table_number in clause.get_all_table_numbers():
+                normalized_number = self._normalize_table_reference_number(table_number)
+                for table in tables_by_number.get(normalized_number, []):
+                    table_text = self._table_text_for_clause_context(table)
+                    if not table_text:
+                        continue
+                    if table_text in (clause.body_text or "") or table_text in chunks:
+                        continue
+                    chunks.append(table_text)
+                    if table.table_id:
+                        attached_table_ids.append(table.table_id)
+                    if clause.clause_id not in table.referenced_by_clause_ids:
+                        table.referenced_by_clause_ids.append(clause.clause_id)
+            if not chunks:
+                continue
+            body_parts = [clause.body_text or "", *chunks]
+            clause.body_text = "\n".join(part for part in body_parts if part).strip()
+            clause.text_content = clause.body_text
+            clause.full_text = f"{clause.number} {clause.body_text}".strip()
+            clause.metadata["referenced_table_text_attached"] = True
+            clause.metadata["referenced_table_ids"] = attached_table_ids
+
+    def _table_text_for_clause_context(self, table: PTRTable) -> str:
+        values: list[str] = []
+        values.extend([table.caption, table.title])
+        canonical = table.canonical_table
+        if canonical is not None:
+            for row in canonical.header_rows:
+                values.append(" / ".join(cell for cell in row if cell))
+            cell_rows: dict[int, list[tuple[int, str]]] = {}
+            for cell in canonical.cells:
+                text = str(cell.text or "").strip()
+                if not text:
+                    continue
+                cell_rows.setdefault(cell.row_index, []).append((cell.column_index, text))
+            for row_index in sorted(cell_rows):
+                row_text = " / ".join(text for _, text in sorted(cell_rows[row_index]))
+                if row_text:
+                    values.append(row_text)
+            for record in canonical.parameter_records:
+                record_parts: list[str] = []
+                record_parts.extend(record.parameter_path)
+                record_parts.extend([record.parameter_name, record.raw_name, record.raw_value, record.normalized_value, record.unit])
+                record_parts.extend(f"{key}:{value}" for key, value in record.dimensions.items())
+                record_parts.extend(f"{key}:{value}" for key, value in record.conditions.items())
+                record_parts.extend(f"{key}:{value}" for key, value in record.values.items())
+                values.append(" / ".join(str(part) for part in record_parts if str(part or "").strip()))
+        return "\n".join(_unique_non_empty(values))
 
     def _link_hierarchy(self, clauses: list[PTRClause]) -> None:
         by_number = {str(clause.number): clause for clause in clauses}
@@ -409,6 +576,16 @@ class PTRExtractor:
             re.sub(r"\s+", "", record.parameter_name or ""),
             tuple(sorted((str(key), str(value)) for key, value in record.dimensions.items())),
         )
+
+
+def _unique_non_empty(values: Iterable[str | None]) -> list[str]:
+    result: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if not text or text in result:
+            continue
+        result.append(text)
+    return result
 
 
 def extract_ptr(parsed_pdf: ParsedPdf) -> PTRDocument:

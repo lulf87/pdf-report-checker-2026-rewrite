@@ -202,6 +202,8 @@ def _scope_consistency_metadata(
         "status": status,
         "declared_scope": list(report_scope.declared_scope_items),
         "declared_scope_ranges": [item.model_dump(mode="json") for item in report_scope.declared_scope_ranges],
+        "scope_modifiers": list(report_scope.scope_modifiers),
+        "clause_exclusions": list(report_scope.clause_exclusions),
         "actual_report_scope": actual_scope,
         "external_standard_ranges": [item.model_dump(mode="json") for item in report_scope.external_standard_ranges],
         "excluded_topics": list(report_scope.excluded_topics),
