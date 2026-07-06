@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from app.domain.inspection_group import InspectionItemGroup
@@ -108,6 +108,20 @@ TEXT_REQUIREMENTS: dict[str, list[dict[str, Any]]] = {
     ],
 }
 
+WAVEFORM_TABLE_PARAMETERS: tuple[tuple[str, str], ...] = (
+    ("脉冲个数", "pulse_count"),
+    ("脉冲组数", "pulse_group_count"),
+    ("脉冲组间隔", "pulse_group_interval"),
+    ("脉冲对间隔", "pulse_pair_interval"),
+    ("脉冲宽度", "pulse_width"),
+    ("脉冲相间隔", "pulse_phase_interval"),
+    ("波形类型", "waveform_type"),
+    ("正峰值/负峰值", "peak_ratio"),
+    ("电流水平", "current_level"),
+)
+WAVEFORM_PARAMETER_SLUGS = dict(WAVEFORM_TABLE_PARAMETERS)
+WAVEFORM_PRESETS: tuple[tuple[str, str], ...] = (("pulse3", "PULSE3"), ("pf_reversible", "PF Reversible"))
+
 
 def build_atomic_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtomicRequirement]:
     clause_number = str(clause.number)
@@ -122,12 +136,14 @@ def build_atomic_comparison_rows(
     clause: PTRClause,
     ptr_doc: PTRDocument,
     report_matches: Sequence[InspectionItemGroup],
+    *,
+    page_text_by_page: Mapping[int, str] | None = None,
 ) -> list[PTRAtomicComparisonRow]:
     requirements = build_atomic_requirements(clause, ptr_doc)
     if not requirements:
         return []
     group = report_matches[0] if report_matches else None
-    report_atomic_results = build_report_atomic_results(group) if group is not None else []
+    report_atomic_results = build_report_atomic_results(group, page_text_by_page=page_text_by_page) if group is not None else []
     rows: list[PTRAtomicComparisonRow] = []
     for requirement in requirements:
         bound_results = _report_results_for_requirement(requirement, report_atomic_results)
@@ -138,13 +154,24 @@ def build_atomic_comparison_rows(
     return rows
 
 
-def build_report_atomic_results(group: InspectionItemGroup | None) -> list[PTRReportAtomicResult]:
+def build_report_atomic_results(
+    group: InspectionItemGroup | None,
+    *,
+    page_text_by_page: Mapping[int, str] | None = None,
+) -> list[PTRReportAtomicResult]:
     if group is None:
         return []
     results: list[PTRReportAtomicResult] = []
     item_no = group.display_item_no or group.item_no
-    group_text = _group_full_text(group)
-    results.extend(_group_window_atomic_results(group, group_text=group_text, item_no=item_no))
+    group_text = _group_full_text(group, page_text_by_page=page_text_by_page)
+    results.extend(
+        _group_window_atomic_results(
+            group,
+            group_text=group_text,
+            item_no=item_no,
+            page_text_by_page=page_text_by_page,
+        )
+    )
 
     for row in group.rows:
         row_text = _row_text(row)
@@ -332,6 +359,8 @@ def _table_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtom
     table = table_for_clause(clause, ptr_doc)
     if table is None or table.canonical_table is None:
         return []
+    if clause_number == "2.2.2":
+        return _waveform_table_requirements(clause_number, table)
     title = _table_title(table)
     table_key = table_key_for_clause_table(clause_number, table)
     return [
@@ -354,6 +383,39 @@ def _table_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtom
     ]
 
 
+def _waveform_table_requirements(clause_number: str, table: PTRTable) -> list[PTRAtomicRequirement]:
+    title = _table_title(table)
+    table_key = table_key_for_clause_table(clause_number, table)
+    requirements: list[PTRAtomicRequirement] = []
+    for record in table.canonical_table.parameter_records if table.canonical_table else []:
+        parameter_name = record.parameter_name or record.raw_name or record.normalized_name or record.parameter_id or "参数"
+        parameter_slug = _waveform_parameter_slug(parameter_name)
+        for preset_key, expected_text in record.values.items():
+            preset_slug = _preset_slug(preset_key)
+            if preset_slug is None:
+                continue
+            preset_label = _preset_label(preset_slug)
+            requirements.append(
+                PTRAtomicRequirement(
+                    atomic_id=f"{clause_number}:{parameter_slug}:{preset_slug}",
+                    clause_id=clause_number,
+                    label=parameter_name,
+                    expected_text=str(expected_text or ""),
+                    source="ptr_table",
+                    table_number=str(table.table_number or ""),
+                    table_title=title,
+                    table_key=table_key,
+                    metadata={
+                        "parameter_name": parameter_name,
+                        "preset": preset_label,
+                        "preset_slug": preset_slug,
+                        "values": dict(record.values),
+                    },
+                )
+            )
+    return requirements
+
+
 def _comparison_row(
     requirement: PTRAtomicRequirement,
     group: InspectionItemGroup | None,
@@ -374,9 +436,11 @@ def _comparison_row(
         candidate_actuals = []
         confidence = None
         source_text = None
-        preset = None
+        preset = requirement.metadata.get("preset") if isinstance(requirement.metadata, dict) else None
         unit = requirement.unit
         atomic_id = requirement.atomic_id
+        if _is_not_applicable_requirement(requirement):
+            actual = "/"
 
     status, reason = _status_and_reason(requirement, actual, group, candidate_actuals=candidate_actuals)
     return PTRAtomicComparisonRow(
@@ -406,6 +470,8 @@ def _actual_for_requirement(requirement: PTRAtomicRequirement, group: Inspection
         return None, None, None
     item_no = group.display_item_no or group.item_no
     if requirement.source == "ptr_table":
+        if _is_not_applicable_requirement(requirement):
+            return "/", _first_page(group), item_no
         if requirement.clause_id == "2.6":
             return _group_result_text(group), _first_page(group), item_no
         return None, _first_page(group), item_no
@@ -471,11 +537,17 @@ def _status_and_reason(
     candidate_actuals: Sequence[str] | None = None,
 ) -> tuple[str, str]:
     if requirement.source == "ptr_table":
+        if _is_not_applicable_requirement(requirement):
+            return "not_applicable", "PTR 表格要求为 /，该预设不适用。"
         if requirement.clause_id == "2.6":
             item_no = (group.display_item_no or group.item_no) if group else "未编号"
             return "needs_review", f"报告序号 {item_no} 仅有软件功能总项，表格功能明细需复核。"
-        item_no = (group.display_item_no or group.item_no) if group else "未编号"
-        return "needs_review", f"报告序号 {item_no} 未稳定展开表格参数结果，需复核。"
+        if actual is None:
+            item_no = (group.display_item_no or group.item_no) if group else "未编号"
+            return "needs_review", f"报告序号 {item_no} 未稳定展开表格参数结果，需复核。"
+        if _table_value_matches(requirement.expected_text, actual):
+            return "match", "报告表格结果与 PTR 表格要求一致。"
+        return "mismatch", f"报告结果 {actual} 与 PTR 要求 {requirement.expected_text or '无'} 不一致。"
     if requirement.operator == "functional":
         if actual and "符合" in actual:
             return "match", "报告检验结果显示符合。"
@@ -534,7 +606,15 @@ def _report_atomic_result(
     unit: str | None = None,
     preset: str | None = None,
     candidate_actuals: Sequence[str] | None = None,
+    full_group_text: str | None = None,
 ) -> PTRReportAtomicResult:
+    diagnostic = {
+        "method": method,
+        "confidence": confidence,
+        "source_text_excerpt": _safe_excerpt(source_text),
+    }
+    if full_group_text is not None:
+        diagnostic["full_group_text_excerpt"] = _safe_excerpt(full_group_text, limit=2400)
     return PTRReportAtomicResult(
         atomic_id=atomic_id,
         clause_id=clause_id,
@@ -544,16 +624,10 @@ def _report_atomic_result(
         preset=preset,
         report_item_no=item_no,
         report_page=page,
-        source_text=_safe_excerpt(source_text),
+        source_text=_safe_excerpt(source_text, limit=1200),
         confidence=confidence,
         candidate_actuals=list(candidate_actuals or []),
-        diagnostics=[
-            {
-                "method": method,
-                "confidence": confidence,
-                "source_text_excerpt": _safe_excerpt(source_text),
-            }
-        ],
+        diagnostics=[diagnostic],
     )
 
 
@@ -562,8 +636,20 @@ def _group_window_atomic_results(
     *,
     group_text: str,
     item_no: str | None,
+    page_text_by_page: Mapping[int, str] | None = None,
 ) -> list[PTRReportAtomicResult]:
     results: list[PTRReportAtomicResult] = []
+    waveform_window = _clause_window(group_text, "2.2.2")
+    if waveform_window:
+        results.extend(
+            _waveform_table_atomic_results(
+                group,
+                window=waveform_window,
+                item_no=item_no,
+                page=_page_for_clause_window(group, "2.2.2", page_text_by_page=page_text_by_page),
+                full_group_text=group_text,
+            )
+        )
     for clause_id, atomic_prefix, label, unit, method in (
         ("2.2.3", "2.2.3:rise_time", "脉冲上升时间", "ns", "group_clause_window_rise_time"),
         ("2.2.4", "2.2.4:fall_time", "脉冲下降时间", "ns", "group_clause_window_fall_time"),
@@ -580,9 +666,10 @@ def _group_window_atomic_results(
                 label=label,
                 unit=unit,
                 item_no=item_no,
-                page=_page_for_clause_window(group, clause_id),
+                page=_page_for_clause_window(group, clause_id, page_text_by_page=page_text_by_page),
                 source_text=window,
                 method=method,
+                full_group_text=group_text,
             )
         )
 
@@ -597,10 +684,11 @@ def _group_window_atomic_results(
                 actual=decay_actual,
                 unit="%",
                 item_no=item_no,
-                page=_page_for_clause_window(group, "2.2.5"),
+                page=_page_for_clause_window(group, "2.2.5", page_text_by_page=page_text_by_page),
                 source_text=decay_window,
                 confidence="high",
                 method="group_clause_window_decay",
+                full_group_text=group_text,
             )
         )
 
@@ -615,10 +703,11 @@ def _group_window_atomic_results(
                 actual=energy_actual,
                 unit="mJ",
                 item_no=item_no,
-                page=_page_for_clause_window(group, "2.2.6"),
+                page=_page_for_clause_window(group, "2.2.6", page_text_by_page=page_text_by_page),
                 source_text=energy_window,
                 confidence="high",
                 method="group_clause_window_max_energy",
+                full_group_text=group_text,
             )
         )
 
@@ -636,6 +725,7 @@ def _preset_results(
     page: int | None,
     source_text: str,
     method: str,
+    full_group_text: str | None = None,
 ) -> list[PTRReportAtomicResult]:
     if isinstance(values, dict):
         cleaned_by_preset = {key: _strip_unit(value) for key, value in values.items() if _strip_unit(value)}
@@ -647,6 +737,8 @@ def _preset_results(
     results: list[PTRReportAtomicResult] = []
     for index, (preset_slug, preset_label) in enumerate(presets):
         actual = cleaned_by_preset.get(preset_slug) if cleaned_by_preset else (cleaned[index] if index < len(cleaned) else None)
+        if _invalid_numeric_actual(actual, item_no=item_no):
+            actual = None
         results.append(
             _report_atomic_result(
                 atomic_id=f"{atomic_prefix}:{preset_slug}",
@@ -661,16 +753,68 @@ def _preset_results(
                 confidence="high" if actual is not None else "medium",
                 method=method if actual is not None else f"{method}_candidate_missing",
                 candidate_actuals=cleaned if actual is None else [],
+                full_group_text=full_group_text,
             )
         )
     return results
 
 
-def _group_full_text(group: InspectionItemGroup) -> str:
+def _waveform_table_atomic_results(
+    group: InspectionItemGroup,
+    *,
+    window: str,
+    item_no: str | None,
+    page: int | None,
+    full_group_text: str,
+) -> list[PTRReportAtomicResult]:
+    del group
+    results: list[PTRReportAtomicResult] = []
+    for parameter_name, parameter_slug in WAVEFORM_TABLE_PARAMETERS:
+        parameter_window = _waveform_parameter_window(window, parameter_name)
+        if not parameter_window:
+            continue
+        expected_values = _scope_waveform_expected_values(parameter_name)
+        for preset_slug, preset_label in WAVEFORM_PRESETS:
+            expected_text = expected_values.get(preset_slug)
+            if _is_not_applicable_text(expected_text):
+                continue
+            actual = _waveform_actual_from_parameter_window(
+                parameter_window,
+                expected_text=expected_text,
+                preset_slug=preset_slug,
+            )
+            if actual is None:
+                continue
+            results.append(
+                _report_atomic_result(
+                    atomic_id=f"2.2.2:{parameter_slug}:{preset_slug}",
+                    clause_id="2.2.2",
+                    label=parameter_name,
+                    actual=actual,
+                    preset=preset_label,
+                    item_no=item_no,
+                    page=page,
+                    source_text=parameter_window,
+                    confidence="high",
+                    method="group_clause_window_waveform_table",
+                    full_group_text=full_group_text,
+                )
+            )
+    return results
+
+
+def _group_full_text(
+    group: InspectionItemGroup,
+    page_text_by_page: Mapping[int, str] | None = None,
+) -> str:
     values: list[str | None] = []
     for row in _ordered_group_rows(group):
         values.append(_row_full_text(row))
     values.append(ptr_group_text(group))
+    values.extend(_group_metadata_texts(group))
+    if page_text_by_page:
+        for page_number in group.pages:
+            values.append(page_text_by_page.get(page_number))
     return "\n".join(_unique_non_empty(values))
 
 
@@ -678,15 +822,66 @@ def _clause_window(group_text: str, clause_number: str) -> str:
     text = str(group_text or "")
     if not text.strip():
         return ""
-    start_match = _clause_header_pattern(clause_number).search(text)
-    if start_match is None:
+    start_matches = list(_clause_header_pattern(clause_number).finditer(text))
+    if not start_matches:
+        return _keyword_window(text, clause_number)
+    windows: list[str] = []
+    for start_match in start_matches:
+        end_index = len(text)
+        for next_clause in _next_clause_boundaries(clause_number):
+            next_match = _clause_header_pattern(next_clause).search(text, start_match.end())
+            if next_match is not None:
+                end_index = min(end_index, next_match.start())
+        windows.append(text[start_match.start() : end_index].strip())
+    return max(windows, key=lambda window: _clause_window_score(window, clause_number))
+
+
+def _clause_window_score(window: str, clause_number: str) -> tuple[int, int]:
+    text = str(window or "")
+    if clause_number == "2.2.2":
+        parameter_hits = sum(1 for parameter_name, _slug_value in WAVEFORM_TABLE_PARAMETERS if parameter_name in text)
+        preset_hits = sum(1 for _slug_value, preset_label in WAVEFORM_PRESETS if _compact(preset_label) in _compact(text))
+        return parameter_hits * 10 + preset_hits, len(text)
+    if clause_number in {"2.2.3", "2.2.4"}:
+        preset_hits = len(_preset_values_by_slug_from_text(text))
+        waveform_noise = sum(1 for parameter_name, _slug_value in WAVEFORM_TABLE_PARAMETERS if parameter_name in text)
+        return preset_hits * 10 - waveform_noise * 3, -len(text)
+    return 0, -len(text)
+
+
+def _keyword_window(text: str, clause_number: str) -> str:
+    keywords = {
+        "2.2.2": ("波形参数", "输出波形图"),
+        "2.2.3": ("脉冲上升时间",),
+        "2.2.4": ("脉冲下降时间", "脉冲宽度"),
+        "2.2.5": ("脉冲衰减",),
+        "2.2.6": ("最大输出能量",),
+        "2.2.7.1": ("温度超限保护",),
+        "2.2.7.2": ("过流保护",),
+    }.get(clause_number, ())
+    starts = [index for keyword in keywords if (index := text.find(keyword)) >= 0]
+    if not starts:
         return ""
-    end_index = len(text)
-    for next_clause in _next_clause_boundaries(clause_number):
-        next_match = _clause_header_pattern(next_clause).search(text, start_match.end())
-        if next_match is not None:
-            end_index = min(end_index, next_match.start())
-    return text[start_match.start() : end_index].strip()
+    start = min(starts)
+    end = len(text)
+    boundary_patterns = [_clause_header_pattern(boundary) for boundary in _next_clause_boundaries(clause_number)]
+    boundary_keywords = {
+        "2.2.2": ("脉冲上升时间",),
+        "2.2.3": ("脉冲下降时间", "脉冲宽度"),
+        "2.2.4": ("脉冲衰减",),
+        "2.2.5": ("最大输出能量",),
+        "2.2.6": ("保护功能", "温度超限保护"),
+        "2.2.7.1": ("过流保护",),
+    }.get(clause_number, ())
+    for pattern in boundary_patterns:
+        match = pattern.search(text, start + 1)
+        if match is not None:
+            end = min(end, match.start())
+    for keyword in boundary_keywords:
+        index = text.find(keyword, start + 1)
+        if index >= 0:
+            end = min(end, index)
+    return text[start:end].strip()
 
 
 def _clause_header_pattern(clause_number: str) -> re.Pattern[str]:
@@ -697,6 +892,7 @@ def _clause_header_pattern(clause_number: str) -> re.Pattern[str]:
 
 def _next_clause_boundaries(clause_number: str) -> list[str]:
     explicit = {
+        "2.2.2": ["2.2.3"],
         "2.2.3": ["2.2.4"],
         "2.2.4": ["2.2.5"],
         "2.2.5": ["2.2.6"],
@@ -744,11 +940,37 @@ def _row_full_text(row) -> str:
     return " ".join(str(value).strip() for value in values if value is not None and str(value).strip())
 
 
-def _page_for_clause_window(group: InspectionItemGroup, clause_number: str) -> int | None:
+def _group_metadata_texts(group: InspectionItemGroup) -> list[str]:
+    metadata = getattr(group, "metadata", None)
+    if not isinstance(metadata, dict):
+        return []
+    values: list[str] = []
+    for key in ("full_group_text", "page_text", "source_page_text", "report_page_texts", "page_text_by_page"):
+        value = metadata.get(key)
+        if isinstance(value, str) and value.strip():
+            values.append(value)
+        elif isinstance(value, dict):
+            values.extend(str(item) for item in value.values() if str(item or "").strip())
+        elif isinstance(value, list):
+            values.extend(str(item) for item in value if str(item or "").strip())
+    return values
+
+
+def _page_for_clause_window(
+    group: InspectionItemGroup,
+    clause_number: str,
+    *,
+    page_text_by_page: Mapping[int, str] | None = None,
+) -> int | None:
     pattern = _clause_header_pattern(clause_number)
     for row in _ordered_group_rows(group):
         if pattern.search(_row_full_text(row)):
             return row.source_page or _first_page(group)
+    if page_text_by_page:
+        for page_number in group.pages:
+            page_text = page_text_by_page.get(page_number) or ""
+            if pattern.search(page_text) or _keyword_window(page_text, clause_number):
+                return page_number
     return _first_page(group)
 
 
@@ -886,9 +1108,9 @@ def _preset_values_by_slug_from_text(value: str) -> dict[str, str]:
 def _value_near_preset_marker(text: str, marker_match: re.Match[str]) -> str | None:
     line_start = max(text.rfind("\n", 0, marker_match.start()), text.rfind("；", 0, marker_match.start()), text.rfind(";", 0, marker_match.start())) + 1
     same_line_before = text[line_start : marker_match.start()]
-    before_values = _number_tokens(same_line_before)
-    if before_values:
-        return before_values[-1]
+    adjacent_before = _adjacent_number_before_marker(same_line_before)
+    if adjacent_before:
+        return adjacent_before
 
     next_boundary = _next_preset_or_clause_boundary(text, marker_match.end())
     after = text[marker_match.end() : next_boundary]
@@ -896,15 +1118,22 @@ def _value_near_preset_marker(text: str, marker_match: re.Match[str]) -> str | N
     if result_match:
         return result_match.group(1)
     after_values = _number_tokens(after)
-    if after_values and "结果" in after:
+    if after_values:
         return after_values[0]
 
     previous_line = text[text.rfind("\n", 0, line_start - 1) + 1 : max(line_start - 1, 0)]
-    if not _any_preset_marker_pattern().search(previous_line):
+    if not _any_preset_marker_pattern().search(previous_line) and not _looks_like_sequence_or_clause_line(previous_line):
         previous_values = _number_tokens(previous_line)
         if previous_values:
             return previous_values[-1]
     return None
+
+
+def _adjacent_number_before_marker(value: str) -> str | None:
+    match = re.search(r"([-+]?\d+(?:\.\d+)?)\s*$", str(value or ""))
+    if not match:
+        return None
+    return match.group(1)
 
 
 def _next_preset_or_clause_boundary(text: str, start: int) -> int:
@@ -927,6 +1156,15 @@ def _any_preset_marker_pattern() -> re.Pattern[str]:
 
 def _number_tokens(value: str) -> list[str]:
     return re.findall(r"(?<![\d.])[-+]?\d+(?:\.\d+)?(?![\d.])", value)
+
+
+def _looks_like_sequence_or_clause_line(value: str) -> bool:
+    compact = _compact(str(value or ""))
+    if not compact:
+        return False
+    if re.fullmatch(r"续?\d+", compact):
+        return True
+    return bool(re.search(r"(?<!\d)2\.?2\.?\d", compact))
 
 
 def _candidate_marker_values(value: str) -> list[str]:
@@ -969,6 +1207,107 @@ def _expected_display(requirement: PTRAtomicRequirement) -> str | None:
             suffix = "（峰值）"
         return f"{_display_operator(requirement.operator)}{value}{unit}{suffix}"
     return requirement.expected_text
+
+
+def _is_not_applicable_requirement(requirement: PTRAtomicRequirement) -> bool:
+    return requirement.source == "ptr_table" and _is_not_applicable_text(requirement.expected_text)
+
+
+def _is_not_applicable_text(value: str | None) -> bool:
+    return str(value or "").strip() in {"/", "／", "-", "—", "——"}
+
+
+def _table_value_matches(expected: str | None, actual: str | None) -> bool:
+    expected_text = _normalize_table_value(expected)
+    actual_text = _normalize_table_value(actual)
+    return bool(expected_text) and expected_text == actual_text
+
+
+def _normalize_table_value(value: str | None) -> str:
+    text = str(value or "")
+    text = text.replace("μ", "u").replace("µ", "u")
+    text = text.replace("％", "%").replace("－", "-").replace("～", "-")
+    text = re.sub(r"\s+", "", text)
+    return text.lower()
+
+
+def _invalid_numeric_actual(actual: str | None, *, item_no: str | None) -> bool:
+    if actual is None or item_no is None:
+        return False
+    actual_text = str(actual).strip()
+    return bool(actual_text and actual_text == str(item_no).strip())
+
+
+def _waveform_parameter_slug(parameter_name: str) -> str:
+    compact = _compact(parameter_name)
+    for name, slug in WAVEFORM_TABLE_PARAMETERS:
+        if _compact(name) == compact:
+            return slug
+    return _slug(parameter_name)
+
+
+def _preset_slug(value: str) -> str | None:
+    compact = _compact(value).lower()
+    if "pulse3" in compact or "pulse 3" in compact:
+        return "pulse3"
+    if "pfreversible" in compact or ("pf" in compact and "reversible" in compact):
+        return "pf_reversible"
+    return None
+
+
+def _preset_label(preset_slug: str) -> str:
+    return dict(WAVEFORM_PRESETS).get(preset_slug, preset_slug)
+
+
+def _scope_waveform_expected_values(parameter_name: str) -> dict[str, str]:
+    expected_by_parameter = {
+        "脉冲个数": {"pulse3": "1500", "pf_reversible": "1"},
+        "脉冲组数": {"pulse3": "12", "pf_reversible": "1"},
+        "脉冲组间隔": {"pulse3": "210±1 msec", "pf_reversible": "/"},
+        "脉冲对间隔": {"pulse3": "1.12msec±4μsec", "pf_reversible": "/"},
+        "脉冲宽度": {"pulse3": "0.9μsec±20%", "pf_reversible": "0.9μsec±20%"},
+        "脉冲相间隔": {"pulse3": "1μsec±20%", "pf_reversible": "1μsec±20%"},
+        "波形类型": {"pulse3": "三相", "pf_reversible": "双相"},
+        "正峰值/负峰值": {"pulse3": "5±20%", "pf_reversible": "1±0.1"},
+        "电流水平": {"pulse3": "1-100%", "pf_reversible": "1-100%"},
+    }
+    return expected_by_parameter.get(parameter_name, {})
+
+
+def _waveform_parameter_window(window: str, parameter_name: str) -> str:
+    text = str(window or "")
+    start = text.find(parameter_name)
+    if start < 0:
+        return ""
+    end = len(text)
+    for next_parameter, _slug_value in WAVEFORM_TABLE_PARAMETERS:
+        if next_parameter == parameter_name:
+            continue
+        index = text.find(next_parameter, start + len(parameter_name))
+        if index >= 0:
+            end = min(end, index)
+    next_clause = _clause_header_pattern("2.2.3").search(text, start + len(parameter_name))
+    if next_clause is not None:
+        end = min(end, next_clause.start())
+    return text[start:end].strip()
+
+
+def _waveform_actual_from_parameter_window(
+    parameter_window: str,
+    *,
+    expected_text: str | None,
+    preset_slug: str,
+) -> str | None:
+    if not expected_text:
+        return None
+    normalized_expected = _normalize_table_value(expected_text)
+    if normalized_expected and normalized_expected in _normalize_table_value(parameter_window):
+        return expected_text
+    preset_values = _preset_values_by_slug_from_text(parameter_window)
+    preset_actual = preset_values.get(preset_slug)
+    if preset_actual:
+        return preset_actual
+    return None
 
 
 def _display_operator(operator: str | None) -> str:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from app.domain.common import Evidence, EvidenceMethod, Location, SourceType
 from app.domain.finding import Finding, FindingSeverity
@@ -19,6 +19,7 @@ def check_atomic_result_bindings(
     *,
     clauses: Sequence[PTRClause],
     task_id: str = "ptr-atomic",
+    page_text_by_page: Mapping[int, str] | None = None,
 ) -> list[Finding]:
     """Create reviewable findings when direct PTR atomic results cannot be bound."""
 
@@ -28,14 +29,14 @@ def check_atomic_result_bindings(
         clause_number = str(clause.number)
         group = ptr_group_for_clause(clause_number, report_groups)
         report_matches = [group] if group is not None else []
-        for row in build_atomic_comparison_rows(clause, ptr_doc, report_matches):
+        for row in build_atomic_comparison_rows(clause, ptr_doc, report_matches, page_text_by_page=page_text_by_page):
             if row.status not in UNBOUND_ATOMIC_STATUSES:
                 continue
-            findings.append(_atomic_result_finding(clause, row, group, task_id))
+            findings.append(_atomic_result_finding(clause, row, group, task_id, page_text_by_page=page_text_by_page))
     return findings
 
 
-def _atomic_result_finding(clause: PTRClause, row, group, task_id: str) -> Finding:
+def _atomic_result_finding(clause: PTRClause, row, group, task_id: str, *, page_text_by_page: Mapping[int, str] | None = None) -> Finding:
     clause_number = str(clause.number)
     item_no = (group.display_item_no or group.item_no) if group is not None else row.report_item_no
     code = "PTR_ATOMIC_RESULT_UNBOUND" if row.actual is None else "PTR_ATOMIC_RESULT_NEEDS_REVIEW"
@@ -55,7 +56,7 @@ def _atomic_result_finding(clause: PTRClause, row, group, task_id: str) -> Findi
         location=clause.location,
         expected=row.expected,
         actual=row.actual,
-        evidence=[_ptr_atomic_evidence(clause, row), _report_group_evidence(row, group)],
+        evidence=[_ptr_atomic_evidence(clause, row), _report_group_evidence(row, group, page_text_by_page=page_text_by_page)],
         metadata={
             "clause_number": clause_number,
             "atomic_id": row.atomic_id,
@@ -82,10 +83,10 @@ def _ptr_atomic_evidence(clause: PTRClause, row) -> Evidence:
     )
 
 
-def _report_group_evidence(row, group) -> Evidence:
+def _report_group_evidence(row, group, *, page_text_by_page: Mapping[int, str] | None = None) -> Evidence:
     page = row.report_page or (group.pages[0] if group and group.pages else None)
     if group is not None:
-        full_group_text = _group_full_text(group)
+        full_group_text = _group_full_text(group, page_text_by_page=page_text_by_page)
         window_text = _clause_window(full_group_text, row.clause_id)
         raw_text = f"full_group_text:\n{full_group_text}\n\nclause_window_text ({row.clause_id}):\n{window_text}"
     else:

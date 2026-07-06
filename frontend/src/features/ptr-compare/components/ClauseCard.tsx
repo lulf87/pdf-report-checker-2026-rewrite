@@ -226,12 +226,14 @@ function PTRExplanationDetails({
 }
 
 function PTRAtomicComparisonTable({ rows }: { rows: PTRAtomicComparisonRow[] }) {
+  const title = atomicComparisonTitle(rows);
+
   return (
     <section className="comparison-details" aria-label="参数级比对表">
       <div className="comparison-details-head">
         <div>
           <p className="detail-kicker">参数级比对表</p>
-          <p className="comparison-title">Atomic requirements</p>
+          <p className="comparison-title">{title}</p>
         </div>
       </div>
       <div className="comparison-table-wrap">
@@ -269,6 +271,14 @@ function PTRAtomicComparisonTable({ rows }: { rows: PTRAtomicComparisonRow[] }) 
       </div>
     </section>
   );
+}
+
+function atomicComparisonTitle(rows: PTRAtomicComparisonRow[]): string {
+  const tableKeys = Array.from(new Set(rows.map((row) => row.table_key).filter(Boolean)));
+  if (tableKeys.length !== 1) return "Atomic requirements";
+  const match = /^.+:表([^:]+):(.+)$/.exec(tableKeys[0] ?? "");
+  if (!match) return tableKeys[0] ?? "Atomic requirements";
+  return `表 ${match[1]} ${match[2]}比对表`;
 }
 
 function ReportMatchLine({ match }: { match: PTRReportMatch }) {

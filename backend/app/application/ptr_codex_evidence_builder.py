@@ -13,6 +13,7 @@ from app.application.codex_audit_targeting import (
     DEFAULT_PTR_PRIORITY_FINDING_CODES,
     priority_index,
 )
+from app.application.report_page_texts import report_page_text_by_page
 from app.domain.codex_review import (
     CodexEvidenceRef,
     CodexReviewRequest,
@@ -523,13 +524,18 @@ class PtrCodexEvidenceBuilder:
             return None
         item_no = group.display_item_no or group.item_no
         clause_number = str(finding.metadata.get("clause_number") or "")
+        page_text_by_page = report_page_text_by_page(report_doc)
         return EvidenceItem(
             ref_id=f"report_inspection_group:{self._sanitize_text(item_no)}",
             source_type=EvidenceSourceType.TABLE,
             title=self._sanitize_text(f"Report inspection item group {item_no}"),
             structured=self._safe_payload(
                 {
-                    "inspection_item_group": self._report_inspection_group_summary(group, clause_number=clause_number),
+                    "inspection_item_group": self._report_inspection_group_summary(
+                        group,
+                        clause_number=clause_number,
+                        page_text_by_page=page_text_by_page,
+                    ),
                 }
             ),
             page_number=group.pages[0] if group.pages else None,
@@ -553,8 +559,14 @@ class PtrCodexEvidenceBuilder:
             return ptr_group_for_clause(clause_number, groups)
         return None
 
-    def _report_inspection_group_summary(self, group: InspectionItemGroup, *, clause_number: str | None = None) -> dict[str, Any]:
-        full_group_text = _group_full_text(group)
+    def _report_inspection_group_summary(
+        self,
+        group: InspectionItemGroup,
+        *,
+        clause_number: str | None = None,
+        page_text_by_page: dict[int, str] | None = None,
+    ) -> dict[str, Any]:
+        full_group_text = _group_full_text(group, page_text_by_page=page_text_by_page)
         clause_window_text = _clause_window(full_group_text, clause_number) if clause_number else ""
         return {
             "item_no": group.item_no,
@@ -570,7 +582,7 @@ class PtrCodexEvidenceBuilder:
             "single_conclusion": ptr_group_single_conclusion(group),
             "compact_rows": ptr_group_compact_rows(group),
             "source_rows": self._report_inspection_group_source_rows(group),
-            "report_atomic_results": self._safe_payload(build_report_atomic_results(group)),
+            "report_atomic_results": self._safe_payload(build_report_atomic_results(group, page_text_by_page=page_text_by_page)),
             "diagnostics": self._safe_payload(group.diagnostics),
         }
 

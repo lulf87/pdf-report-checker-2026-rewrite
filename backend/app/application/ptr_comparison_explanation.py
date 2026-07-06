@@ -4,6 +4,7 @@ from collections.abc import Sequence
 import re
 from typing import Any
 
+from app.application.report_page_texts import report_page_text_by_page
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.ptr import PTRClause, PTRDocument
 from app.domain.ptr_comparison import (
@@ -14,6 +15,7 @@ from app.domain.ptr_comparison import (
     PTRComparisonOverallStatus,
     PTRDisplayFinalStatus,
     PTRNormalizedComparison,
+    PTRReportAtomicResult,
     PTRReportMatch,
     PTRUserFacingStatus,
 )
@@ -70,6 +72,7 @@ def build_ptr_comparison_details(
     report_groups = build_ptr_report_item_groups(report_doc.inspection_items)
     report_scope = _report_inspection_scope(report_doc)
     scope_consistency = _scope_consistency_metadata(check_results, report_scope)
+    page_text_by_page = report_page_text_by_page(report_doc)
 
     items = [
         _comparison_item(
@@ -80,6 +83,7 @@ def build_ptr_comparison_details(
             external_coverages=_external_standard_coverages(clause, report_scope, report_doc.inspection_items),
             ptr_doc=ptr_doc,
             report_doc=report_doc,
+            page_text_by_page=page_text_by_page,
         )
         for clause in included_clauses
     ]
@@ -99,10 +103,11 @@ def _comparison_item(
     external_coverages: list[dict[str, Any]],
     ptr_doc: PTRDocument,
     report_doc: ReportDocument,
+    page_text_by_page: dict[int, str] | None = None,
 ) -> PTRComparisonItem:
     clause_number = str(clause.number)
     atomic_requirements = build_atomic_requirements(clause, ptr_doc)
-    atomic_rows = build_atomic_comparison_rows(clause, ptr_doc, report_matches)
+    atomic_rows = build_atomic_comparison_rows(clause, ptr_doc, report_matches, page_text_by_page=page_text_by_page)
     selected_finding = _primary_finding(findings)
     rule_status = _rule_status(findings)
     user_status = _user_facing_status(findings)
@@ -125,7 +130,7 @@ def _comparison_item(
         ptr_title=_safe_text(clause.title),
         ptr_page=clause.location.page_number if clause.location else None,
         ptr_requirement_text=_safe_text(clause.body_text or clause.text_content or clause.full_text or ""),
-        report_matches=[_report_match(item) for item in report_matches],
+        report_matches=[_report_match(item, page_text_by_page=page_text_by_page) for item in report_matches],
         external_standard_coverage=_safe_payload(external_coverage),
         external_standard_coverages=_safe_payload(external_coverages),
         atomic_requirements=_safe_payload(atomic_requirements),
@@ -246,9 +251,9 @@ def _candidate_report_items(report_items: Sequence[InspectionItem]) -> list[Insp
     return list(report_items)
 
 
-def _report_match(item: InspectionItem | InspectionItemGroup) -> PTRReportMatch:
+def _report_match(item: InspectionItem | InspectionItemGroup, *, page_text_by_page: dict[int, str] | None = None) -> PTRReportMatch:
     if isinstance(item, InspectionItemGroup):
-        return _report_group_match(item)
+        return _report_group_match(item, page_text_by_page=page_text_by_page)
     item_no = item.sequence_raw or (str(item.sequence) if item.sequence is not None else None)
     return PTRReportMatch(
         item_no=_safe_text(item_no),
@@ -264,9 +269,10 @@ def _report_match(item: InspectionItem | InspectionItemGroup) -> PTRReportMatch:
     )
 
 
-def _report_group_match(group: InspectionItemGroup) -> PTRReportMatch:
+def _report_group_match(group: InspectionItemGroup, *, page_text_by_page: dict[int, str] | None = None) -> PTRReportMatch:
     first_row = group.rows[0] if group.rows else None
     pages = list(group.pages)
+    report_atomic_results = build_report_atomic_results(group, page_text_by_page=page_text_by_page)
     return PTRReportMatch(
         item_no=_safe_text(group.display_item_no or group.item_no),
         report_page=pages[0] if pages else None,
@@ -275,11 +281,22 @@ def _report_group_match(group: InspectionItemGroup) -> PTRReportMatch:
         standard_clause=_safe_text(first_row.standard_clause if first_row else None),
         item_name=_safe_text(first_row.item_name if first_row else None),
         standard_requirement=_safe_text(ptr_group_standard_requirement(group)),
-        test_result=_safe_text(ptr_group_test_result(group)),
+        test_result=_safe_text(_group_test_result_with_atomic_fallback(group, report_atomic_results)),
         single_conclusion=_safe_text(ptr_group_single_conclusion(group)),
         remark=_safe_text(first_row.remark if first_row else None),
-        report_atomic_results=_safe_payload(build_report_atomic_results(group)),
+        report_atomic_results=_safe_payload(report_atomic_results),
     )
+
+
+def _group_test_result_with_atomic_fallback(
+    group: InspectionItemGroup,
+    report_atomic_results: Sequence[PTRReportAtomicResult],
+) -> str:
+    values = [value.strip() for value in ptr_group_test_result(group).split(" / ") if value.strip()]
+    for result in report_atomic_results:
+        if result.actual and result.actual not in values:
+            values.append(result.actual)
+    return " / ".join(values)
 
 
 def _primary_finding(findings: list[Finding]) -> Finding | None:

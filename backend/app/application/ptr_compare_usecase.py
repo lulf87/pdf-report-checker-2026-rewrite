@@ -15,6 +15,7 @@ from app.application.codex_audit_options import CodexAuditOptions
 from app.application.codex_audit_scheduler import CodexAuditJob, CodexAuditScheduler
 from app.application.ptr_codex_evidence_builder import PtrCodexEvidenceBuilder
 from app.application.ptr_comparison_explanation import build_ptr_comparison_details
+from app.application.report_page_texts import report_page_text_by_page
 from app.application.task_service import TaskService
 from app.domain.codex_review import CodexReviewError, CodexReviewRequest, CodexReviewResult, CodexReviewStatus
 from app.domain.evidence_package import EvidencePackage
@@ -291,6 +292,7 @@ class PTRCompareUseCase:
         ptr_doc = self.ptr_extractor.extract(ptr_pdf)
         report_doc = self._build_report_document(report_pdf)
         report_scope = self._report_inspection_scope(report_doc)
+        page_text_by_page = report_page_text_by_page(report_doc)
 
         scope_texts = [report_scope.source_text] if report_scope.source_text else self._inspection_scope_texts(report_doc)
         report_clause_numbers = self._report_clause_numbers(report_doc.inspection_items)
@@ -329,6 +331,7 @@ class PTRCompareUseCase:
                 report_doc.inspection_items,
                 clauses=direct_compare_clauses,
                 task_id=task_id,
+                page_text_by_page=page_text_by_page,
             )
         )
         report_scope_check_result = check_report_scope_consistency(

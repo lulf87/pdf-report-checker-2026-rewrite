@@ -868,6 +868,144 @@ def test_ptr_compare_scope_aware_1539_binds_split_values_from_group_clause_windo
     assert report_atomic["2.2.6:max_energy"].report_page == 101
 
 
+def test_ptr_compare_scope_aware_1539_uses_report_page_text_fallback_for_incomplete_item_group(tmp_path: Path) -> None:
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(_scope_aware_report_items_with_incomplete_item_157_atomic_rows()),
+        extra_report_pages=_scope_aware_report_item_157_page_text_pages(),
+    )
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    group_match = items["2.2.3"]["report_matches"][0]
+    report_atomic = {row["atomic_id"]: row for row in group_match["report_atomic_results"]}
+
+    full_text = report_atomic["2.2.3:rise_time:pf_reversible"]["diagnostics"][0]["full_group_text_excerpt"]
+    for expected in ("430", "455", "260", "205", "159"):
+        assert expected in full_text
+        assert expected in group_match["test_result"]
+
+    rise_rows = {row["atomic_id"]: row for row in items["2.2.3"]["atomic_comparison_rows"]}
+    assert rise_rows["2.2.3:rise_time:pulse3"]["actual"] == "430"
+    assert rise_rows["2.2.3:rise_time:pulse3"]["status"] == "match"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["actual"] == "455"
+    assert rise_rows["2.2.3:rise_time:pf_reversible"]["status"] == "match"
+    assert "430" in rise_rows["2.2.3:rise_time:pf_reversible"]["source_text"]
+    assert "455" in rise_rows["2.2.3:rise_time:pf_reversible"]["source_text"]
+
+    fall_rows = {row["atomic_id"]: row for row in items["2.2.4"]["atomic_comparison_rows"]}
+    assert fall_rows["2.2.4:fall_time:pulse3"]["actual"] == "260"
+    assert fall_rows["2.2.4:fall_time:pulse3"]["status"] == "match"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["actual"] == "205"
+    assert fall_rows["2.2.4:fall_time:pf_reversible"]["status"] == "match"
+    assert "260" in fall_rows["2.2.4:fall_time:pf_reversible"]["source_text"]
+    assert "205" in fall_rows["2.2.4:fall_time:pf_reversible"]["source_text"]
+
+    energy_rows = {row["atomic_id"]: row for row in items["2.2.6"]["atomic_comparison_rows"]}
+    assert energy_rows["2.2.6:max_energy"]["actual"] == "159"
+    assert energy_rows["2.2.6:max_energy"]["status"] == "match"
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    unresolved_atomic_ids = {finding.metadata.get("atomic_id") for finding in ptr_table_result.findings}
+    assert "2.2.3:rise_time:pf_reversible" not in unresolved_atomic_ids
+    assert "2.2.4:fall_time:pulse3" not in unresolved_atomic_ids
+    assert "2.2.4:fall_time:pf_reversible" not in unresolved_atomic_ids
+    assert "2.2.6:max_energy" not in unresolved_atomic_ids
+    assert details["confirmed_errors_count"] == 0
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_ptr_compare_scope_aware_1539_expands_waveform_table_from_report_page_text(tmp_path: Path) -> None:
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        extra_report_pages=_scope_aware_report_item_157_page_text_pages(),
+    )
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    waveform_item = items["2.2.2"]
+    waveform_rows = {row["atomic_id"]: row for row in waveform_item["atomic_comparison_rows"]}
+
+    assert waveform_item["coverage_status"] == "covered_passed"
+    assert waveform_item["final_status"] == "passed"
+    assert waveform_rows
+    assert {row["table_key"] for row in waveform_rows.values()} == {"2.2.2:表6:波形参数"}
+    assert set(waveform_rows) == {
+        "2.2.2:pulse_count:pulse3",
+        "2.2.2:pulse_count:pf_reversible",
+        "2.2.2:pulse_group_count:pulse3",
+        "2.2.2:pulse_group_count:pf_reversible",
+        "2.2.2:pulse_group_interval:pulse3",
+        "2.2.2:pulse_group_interval:pf_reversible",
+        "2.2.2:pulse_pair_interval:pulse3",
+        "2.2.2:pulse_pair_interval:pf_reversible",
+        "2.2.2:pulse_width:pulse3",
+        "2.2.2:pulse_width:pf_reversible",
+        "2.2.2:pulse_phase_interval:pulse3",
+        "2.2.2:pulse_phase_interval:pf_reversible",
+        "2.2.2:waveform_type:pulse3",
+        "2.2.2:waveform_type:pf_reversible",
+        "2.2.2:peak_ratio:pulse3",
+        "2.2.2:peak_ratio:pf_reversible",
+        "2.2.2:current_level:pulse3",
+        "2.2.2:current_level:pf_reversible",
+    }
+    assert waveform_rows["2.2.2:pulse_count:pulse3"]["actual"] == "1500"
+    assert waveform_rows["2.2.2:pulse_count:pulse3"]["status"] == "match"
+    assert waveform_rows["2.2.2:pulse_count:pf_reversible"]["actual"] == "1"
+    assert waveform_rows["2.2.2:pulse_group_count:pulse3"]["actual"] == "12"
+    assert waveform_rows["2.2.2:pulse_group_count:pf_reversible"]["actual"] == "1"
+    assert waveform_rows["2.2.2:pulse_group_interval:pulse3"]["actual"] == "210±1 msec"
+    assert waveform_rows["2.2.2:pulse_group_interval:pf_reversible"]["expected"] == "/"
+    assert waveform_rows["2.2.2:pulse_group_interval:pf_reversible"]["actual"] == "/"
+    assert waveform_rows["2.2.2:pulse_group_interval:pf_reversible"]["status"] == "not_applicable"
+    assert waveform_rows["2.2.2:pulse_pair_interval:pulse3"]["actual"] == "1.12msec±4μsec"
+    assert waveform_rows["2.2.2:pulse_pair_interval:pf_reversible"]["expected"] == "/"
+    assert waveform_rows["2.2.2:pulse_pair_interval:pf_reversible"]["actual"] == "/"
+    assert waveform_rows["2.2.2:pulse_pair_interval:pf_reversible"]["status"] == "not_applicable"
+    assert waveform_rows["2.2.2:pulse_width:pulse3"]["actual"] == "0.9μsec±20%"
+    assert waveform_rows["2.2.2:pulse_width:pf_reversible"]["actual"] == "0.9μsec±20%"
+    assert waveform_rows["2.2.2:pulse_phase_interval:pulse3"]["actual"] == "1μsec±20%"
+    assert waveform_rows["2.2.2:pulse_phase_interval:pf_reversible"]["actual"] == "1μsec±20%"
+    assert waveform_rows["2.2.2:waveform_type:pulse3"]["actual"] == "三相"
+    assert waveform_rows["2.2.2:waveform_type:pf_reversible"]["actual"] == "双相"
+    assert waveform_rows["2.2.2:peak_ratio:pulse3"]["actual"] == "5±20%"
+    assert waveform_rows["2.2.2:peak_ratio:pf_reversible"]["actual"] == "1±0.1"
+    assert waveform_rows["2.2.2:current_level:pulse3"]["actual"] == "1-100%"
+    assert waveform_rows["2.2.2:current_level:pf_reversible"]["actual"] == "1-100%"
+    assert all(row["status"] in {"match", "not_applicable"} for row in waveform_rows.values())
+    assert waveform_item["normalized_comparison"]["actual"]
+    assert "脉冲个数:1500" in waveform_item["normalized_comparison"]["actual"]
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    unresolved_atomic_ids = {finding.metadata.get("atomic_id") for finding in ptr_table_result.findings}
+    assert not any(str(atomic_id or "").startswith("2.2.2:") for atomic_id in unresolved_atomic_ids)
+    assert details["confirmed_errors_count"] == 0
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_ptr_compare_scope_aware_1539_fall_time_ignores_item_no_when_pf_reversible_value_follows_marker() -> None:
+    page_text_by_page = {
+        100: (
+            "续 157 2.2.4 脉冲下降时间 "
+            "PF Reversible 预设 205 ns "
+            "PULSE3 预设 260 ns "
+            "单项结论 符合"
+        )
+    }
+    groups = build_ptr_report_item_groups(_scope_aware_report_items_with_incomplete_item_157_atomic_rows())
+    group_157 = next(group for group in groups if group.item_no == "157")
+
+    report_atomic = {
+        result.atomic_id: result
+        for result in atomic_compare.build_report_atomic_results(group_157, page_text_by_page=page_text_by_page)
+    }
+
+    assert report_atomic["2.2.4:fall_time:pulse3"].actual == "260"
+    assert report_atomic["2.2.4:fall_time:pf_reversible"].actual == "205"
+    assert report_atomic["2.2.4:fall_time:pf_reversible"].actual != "157"
+
+
 def test_ptr_compare_atomic_unbound_generates_codex_required_finding_and_final_status(tmp_path: Path) -> None:
     audit_service = FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN)
 
@@ -1651,6 +1789,7 @@ def _run_scope_aware_usecase(
     report_extractor: ScopeAwareReportExtractor | None = None,
     inspection_table_extractor: ScopeAwareInspectionTableExtractor | None = None,
     codex_audit_service=None,
+    extra_report_pages: list[PdfPage] | None = None,
 ):
     if codex_audit_service is None:
         codex_audit_service = FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN)
@@ -1670,6 +1809,7 @@ def _run_scope_aware_usecase(
                     "202-2021 标准的内容"
                 ),
             ),
+            *(extra_report_pages or []),
         ],
     )
     usecase = PTRCompareUseCase(
@@ -2261,6 +2401,84 @@ def _scope_aware_report_items_with_clause_window_split_atomic_source() -> list[I
             continue
         items.append(item)
     return items
+
+
+def _scope_aware_report_items_with_incomplete_item_157_atomic_rows() -> list[InspectionItem]:
+    items: list[InspectionItem] = []
+    for item in _scope_aware_report_items():
+        raw = item.sequence_raw or ""
+        if raw.startswith("续") and "2.2.3" in (item.standard_requirement or ""):
+            items.append(
+                item.model_copy(
+                    update={
+                        "test_result": "430",
+                        "result_values": ["430"],
+                        "metadata": {
+                            "row_text": (
+                                "续 157 2.2.3 脉冲上升时间\n"
+                                "430 PULSE3 预设\n"
+                                "单项结论 符合"
+                            ),
+                        },
+                    }
+                )
+            )
+            continue
+        if raw.startswith("2.2.4"):
+            continue
+        items.append(item)
+    return items
+
+
+def _scope_aware_report_item_157_page_text_pages() -> list[PdfPage]:
+    return [
+        PdfPage(
+            page_number=99,
+            text=(
+                "157 2.2 心脏脉冲电场消融仪输出\n"
+                "2.2.1 心脏脉冲电场消融仪输出 电压：3333V（峰值） 检验结果 3375\n"
+                "电流：57A（峰值） 检验结果 59 单项结论 符合\n"
+                "2.2.2 心脏脉冲电场消融仪输出波形图和波形参数\n"
+                "表 6 波形参数\n"
+                "参数 PULSE3 预设 PF Reversible 预设\n"
+                "脉冲个数 1500 1\n"
+                "脉冲组数 12 1\n"
+                "脉冲组间隔 210±1 msec /\n"
+                "脉冲对间隔 1.12msec±4μsec /\n"
+                "脉冲宽度 0.9μsec±20% 0.9μsec±20%\n"
+                "脉冲相间隔 1μsec±20% 1μsec±20%\n"
+                "波形类型 三相 双相\n"
+                "正峰值/负峰值 5±20% 1±0.1\n"
+                "电流水平 1-100% 1-100%\n"
+                "单项结论 符合"
+            ),
+        ),
+        PdfPage(
+            page_number=100,
+            text=(
+                "续 157\n"
+                "2.2.3 脉冲上升时间\n"
+                "430 PULSE3 预设\n"
+                "455 PFReversi\n"
+                "ble 预设\n"
+                "2.2.4 脉冲下降时间\n"
+                "260 PULSE3 预设\n"
+                "205 PFReversible 预设\n"
+                "单项结论 符合"
+            ),
+        ),
+        PdfPage(
+            page_number=101,
+            text=(
+                "续 157\n"
+                "2.2.5 脉冲衰减 检验结果 1%\n"
+                "2.2.6 最大输出能量\n"
+                "单个脉冲最大输出能量应小于 258mJ。\n"
+                "检验结果 159 mJ\n"
+                "2.2.7 保护功能 温度超限保护和过流保护功能符合要求。"
+            ),
+        ),
+    ]
 
 
 def _scope_aware_report_items_with_unbound_energy() -> list[InspectionItem]:
