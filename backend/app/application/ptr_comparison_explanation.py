@@ -109,14 +109,19 @@ def _comparison_item(
     atomic_requirements = build_atomic_requirements(clause, ptr_doc)
     atomic_rows = build_atomic_comparison_rows(clause, ptr_doc, report_matches, page_text_by_page=page_text_by_page)
     selected_finding = _primary_finding(findings)
+    display_finding = selected_finding
     rule_status = _rule_status(findings)
     user_status = _user_facing_status(findings)
-    if selected_finding is None:
-        atomic_status = _status_from_atomic_rows(
-            atomic_rows,
-            report_matches=report_matches,
-            external_coverages=external_coverages,
-        )
+    atomic_status = _status_from_atomic_rows(
+        atomic_rows,
+        report_matches=report_matches,
+        external_coverages=external_coverages,
+    )
+    if _atomic_rows_override_refuted_missing_table(selected_finding, atomic_rows) and atomic_status is not None:
+        display_finding = None
+        rule_status = atomic_status
+        user_status = atomic_status
+    elif selected_finding is None:
         if atomic_status is not None:
             rule_status = atomic_status
             user_status = atomic_status
@@ -140,7 +145,7 @@ def _comparison_item(
             report_matches=report_matches,
             external_coverage=external_coverage,
             atomic_rows=atomic_rows,
-            finding=selected_finding,
+            finding=display_finding,
             ptr_doc=ptr_doc,
             report_doc=report_doc,
         ),
@@ -150,7 +155,7 @@ def _comparison_item(
         final_status=final_status,
         reason=_reason(
             clause=clause,
-            finding=selected_finding,
+            finding=display_finding,
             report_matches=report_matches,
             external_coverages=external_coverages,
             atomic_rows=atomic_rows,
@@ -402,6 +407,17 @@ def _status_from_atomic_rows(
     if report_matches:
         return PTRUserFacingStatus.COVERAGE_ONLY_NEEDS_REVIEW
     return None
+
+
+def _atomic_rows_override_refuted_missing_table(
+    finding: Finding | None,
+    atomic_rows: list[PTRAtomicComparisonRow],
+) -> bool:
+    if finding is None or not atomic_rows:
+        return False
+    if finding.code not in MISSING_CODES:
+        return False
+    return finding.metadata.get("final_status") == "refuted" or finding.metadata.get("codex_verdict") == "refute"
 
 
 def _normalized_comparison(

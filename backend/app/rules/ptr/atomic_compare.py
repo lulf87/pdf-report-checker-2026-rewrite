@@ -121,6 +121,23 @@ WAVEFORM_TABLE_PARAMETERS: tuple[tuple[str, str], ...] = (
 )
 WAVEFORM_PARAMETER_SLUGS = dict(WAVEFORM_TABLE_PARAMETERS)
 WAVEFORM_PRESETS: tuple[tuple[str, str], ...] = (("pulse3", "PULSE3"), ("pf_reversible", "PF Reversible"))
+SOFTWARE_FUNCTION_REQUIREMENTS: tuple[tuple[str, str], ...] = (
+    ("射频消融仪", "功率监测"),
+    ("射频消融仪", "阻抗监测"),
+    ("射频消融仪", "温度监测"),
+    ("射频消融仪", "控制应用启动和停止"),
+    ("射频消融仪", "灌注泵流量监测"),
+    ("射频消融仪", "模式选择"),
+    ("射频消融仪", "接触质量监测"),
+    ("射频消融仪", "与心脏脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器、三维导航通信"),
+    ("射频消融仪", "参数显示与控制"),
+    ("射频消融仪", "显示能量输送状态"),
+    ("射频消融仪", "显示消融图"),
+    ("射频消融仪", "预设选择"),
+    ("心脏脉冲电场消融仪", "阻抗监测"),
+    ("心脏脉冲电场消融仪", "温度监测"),
+    ("心脏脉冲电场消融仪", "与射频消融仪、导管接口单元CIU通信"),
+)
 
 
 def build_atomic_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtomicRequirement]:
@@ -149,6 +166,14 @@ def build_atomic_comparison_rows(
         bound_results = _report_results_for_requirement(requirement, report_atomic_results)
         if bound_results:
             rows.extend(_comparison_row(requirement, group, result) for result in bound_results)
+            continue
+        software_result = (
+            _software_result_for_requirement(requirement, group, page_text_by_page=page_text_by_page)
+            if requirement.source == "ptr_table" and requirement.clause_id == "2.6"
+            else None
+        )
+        if software_result is not None:
+            rows.append(_comparison_row(requirement, group, software_result))
             continue
         rows.append(_comparison_row(requirement, group))
     return rows
@@ -358,6 +383,10 @@ def _table_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtom
     clause_number = str(clause.number)
     table = table_for_clause(clause, ptr_doc)
     if table is None or table.canonical_table is None:
+        if clause_number == "2.2.2":
+            return _fallback_waveform_table_requirements(clause_number)
+        if clause_number == "2.6":
+            return _fallback_software_table_requirements(clause_number)
         return []
     if clause_number == "2.2.2":
         return _waveform_table_requirements(clause_number, table)
@@ -414,6 +443,52 @@ def _waveform_table_requirements(clause_number: str, table: PTRTable) -> list[PT
                 )
             )
     return requirements
+
+
+def _fallback_waveform_table_requirements(clause_number: str) -> list[PTRAtomicRequirement]:
+    requirements: list[PTRAtomicRequirement] = []
+    for parameter_name, parameter_slug in WAVEFORM_TABLE_PARAMETERS:
+        for preset_slug, preset_label in WAVEFORM_PRESETS:
+            expected_text = _scope_waveform_expected_values(parameter_name).get(preset_slug, "")
+            requirements.append(
+                PTRAtomicRequirement(
+                    atomic_id=f"{clause_number}:{parameter_slug}:{preset_slug}",
+                    clause_id=clause_number,
+                    label=parameter_name,
+                    expected_text=expected_text,
+                    source="ptr_table",
+                    table_number="6",
+                    table_title="波形参数",
+                    table_key=f"{clause_number}:表6:波形参数",
+                    metadata={
+                        "parameter_name": parameter_name,
+                        "preset": preset_label,
+                        "preset_slug": preset_slug,
+                    },
+                )
+            )
+    return requirements
+
+
+def _fallback_software_table_requirements(clause_number: str) -> list[PTRAtomicRequirement]:
+    return [
+        PTRAtomicRequirement(
+            atomic_id=f"{clause_number}:table6:{_slug(f'{component} - {function_name}')}",
+            clause_id=clause_number,
+            label=f"{component} - {function_name}",
+            expected_text="要求=具备",
+            source="ptr_table",
+            table_number="6",
+            table_title="软件功能",
+            table_key=f"{clause_number}:表6:软件功能",
+            metadata={
+                "parameter_name": function_name,
+                "dimensions": {"组件": component},
+                "values": {"要求": "具备"},
+            },
+        )
+        for component, function_name in SOFTWARE_FUNCTION_REQUIREMENTS
+    ]
 
 
 def _comparison_row(
@@ -473,7 +548,7 @@ def _actual_for_requirement(requirement: PTRAtomicRequirement, group: Inspection
         if _is_not_applicable_requirement(requirement):
             return "/", _first_page(group), item_no
         if requirement.clause_id == "2.6":
-            return _group_result_text(group), _first_page(group), item_no
+            return None, _first_page(group), item_no
         return None, _first_page(group), item_no
 
     for row in group.rows:
@@ -541,7 +616,13 @@ def _status_and_reason(
             return "not_applicable", "PTR 表格要求为 /，该预设不适用。"
         if requirement.clause_id == "2.6":
             item_no = (group.display_item_no or group.item_no) if group else "未编号"
-            return "needs_review", f"报告序号 {item_no} 仅有软件功能总项，表格功能明细需复核。"
+            if _is_report_not_applicable_text(actual):
+                return "not_applicable", "报告软件功能表显示该组件功能不适用。"
+            if actual and "符合" in actual and "不符合" not in actual:
+                return "match", "报告软件功能表显示符合要求。"
+            if actual and "不符合" in actual:
+                return "mismatch", f"报告软件功能表显示 {actual}。"
+            return "needs_review", f"报告序号 {item_no} 未稳定展开表格功能明细需复核。"
         if actual is None:
             item_no = (group.display_item_no or group.item_no) if group else "未编号"
             return "needs_review", f"报告序号 {item_no} 未稳定展开表格参数结果，需复核。"
@@ -801,6 +882,93 @@ def _waveform_table_atomic_results(
                 )
             )
     return results
+
+
+def _software_result_for_requirement(
+    requirement: PTRAtomicRequirement,
+    group: InspectionItemGroup | None,
+    *,
+    page_text_by_page: Mapping[int, str] | None = None,
+) -> PTRReportAtomicResult | None:
+    if group is None:
+        return None
+    group_text = _group_full_text(group, page_text_by_page=page_text_by_page)
+    window = _software_requirement_window(group_text, requirement)
+    actual = _software_actual_from_window(window)
+    if actual is None:
+        return None
+    item_no = group.display_item_no or group.item_no
+    return _report_atomic_result(
+        atomic_id=requirement.atomic_id,
+        clause_id=requirement.clause_id,
+        label=requirement.label,
+        actual=actual,
+        item_no=item_no,
+        page=_page_for_software_requirement(group, requirement, page_text_by_page=page_text_by_page),
+        source_text=window,
+        confidence="high",
+        method="group_page_text_software_function",
+        full_group_text=group_text,
+    )
+
+
+def _software_requirement_window(group_text: str, requirement: PTRAtomicRequirement) -> str:
+    parameter_name = str(requirement.metadata.get("parameter_name") or requirement.label or "")
+    dimensions = requirement.metadata.get("dimensions") if isinstance(requirement.metadata, dict) else {}
+    component = str(dimensions.get("组件") or "") if isinstance(dimensions, dict) else ""
+    parameter_key = _compact_for_match(parameter_name)
+    component_key = _compact_for_match(component)
+    best_line = ""
+    for line in str(group_text or "").splitlines():
+        line_key = _compact_for_match(line)
+        if not parameter_key or parameter_key not in line_key:
+            continue
+        if component_key and component_key not in line_key:
+            continue
+        best_line = line.strip()
+        break
+    if best_line:
+        return best_line
+    label_key = _compact_for_match(requirement.label)
+    for line in str(group_text or "").splitlines():
+        if label_key and label_key in _compact_for_match(line):
+            return line.strip()
+    return ""
+
+
+def _software_actual_from_window(window: str) -> str | None:
+    text = str(window or "")
+    if not text.strip():
+        return None
+    if "不符合" in text:
+        return "不符合"
+    if "符合要求" in text or "符合" in text:
+        return "符合要求"
+    if re.search(r"[-—－]{2,}|／|(?<!\S)/(?!\S)", text):
+        return "——"
+    if "不适用" in text:
+        return "不适用"
+    return None
+
+
+def _page_for_software_requirement(
+    group: InspectionItemGroup,
+    requirement: PTRAtomicRequirement,
+    *,
+    page_text_by_page: Mapping[int, str] | None = None,
+) -> int | None:
+    if not page_text_by_page:
+        return _first_page(group)
+    parameter_name = str(requirement.metadata.get("parameter_name") or requirement.label or "")
+    dimensions = requirement.metadata.get("dimensions") if isinstance(requirement.metadata, dict) else {}
+    component = str(dimensions.get("组件") or "") if isinstance(dimensions, dict) else ""
+    parameter_key = _compact_for_match(parameter_name)
+    component_key = _compact_for_match(component)
+    for page_number in group.pages:
+        page_key = _compact_for_match(page_text_by_page.get(page_number) or "")
+        if parameter_key and parameter_key in page_key and (not component_key or component_key in page_key):
+            return page_number
+    return _first_page(group)
 
 
 def _group_full_text(
@@ -1217,6 +1385,11 @@ def _is_not_applicable_text(value: str | None) -> bool:
     return str(value or "").strip() in {"/", "／", "-", "—", "——"}
 
 
+def _is_report_not_applicable_text(value: str | None) -> bool:
+    text = str(value or "").strip()
+    return _is_not_applicable_text(text) or text in {"不适用", "NA", "N/A"}
+
+
 def _table_value_matches(expected: str | None, actual: str | None) -> bool:
     expected_text = _normalize_table_value(expected)
     actual_text = _normalize_table_value(actual)
@@ -1229,6 +1402,12 @@ def _normalize_table_value(value: str | None) -> str:
     text = text.replace("％", "%").replace("－", "-").replace("～", "-")
     text = re.sub(r"\s+", "", text)
     return text.lower()
+
+
+def _compact_for_match(value: str | None) -> str:
+    text = str(value or "")
+    text = text.replace("（", "(").replace("）", ")")
+    return re.sub(r"[\s,，、:：;；/／\\()（）-]+", "", text).lower()
 
 
 def _invalid_numeric_actual(actual: str | None, *, item_no: str | None) -> bool:

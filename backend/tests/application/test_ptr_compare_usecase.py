@@ -205,6 +205,46 @@ class TrackingTableCompare:
         return []
 
 
+class RefutedMissingTableCompare:
+    def __init__(self, clause_numbers: set[str]) -> None:
+        self.clause_numbers = set(clause_numbers)
+
+    def __call__(self, ptr_doc: PTRDocument, *, clauses: list[PTRClause] | None = None, task_id: str) -> list[Finding]:
+        del ptr_doc
+        findings: list[Finding] = []
+        for clause in clauses or []:
+            clause_number = str(clause.number)
+            if clause_number not in self.clause_numbers:
+                continue
+            evidence = Evidence(
+                id=f"{task_id}-missing-table-{clause_number}",
+                source_type=SourceType.PTR,
+                location=clause.location,
+                raw_text=f"{clause_number} {clause.title or ''}\n{clause.body_text or ''}",
+                method=EvidenceMethod.PDF_TEXT,
+            )
+            findings.append(
+                Finding(
+                    id=f"{task_id}:PTR_TABLE_MISSING:{clause_number}:table6",
+                    task_id=task_id,
+                    check_id="PTR_TABLE",
+                    severity=FindingSeverity.WARN,
+                    code="PTR_TABLE_MISSING",
+                    message=f"PTR 条款 {clause_number} 引用表 6，但规则初筛未找到可比对表格。",
+                    location=clause.location,
+                    expected="表6",
+                    actual=None,
+                    evidence=[evidence],
+                    metadata={
+                        "clause_number": clause_number,
+                        "table_number": "6",
+                        "codex_required": True,
+                    },
+                )
+            )
+        return findings
+
+
 class FakePtrCodexAuditService:
     def __init__(
         self,
@@ -981,6 +1021,71 @@ def test_ptr_compare_scope_aware_1539_expands_waveform_table_from_report_page_te
     unresolved_atomic_ids = {finding.metadata.get("atomic_id") for finding in ptr_table_result.findings}
     assert not any(str(atomic_id or "").startswith("2.2.2:") for atomic_id in unresolved_atomic_ids)
     assert details["confirmed_errors_count"] == 0
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_ptr_compare_scope_aware_1539_table_atomic_rows_override_refuted_missing_table_candidates(tmp_path: Path) -> None:
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        codex_audit_service=FakePtrCodexAuditService(verdict=CodexReviewVerdict.REFUTE),
+        table_reference_compare=RefutedMissingTableCompare({"2.2.2", "2.6"}),
+        extra_report_pages=_scope_aware_report_item_157_and_159_page_text_pages(),
+    )
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+
+    waveform_item = items["2.2.2"]
+    waveform_rows = waveform_item["atomic_comparison_rows"]
+    assert waveform_rows
+    assert waveform_item["coverage_status"] == "covered_passed"
+    assert waveform_item["final_status"] == "passed"
+    assert waveform_item["normalized_comparison"]["actual"]
+    assert waveform_item["coverage_status"] != "refuted"
+    assert "候选问题已排除" not in waveform_item["reason"]
+    assert {row["table_key"] for row in waveform_rows} == {"2.2.2:表6:波形参数"}
+
+    software_item = items["2.6"]
+    software_rows = {row["atomic_id"]: row for row in software_item["atomic_comparison_rows"]}
+    assert software_rows
+    assert software_item["coverage_status"] == "covered_passed"
+    assert software_item["final_status"] == "passed"
+    assert software_item["normalized_comparison"]["actual"]
+    assert software_item["coverage_status"] != "refuted"
+    assert "候选问题已排除" not in software_item["reason"]
+    assert {row["table_key"] for row in software_rows.values()} == {"2.6:表6:软件功能"}
+    communication_row = next(
+        row
+        for row in software_rows.values()
+        if row["label"] == "心脏脉冲电场消融仪 - 与射频消融仪、导管接口单元CIU通信"
+    )
+    assert communication_row["actual"] == "符合要求"
+    assert communication_row["status"] == "match"
+    assert communication_row["report_item_no"] == "159"
+    assert communication_row["report_page"] == 99
+
+    energy_row = {
+        row["atomic_id"]: row
+        for row in items["2.2.6"]["atomic_comparison_rows"]
+    }["2.2.6:max_energy"]
+    assert energy_row["label"] == "单个脉冲最大输出能量"
+    assert energy_row["expected"] == "<258 mJ"
+    assert energy_row["actual"] == "159"
+    assert energy_row["unit"] == "mJ"
+    assert energy_row["status"] == "match"
+    assert energy_row["reason"] == "159 < 258"
+    assert energy_row["report_item_no"] == "157"
+    assert energy_row["report_page"] == 101
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    refuted_missing = [
+        finding
+        for finding in ptr_table_result.findings
+        if finding.code == "PTR_TABLE_MISSING" and finding.metadata.get("final_status") == "refuted"
+    ]
+    assert {finding.metadata["clause_number"] for finding in refuted_missing} == {"2.2.2", "2.6"}
+    assert details["confirmed_errors_count"] == 0
+    assert details["manual_review_required_count"] == 0
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
 
@@ -1788,6 +1893,7 @@ def _run_scope_aware_usecase(
     *,
     report_extractor: ScopeAwareReportExtractor | None = None,
     inspection_table_extractor: ScopeAwareInspectionTableExtractor | None = None,
+    table_reference_compare=None,
     codex_audit_service=None,
     extra_report_pages: list[PdfPage] | None = None,
 ):
@@ -1819,7 +1925,7 @@ def _run_scope_aware_usecase(
         ptr_extractor=FakePTRExtractor(_scope_aware_ptr_document()),
         report_extractor=report_extractor or ScopeAwareReportExtractor(),
         inspection_table_extractor=inspection_table_extractor or ScopeAwareInspectionTableExtractor(),
-        table_reference_compare=TrackingTableCompare(),
+        table_reference_compare=table_reference_compare or TrackingTableCompare(),
         codex_audit_service=codex_audit_service,
     )
 
@@ -2478,6 +2584,25 @@ def _scope_aware_report_item_157_page_text_pages() -> list[PdfPage]:
                 "2.2.7 保护功能 温度超限保护和过流保护功能符合要求。"
             ),
         ),
+    ]
+
+
+def _scope_aware_report_item_157_and_159_page_text_pages() -> list[PdfPage]:
+    pages = _scope_aware_report_item_157_page_text_pages()
+    software_table_text = (
+        "\n159 2.6 软件功能\n"
+        "表 6 软件功能\n"
+        "组件 功能 报告结果\n"
+        "射频消融仪 功率监测 ——\n"
+        "射频消融仪 阻抗监测 ——\n"
+        "心脏脉冲电场消融仪 阻抗监测 符合要求\n"
+        "心脏脉冲电场消融仪 温度监测 符合要求\n"
+        "心脏脉冲电场消融仪 与射频消融仪、导管接口单元CIU通信 符合要求\n"
+        "单项结论 符合"
+    )
+    return [
+        pages[0].model_copy(update={"text": f"{pages[0].text}{software_table_text}"}),
+        *pages[1:],
     ]
 
 
