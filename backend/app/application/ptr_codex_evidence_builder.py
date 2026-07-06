@@ -41,7 +41,7 @@ from app.rules.ptr.report_item_grouping import (
     ptr_group_standard_requirement,
     ptr_group_test_result,
 )
-from app.rules.ptr.atomic_compare import build_report_atomic_results
+from app.rules.ptr.atomic_compare import _clause_window, _group_full_text, build_report_atomic_results
 
 
 OLD_PROJECT_ROOT = "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.4.13"
@@ -305,8 +305,31 @@ class PtrCodexEvidenceBuilder:
     def _add_item(self, items_by_ref: dict[str, EvidenceItem], item: EvidenceItem, refs: list[str]) -> None:
         if item.ref_id not in items_by_ref:
             items_by_ref[item.ref_id] = item
+        else:
+            items_by_ref[item.ref_id] = self._merge_evidence_item(items_by_ref[item.ref_id], item)
         if item.ref_id not in refs:
             refs.append(item.ref_id)
+
+    def _merge_evidence_item(self, existing: EvidenceItem, incoming: EvidenceItem) -> EvidenceItem:
+        existing_group = _inspection_group_payload(existing)
+        incoming_group = _inspection_group_payload(incoming)
+        if existing_group is None or incoming_group is None:
+            return existing
+
+        existing_windows = dict(existing_group.get("clause_windows") or {})
+        incoming_windows = dict(incoming_group.get("clause_windows") or {})
+        merged_group = {
+            **existing_group,
+            "clause_windows": {**existing_windows, **incoming_windows},
+        }
+        return existing.model_copy(
+            update={
+                "structured": {
+                    **(existing.structured or {}),
+                    "inspection_item_group": merged_group,
+                }
+            }
+        )
 
     def _finding_item(self, finding: Finding) -> EvidenceItem:
         return EvidenceItem(
@@ -499,13 +522,14 @@ class PtrCodexEvidenceBuilder:
         if group is None:
             return None
         item_no = group.display_item_no or group.item_no
+        clause_number = str(finding.metadata.get("clause_number") or "")
         return EvidenceItem(
             ref_id=f"report_inspection_group:{self._sanitize_text(item_no)}",
             source_type=EvidenceSourceType.TABLE,
             title=self._sanitize_text(f"Report inspection item group {item_no}"),
             structured=self._safe_payload(
                 {
-                    "inspection_item_group": self._report_inspection_group_summary(group),
+                    "inspection_item_group": self._report_inspection_group_summary(group, clause_number=clause_number),
                 }
             ),
             page_number=group.pages[0] if group.pages else None,
@@ -529,12 +553,18 @@ class PtrCodexEvidenceBuilder:
             return ptr_group_for_clause(clause_number, groups)
         return None
 
-    def _report_inspection_group_summary(self, group: InspectionItemGroup) -> dict[str, Any]:
+    def _report_inspection_group_summary(self, group: InspectionItemGroup, *, clause_number: str | None = None) -> dict[str, Any]:
+        full_group_text = _group_full_text(group)
+        clause_window_text = _clause_window(full_group_text, clause_number) if clause_number else ""
         return {
             "item_no": group.item_no,
             "display_item_no": group.display_item_no,
             "pages": list(group.pages),
             "group_row_count": len(group.rows),
+            "full_group_text": full_group_text,
+            "clause_window_clause_number": clause_number or None,
+            "clause_window_text": clause_window_text,
+            "clause_windows": {clause_number: clause_window_text} if clause_number else {},
             "standard_requirement": ptr_group_standard_requirement(group),
             "test_result": ptr_group_test_result(group),
             "single_conclusion": ptr_group_single_conclusion(group),
@@ -732,6 +762,12 @@ class PtrCodexEvidenceBuilder:
         sanitized = sanitized.replace("..\\", REDACTED_PATH)
         sanitized = re.sub(r"/Users/[^\s\"'，,；;\)\]\}]+", REDACTED_PATH, sanitized)
         return sanitized
+
+
+def _inspection_group_payload(item: EvidenceItem) -> dict[str, Any] | None:
+    structured = item.structured if isinstance(item.structured, dict) else {}
+    group = structured.get("inspection_item_group")
+    return group if isinstance(group, dict) else None
 
 
 def _coerce_canonical_tables(value: Any) -> list[CanonicalTable]:

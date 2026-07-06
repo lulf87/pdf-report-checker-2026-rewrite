@@ -121,6 +121,7 @@ def ptr_group_test_results(group: InspectionItemGroup) -> list[str]:
             values.append(row.test_result)
         if _looks_like_shifted_parameter_row(row) and _is_result_like(row.item_name):
             values.append(row.item_name or "")
+        values.extend(_preset_payload_result_values(row))
     return _unique_non_empty(values)
 
 
@@ -226,6 +227,32 @@ def _is_result_like(value: str | None) -> bool:
     if not text:
         return False
     return bool(re.fullmatch(r"[-+]?\d+(?:\.\d+)?(?:\s*[A-Za-zμΩ°/%]+)?", text) or "符合" in text)
+
+
+def _preset_payload_result_values(item: InspectionItem) -> list[str]:
+    values: list[str] = []
+    context = " ".join(
+        str(value or "")
+        for value in [
+            item.standard_clause,
+            item.standard_requirement,
+            _metadata_text(item, "row_text"),
+            _metadata_text(item, "source_text"),
+            _metadata_text(item, "table_row_text"),
+            _metadata_text(item, "combined_row_text"),
+        ]
+    )
+    if _is_result_like(item.item_name) and re.search(r"PULSE\s*3|PULSE3|PF\s*Reversi\s*ble|PFReversi\s*ble|PF\s*Reversible|PFReversible", context, re.IGNORECASE):
+        values.append(str(item.item_name or ""))
+
+    source_text = " ".join([context, str(item.item_name or "")])
+    preset_pattern = r"PULSE\s*3|PULSE3|PF\s*Reversi\s*ble|PFReversi\s*ble|PF\s*Reversible|PFReversible"
+    for pattern in (
+        re.compile(rf"([-+]?\d+(?:\.\d+)?)\s*(?:ns|mJ|%|V|A)?\s*(?:{preset_pattern})\s*预\s*设", re.IGNORECASE),
+        re.compile(rf"(?:{preset_pattern})\s*预\s*设\D{{0,80}}?(?:检验)?结果\s*[:：]?\s*([-+]?\d+(?:\.\d+)?)", re.IGNORECASE),
+    ):
+        values.extend(match.group(1) for match in pattern.finditer(source_text))
+    return _unique_non_empty(values)
 
 
 def _report_clause_covers_ptr_clause(ptr_clause_number: str, report_clause_number: str) -> bool:

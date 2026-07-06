@@ -32,22 +32,42 @@ TEXT_REQUIREMENTS: dict[str, list[dict[str, Any]]] = {
     ],
     "2.2.3": [
         {
-            "suffix": "rise_time",
+            "suffix": "rise_time:pulse3",
             "label": "脉冲上升时间",
             "expected_text": "不超过 700ns",
             "expected_value": 700,
             "operator": "<=",
             "unit": "ns",
+            "preset": "PULSE3",
+        },
+        {
+            "suffix": "rise_time:pf_reversible",
+            "label": "脉冲上升时间",
+            "expected_text": "不超过 700ns",
+            "expected_value": 700,
+            "operator": "<=",
+            "unit": "ns",
+            "preset": "PF Reversible",
         }
     ],
     "2.2.4": [
         {
-            "suffix": "fall_time",
+            "suffix": "fall_time:pulse3",
             "label": "脉冲下降时间",
             "expected_text": "不超过 700ns",
             "expected_value": 700,
             "operator": "<=",
             "unit": "ns",
+            "preset": "PULSE3",
+        },
+        {
+            "suffix": "fall_time:pf_reversible",
+            "label": "脉冲下降时间",
+            "expected_text": "不超过 700ns",
+            "expected_value": 700,
+            "operator": "<=",
+            "unit": "ns",
+            "preset": "PF Reversible",
         }
     ],
     "2.2.5": [
@@ -123,6 +143,8 @@ def build_report_atomic_results(group: InspectionItemGroup | None) -> list[PTRRe
         return []
     results: list[PTRReportAtomicResult] = []
     item_no = group.display_item_no or group.item_no
+    group_text = _group_full_text(group)
+    results.extend(_group_window_atomic_results(group, group_text=group_text, item_no=item_no))
 
     for row in group.rows:
         row_text = _row_text(row)
@@ -301,6 +323,7 @@ def _text_requirement(clause_number: str, spec: dict[str, Any]) -> PTRAtomicRequ
         operator=spec.get("operator"),
         unit=spec.get("unit"),
         source="ptr_text",
+        metadata={"preset": spec["preset"]} if spec.get("preset") else {},
     )
 
 
@@ -403,9 +426,9 @@ def _row_matches_requirement(requirement: PTRAtomicRequirement, row_text: str) -
         return "电压" in compact
     if atomic_id.endswith(":current"):
         return "电流" in compact
-    if atomic_id.endswith(":rise_time"):
+    if ":rise_time" in atomic_id:
         return "2.2.3" in compact or "上升" in compact
-    if atomic_id.endswith(":fall_time"):
+    if ":fall_time" in atomic_id:
         return "2.2.4" in compact or "下降" in compact or "脉冲宽度" in compact
     if atomic_id.endswith(":decay"):
         return "2.2.5" in compact or "衰减" in compact
@@ -434,7 +457,7 @@ def _row_actual(requirement: PTRAtomicRequirement, row) -> str | None:
 
 def _actual_subset(requirement: PTRAtomicRequirement, value: str) -> str:
     text = str(value or "").strip()
-    if requirement.atomic_id.endswith(":fall_time"):
+    if ":fall_time" in requirement.atomic_id:
         numbers = re.findall(r"\d+(?:\.\d+)?", text)
         return " / ".join(numbers[:2]) if len(numbers) >= 2 else text
     return text
@@ -534,8 +557,76 @@ def _report_atomic_result(
     )
 
 
+def _group_window_atomic_results(
+    group: InspectionItemGroup,
+    *,
+    group_text: str,
+    item_no: str | None,
+) -> list[PTRReportAtomicResult]:
+    results: list[PTRReportAtomicResult] = []
+    for clause_id, atomic_prefix, label, unit, method in (
+        ("2.2.3", "2.2.3:rise_time", "脉冲上升时间", "ns", "group_clause_window_rise_time"),
+        ("2.2.4", "2.2.4:fall_time", "脉冲下降时间", "ns", "group_clause_window_fall_time"),
+    ):
+        window = _clause_window(group_text, clause_id)
+        values_by_preset = _preset_values_by_slug_from_text(window)
+        if not values_by_preset:
+            continue
+        results.extend(
+            _preset_results(
+                values_by_preset,
+                atomic_prefix=atomic_prefix,
+                clause_id=clause_id,
+                label=label,
+                unit=unit,
+                item_no=item_no,
+                page=_page_for_clause_window(group, clause_id),
+                source_text=window,
+                method=method,
+            )
+        )
+
+    decay_window = _clause_window(group_text, "2.2.5")
+    decay_actual = _numeric_result_from_window(decay_window, expected=10)
+    if decay_actual:
+        results.append(
+            _report_atomic_result(
+                atomic_id="2.2.5:decay",
+                clause_id="2.2.5",
+                label="脉冲衰减",
+                actual=decay_actual,
+                unit="%",
+                item_no=item_no,
+                page=_page_for_clause_window(group, "2.2.5"),
+                source_text=decay_window,
+                confidence="high",
+                method="group_clause_window_decay",
+            )
+        )
+
+    energy_window = _clause_window(group_text, "2.2.6")
+    energy_actual = _numeric_result_from_window(energy_window, expected=258)
+    if energy_actual:
+        results.append(
+            _report_atomic_result(
+                atomic_id="2.2.6:max_energy",
+                clause_id="2.2.6",
+                label="单个脉冲最大输出能量",
+                actual=energy_actual,
+                unit="mJ",
+                item_no=item_no,
+                page=_page_for_clause_window(group, "2.2.6"),
+                source_text=energy_window,
+                confidence="high",
+                method="group_clause_window_max_energy",
+            )
+        )
+
+    return results
+
+
 def _preset_results(
-    values: Sequence[str],
+    values: Sequence[str] | dict[str, str],
     *,
     atomic_prefix: str,
     clause_id: str,
@@ -546,11 +637,16 @@ def _preset_results(
     source_text: str,
     method: str,
 ) -> list[PTRReportAtomicResult]:
-    cleaned = [_strip_unit(value) for value in values if _strip_unit(value)]
+    if isinstance(values, dict):
+        cleaned_by_preset = {key: _strip_unit(value) for key, value in values.items() if _strip_unit(value)}
+        cleaned = list(cleaned_by_preset.values())
+    else:
+        cleaned_by_preset = {}
+        cleaned = [_strip_unit(value) for value in values if _strip_unit(value)]
     presets = [("pulse3", "PULSE3"), ("pf_reversible", "PF Reversible")]
     results: list[PTRReportAtomicResult] = []
     for index, (preset_slug, preset_label) in enumerate(presets):
-        actual = cleaned[index] if index < len(cleaned) else None
+        actual = cleaned_by_preset.get(preset_slug) if cleaned_by_preset else (cleaned[index] if index < len(cleaned) else None)
         results.append(
             _report_atomic_result(
                 atomic_id=f"{atomic_prefix}:{preset_slug}",
@@ -568,6 +664,111 @@ def _preset_results(
             )
         )
     return results
+
+
+def _group_full_text(group: InspectionItemGroup) -> str:
+    values: list[str | None] = []
+    for row in _ordered_group_rows(group):
+        values.append(_row_full_text(row))
+    values.append(ptr_group_text(group))
+    return "\n".join(_unique_non_empty(values))
+
+
+def _clause_window(group_text: str, clause_number: str) -> str:
+    text = str(group_text or "")
+    if not text.strip():
+        return ""
+    start_match = _clause_header_pattern(clause_number).search(text)
+    if start_match is None:
+        return ""
+    end_index = len(text)
+    for next_clause in _next_clause_boundaries(clause_number):
+        next_match = _clause_header_pattern(next_clause).search(text, start_match.end())
+        if next_match is not None:
+            end_index = min(end_index, next_match.start())
+    return text[start_match.start() : end_index].strip()
+
+
+def _clause_header_pattern(clause_number: str) -> re.Pattern[str]:
+    parts = [re.escape(part) for part in str(clause_number).split(".")]
+    pattern = r"\s*\.\s*".join(parts)
+    return re.compile(rf"(?<!\d){pattern}(?!\s*\.\s*\d)")
+
+
+def _next_clause_boundaries(clause_number: str) -> list[str]:
+    explicit = {
+        "2.2.3": ["2.2.4"],
+        "2.2.4": ["2.2.5"],
+        "2.2.5": ["2.2.6"],
+        "2.2.6": ["2.2.7"],
+        "2.2.7.1": ["2.2.7.2"],
+    }
+    if clause_number in explicit:
+        return explicit[clause_number]
+    match = re.fullmatch(r"2\.2\.(\d+)", clause_number)
+    if match:
+        return [f"2.2.{int(match.group(1)) + 1}"]
+    match = re.fullmatch(r"2\.2\.7\.(\d+)", clause_number)
+    if match:
+        return [f"2.2.7.{int(match.group(1)) + 1}"]
+    return []
+
+
+def _ordered_group_rows(group: InspectionItemGroup):
+    return sorted(
+        group.rows,
+        key=lambda row: (
+            row.source_page or 0,
+            row.row_index_in_page if row.row_index_in_page is not None else 10**9,
+        ),
+    )
+
+
+def _row_full_text(row) -> str:
+    values = [
+        row.sequence_raw,
+        row.item_name,
+        row.standard_clause,
+        row.standard_requirement,
+        row.test_result,
+        row.conclusion,
+        row.remark,
+        *row.result_values,
+        row.metadata.get("row_text"),
+        row.metadata.get("source_text"),
+        row.metadata.get("table_row_text"),
+        row.metadata.get("combined_row_text"),
+        row.metadata.get("raw_text"),
+        row.metadata.get("page_text_excerpt"),
+    ]
+    return " ".join(str(value).strip() for value in values if value is not None and str(value).strip())
+
+
+def _page_for_clause_window(group: InspectionItemGroup, clause_number: str) -> int | None:
+    pattern = _clause_header_pattern(clause_number)
+    for row in _ordered_group_rows(group):
+        if pattern.search(_row_full_text(row)):
+            return row.source_page or _first_page(group)
+    return _first_page(group)
+
+
+def _numeric_result_from_window(window: str, *, expected: float) -> str | None:
+    if re.search(r"候选值|候选结果|可见候选值|未能稳定", str(window or "")):
+        return None
+    marker_values = _result_marker_values(window)
+    if marker_values:
+        return marker_values[-1]
+    text = re.sub(r"2\s*\.\s*2\s*\.\s*\d+(?:\s*\.\s*\d+)?", " ", str(window or ""))
+    values: list[str] = []
+    for match in re.finditer(r"(?<![\d.])[-+]?\d+(?:\.\d+)?(?![\d.])", text):
+        value = match.group(0)
+        try:
+            if float(value) == float(expected):
+                continue
+        except ValueError:
+            pass
+        values.append(value)
+    return values[-1] if values else None
 
 
 def _unique_report_atomic_results(results: Sequence[PTRReportAtomicResult]) -> list[PTRReportAtomicResult]:
@@ -660,6 +861,11 @@ def _preset_marker_values(value: str) -> list[str]:
 
 
 def _preset_values_from_text(value: str) -> list[str]:
+    values_by_preset = _preset_values_by_slug_from_text(value)
+    return _unique_text(values_by_preset[preset_slug] for preset_slug in ("pulse3", "pf_reversible") if preset_slug in values_by_preset)
+
+
+def _preset_values_by_slug_from_text(value: str) -> dict[str, str]:
     text = str(value or "")
     preset_patterns = [
         ("pulse3", r"PULSE\s*3|PULSE3"),
@@ -667,25 +873,60 @@ def _preset_values_from_text(value: str) -> list[str]:
     ]
     values_by_preset: dict[str, str] = {}
     for preset_slug, preset_pattern in preset_patterns:
-        value_before = re.compile(
-            rf"([-+]?\d+(?:\.\d+)?)\s*(?:ns|mJ|%|V|A)?\s*(?:{preset_pattern})\s*预设",
-            re.IGNORECASE,
-        )
-        value_after = re.compile(
-            rf"(?:{preset_pattern})\s*预设[^\d\n]{{0,40}}(?:检验)?结果\s*[:：]?\s*([-+]?\d+(?:\.\d+)?)\s*(?:ns|mJ|%|V|A)?",
-            re.IGNORECASE,
-        )
-        loose_same_line_after = re.compile(
-            rf"(?:{preset_pattern})\s*预设[^\d\n]{{0,20}}([-+]?\d+(?:\.\d+)?)\s*(?:ns|mJ|%|V|A)?",
-            re.IGNORECASE,
-        )
-        for pattern in (value_after, value_before, loose_same_line_after):
-            match = pattern.search(text)
-            if match:
-                values_by_preset[preset_slug] = match.group(1)
+        preset_marker = re.compile(rf"(?:{preset_pattern})\s*预\s*设", re.IGNORECASE)
+        for match in preset_marker.finditer(text):
+            actual = _value_near_preset_marker(text, match)
+            if actual:
+                values_by_preset[preset_slug] = actual
                 break
 
-    return _unique_text(values_by_preset[preset_slug] for preset_slug, _ in preset_patterns if preset_slug in values_by_preset)
+    return values_by_preset
+
+
+def _value_near_preset_marker(text: str, marker_match: re.Match[str]) -> str | None:
+    line_start = max(text.rfind("\n", 0, marker_match.start()), text.rfind("；", 0, marker_match.start()), text.rfind(";", 0, marker_match.start())) + 1
+    same_line_before = text[line_start : marker_match.start()]
+    before_values = _number_tokens(same_line_before)
+    if before_values:
+        return before_values[-1]
+
+    next_boundary = _next_preset_or_clause_boundary(text, marker_match.end())
+    after = text[marker_match.end() : next_boundary]
+    result_match = re.search(r"(?:检验)?结果\s*[:：]?\s*([-+]?\d+(?:\.\d+)?)\s*(?:ns|mJ|%|V|A)?", after, re.IGNORECASE)
+    if result_match:
+        return result_match.group(1)
+    after_values = _number_tokens(after)
+    if after_values and "结果" in after:
+        return after_values[0]
+
+    previous_line = text[text.rfind("\n", 0, line_start - 1) + 1 : max(line_start - 1, 0)]
+    if not _any_preset_marker_pattern().search(previous_line):
+        previous_values = _number_tokens(previous_line)
+        if previous_values:
+            return previous_values[-1]
+    return None
+
+
+def _next_preset_or_clause_boundary(text: str, start: int) -> int:
+    candidates = [len(text)]
+    preset_match = _any_preset_marker_pattern().search(text, start)
+    if preset_match:
+        candidates.append(preset_match.start())
+    clause_match = re.search(r"(?<!\d)2\s*\.\s*2\s*\.\s*\d+(?:\s*\.\s*\d+)?(?!\s*\.\s*\d)", text[start:])
+    if clause_match:
+        candidates.append(start + clause_match.start())
+    return min(candidates)
+
+
+def _any_preset_marker_pattern() -> re.Pattern[str]:
+    return re.compile(
+        r"(?:PULSE\s*3|PULSE3|PF\s*Reversi\s*ble|PFReversi\s*ble|PF\s*Reversible|PFReversible)\s*预\s*设",
+        re.IGNORECASE,
+    )
+
+
+def _number_tokens(value: str) -> list[str]:
+    return re.findall(r"(?<![\d.])[-+]?\d+(?:\.\d+)?(?![\d.])", value)
 
 
 def _candidate_marker_values(value: str) -> list[str]:
@@ -695,6 +936,15 @@ def _candidate_marker_values(value: str) -> list[str]:
 
 
 def _unique_text(values: Sequence[str]) -> list[str]:
+    result: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if text and text not in result:
+            result.append(text)
+    return result
+
+
+def _unique_non_empty(values: Sequence[str | None]) -> list[str]:
     result: list[str] = []
     for value in values:
         text = str(value or "").strip()

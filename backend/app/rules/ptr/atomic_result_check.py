@@ -6,8 +6,8 @@ from app.domain.common import Evidence, EvidenceMethod, Location, SourceType
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.ptr import PTRClause, PTRDocument
 from app.domain.report import InspectionItem
-from app.rules.ptr.atomic_compare import build_atomic_comparison_rows
-from app.rules.ptr.report_item_grouping import build_ptr_report_item_groups, ptr_group_for_clause, ptr_group_text
+from app.rules.ptr.atomic_compare import _clause_window, _group_full_text, build_atomic_comparison_rows
+from app.rules.ptr.report_item_grouping import build_ptr_report_item_groups, ptr_group_for_clause
 
 
 UNBOUND_ATOMIC_STATUSES = {"needs_review", "candidate_found_needs_mapping"}
@@ -84,7 +84,12 @@ def _ptr_atomic_evidence(clause: PTRClause, row) -> Evidence:
 
 def _report_group_evidence(row, group) -> Evidence:
     page = row.report_page or (group.pages[0] if group and group.pages else None)
-    raw_text = ptr_group_text(group) if group is not None else row.source_text
+    if group is not None:
+        full_group_text = _group_full_text(group)
+        window_text = _clause_window(full_group_text, row.clause_id)
+        raw_text = f"full_group_text:\n{full_group_text}\n\nclause_window_text ({row.clause_id}):\n{window_text}"
+    else:
+        raw_text = row.source_text
     return Evidence(
         id=f"report-atomic-{row.atomic_id}",
         source_type=SourceType.REPORT,

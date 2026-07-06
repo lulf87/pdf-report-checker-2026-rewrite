@@ -27,6 +27,8 @@ from app.infrastructure.audit.evidence_package_writer import EvidencePackageWrit
 from app.infrastructure.codex.fake_codex_runner import FakeCodexRunner
 from app.infrastructure.codex.prompt_builder import PromptBuilder
 from app.infrastructure.storage.local_file_store import LocalFileStore
+from app.rules.ptr import atomic_compare
+from app.rules.ptr.report_item_grouping import build_ptr_report_item_groups, ptr_group_test_result
 from app.rules.ptr.scope_filter import ScopeDecision, ScopeFilterResult
 from tests.fixtures.table_fixture_builder import build_pdf_table
 
@@ -823,6 +825,49 @@ def test_ptr_compare_scope_aware_1539_binds_atomic_results_when_value_precedes_p
     assert items["2.2.4"]["coverage_status"] == "covered_passed"
 
 
+def test_ptr_compare_scope_aware_1539_binds_split_values_from_group_clause_windows() -> None:
+    groups = build_ptr_report_item_groups(_scope_aware_report_items_with_clause_window_split_atomic_source())
+    group_157 = next(group for group in groups if group.item_no == "157")
+
+    full_text = atomic_compare._group_full_text(group_157)
+    for expected in ("430", "455", "260", "205", "159"):
+        assert expected in full_text
+        assert expected in ptr_group_test_result(group_157)
+
+    rise_window = atomic_compare._clause_window(full_text, "2.2.3")
+    assert "430" in rise_window
+    assert "455" in rise_window
+    assert "260" not in rise_window
+    assert "205" not in rise_window
+
+    fall_window = atomic_compare._clause_window(full_text, "2.2.4")
+    assert "260" in fall_window
+    assert "205" in fall_window
+    assert "430" not in fall_window
+    assert "455" not in fall_window
+
+    report_atomic = {
+        result.atomic_id: result for result in atomic_compare.build_report_atomic_results(group_157)
+    }
+    assert report_atomic["2.2.3:rise_time:pulse3"].actual == "430"
+    assert report_atomic["2.2.3:rise_time:pulse3"].unit == "ns"
+    assert report_atomic["2.2.3:rise_time:pulse3"].report_page == 100
+    assert report_atomic["2.2.3:rise_time:pulse3"].confidence == "high"
+    assert report_atomic["2.2.3:rise_time:pf_reversible"].actual == "455"
+    assert report_atomic["2.2.3:rise_time:pf_reversible"].unit == "ns"
+    assert report_atomic["2.2.3:rise_time:pf_reversible"].report_page == 100
+    assert report_atomic["2.2.3:rise_time:pf_reversible"].confidence == "high"
+    assert report_atomic["2.2.4:fall_time:pulse3"].actual == "260"
+    assert report_atomic["2.2.4:fall_time:pulse3"].unit == "ns"
+    assert report_atomic["2.2.4:fall_time:pulse3"].report_page == 100
+    assert report_atomic["2.2.4:fall_time:pf_reversible"].actual == "205"
+    assert report_atomic["2.2.4:fall_time:pf_reversible"].unit == "ns"
+    assert report_atomic["2.2.4:fall_time:pf_reversible"].report_page == 100
+    assert report_atomic["2.2.6:max_energy"].actual == "159"
+    assert report_atomic["2.2.6:max_energy"].unit == "mJ"
+    assert report_atomic["2.2.6:max_energy"].report_page == 101
+
+
 def test_ptr_compare_atomic_unbound_generates_codex_required_finding_and_final_status(tmp_path: Path) -> None:
     audit_service = FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN)
 
@@ -852,13 +897,22 @@ def test_ptr_compare_atomic_unbound_generates_codex_required_finding_and_final_s
     assert result.metadata["codex_audit"]["final_audit_status"] == "needs_manual_review"
     assert result.summary.final_audit_status == "needs_manual_review"
 
-    request, evidence_package = audit_service.calls[0]
-    assert request.targets[0].finding_code == "PTR_ATOMIC_RESULT_UNBOUND"
+    request, evidence_package = next(
+        (request, evidence_package)
+        for request, evidence_package in audit_service.calls
+        if any(target.metadata.get("clause_number") == "2.2.6" for target in request.targets)
+    )
+    assert any(target.finding_code == "PTR_ATOMIC_RESULT_UNBOUND" for target in request.targets)
     group_items = [item for item in evidence_package.items if item.ref_id == "report_inspection_group:157"]
     assert group_items
     group = group_items[0].structured["inspection_item_group"]
     assert group["item_no"] == "157"
     assert group["pages"] == [99, 100, 101]
+    for expected_text in ("430", "455", "260", "205", "159"):
+        assert expected_text in group["full_group_text"]
+    assert "2.2.6" in group["clause_windows"]
+    assert "2.2.6 最大输出能量" in group["clause_windows"]["2.2.6"]
+    assert "159" in group["clause_windows"]["2.2.6"]
     assert any(row["sequence_raw"] == "2.2.6 最大输出能量" for row in group["compact_rows"])
     page100_source = json.dumps(
         [row for row in group["source_rows"] if row["page_number"] == 100],
@@ -2139,6 +2193,69 @@ def _scope_aware_report_items_with_value_before_preset_atomic_source() -> list[I
                             )
                         },
                     }
+                )
+            )
+            continue
+        items.append(item)
+    return items
+
+
+def _scope_aware_report_items_with_clause_window_split_atomic_source() -> list[InspectionItem]:
+    items: list[InspectionItem] = []
+    for item in _scope_aware_report_items():
+        raw = item.sequence_raw or ""
+        if raw.startswith("续") and "2.2.3" in (item.standard_requirement or ""):
+            items.append(
+                item.model_copy(
+                    update={
+                        "test_result": None,
+                        "result_values": [],
+                        "metadata": {
+                            "row_text": (
+                                "续 157 2.2.3 脉冲上升时间\n"
+                                "430 PULSE3 预 设\n"
+                                "单项结论 符合"
+                            ),
+                        },
+                    }
+                )
+            )
+            items.append(
+                InspectionItem(
+                    sequence_raw=None,
+                    item_name="455",
+                    standard_clause="PFReversi\nble 预设",
+                    source_page=100,
+                    row_index_in_page=2,
+                    metadata={"row_text": "455 PFReversi\nble 预设"},
+                )
+            )
+            continue
+        if raw.startswith("2.2.4"):
+            items.append(
+                item.model_copy(
+                    update={
+                        "test_result": None,
+                        "result_values": [],
+                        "row_index_in_page": 3,
+                        "metadata": {
+                            "row_text": (
+                                "2.2.4 脉冲下降时间\n"
+                                "260 PULSE 3 预 设\n"
+                                "单项结论 符合"
+                            ),
+                        },
+                    }
+                )
+            )
+            items.append(
+                InspectionItem(
+                    sequence_raw=None,
+                    item_name="205",
+                    standard_clause="PF Reversible 预设",
+                    source_page=100,
+                    row_index_in_page=4,
+                    metadata={"row_text": "205 PF Reversible 预设"},
                 )
             )
             continue
