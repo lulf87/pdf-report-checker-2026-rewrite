@@ -941,9 +941,25 @@ def _external_standard_coverages(
     if report_scope is None:
         return []
     clause_text = _normalize_standard_text(" ".join([clause.title or "", clause.body_text or "", clause.full_text or ""]))
+    report_group = ptr_group_for_clause(str(clause.number), build_ptr_report_item_groups(report_items))
+    report_group_text = ""
+    if report_group is not None:
+        report_group_text = " ".join(
+            [
+                ptr_group_standard_requirement(report_group),
+                ptr_group_test_result(report_group),
+                ptr_group_single_conclusion(report_group) or "",
+            ]
+        )
+    normalized_report_group_text = _normalize_standard_text(report_group_text)
     coverages: list[dict[str, Any]] = []
     for standard_range in report_scope.external_standard_ranges:
-        if _normalize_standard_text(standard_range.standard) not in clause_text:
+        standard_text = _normalize_standard_text(standard_range.standard)
+        if (
+            standard_text not in clause_text
+            and standard_text not in normalized_report_group_text
+            and not _text_mentions_item_range(report_group_text, standard_range)
+        ):
             continue
         range_items = _items_in_standard_range(report_items, standard_range)
         coverages.append(
@@ -960,6 +976,16 @@ def _external_standard_coverages(
             }
         )
     return coverages
+
+
+def _text_mentions_item_range(text: str, standard_range: ExternalStandardRange) -> bool:
+    start = str(standard_range.start_item_no or "").strip()
+    end = str(standard_range.end_item_no or "").strip()
+    if not start or not end:
+        return False
+    compact = re.sub(r"\s+", "", text or "")
+    pattern = rf"(?:序号)?{re.escape(start)}(?:[~～\-‑－–—]|至|到)(?:序号)?{re.escape(end)}"
+    return bool(re.search(pattern, compact))
 
 
 def _items_in_standard_range(

@@ -20,7 +20,7 @@ from app.infrastructure.table.table_normalizer import TableNormalizer
 
 CLAUSE_LINE_RE = re.compile(r"^(2(?:\.\d+){0,3})(?:[\.．、。]?\s*)(.+?)\s*$")
 TOP_LEVEL_CHAPTER_RE = re.compile(r"^([1-9]\d*)\s*(?:[\.．、。]?\s*)([\u4e00-\u9fffA-Za-z].*)?$")
-TABLE_REFERENCE_RE = re.compile(r"(?:见\s*表|符合\s*表|按\s*表|表)\s*([A-Za-z]?\d+(?:\s*[-－—]\s*\d+)?)")
+TABLE_REFERENCE_RE = re.compile(r"(?:见\s*表|符合\s*表|按\s*表|表)\s*([A-Za-z]?\d+(?:\s*[-‑－–—]\s*\d+)?)")
 DIRECT_REQUIREMENT_MARKERS = ("应", "不应", "不得", "符合", "至少", "不低于", "不高于", "大于", "小于")
 
 
@@ -175,9 +175,7 @@ class PTRExtractor:
     ) -> dict[str, TableReference]:
         references: dict[str, TableReference] = {}
         for match in TABLE_REFERENCE_RE.finditer(text or ""):
-            number = re.sub(r"\s+", "", match.group(1)).replace("－", "-").replace("—", "-")
-            if "-" in number:
-                number = number.split("-", maxsplit=1)[0]
+            number = self._normalize_table_reference_number(match.group(1))
             references[number] = TableReference(
                 table_number=number,
                 raw_text=text,
@@ -194,6 +192,10 @@ class PTRExtractor:
         text = re.split(r"[。；;]", text, maxsplit=1)[0]
         text = re.split(r"(?:应|不应|不得|符合|见表|按表)", text, maxsplit=1)[0]
         return text.strip(" ：:，,。") or (content or "").strip()
+
+    def _normalize_table_reference_number(self, value: str) -> str:
+        number = re.sub(r"\s+", "", value or "")
+        return number.translate(str.maketrans({"‑": "-", "－": "-", "–": "-", "—": "-"}))
 
     def _deduplicate_clauses(self, clauses: list[PTRClause]) -> list[PTRClause]:
         best_by_number: dict[str, PTRClause] = {}

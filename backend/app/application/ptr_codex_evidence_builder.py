@@ -461,6 +461,8 @@ class PtrCodexEvidenceBuilder:
                 {
                     "declared_scope_items": report_scope.declared_scope_items,
                     "declared_scope_ranges": [item.model_dump(mode="json") for item in report_scope.declared_scope_ranges],
+                    "scope_modifiers": list(report_scope.scope_modifiers),
+                    "clause_exclusions": list(report_scope.clause_exclusions),
                     "excluded_topics": report_scope.excluded_topics,
                     "source_page": report_scope.source_page,
                     "source_text": report_scope.source_text,
@@ -498,16 +500,19 @@ class PtrCodexEvidenceBuilder:
         )
 
     def _report_scope_inspection_items_item(self, finding: Finding, report_doc: ReportDocument) -> EvidenceItem:
-        items = self._inspection_items_for_scope_finding(finding, report_doc.inspection_items)
+        items = self._inspection_scope_items_for_finding(finding, report_doc)
+        truncated = len(items) > self.max_table_records and finding.check_id != "PTR_REPORT_SCOPE"
+        displayed_items = items if finding.check_id == "PTR_REPORT_SCOPE" else items[: self.max_table_records]
         return EvidenceItem(
             ref_id="report_scope:inspection_items",
             source_type=EvidenceSourceType.TABLE,
             title="Report inspection table items relevant to scope",
             structured=self._safe_payload(
                 {
-                    "items": [self._inspection_item_summary(item) for item in items[: self.max_table_records]],
+                    "items": [self._inspection_item_summary(item) for item in displayed_items],
                     "item_count": len(items),
-                    "truncated": len(items) > self.max_table_records,
+                    "truncated": truncated,
+                    "scope_evidence_mode": "full_actual_scope" if finding.check_id == "PTR_REPORT_SCOPE" else "focused",
                 }
             ),
             section="inspection_items",
@@ -661,6 +666,48 @@ class PtrCodexEvidenceBuilder:
             if matched:
                 return matched
         return list(report_items)
+
+    def _inspection_scope_items_for_finding(
+        self,
+        finding: Finding,
+        report_doc: ReportDocument,
+    ) -> list[InspectionItem]:
+        if finding.check_id != "PTR_REPORT_SCOPE":
+            return self._inspection_items_for_scope_finding(finding, report_doc.inspection_items)
+        report_scope = self._report_inspection_scope(report_doc)
+        if report_scope is None:
+            return list(report_doc.inspection_items)
+        items = self._actual_scope_inspection_items(report_scope, report_doc.inspection_items)
+        return items or list(report_doc.inspection_items)
+
+    def _actual_scope_inspection_items(
+        self,
+        report_scope: ReportInspectionScope,
+        report_items: list[InspectionItem],
+    ) -> list[InspectionItem]:
+        direct_starts_after = self._safe_int(report_scope.ptr_direct_content_starts_after)
+        items: list[InspectionItem] = []
+        for item in report_items:
+            item_no = self._safe_int(self._inspection_item_no(item))
+            if item_no is not None and direct_starts_after is not None:
+                if item_no > direct_starts_after:
+                    items.append(item)
+                continue
+            if item_no is not None and self._item_no_in_external_ranges(item_no, report_scope):
+                continue
+            if _first_ptr_clause_number(item):
+                items.append(item)
+        return items
+
+    def _item_no_in_external_ranges(self, item_no: int, report_scope: ReportInspectionScope) -> bool:
+        for standard_range in report_scope.external_standard_ranges:
+            start = self._safe_int(standard_range.start_item_no)
+            end = self._safe_int(standard_range.end_item_no)
+            if start is None or end is None:
+                continue
+            if start <= item_no <= end:
+                return True
+        return False
 
     def _inspection_items_in_range(
         self,
@@ -819,6 +866,12 @@ def _finding_can_use_report_group(finding: Finding) -> bool:
         "PTR_ATOMIC_RESULT_NEEDS_REVIEW",
         "PTR_ATOMIC_RESULT_UNBOUND",
     }
+
+
+def _first_ptr_clause_number(item: InspectionItem) -> str:
+    text = " ".join([item.standard_clause or "", item.standard_requirement or ""])
+    match = re.search(r"(?<![\d.])2(?:\.\d+)+(?![\d.])", text)
+    return match.group(0) if match else ""
 
 
 def _utc_now() -> datetime:

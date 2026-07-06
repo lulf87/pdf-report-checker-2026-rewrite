@@ -7,7 +7,7 @@ from app.domain.evidence_package import EvidencePackageKind, EvidenceSourceType
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.ptr import PTRClause, PTRClauseNumber, PTRDocument, PTRTable, TableReference
 from app.domain.report import InspectionItem, ReportDocument
-from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope
+from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope, ReportScopeRange
 from app.domain.result import CheckResult, CheckStatus
 from app.domain.table import CanonicalTable, ParameterRecord
 from app.domain.task import TaskType
@@ -176,6 +176,35 @@ def test_report_scope_finding_builds_inspection_item_target_with_scope_evidence(
     assert items_by_ref["report_scope:external_standard_ranges"].structured["external_standard_ranges"][0]["standard"] == "GB 9706.1-2020"
     assert "report_scope:inspection_items" in items_by_ref
     assert items_by_ref["report_scope:inspection_items"].structured["items"][-1]["item_no"] == "160"
+
+
+def test_report_scope_finding_includes_full_pm3562_actual_scope_items_without_truncation() -> None:
+    finding = _finding(
+        code="PTR_SCOPE_DECLARED_ITEM_MISSING_IN_REPORT",
+        check_id="PTR_REPORT_SCOPE",
+        metadata={"clause_number": "2.8.2"},
+    )
+
+    bundle = PtrCodexEvidenceBuilder(max_table_records=5).build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=_ptr_document(),
+        report_doc=_pm3562_report_scope_document(),
+        check_results=[_check_result("PTR_REPORT_SCOPE", [finding])],
+    )
+
+    assert bundle is not None
+    items_by_ref = {item.ref_id: item for item in bundle.evidence_package.items}
+    inspection_scope_items = items_by_ref["report_scope:inspection_items"].structured
+    item_nos = [item["item_no"] for item in inspection_scope_items["items"]]
+    assert item_nos == [str(item_no) for item_no in range(38, 55)]
+    assert inspection_scope_items["item_count"] == 17
+    assert inspection_scope_items["truncated"] is False
+    assert inspection_scope_items["items"][12]["standard_clause"] == "2.2.2"
+    assert inspection_scope_items["items"][13]["standard_clause"] == "2.3"
+    assert inspection_scope_items["items"][14]["standard_clause"] == "2.6"
+    assert inspection_scope_items["items"][15]["standard_clause"] == "2.7"
+    assert inspection_scope_items["items"][16]["standard_clause"] == "2.8.2"
 
 
 def test_package_contains_finding_clause_ptr_table_and_report_table_evidence() -> None:
@@ -578,6 +607,82 @@ def _report_scope_document() -> ReportDocument:
             InspectionItem(sequence_raw="159", sequence=159, standard_clause="2.6", standard_requirement="软件功能", test_result="符合要求", conclusion="符合", source_page=99),
             InspectionItem(sequence_raw="160", sequence=160, standard_clause="2.7", standard_requirement="额外项目", test_result="符合要求", conclusion="符合", source_page=100),
         ],
+        metadata={"inspection_scope": scope.model_dump(mode="json")},
+    )
+
+
+def _pm3562_report_scope_document() -> ReportDocument:
+    scope_text = (
+        "2.1.1～2.1.12、2.2.2、2.3（仅检 PVC 反应）、2.6、2.7、"
+        "2.8.2（除有源植入式医疗器械对外部除颤器造成损坏的防护、"
+        "GB 16174.2-2024 中 21.2、有源植入式医疗器械对非电离电磁辐射的防护）"
+    )
+    scope = ReportInspectionScope(
+        declared_scope_items=["2.2.2", "2.3", "2.6", "2.7", "2.8.2"],
+        declared_scope_ranges=[ReportScopeRange(start="2.1.1", end="2.1.12", source_text=scope_text)],
+        scope_modifiers=[{"clause": "2.3", "only": ["PVC 反应", "PVC Response"], "source_text": "仅检 PVC 反应"}],
+        clause_exclusions=[
+            {
+                "clause": "2.8.2",
+                "excluded_topics": [
+                    "有源植入式医疗器械对外部除颤器造成损坏的防护",
+                    "GB 16174.2-2024 中 21.2",
+                    "有源植入式医疗器械对非电离电磁辐射的防护",
+                ],
+                "source_text": (
+                    "除有源植入式医疗器械对外部除颤器造成损坏的防护、"
+                    "GB 16174.2-2024 中 21.2、有源植入式医疗器械对非电离电磁辐射的防护"
+                ),
+            }
+        ],
+        excluded_topics=[
+            "有源植入式医疗器械对外部除颤器造成损坏的防护",
+            "GB 16174.2-2024 中 21.2",
+            "有源植入式医疗器械对非电离电磁辐射的防护",
+        ],
+        source_page=1,
+        source_text=scope_text,
+        external_standard_ranges=[
+            ExternalStandardRange(
+                start_item_no="1",
+                end_item_no="24",
+                standard="GB 16174.1-2024",
+                source_page=5,
+                source_text="序号 1～24 为 GB 16174.1-2024 标准的内容",
+            ),
+            ExternalStandardRange(
+                start_item_no="25",
+                end_item_no="37",
+                standard="GB 16174.2-2024",
+                source_page=5,
+                source_text="序号 25～37 为 GB 16174.2-2024 标准的内容",
+            ),
+        ],
+        ptr_direct_content_starts_after="37",
+    )
+    inspection_items = [
+        InspectionItem(
+            sequence_raw=str(item_no),
+            sequence=item_no,
+            standard_clause=f"2.1.{item_no - 37}",
+            standard_requirement=f"2.1.{item_no - 37} 项",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=20,
+        )
+        for item_no in range(38, 50)
+    ]
+    inspection_items.extend(
+        [
+            InspectionItem(sequence_raw="50", sequence=50, standard_clause="2.2.2", standard_requirement="紧急起搏模式", test_result="符合要求", conclusion="符合", source_page=21),
+            InspectionItem(sequence_raw="51", sequence=51, standard_clause="2.3", standard_requirement="PVC 反应 / PVC Response", test_result="符合要求", conclusion="符合", remark="仅检 PVC 反应", source_page=21),
+            InspectionItem(sequence_raw="52", sequence=52, standard_clause="2.6", standard_requirement="通用要求，见序号 1～24", test_result="符合要求", conclusion="符合", source_page=21),
+            InspectionItem(sequence_raw="53", sequence=53, standard_clause="2.7", standard_requirement="专用要求，见序号 25～37", test_result="符合要求", conclusion="符合", source_page=21),
+            InspectionItem(sequence_raw="54", sequence=54, standard_clause="2.8.2", standard_requirement="扭矩扳手尺寸", test_result="A=0.884，B=0.993", conclusion="符合", source_page=22),
+        ]
+    )
+    return ReportDocument(
+        inspection_items=inspection_items,
         metadata={"inspection_scope": scope.model_dump(mode="json")},
     )
 

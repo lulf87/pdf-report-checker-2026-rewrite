@@ -90,13 +90,14 @@ def _parse_scope(texts: list[str]) -> tuple[list[ScopeRule], list[str]]:
         normalized = re.sub(r"\s+", "", text)
 
         for pattern in EXCLUSION_PATTERNS:
-            for match in pattern.finditer(normalized):
-                for topic in re.split(r"[、，,；;/及和]", match.group(1)):
+            for match in pattern.finditer(text):
+                for topic in re.split(r"[、，,；;]", match.group(1)):
                     topic = topic.strip("()（）")
                     if topic and topic not in seen_topics:
                         seen_topics.add(topic)
                         excluded_topics.append(topic)
 
+        normalized = _without_exclusion_text(normalized)
         matched_numbers: set[str] = set()
         for match in RANGE_RE.finditer(normalized):
             start = _parse_number(match.group(1))
@@ -124,6 +125,13 @@ def _parse_scope(texts: list[str]) -> tuple[list[ScopeRule], list[str]]:
                 seen_rules.add(key)
 
     return rules, excluded_topics
+
+
+def _without_exclusion_text(text: str) -> str:
+    value = text
+    for pattern in EXCLUSION_PATTERNS:
+        value = pattern.sub("", value)
+    return value
 
 
 def _decide_clause(

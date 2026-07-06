@@ -1,5 +1,5 @@
 from app.domain.report import InspectionItem
-from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope
+from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope, ReportScopeRange
 from app.domain.result import CheckStatus
 from app.rules.ptr.report_scope_consistency import check_report_scope_consistency
 
@@ -122,6 +122,80 @@ def test_report_scope_consistency_ignores_external_standard_clause_that_contains
     assert result.status == CheckStatus.PASS
     assert result.findings == []
     assert result.metadata["scope_consistency"]["actual_report_scope"] == ["2.2", "2.5", "2.6"]
+
+
+def test_report_scope_consistency_preserves_pm3562_exact_subclauses() -> None:
+    result = check_report_scope_consistency(
+        ReportInspectionScope(
+            declared_scope_items=["2.2.2", "2.3", "2.6", "2.7", "2.8.2"],
+            declared_scope_ranges=[ReportScopeRange(start="2.1.1", end="2.1.12", source_text="2.1.1～2.1.12")],
+            source_page=1,
+            source_text="2.1.1～2.1.12、2.2.2、2.3（仅检 PVC 反应）、2.6、2.7、2.8.2",
+            external_standard_ranges=[
+                ExternalStandardRange(
+                    start_item_no="1",
+                    end_item_no="24",
+                    standard="GB 16174.1-2024",
+                    source_page=5,
+                    source_text="序号 1～24 为 GB 16174.1-2024 标准的内容",
+                ),
+                ExternalStandardRange(
+                    start_item_no="25",
+                    end_item_no="37",
+                    standard="GB 16174.2-2024",
+                    source_page=5,
+                    source_text="序号 25～37 为 GB 16174.2-2024 标准的内容",
+                ),
+            ],
+            ptr_direct_content_starts_after="37",
+        ),
+        [
+            InspectionItem(sequence_raw="1", sequence=1, standard_clause="GB 16174.1-2024", standard_requirement="通用标准起点", source_page=6),
+            InspectionItem(sequence_raw="24", sequence=24, standard_clause="GB 16174.1-2024", standard_requirement="通用标准终点", source_page=12),
+            InspectionItem(sequence_raw="25", sequence=25, standard_clause="GB 16174.2-2024", standard_requirement="专用标准起点", source_page=13),
+            InspectionItem(sequence_raw="37", sequence=37, standard_clause="GB 16174.2-2024", standard_requirement="专用标准终点", source_page=19),
+            *[
+                InspectionItem(
+                    sequence_raw=str(item_no),
+                    sequence=item_no,
+                    standard_clause=f"2.1.{item_no - 37}",
+                    standard_requirement=f"2.1.{item_no - 37} 项",
+                    test_result="符合要求",
+                    conclusion="符合",
+                    source_page=20,
+                )
+                for item_no in range(38, 50)
+            ],
+            InspectionItem(sequence_raw="50", sequence=50, standard_clause="2.2.2", standard_requirement="紧急起搏模式", source_page=21),
+            InspectionItem(sequence_raw="51", sequence=51, standard_clause="2.3", standard_requirement="PVC 反应 / PVC Response", remark="仅检 PVC 反应", source_page=21),
+            InspectionItem(sequence_raw="52", sequence=52, standard_clause="2.6", standard_requirement="通用要求，见序号 1～24", source_page=21),
+            InspectionItem(sequence_raw="53", sequence=53, standard_clause="2.7", standard_requirement="专用要求，见序号 25～37", source_page=21),
+            InspectionItem(sequence_raw="54", sequence=54, standard_clause="2.8.2", standard_requirement="扭矩扳手尺寸", test_result="A=0.884，B=0.993", source_page=21),
+        ],
+        task_id="task-pm3562-scope",
+    )
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["scope_consistency"]["actual_report_scope"] == [
+        "2.1.1",
+        "2.1.2",
+        "2.1.3",
+        "2.1.4",
+        "2.1.5",
+        "2.1.6",
+        "2.1.7",
+        "2.1.8",
+        "2.1.9",
+        "2.1.10",
+        "2.1.11",
+        "2.1.12",
+        "2.2.2",
+        "2.3",
+        "2.6",
+        "2.7",
+        "2.8.2",
+    ]
 
 
 def _scope() -> ReportInspectionScope:

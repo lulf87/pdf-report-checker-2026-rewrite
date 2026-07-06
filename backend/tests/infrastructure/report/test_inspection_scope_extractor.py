@@ -126,3 +126,70 @@ def test_extracts_external_standard_ranges_when_standard_name_is_split_across_li
         },
     ]
     assert scope.ptr_direct_content_starts_after == "156"
+
+
+def test_extracts_pm3562_scope_modifiers_and_clause_specific_exclusions() -> None:
+    scope_text = (
+        "2.1.1～2.1.12、2.2.2、2.3（仅检 PVC 反应）、2.6、2.7、"
+        "2.8.2（除有源植入式医疗器械对外部除颤器造成损坏的防护、"
+        "GB 16174.2-2024 中 21.2、有源植入式医疗器械对非电离电磁辐射的防护）"
+    )
+    scope_field = ReportField(
+        name="检验项目",
+        value=scope_text,
+        location=Location(source_type=SourceType.REPORT, page_number=1),
+    )
+    report = ReportDocument(
+        parsed_pdf=ParsedPdf(
+            file_id="report-pm3562-like",
+            file_name="4788draft.pdf",
+            page_count=5,
+            pages=[
+                PdfPage(page_number=1, text=f"检验项目：{scope_text}"),
+                PdfPage(
+                    page_number=5,
+                    text=(
+                        "序号 1～24 为 GB 16174.1-2024 标准的内容\n"
+                        "序号 25～37 为 GB 16174.2-2024 标准的内容"
+                    ),
+                ),
+            ],
+        ),
+        third_page=ThirdPageInfo(fields=[scope_field]),
+        fields=[scope_field],
+    )
+
+    scope = ReportInspectionScopeExtractor().extract(report)
+
+    assert [item.model_dump(mode="json") for item in scope.declared_scope_ranges] == [
+        {"start": "2.1.1", "end": "2.1.12", "source_text": scope_text}
+    ]
+    assert scope.declared_scope_items == ["2.2.2", "2.3", "2.6", "2.7", "2.8.2"]
+    assert scope.scope_modifiers == [
+        {"clause": "2.3", "only": ["PVC 反应", "PVC Response"], "source_text": "仅检 PVC 反应"}
+    ]
+    assert scope.clause_exclusions == [
+        {
+            "clause": "2.8.2",
+            "excluded_topics": [
+                "有源植入式医疗器械对外部除颤器造成损坏的防护",
+                "GB 16174.2-2024 中 21.2",
+                "有源植入式医疗器械对非电离电磁辐射的防护",
+            ],
+            "source_text": (
+                "除有源植入式医疗器械对外部除颤器造成损坏的防护、"
+                "GB 16174.2-2024 中 21.2、有源植入式医疗器械对非电离电磁辐射的防护"
+            ),
+        }
+    ]
+    assert scope.excluded_topics == [
+        "有源植入式医疗器械对外部除颤器造成损坏的防护",
+        "GB 16174.2-2024 中 21.2",
+        "有源植入式医疗器械对非电离电磁辐射的防护",
+    ]
+    assert scope.external_standard_ranges[0].start_item_no == "1"
+    assert scope.external_standard_ranges[0].end_item_no == "24"
+    assert scope.external_standard_ranges[0].standard == "GB 16174.1-2024"
+    assert scope.external_standard_ranges[1].start_item_no == "25"
+    assert scope.external_standard_ranges[1].end_item_no == "37"
+    assert scope.external_standard_ranges[1].standard == "GB 16174.2-2024"

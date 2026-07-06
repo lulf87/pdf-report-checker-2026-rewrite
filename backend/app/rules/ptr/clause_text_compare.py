@@ -34,6 +34,8 @@ def compare_clause_texts(
         report_group = ptr_group_for_clause(clause_number, report_groups)
         invalid_candidates = ptr_group_invalid_candidates_for_clause(clause_number, report_groups)
         if report_item is not None:
+            if _modifier_limited_report_item_satisfies_clause(clause, report_item):
+                continue
             expected = normalize_text(clause.body_text or "")
             actual = normalize_text(report_item.standard_requirement or "")
             if _compact(expected) == _compact(actual):
@@ -70,6 +72,32 @@ def _parent_report_item_for_clause(clause_number: str, report_by_clause: dict[st
         if parent_number in report_by_clause:
             return report_by_clause[parent_number]
     return None
+
+
+def _modifier_limited_report_item_satisfies_clause(clause: PTRClause, report_item: InspectionItem) -> bool:
+    clause_number = str(clause.number)
+    if clause_number != "2.3":
+        return False
+    report_text = _compact(
+        " ".join(
+            [
+                report_item.standard_requirement or "",
+                report_item.item_name or "",
+                report_item.test_result or "",
+                report_item.conclusion or "",
+                report_item.remark or "",
+            ]
+        )
+    ).lower()
+    ptr_text = _compact(" ".join([clause.body_text or "", clause.title or ""])).lower()
+    return (
+        "仅检" in report_text
+        and "pvc" in report_text
+        and "反应" in report_text
+        and "pvc" in ptr_text
+        and "反应" in ptr_text
+        and ("符合" in report_text or "pass" in report_text)
+    )
 
 
 def _index_report_items(report_items: list[InspectionItem]) -> dict[str, InspectionItem]:

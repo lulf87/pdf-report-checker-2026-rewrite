@@ -405,13 +405,15 @@ def _table_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtom
     clause_number = str(clause.number)
     table = table_for_clause(clause, ptr_doc)
     if table is None or table.canonical_table is None:
-        if clause_number == "2.2.2":
+        if clause_number == "2.2.2" and _clause_indicates_waveform_table(clause):
             return _fallback_waveform_table_requirements(clause_number)
-        if clause_number == "2.6":
+        if clause_number == "2.6" and _clause_indicates_software_table(clause):
             return _fallback_software_table_requirements(clause_number)
         return []
-    if clause_number == "2.2.2":
+    if clause_number == "2.2.2" and _clause_indicates_waveform_table(clause):
         return _waveform_table_requirements(clause_number, table)
+    if clause_number == "2.2.2":
+        return []
     title = _table_title(table)
     table_key = table_key_for_clause_table(clause_number, table)
     return [
@@ -432,6 +434,16 @@ def _table_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtom
         )
         for record in table.canonical_table.parameter_records
     ]
+
+
+def _clause_indicates_waveform_table(clause: PTRClause) -> bool:
+    text = _compact(" ".join([clause.title or "", clause.body_text or "", clause.full_text or ""]))
+    return "波形参数" in text or ("输出波形" in text and "表" in text)
+
+
+def _clause_indicates_software_table(clause: PTRClause) -> bool:
+    text = _compact(" ".join([clause.title or "", clause.body_text or "", clause.full_text or ""]))
+    return "软件功能" in text and ("表" in text or bool(clause.table_refs or clause.table_references))
 
 
 def _waveform_table_requirements(clause_number: str, table: PTRTable) -> list[PTRAtomicRequirement]:

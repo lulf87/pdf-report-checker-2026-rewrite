@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -20,6 +22,8 @@ class ExternalStandardRange(BaseModel):
 class ReportInspectionScope(BaseModel):
     declared_scope_items: list[str] = Field(default_factory=list)
     declared_scope_ranges: list[ReportScopeRange] = Field(default_factory=list)
+    scope_modifiers: list[dict[str, Any]] = Field(default_factory=list)
+    clause_exclusions: list[dict[str, Any]] = Field(default_factory=list)
     excluded_topics: list[str] = Field(default_factory=list)
     source_page: int | None = Field(default=None, gt=0)
     source_text: str | None = None

@@ -449,6 +449,22 @@ class ScopeAwareInspectionTableExtractor:
         return InspectionTable(table_id="report-inspection-table", items=self.items)
 
 
+class PM3562ReportExtractor:
+    def extract(self, parsed_pdf: ParsedPdf) -> ReportDocument:
+        del parsed_pdf
+        scope_field = ReportField(name="检验项目", value=_pm3562_scope_text(), metadata={"items": [_pm3562_scope_text()]})
+        return ReportDocument(
+            third_page=ThirdPageInfo(fields=[scope_field]),
+            fields=[scope_field],
+        )
+
+
+class PM3562InspectionTableExtractor:
+    def extract_table(self, parsed_pdf: ParsedPdf) -> InspectionTable:
+        del parsed_pdf
+        return InspectionTable(table_id="report-inspection-table", items=_pm3562_report_items())
+
+
 def test_ptr_compare_usecase_saves_parses_filters_compares_and_completes_task(tmp_path: Path) -> None:
     task_service = TaskService()
     parser = FakePdfParser()
@@ -730,6 +746,78 @@ def test_ptr_compare_usecase_ptr_comparison_details_include_numeric_expected_act
         "operator": "≤",
         "status": "mismatch",
     }
+
+
+def test_ptr_compare_pm3562_scope_table_and_pvc_only_semantics(tmp_path: Path) -> None:
+    result = _run_pm3562_usecase(tmp_path)
+
+    scope_result = _check_result(result, "PTR_REPORT_SCOPE")
+    assert scope_result.status == CheckStatus.PASS
+    assert scope_result.findings == []
+    scope_metadata = scope_result.metadata["scope_consistency"]
+    assert scope_metadata["status"] == "passed"
+    assert scope_metadata["declared_scope"] == ["2.2.2", "2.3", "2.6", "2.7", "2.8.2"]
+    assert scope_metadata["declared_scope_ranges"] == [
+        {"start": "2.1.1", "end": "2.1.12", "source_text": _pm3562_scope_text()}
+    ]
+    assert scope_metadata["actual_report_scope"] == [
+        "2.1.1",
+        "2.1.2",
+        "2.1.3",
+        "2.1.4",
+        "2.1.5",
+        "2.1.6",
+        "2.1.7",
+        "2.1.8",
+        "2.1.9",
+        "2.1.10",
+        "2.1.11",
+        "2.1.12",
+        "2.2.2",
+        "2.3",
+        "2.6",
+        "2.7",
+        "2.8.2",
+    ]
+    assert "2.2" not in scope_metadata["actual_report_scope"]
+    assert "2.8" not in scope_metadata["actual_report_scope"]
+
+    ptr_clause_result = _check_result(result, "PTR_CLAUSE")
+    assert ptr_clause_result.findings == []
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert not any(
+        finding.code == "PTR_TABLE_MISSING" and finding.metadata.get("table_number") in {"2", "2-1"}
+        for finding in ptr_table_result.findings
+    )
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    assert {"2.2.2", "2.6", "2.7", "2.8.2"} <= set(items)
+    assert items["2.2.2"]["report_matches"][0]["item_no"] == "50"
+    assert items["2.3"]["report_matches"][0]["item_no"] == "51"
+    assert "仅检 PVC 反应" in items["2.3"]["report_matches"][0]["remark"]
+    assert items["2.6"]["report_matches"][0]["item_no"] == "52"
+    assert items["2.7"]["report_matches"][0]["item_no"] == "53"
+    assert items["2.8.2"]["report_matches"][0]["item_no"] == "54"
+    assert "0.884" in items["2.8.2"]["report_matches"][0]["test_result"]
+    assert "0.993" in items["2.8.2"]["report_matches"][0]["test_result"]
+
+    assert [coverage["standard"] for coverage in items["2.6"]["external_standard_coverages"]] == [
+        "GB 16174.1-2024"
+    ]
+    assert items["2.6"]["external_standard_coverages"][0]["start_item_no"] == "1"
+    assert items["2.6"]["external_standard_coverages"][0]["end_item_no"] == "24"
+    assert [coverage["standard"] for coverage in items["2.7"]["external_standard_coverages"]] == [
+        "GB 16174.2-2024"
+    ]
+    assert items["2.7"]["external_standard_coverages"][0]["start_item_no"] == "25"
+    assert items["2.7"]["external_standard_coverages"][0]["end_item_no"] == "37"
+
+    assert details["confirmed_errors_count"] == 0
+    assert details["manual_review_required_count"] == 0
+    assert result.summary.confirmed_errors_count == 0
+    assert result.summary.manual_review_required_count == 0
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
 
 def test_ptr_compare_scope_aware_1539_like_report_passes_and_explains_scope(tmp_path: Path) -> None:
@@ -2214,6 +2302,46 @@ def _run_parameter_compare_task(
     return task_service, status
 
 
+def _run_pm3562_usecase(tmp_path: Path):
+    task_service = TaskService()
+    report_pdf = ParsedPdf(
+        file_id="report-pm3562-like",
+        file_name="report.pdf",
+        page_count=30,
+        pages=[
+            PdfPage(page_number=1, text=f"检验项目：{_pm3562_scope_text()}"),
+            PdfPage(
+                page_number=5,
+                text=(
+                    "型号规格或其他说明\n"
+                    "序号 1～24 为 GB 16174.1-2024 标准的内容\n"
+                    "序号 25～37 为 GB 16174.2-2024 标准的内容"
+                ),
+            ),
+        ],
+    )
+    usecase = PTRCompareUseCase(
+        task_service=task_service,
+        file_store=LocalFileStore(tmp_path),
+        pdf_parser=FakePdfParser({"4788draft.pdf": report_pdf}),
+        ptr_extractor=FakePTRExtractor(_pm3562_ptr_document()),
+        report_extractor=PM3562ReportExtractor(),
+        inspection_table_extractor=PM3562InspectionTableExtractor(),
+        codex_audit_service=FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN),
+    )
+
+    status = usecase.run(
+        ptr_file_name="CH3.4.1QuadraAllure3TMP技术要求_PM3562-1-0506最终.pdf",
+        ptr_content=b"%PDF-1.4 ptr",
+        report_file_name="4788draft.pdf",
+        report_content=b"%PDF-1.4 report",
+        content_type="application/pdf",
+    )
+
+    assert status.status == TaskState.COMPLETED, status.error_message
+    return task_service.get_result(status.task_id)
+
+
 def _run_scope_aware_usecase(
     tmp_path: Path,
     *,
@@ -2265,6 +2393,205 @@ def _run_scope_aware_usecase(
 
     assert status.status == TaskState.COMPLETED, status.error_message
     return task_service.get_result(status.task_id)
+
+
+def _pm3562_scope_text() -> str:
+    return (
+        "2.1.1～2.1.12、2.2.2、2.3（仅检 PVC 反应）、2.6、2.7、"
+        "2.8.2（除有源植入式医疗器械对外部除颤器造成损坏的防护、"
+        "GB 16174.2-2024 中 21.2、有源植入式医疗器械对非电离电磁辐射的防护）"
+    )
+
+
+def _pm3562_ptr_document() -> PTRDocument:
+    clauses = [
+        *[
+            PTRClause(
+                clause_id=f"ptr-2.1.{index}",
+                number=PTRClauseNumber.from_string(f"2.1.{index}"),
+                title=f"起搏参数 {index}",
+                body_text="应符合表2-1规定的要求。",
+                scope_type=PTRScopeType.REQUIREMENT,
+                table_references=[
+                    TableReference(
+                        table_number="2-1",
+                        reference_text="表2-1",
+                        context="起搏参数",
+                        clause_id=f"ptr-2.1.{index}",
+                    )
+                ],
+            )
+            for index in range(1, 13)
+        ],
+        PTRClause(
+            clause_id="ptr-2.2.2",
+            number=PTRClauseNumber.from_string("2.2.2"),
+            title="紧急起搏模式",
+            body_text="紧急起搏模式应符合要求。",
+            scope_type=PTRScopeType.REQUIREMENT,
+        ),
+        PTRClause(
+            clause_id="ptr-2.3",
+            number=PTRClauseNumber.from_string("2.3"),
+            title="特殊功能",
+            body_text=(
+                "特殊功能应符合表 2-2 的要求。\n"
+                "PVC 反应 / PVC Response：应支持。\n"
+                "Atrial ACap：应支持。\n"
+                "AF Suppression：应支持。"
+            ),
+            scope_type=PTRScopeType.REQUIREMENT,
+        ),
+        PTRClause(
+            clause_id="ptr-2.6",
+            number=PTRClauseNumber.from_string("2.6"),
+            title="通用要求",
+            body_text="通用要求见序号 1～24。",
+            scope_type=PTRScopeType.REQUIREMENT,
+        ),
+        PTRClause(
+            clause_id="ptr-2.7",
+            number=PTRClauseNumber.from_string("2.7"),
+            title="专用要求",
+            body_text="专用要求见序号 25～37。",
+            scope_type=PTRScopeType.REQUIREMENT,
+        ),
+        PTRClause(
+            clause_id="ptr-2.8.2",
+            number=PTRClauseNumber.from_string("2.8.2"),
+            title="扭矩扳手尺寸",
+            body_text="扭矩扳手尺寸应符合要求。",
+            scope_type=PTRScopeType.REQUIREMENT,
+        ),
+    ]
+    return PTRDocument(
+        clauses=clauses,
+        tables=[
+            PTRTable(
+                table_id="ptr-table-2-1",
+                table_number="2-1",
+                title="表2-1 起搏参数",
+                caption="表2-1 起搏参数",
+            )
+        ],
+    )
+
+
+def _pm3562_report_items() -> list[InspectionItem]:
+    items = [
+        InspectionItem(
+            sequence_raw="1",
+            sequence=1,
+            standard_clause="GB 16174.1-2024",
+            standard_requirement="GB 16174.1-2024 标准通用要求起点。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=6,
+        ),
+        InspectionItem(
+            sequence_raw="24",
+            sequence=24,
+            standard_clause="GB 16174.1-2024",
+            standard_requirement="GB 16174.1-2024 标准通用要求终点。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=12,
+        ),
+        InspectionItem(
+            sequence_raw="25",
+            sequence=25,
+            standard_clause="GB 16174.2-2024",
+            standard_requirement="GB 16174.2-2024 标准专用要求起点。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=13,
+        ),
+        InspectionItem(
+            sequence_raw="37",
+            sequence=37,
+            standard_clause="GB 16174.2-2024",
+            standard_requirement="GB 16174.2-2024 标准专用要求终点。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=19,
+        ),
+    ]
+    items.extend(
+        InspectionItem(
+            sequence_raw=str(item_no),
+            sequence=item_no,
+            standard_clause=f"2.1.{item_no - 37}",
+            item_name=f"起搏参数 {item_no - 37}",
+            standard_requirement="应符合表2-1规定的要求。",
+            test_result="符合要求",
+            conclusion="符合",
+            source_page=20,
+            row_index_in_page=item_no,
+        )
+        for item_no in range(38, 50)
+    )
+    items.extend(
+        [
+            InspectionItem(
+                sequence_raw="50",
+                sequence=50,
+                standard_clause="2.2.2",
+                item_name="紧急起搏模式",
+                standard_requirement="紧急起搏模式应符合要求。",
+                test_result="符合要求",
+                conclusion="符合",
+                source_page=21,
+                row_index_in_page=50,
+            ),
+            InspectionItem(
+                sequence_raw="51",
+                sequence=51,
+                standard_clause="2.3",
+                item_name="特殊功能",
+                standard_requirement="2.3 特殊功能；PVC 反应 / PVC Response",
+                test_result="符合要求",
+                conclusion="符合",
+                remark="仅检 PVC 反应",
+                source_page=21,
+                row_index_in_page=51,
+            ),
+            InspectionItem(
+                sequence_raw="52",
+                sequence=52,
+                standard_clause="2.6",
+                item_name="通用要求",
+                standard_requirement="通用要求见序号 1～24。",
+                test_result="符合要求",
+                conclusion="符合",
+                source_page=21,
+                row_index_in_page=52,
+            ),
+            InspectionItem(
+                sequence_raw="53",
+                sequence=53,
+                standard_clause="2.7",
+                item_name="专用要求",
+                standard_requirement="专用要求见序号 25～37。",
+                test_result="符合要求",
+                conclusion="符合",
+                source_page=21,
+                row_index_in_page=53,
+            ),
+            InspectionItem(
+                sequence_raw="54",
+                sequence=54,
+                standard_clause="2.8.2",
+                item_name="扭矩扳手尺寸",
+                standard_requirement="扭矩扳手尺寸应符合要求。",
+                test_result="A=0.884，B=0.993",
+                result_values=["A=0.884", "B=0.993"],
+                conclusion="符合",
+                source_page=22,
+                row_index_in_page=54,
+            ),
+        ]
+    )
+    return items
 
 
 def _scope_aware_ptr_document() -> PTRDocument:

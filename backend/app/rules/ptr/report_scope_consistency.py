@@ -45,10 +45,9 @@ def _declared_missing_findings(
     actual_scope: list[str],
     task_id: str,
 ) -> list[Finding]:
-    actual = set(actual_scope)
     findings: list[Finding] = []
     for clause_number in report_scope.declared_scope_items:
-        if clause_number in actual:
+        if _actual_scope_covers_declared_item(clause_number, actual_scope):
             continue
         findings.append(
             Finding(
@@ -82,7 +81,9 @@ def _undeclared_item_findings(
     findings: list[Finding] = []
     seen: set[str] = set()
     for item in _direct_report_items(report_scope, report_items):
-        clause_number = _root_scope_number(_first_ptr_clause_number(item))
+        clause_number = _first_ptr_clause_number(item)
+        if _item_contains_excluded_topic(report_scope, item):
+            continue
         if not clause_number or _declared_scope_contains(report_scope, clause_number):
             continue
         if clause_number in seen:
@@ -103,6 +104,11 @@ def _undeclared_item_findings(
             )
         )
     return findings
+
+
+def _item_contains_excluded_topic(report_scope: ReportInspectionScope, item: InspectionItem) -> bool:
+    item_text = _compact(" ".join([item.standard_clause or "", item.item_name or "", item.standard_requirement or ""]))
+    return any(_contains_topic(item_text, topic) for topic in report_scope.excluded_topics)
 
 
 def _excluded_topic_findings(
@@ -209,9 +215,9 @@ def _scope_consistency_metadata(
 def _actual_direct_scope(report_scope: ReportInspectionScope, report_items: list[InspectionItem]) -> list[str]:
     scope: list[str] = []
     for item in _direct_report_items(report_scope, report_items):
-        root = _root_scope_number(_first_ptr_clause_number(item))
-        if root and root not in scope:
-            scope.append(root)
+        clause_number = _first_ptr_clause_number(item)
+        if clause_number and clause_number not in scope:
+            scope.append(clause_number)
     return scope
 
 
@@ -260,6 +266,15 @@ def _declared_scope_contains(report_scope: ReportInspectionScope, clause_number:
         return True
     number_tuple = _number_tuple(clause_number)
     return any(_range_contains(number_tuple, scope_range) for scope_range in report_scope.declared_scope_ranges)
+
+
+def _actual_scope_covers_declared_item(declared_clause: str, actual_scope: list[str]) -> bool:
+    if declared_clause in actual_scope:
+        return True
+    declared_tuple = _number_tuple(declared_clause)
+    if len(declared_tuple) <= 2:
+        return any(actual.startswith(declared_clause + ".") for actual in actual_scope)
+    return False
 
 
 def _range_contains(number_tuple: tuple[int, ...], scope_range: ReportScopeRange) -> bool:

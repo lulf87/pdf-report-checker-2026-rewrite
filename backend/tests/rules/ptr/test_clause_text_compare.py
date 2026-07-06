@@ -34,6 +34,38 @@ def test_clause_text_compare_outputs_finding_for_strict_mismatch() -> None:
     assert any(fragment.kind.value in {"delete", "insert", "replace"} for fragment in finding.diff_fragments)
 
 
+def test_clause_text_compare_accepts_pm3562_only_pvc_response_modifier() -> None:
+    findings = compare_clause_texts(
+        [
+            _clause(
+                "2.3",
+                (
+                    "特殊功能应符合表 2-2 的要求。\n"
+                    "PVC 反应 / PVC Response：应支持。\n"
+                    "Atrial ACap：应支持。\n"
+                    "AF Suppression：应支持。"
+                ),
+            )
+        ],
+        [
+            InspectionItem(
+                sequence_raw="51",
+                sequence=51,
+                standard_clause="2.3",
+                item_name="特殊功能",
+                standard_requirement="2.3 特殊功能；PVC 反应 / PVC Response",
+                test_result="符合要求",
+                conclusion="符合",
+                remark="仅检 PVC 反应",
+                source_page=21,
+            )
+        ],
+        task_id="task-pm3562-pvc",
+    )
+
+    assert findings == []
+
+
 def test_clause_text_compare_outputs_missing_finding() -> None:
     findings = compare_clause_texts(
         [_clause("2.1.9", "缺失条款应符合要求。")],

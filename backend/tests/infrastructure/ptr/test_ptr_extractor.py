@@ -50,6 +50,36 @@ def test_extracts_chapter2_by_number_not_fixed_title_and_table_refs() -> None:
     assert leaf.parent_id == parent.clause_id
 
 
+def test_extracts_hyphenated_table_reference_numbers_without_truncation() -> None:
+    for separator in ("-", "‑", "－", "–"):
+        parsed_pdf = ParsedPdf(
+            file_id=f"ptr-table-2{separator}1",
+            file_name="ptr.pdf",
+            page_count=1,
+            pages=[
+                PdfPage(
+                    page_number=1,
+                    text="\n".join(
+                        [
+                            "2 性能指标",
+                            "2.1.1 基本频率",
+                            f"基本频率应符合表 2{separator}1 规定的要求。",
+                            f"表 2{separator}1 起搏参数",
+                        ]
+                    ),
+                )
+            ],
+        )
+
+        document = PTRExtractor().extract(parsed_pdf)
+
+        clause = document.get_clause_by_string("2.1.1")
+        assert clause is not None
+        assert clause.table_refs == ["2-1"]
+        assert clause.table_references[0].table_number == "2-1"
+        assert clause.table_references[0].reference_text == "表 2-1"
+
+
 def test_classifies_non_requirement_lines_without_comparing() -> None:
     parsed_pdf = ParsedPdf(
         file_id="ptr-fixture",

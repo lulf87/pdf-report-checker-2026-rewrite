@@ -25,12 +25,15 @@ class ReportInspectionScopeExtractor:
         scope_field = _first_scope_field(report)
         source_text = _field_text(scope_field) if scope_field is not None else None
         declared_items, declared_ranges = _parse_declared_scope(source_text or "")
+        scope_modifiers, clause_exclusions = _parse_clause_parentheticals(source_text or "")
         excluded_topics = _parse_excluded_topics(source_text or "")
         external_ranges = _parse_external_standard_ranges(report)
 
         return ReportInspectionScope(
             declared_scope_items=declared_items,
             declared_scope_ranges=declared_ranges,
+            scope_modifiers=scope_modifiers,
+            clause_exclusions=clause_exclusions,
             excluded_topics=excluded_topics,
             source_page=scope_field.location.page_number if scope_field and scope_field.location else None,
             source_text=source_text,
@@ -92,17 +95,61 @@ def _without_exclusion_text(text: str) -> str:
 
 
 def _parse_excluded_topics(text: str) -> list[str]:
-    normalized = re.sub(r"\s+", "", text or "")
     topics: list[str] = []
     seen: set[str] = set()
     for pattern in EXCLUSION_PATTERNS:
-        for match in pattern.finditer(normalized):
-            for topic in re.split(r"[、，,；;/及和]", match.group(1)):
-                clean = topic.strip("()（）")
+        for match in pattern.finditer(text or ""):
+            for topic in _split_scope_topics(match.group(1)):
+                clean = _normalize_scope_topic(topic)
                 if clean and clean not in seen:
                     seen.add(clean)
                     topics.append(clean)
     return topics
+
+
+def _parse_clause_parentheticals(text: str) -> tuple[list[dict], list[dict]]:
+    modifiers: list[dict] = []
+    exclusions: list[dict] = []
+    for match in re.finditer(r"(2(?:\.\d+)+)\s*（([^）]*)）", text or ""):
+        clause = match.group(1)
+        content = _normalize_scope_topic(match.group(2))
+        compact = re.sub(r"\s+", "", content)
+        if compact.startswith("仅检"):
+            topic = _normalize_scope_topic(re.sub(r"^\s*仅\s*检\s*", "", content))
+            only = _only_scope_terms(topic)
+            if only:
+                modifiers.append({"clause": clause, "only": only, "source_text": content})
+        elif compact.startswith("除"):
+            raw_topics = re.sub(r"^\s*除\s*", "", content)
+            topics = [_normalize_scope_topic(topic) for topic in _split_scope_topics(raw_topics)]
+            topics = [topic for topic in topics if topic]
+            if topics:
+                exclusions.append({"clause": clause, "excluded_topics": topics, "source_text": content})
+    return modifiers, exclusions
+
+
+def _split_scope_topics(value: str) -> list[str]:
+    return [topic for topic in re.split(r"[、，,；;]", value or "") if topic.strip()]
+
+
+def _normalize_scope_topic(value: str) -> str:
+    text = str(value or "").strip("()（） \t\r\n")
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"\bGB\s+(\d)", r"GB \1", text, flags=re.IGNORECASE)
+    return text.strip()
+
+
+def _only_scope_terms(topic: str) -> list[str]:
+    if not topic:
+        return []
+    terms = [_normalize_scope_topic(item) for item in _split_scope_topics(topic)]
+    result: list[str] = []
+    for term in terms:
+        if term and term not in result:
+            result.append(term)
+        if re.search(r"\bPVC\b", term, flags=re.IGNORECASE) and "反应" in term and "PVC Response" not in result:
+            result.append("PVC Response")
+    return result
 
 
 def _parse_external_standard_ranges(report: ReportDocument) -> list[ExternalStandardRange]:
