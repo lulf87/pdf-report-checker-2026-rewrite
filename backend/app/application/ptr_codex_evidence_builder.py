@@ -153,12 +153,13 @@ class PtrCodexEvidenceBuilder:
                     evidence_refs=evidence_refs,
                     metadata={
                         "source": "ptr_compare_usecase",
-                        "finding_code": finding.code,
-                        "clause_number": finding.metadata.get("clause_number"),
-                        "table_number": finding.metadata.get("table_number"),
-                        "parameter_name": finding.metadata.get("parameter_name"),
-                    },
-                )
+                    "finding_code": finding.code,
+                    "clause_number": finding.metadata.get("clause_number"),
+                    "table_number": finding.metadata.get("table_number"),
+                    "parameter_name": finding.metadata.get("parameter_name"),
+                    "atomic_id": finding.metadata.get("atomic_id"),
+                },
+            )
             )
             review_targets.append(
                 CodexReviewTarget(
@@ -180,6 +181,7 @@ class PtrCodexEvidenceBuilder:
                         "clause_number": finding.metadata.get("clause_number"),
                         "table_number": finding.metadata.get("table_number"),
                         "parameter_name": finding.metadata.get("parameter_name"),
+                        "atomic_id": finding.metadata.get("atomic_id"),
                     },
                 )
             )

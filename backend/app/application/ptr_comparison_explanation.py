@@ -58,6 +58,10 @@ REVIEW_CODES = {
     "PTR_CLAUSE_INVALID_MATCH_CANDIDATE",
 }
 PTR_CHECK_IDS = {"PTR_SCOPE", "PTR_CLAUSE", "PTR_TABLE"}
+EXTRACTION_BINDING_REVIEW_CODES = {
+    "PTR_ATOMIC_RESULT_NEEDS_REVIEW",
+    "PTR_ATOMIC_RESULT_UNBOUND",
+}
 
 
 def build_ptr_comparison_details(
@@ -108,6 +112,7 @@ def _comparison_item(
     clause_number = str(clause.number)
     atomic_requirements = build_atomic_requirements(clause, ptr_doc)
     atomic_rows = build_atomic_comparison_rows(clause, ptr_doc, report_matches, page_text_by_page=page_text_by_page)
+    atomic_rows = _atomic_rows_with_codex_field_comparison_backfills(atomic_rows, findings)
     selected_finding = _primary_finding(findings)
     display_finding = selected_finding
     rule_status = _rule_status(findings)
@@ -118,6 +123,10 @@ def _comparison_item(
         external_coverages=external_coverages,
     )
     if _atomic_rows_override_refuted_missing_table(selected_finding, atomic_rows) and atomic_status is not None:
+        display_finding = None
+        rule_status = atomic_status
+        user_status = atomic_status
+    elif _atomic_rows_override_extraction_binding_findings(findings, atomic_rows) and atomic_status is not None:
         display_finding = None
         rule_status = atomic_status
         user_status = atomic_status
@@ -409,6 +418,82 @@ def _status_from_atomic_rows(
     return None
 
 
+def _atomic_rows_with_codex_field_comparison_backfills(
+    atomic_rows: list[PTRAtomicComparisonRow],
+    findings: list[Finding],
+) -> list[PTRAtomicComparisonRow]:
+    if not atomic_rows or not findings:
+        return atomic_rows
+    rows_by_id = {row.atomic_id: row for row in atomic_rows}
+    updates: dict[str, PTRAtomicComparisonRow] = {}
+    for finding in findings:
+        if finding.code not in EXTRACTION_BINDING_REVIEW_CODES:
+            continue
+        if finding.metadata.get("final_status") != "refuted":
+            continue
+        atomic_id = str(finding.metadata.get("atomic_id") or "")
+        row = rows_by_id.get(atomic_id)
+        if row is None:
+            continue
+        comparison = _codex_matching_field_comparison(finding)
+        if comparison is None:
+            continue
+        actual = _safe_text(comparison.get("observed_value"))
+        if not actual:
+            continue
+        status = _codex_backfill_row_status(actual, comparison)
+        reason = _safe_text(comparison.get("reasoning")) or "Codex 复审识别报告结果与 PTR 要求一致。"
+        updates[atomic_id] = row.model_copy(
+            update={
+                "actual": actual,
+                "status": status,
+                "reason": reason,
+                "source": "codex_review",
+                "candidate_actuals": [],
+                "confidence": row.confidence or "medium",
+                "source_text": row.source_text or reason,
+                "report_page": row.report_page or finding.metadata.get("report_page"),
+                "report_item_no": row.report_item_no or finding.metadata.get("item_no"),
+            }
+        )
+    if not updates:
+        return atomic_rows
+    return [updates.get(row.atomic_id, row) for row in atomic_rows]
+
+
+def _codex_matching_field_comparison(finding: Finding) -> dict[str, Any] | None:
+    comparisons = finding.metadata.get("codex_field_comparisons")
+    if not isinstance(comparisons, list):
+        return None
+    for comparison in comparisons:
+        if not isinstance(comparison, dict):
+            continue
+        if str(comparison.get("status") or "").strip().lower() == "match":
+            return comparison
+    return None
+
+
+def _codex_backfill_row_status(actual: str, comparison: dict[str, Any]) -> str:
+    actual_text = str(actual or "").strip()
+    if actual_text in {"/", "／", "-", "—", "——", "不适用", "NA", "N/A"}:
+        return "not_applicable"
+    status = str(comparison.get("status") or "").strip().lower()
+    return status if status in {"match", "mismatch", "needs_review", "not_applicable"} else "match"
+
+
+def _atomic_rows_override_extraction_binding_findings(
+    findings: list[Finding],
+    atomic_rows: list[PTRAtomicComparisonRow],
+) -> bool:
+    if not findings or not atomic_rows:
+        return False
+    if any(finding.code not in EXTRACTION_BINDING_REVIEW_CODES for finding in findings):
+        return False
+    if any(row.source == "codex_review" for row in atomic_rows):
+        return True
+    return any(finding.metadata.get("final_status") == "manual_review_required" for finding in findings)
+
+
 def _atomic_rows_override_refuted_missing_table(
     finding: Finding | None,
     atomic_rows: list[PTRAtomicComparisonRow],
@@ -538,7 +623,15 @@ def _reason(
         if atomic_rows:
             if any(row.status == "needs_review" for row in atomic_rows):
                 if str(clause.number) == "2.6":
-                    return _safe_text("报告序号 159 覆盖软件功能总项，但表格功能明细需复核。")
+                    review_count = sum(1 for row in atomic_rows if row.status in {"needs_review", "candidate_found_needs_mapping"})
+                    if review_count == 1:
+                        pending = next(
+                            (row for row in atomic_rows if row.status in {"needs_review", "candidate_found_needs_mapping"}),
+                            None,
+                        )
+                        label = f"：{pending.label}" if pending is not None else ""
+                        return _safe_text(f"报告序号 159 覆盖软件功能总项，仅剩 1 项需人工复核{label}。")
+                    return _safe_text(f"报告序号 159 覆盖软件功能总项，但仍有 {review_count} 项表格功能明细需复核。")
                 return _safe_text(f"报告匹配项覆盖 {title}，但部分参数级证据需复核。")
             if all(row.status in {"match", "not_applicable"} for row in atomic_rows):
                 item_no = report_matches[0].display_item_no or report_matches[0].item_no if report_matches else None

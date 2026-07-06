@@ -314,6 +314,67 @@ class FakePtrCodexAuditService:
         return results
 
 
+class FieldComparisonPtrCodexAuditService:
+    def __init__(
+        self,
+        comparisons_by_atomic_id: dict[str, dict[str, str]],
+        *,
+        uncertain_atomic_ids: set[str] | None = None,
+    ) -> None:
+        self.comparisons_by_atomic_id = comparisons_by_atomic_id
+        self.uncertain_atomic_ids = uncertain_atomic_ids or set()
+        self.calls: list[tuple] = []
+        self.runner = SimpleNamespace(config=SimpleNamespace(timeout_seconds=900))
+
+    def with_timeout_seconds(self, timeout_seconds: int) -> "FieldComparisonPtrCodexAuditService":
+        del timeout_seconds
+        return self
+
+    def review(self, request, evidence_package: EvidencePackage) -> list[CodexReviewResult]:
+        self.calls.append((request, evidence_package))
+        results: list[CodexReviewResult] = []
+        for target in request.targets:
+            atomic_id = str(target.metadata.get("atomic_id") or "") or _atomic_id_from_finding_id(target.finding_id or "")
+            verdict = CodexReviewVerdict.UNCERTAIN if atomic_id in self.uncertain_atomic_ids else CodexReviewVerdict.REFUTE
+            comparison = self.comparisons_by_atomic_id.get(atomic_id)
+            metadata = {}
+            if comparison is not None:
+                metadata["field_comparisons"] = [
+                    {
+                        "field_name": comparison.get("field_name", atomic_id),
+                        "expected_value": comparison.get("expected_value"),
+                        "observed_value": comparison.get("observed_value"),
+                        "status": comparison.get("status", "match"),
+                        "evidence_ref": "report_inspection_group:157",
+                        "reasoning": comparison.get("reasoning", "Codex field comparison matched."),
+                    }
+                ]
+            results.append(
+                CodexReviewResult(
+                    review_id=f"fake-codex-field:{target.target_id}",
+                    request_id=request.request_id,
+                    task_id=request.task_id,
+                    target=target,
+                    status=CodexReviewStatus.SUCCEEDED,
+                    verdict=verdict,
+                    confidence=CodexReviewConfidence.MEDIUM,
+                    reasoning_summary="Fake PTR Codex field comparison result.",
+                    evidence_refs=[ref.ref_id for ref in target.evidence_refs],
+                    metadata=metadata,
+                )
+            )
+        return results
+
+
+def _atomic_id_from_finding_id(finding_id: str) -> str:
+    marker = ":PTR_ATOMIC:"
+    if marker not in finding_id:
+        return ""
+    suffix = finding_id.split(marker, 1)[1]
+    suffix = suffix.rsplit(":unbound", 1)[0]
+    return suffix.split(":", 1)[1] if ":" in suffix else suffix
+
+
 class ExplodingPtrCodexAuditService:
     def __init__(self) -> None:
         self.calls = 0
@@ -1161,6 +1222,81 @@ def test_ptr_compare_scope_aware_1539_binds_real_report_waveform_and_software_ta
     assert details["overall_status"] == "passed"
     assert result.metadata["codex_audit"]["final_audit_status"] == "passed"
     assert result.summary.final_audit_status == "passed"
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_ptr_compare_codex_field_comparisons_backfill_refuted_atomic_rows(tmp_path: Path) -> None:
+    audit_service = FieldComparisonPtrCodexAuditService(
+        {
+            "2.2.2:pulse_group_count:pulse3": {
+                "field_name": "脉冲组数 / PULSE3",
+                "expected_value": "12",
+                "observed_value": "12",
+                "reasoning": "Codex 在 report_inspection_group:157 中识别 PULSE3 脉冲组数为 12，与 PTR 表 6 要求一致。",
+            },
+        }
+    )
+
+    result = _run_scope_aware_usecase(tmp_path, codex_audit_service=audit_service)
+
+    items = {item["ptr_clause_id"]: item for item in result.metadata["ptr_comparison_details"]["items"]}
+    waveform_rows = {
+        row["atomic_id"]: row
+        for row in items["2.2.2"]["atomic_comparison_rows"]
+    }
+    row = waveform_rows["2.2.2:pulse_group_count:pulse3"]
+    assert row["expected"] == "12"
+    assert row["actual"] == "12"
+    assert row["status"] == "match"
+    assert row["source"] == "codex_review"
+    assert "Codex 在 report_inspection_group:157" in row["reason"]
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    finding = next(
+        finding
+        for finding in ptr_table_result.findings
+        if finding.metadata.get("atomic_id") == "2.2.2:pulse_group_count:pulse3"
+    )
+    assert finding.metadata["final_status"] == "refuted"
+    assert finding.metadata["codex_field_comparisons"][0]["observed_value"] == "12"
+    assert "/Users/" not in json.dumps(result.metadata["ptr_comparison_details"], ensure_ascii=False)
+
+
+def test_ptr_compare_codex_field_backfill_keeps_only_one_uncertain_software_row_in_review(tmp_path: Path) -> None:
+    uncertain_atomic_id = (
+        "2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信"
+    )
+    comparisons = _codex_comparisons_for_default_unbound_scope_rows()
+    comparisons.pop(uncertain_atomic_id, None)
+    audit_service = FieldComparisonPtrCodexAuditService(
+        comparisons,
+        uncertain_atomic_ids={uncertain_atomic_id},
+    )
+
+    result = _run_scope_aware_usecase(tmp_path, codex_audit_service=audit_service)
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    software_item = items["2.6"]
+    software_rows = {
+        row["atomic_id"]: row
+        for row in software_item["atomic_comparison_rows"]
+    }
+    needs_review_rows = [row for row in software_rows.values() if row["status"] == "needs_review"]
+    assert [row["atomic_id"] for row in needs_review_rows] == [uncertain_atomic_id]
+    assert software_rows["2.6:table6:射频消融仪---温度监测"]["actual"] == "——"
+    assert software_rows["2.6:table6:射频消融仪---温度监测"]["status"] == "not_applicable"
+    assert software_rows["2.6:table6:心脏脉冲电场消融仪---温度监测"]["actual"] == "符合要求"
+    assert software_rows["2.6:table6:心脏脉冲电场消融仪---温度监测"]["status"] == "match"
+    assert software_item["coverage_status"] == "needs_review"
+    assert software_item["final_status"] == "manual_review_required"
+    assert "仅剩 1 项需人工复核" in software_item["reason"]
+
+    assert details["confirmed_errors_count"] == 0
+    assert details["manual_review_required_count"] == 1
+    assert result.summary.confirmed_errors_count == 0
+    assert result.summary.manual_review_required_count == 1
+    assert result.summary.final_audit_status == "needs_manual_review"
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
 
@@ -2783,6 +2919,45 @@ def _scope_aware_report_item_157_real_waveform_and_159_full_page_text_pages() ->
             ),
         ),
     ]
+
+
+def _codex_comparisons_for_default_unbound_scope_rows() -> dict[str, dict[str, str]]:
+    comparisons: dict[str, dict[str, str]] = {}
+    waveform_expected = {
+        "2.2.2:pulse_count:pulse3": ("脉冲个数 / PULSE3", "1500", "1500"),
+        "2.2.2:pulse_count:pf_reversible": ("脉冲个数 / PF Reversible", "1", "1"),
+        "2.2.2:pulse_group_count:pulse3": ("脉冲组数 / PULSE3", "12", "12"),
+        "2.2.2:pulse_group_count:pf_reversible": ("脉冲组数 / PF Reversible", "1", "1"),
+        "2.2.2:pulse_group_interval:pulse3": ("脉冲组间隔 / PULSE3", "210±1 msec", "210±1 msec"),
+        "2.2.2:pulse_pair_interval:pulse3": ("脉冲对间隔 / PULSE3", "1.12msec±4μsec", "1.12msec±4μsec"),
+        "2.2.2:pulse_width:pulse3": ("脉冲宽度 / PULSE3", "0.9μsec±20%", "0.9μsec±20%"),
+        "2.2.2:pulse_width:pf_reversible": ("脉冲宽度 / PF Reversible", "0.9μsec±20%", "0.9μsec±20%"),
+        "2.2.2:pulse_phase_interval:pulse3": ("脉冲相间隔 / PULSE3", "1μsec±20%", "1μsec±20%"),
+        "2.2.2:pulse_phase_interval:pf_reversible": ("脉冲相间隔 / PF Reversible", "1μsec±20%", "1μsec±20%"),
+        "2.2.2:waveform_type:pulse3": ("波形类型 / PULSE3", "三相", "三相"),
+        "2.2.2:waveform_type:pf_reversible": ("波形类型 / PF Reversible", "双相", "双相"),
+        "2.2.2:peak_ratio:pulse3": ("正峰值/负峰值 / PULSE3", "5±20%", "5±20%"),
+        "2.2.2:peak_ratio:pf_reversible": ("正峰值/负峰值 / PF Reversible", "1±0.1", "1±0.1"),
+        "2.2.2:current_level:pulse3": ("电流水平 / PULSE3", "1-100%", "1-100%"),
+        "2.2.2:current_level:pf_reversible": ("电流水平 / PF Reversible", "1-100%", "1-100%"),
+    }
+    for atomic_id, (field_name, expected, observed) in waveform_expected.items():
+        comparisons[atomic_id] = {
+            "field_name": field_name,
+            "expected_value": expected,
+            "observed_value": observed,
+            "reasoning": f"Codex 复审识别 {field_name} 报告结果为 {observed}，与 PTR 要求一致。",
+        }
+    for component, function_name in atomic_compare.SOFTWARE_FUNCTION_REQUIREMENTS:
+        atomic_id = f"2.6:table6:{atomic_compare._slug(f'{component} - {function_name}')}"
+        observed = "符合要求" if component == "心脏脉冲电场消融仪" else "——"
+        comparisons[atomic_id] = {
+            "field_name": f"{component} - {function_name}",
+            "expected_value": "要求=具备",
+            "observed_value": observed,
+            "reasoning": f"Codex 复审识别 {component} 的 {function_name} 报告结果为 {observed}。",
+        }
+    return comparisons
 
 
 def _scope_aware_report_items_with_unbound_energy() -> list[InspectionItem]:

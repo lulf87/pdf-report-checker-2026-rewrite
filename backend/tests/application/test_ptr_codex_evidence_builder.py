@@ -110,7 +110,12 @@ def test_table_value_mismatch_finding_builds_ptr_parameter_target() -> None:
     finding = _finding(
         code="PTR_TABLE_VALUE_MISMATCH",
         check_id="PTR_TABLE",
-        metadata={"clause_number": "2.1", "table_number": "1", "parameter_name": "脉冲宽度"},
+        metadata={
+            "clause_number": "2.1",
+            "table_number": "1",
+            "parameter_name": "脉冲宽度",
+            "atomic_id": "2.1:table1:脉冲宽度:pulse3",
+        },
     )
 
     bundle = PtrCodexEvidenceBuilder().build(
@@ -123,6 +128,8 @@ def test_table_value_mismatch_finding_builds_ptr_parameter_target() -> None:
 
     assert bundle is not None
     assert bundle.request.targets[0].target_type is CodexReviewTargetType.PTR_PARAMETER
+    assert bundle.request.targets[0].metadata["atomic_id"] == "2.1:table1:脉冲宽度:pulse3"
+    assert bundle.evidence_package.targets[0].metadata["atomic_id"] == "2.1:table1:脉冲宽度:pulse3"
 
 
 def test_scope_finding_builds_ptr_clause_target_when_scope_rule_outputs_finding() -> None:

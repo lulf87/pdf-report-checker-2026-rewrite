@@ -244,6 +244,7 @@ function PTRAtomicComparisonTable({ rows }: { rows: PTRAtomicComparisonRow[] }) 
               <th>预设</th>
               <th>PTR 要求</th>
               <th>报告结果</th>
+              <th>来源</th>
               <th>状态</th>
               <th>说明</th>
               <th>页码/序号</th>
@@ -256,6 +257,7 @@ function PTRAtomicComparisonTable({ rows }: { rows: PTRAtomicComparisonRow[] }) 
                 <td>{row.preset || "不适用"}</td>
                 <td>{row.expected || "无"}</td>
                 <td>{formatAtomicActual(row)}</td>
+                <td>{ptrAtomicSourceLabel(row.source)}</td>
                 <td>
                   <Badge variant={ptrAtomicStatusTone(row.status)}>{ptrAtomicStatusLabel(row.status)}</Badge>
                 </td>
@@ -430,6 +432,13 @@ function ptrAtomicStatusTone(status: string): "success" | "danger" | "warn" | "i
   if (status === "mismatch") return "danger";
   if (status === "needs_review" || status === "candidate_found_needs_mapping") return "warn";
   return "info";
+}
+
+function ptrAtomicSourceLabel(source: string): string {
+  if (source === "codex_review") return "Codex 复审回填";
+  if (source === "ptr_table") return "规则结构化抽取";
+  if (source === "ptr_text") return "规则结构化抽取";
+  return source || "未标注";
 }
 
 function ClauseFindingItem({ finding, reviews }: { finding: Finding; reviews: CodexReviewResult[] }) {
