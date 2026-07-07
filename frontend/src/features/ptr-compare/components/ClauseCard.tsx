@@ -105,6 +105,11 @@ function PTRClausePreview({ item }: { item: PTRComparisonItem }) {
   const externalCoverages = externalCoverageList(item);
   return (
     <div className="comparison-source-list">
+      {item.atomic_comparison_rows?.length ? (
+        <span className="comparison-source">参数级比对 · {item.atomic_comparison_rows.length} 项</span>
+      ) : item.coverage_comparison_rows?.length ? (
+        <span className="comparison-source">条款覆盖对比 · {item.coverage_comparison_rows.length} 项</span>
+      ) : null}
       <span className="comparison-source">PTR 摘录 · {truncate(item.ptr_requirement_text, 42)}</span>
       {externalCoverages.length > 0 ? (
         externalCoverages.map((coverage, index) => (
@@ -122,11 +127,6 @@ function PTRClausePreview({ item }: { item: PTRComparisonItem }) {
       ) : (
         <span className="comparison-source">报告匹配 · 未找到对应检验项</span>
       )}
-      {item.atomic_comparison_rows?.length ? (
-        <span className="comparison-source">参数级比对 · {item.atomic_comparison_rows.length} 项</span>
-      ) : item.coverage_comparison_rows?.length ? (
-        <span className="comparison-source">条款覆盖对比 · {item.coverage_comparison_rows.length} 项</span>
-      ) : null}
       <span className="comparison-source">最终状态 · {ptrStatusLabel(item.coverage_status ?? item.user_facing_status)}</span>
     </div>
   );
@@ -156,6 +156,12 @@ function PTRExplanationDetails({
 
   return (
     <div className="panel-stack">
+      {item.atomic_comparison_rows?.length ? (
+        <PTRAtomicComparisonTable rows={item.atomic_comparison_rows} />
+      ) : item.coverage_comparison_rows?.length ? (
+        <PTRCoverageComparisonTable rows={item.coverage_comparison_rows} />
+      ) : null}
+
       <div className="explanation-summary-grid">
         <section>
           <p className="detail-kicker">PTR 摘录</p>
@@ -221,11 +227,6 @@ function PTRExplanationDetails({
         </section>
       </div>
 
-      {item.atomic_comparison_rows?.length ? (
-        <PTRAtomicComparisonTable rows={item.atomic_comparison_rows} />
-      ) : item.coverage_comparison_rows?.length ? (
-        <PTRCoverageComparisonTable rows={item.coverage_comparison_rows} />
-      ) : null}
       {diffs.length > 0 ? <DiffViewer diffs={diffs} fallbackText={legacyFallback} /> : null}
       <PTRTechnicalDetails findings={findings} groupedCodexReviews={groupedCodexReviews} reviews={reviews} />
     </div>
@@ -248,7 +249,7 @@ function PTRAtomicComparisonTable({ rows }: { rows: PTRAtomicComparisonRow[] }) 
           <thead>
             <tr>
               <th>参数</th>
-              <th>预设</th>
+              <th>条件/预设</th>
               <th>PTR 要求</th>
               <th>报告结果</th>
               <th>来源</th>

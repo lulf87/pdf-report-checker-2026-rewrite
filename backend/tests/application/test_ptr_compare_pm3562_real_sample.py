@@ -75,7 +75,68 @@ def test_ptr_compare_pm3562_real_sample_scope_and_direct_items(tmp_path: Path) -
         assert item["coverage_status"] == "covered_passed"
         assert item["report_matches"][0]["item_no"] == str(index + 37)
         assert item["report_matches"][0]["single_conclusion"] in {"符合", "/"}
+        assert item["atomic_comparison_rows"], f"2.1.{index} should expose table 2-1 atomic comparison rows"
     assert not _has_finding(result, "PTR_TABLE_MISSING", clause_number_prefix="2.1", table_number="2-1")
+
+    item_211_rows = {row["atomic_id"]: row for row in items["2.1.1"]["atomic_comparison_rows"]}
+    assert item_211_rows["2.1.1:basic_rate:setting"]["expected"] == "30-130，步幅5；140-170，步幅10"
+    assert "30-130" in item_211_rows["2.1.1:basic_rate:setting"]["actual"]
+    assert "140-170" in item_211_rows["2.1.1:basic_rate:setting"]["actual"]
+    assert item_211_rows["2.1.1:basic_rate:nominal"]["expected"] == "60 min⁻¹"
+    assert "60" in item_211_rows["2.1.1:basic_rate:nominal"]["actual"]
+    assert item_211_rows["2.1.1:basic_rate:tolerance:240ohm"]["expected"] == "±15 ms"
+    assert "-8～+1" in item_211_rows["2.1.1:basic_rate:tolerance:240ohm"]["actual"]
+    assert "-8～+0" in item_211_rows["2.1.1:basic_rate:tolerance:500ohm"]["actual"]
+    assert "-8～+1" in item_211_rows["2.1.1:basic_rate:tolerance:2000ohm"]["actual"]
+    assert all(row["status"] == "match" for row in item_211_rows.values())
+
+    item_212_rows = {row["atomic_id"]: row for row in items["2.1.2"]["atomic_comparison_rows"]}
+    assert len(item_212_rows) >= 15
+    for site, expected_actuals in {
+        "atrial": {"240ohm": "+0.01～+0.03", "500ohm": "+0.01～+0.03", "2000ohm": "+0.01～+0.03"},
+        "right_ventricle": {"240ohm": "+0.01～+0.02", "500ohm": "+0.01～+0.02", "2000ohm": "+0.01～+0.02"},
+        "left_ventricle": {"240ohm": "+0.00～+0.03", "500ohm": "+0.00～+0.03", "2000ohm": "+0.01～+0.03"},
+    }.items():
+        assert item_212_rows[f"2.1.2:pulse_width:{site}:setting"]["status"] == "match"
+        assert item_212_rows[f"2.1.2:pulse_width:{site}:nominal"]["status"] == "match"
+        for load, actual in expected_actuals.items():
+            row = item_212_rows[f"2.1.2:pulse_width:{site}:tolerance:{load}"]
+            assert row["expected"] == "±0.04 ms"
+            assert row["actual"] == actual
+            assert row["status"] == "match"
+
+    item_213_rows = {row["atomic_id"]: row for row in items["2.1.3"]["atomic_comparison_rows"]}
+    tolerance_rows_213 = [row for row in item_213_rows.values() if ":tolerance:" in row["atomic_id"]]
+    assert len(tolerance_rows_213) >= 24
+    assert "2.1.3:pulse_amplitude:atrial:tolerance:240ohm:segment_0" in item_213_rows
+    assert item_213_rows["2.1.3:pulse_amplitude:atrial:tolerance:240ohm:segment_0"]["actual"] == "-0.06、-0.11"
+    assert item_213_rows["2.1.3:pulse_amplitude:atrial:tolerance:240ohm:segment_1"]["actual"] == "-22%、-20%"
+    assert item_213_rows["2.1.3:pulse_amplitude:atrial:tolerance:240ohm:segment_2"]["actual"] == "-27%～-20%"
+    assert item_213_rows["2.1.3:pulse_amplitude:atrial:tolerance:500ohm:segment_0"]["actual"] == "-0.09～-0.03"
+    assert item_213_rows["2.1.3:pulse_amplitude:atrial:tolerance:500ohm:segment_2"]["actual"] == "-11%～-10%"
+    assert item_213_rows["2.1.3:pulse_amplitude:atrial:tolerance:2000ohm:segment_0"]["actual"] == "-0.02～-0.01"
+    assert item_213_rows["2.1.3:pulse_amplitude:right_ventricle:tolerance:500ohm:segment_1"]["actual"] == "-8%"
+    assert item_213_rows["2.1.3:pulse_amplitude:left_ventricle:tolerance:2000ohm:segment_1"]["actual"] == "-3%～-2%"
+    assert all(row["status"] == "match" for row in tolerance_rows_213)
+
+    item_218_rows = {row["atomic_id"]: row for row in items["2.1.8"]["atomic_comparison_rows"]}
+    assert item_218_rows["2.1.8:ventricular_sensed_refractory:setting"]["status"] == "match"
+    assert item_218_rows["2.1.8:ventricular_sensed_refractory:nominal"]["actual"] == "250 ms"
+    assert item_218_rows["2.1.8:ventricular_sensed_refractory:tolerance"]["actual"] == "-4～-1"
+
+    item_2110_rows = {row["atomic_id"]: row for row in items["2.1.10"]["atomic_comparison_rows"]}
+    assert item_2110_rows["2.1.10:av_interval:pacing:nominal"]["actual"] == "200 ms"
+    assert item_2110_rows["2.1.10:av_interval:pacing:tolerance"]["actual"] == "-1～+1"
+    assert item_2110_rows["2.1.10:av_interval:sensed:nominal"]["actual"] == "150 ms"
+    assert item_2110_rows["2.1.10:av_interval:sensed:tolerance"]["actual"] == "-3～-0"
+
+    item_2111_rows = {row["atomic_id"]: row for row in items["2.1.11"]["atomic_comparison_rows"]}
+    assert item_2111_rows["2.1.11:escape_interval:tolerance"]["actual"] == "+8～+10"
+
+    item_2112_rows = {row["atomic_id"]: row for row in items["2.1.12"]["atomic_comparison_rows"]}
+    assert item_2112_rows["2.1.12:pvarp:setting"]["actual"].startswith("125-500")
+    assert item_2112_rows["2.1.12:pvarp:nominal"]["actual"] == "275 ms"
+    assert item_2112_rows["2.1.12:pvarp:tolerance"]["actual"] == "+1～+9"
 
     item_222 = items["2.2.2"]
     assert item_222["final_status"] == "passed"
@@ -111,6 +172,13 @@ def test_ptr_compare_pm3562_real_sample_scope_and_direct_items(tmp_path: Path) -
     assert item_282["report_matches"][0]["item_no"] == "54"
     assert "0.884" in item_282["report_matches"][0]["test_result"]
     assert "0.993" in item_282["report_matches"][0]["test_result"]
+    item_282_rows = {row["atomic_id"]: row for row in item_282["atomic_comparison_rows"]}
+    assert item_282_rows["2.8.2:torque_wrench:A"]["expected"] == "0.88～0.89 mm"
+    assert item_282_rows["2.8.2:torque_wrench:A"]["actual"] == "0.884"
+    assert item_282_rows["2.8.2:torque_wrench:A"]["status"] == "match"
+    assert item_282_rows["2.8.2:torque_wrench:B"]["expected"] == "0.96～1.00 mm"
+    assert item_282_rows["2.8.2:torque_wrench:B"]["actual"] == "0.993"
+    assert item_282_rows["2.8.2:torque_wrench:B"]["status"] == "match"
 
     assert not _has_finding(result, "PTR_CLAUSE_TEXT_MISMATCH", clause_number="2.3")
     assert result.summary.confirmed_errors_count == 0
