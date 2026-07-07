@@ -1518,6 +1518,48 @@ def test_ptr_compare_scope_aware_1539_b55_like_split_rows_resolve_without_codex_
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
 
+def test_ptr_compare_scope_aware_1539_software_rf_dash_rows_are_not_applicable_for_afr_00008(
+    tmp_path: Path,
+) -> None:
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(
+            _scope_aware_report_items_with_b55_item_159_software_table_requirement_and_continuation()
+        ),
+        table_reference_compare=RefutedMissingTableCompare({"2.6"}),
+        clause_text_compare=NoopClauseCompare(),
+        extra_report_pages=_scope_aware_report_item_157_waveform_with_real_split_159_software_pages(),
+    )
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+    software_rows = {
+        row["atomic_id"]: row
+        for row in items["2.6"]["atomic_comparison_rows"]
+    }
+
+    power_row = software_rows["2.6:table6:射频消融仪---功率监测"]
+    assert power_row["actual"] == "——"
+    assert power_row["status"] == "not_applicable"
+    assert "不适用" in power_row["reason"]
+
+    rf_communication_id = (
+        "2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信"
+    )
+    communication_row = software_rows[rf_communication_id]
+    assert communication_row["actual"] == "——"
+    assert communication_row["status"] == "not_applicable"
+    assert "不适用" in communication_row["reason"]
+
+    assert items["2.6"]["coverage_status"] == "covered_passed"
+    assert items["2.6"]["final_status"] == "passed"
+    assert details["confirmed_errors_count"] == 0
+    assert details["manual_review_required_count"] == 0
+    assert result.summary.confirmed_errors_count == 0
+    assert result.summary.manual_review_required_count == 0
+    assert result.summary.final_audit_status == "passed"
+
+
 def test_ptr_compare_codex_field_comparisons_backfill_refuted_atomic_rows(tmp_path: Path) -> None:
     audit_service = FieldComparisonPtrCodexAuditService(
         {
@@ -3381,6 +3423,32 @@ def _scope_aware_report_items_with_b55_item_159_software_table_requirement() -> 
     return items
 
 
+def _scope_aware_report_items_with_b55_item_159_software_table_requirement_and_continuation() -> list[InspectionItem]:
+    items = _scope_aware_report_items_with_b55_item_159_software_table_requirement()
+    items.append(
+        InspectionItem(
+            sequence_raw="续\n159",
+            sequence=159,
+            is_continuation=True,
+            item_name="软件功能",
+            standard_clause="2.6",
+            standard_requirement="射频消\n融仪",
+            test_result="——",
+            conclusion="符合",
+            remark="/",
+            source_page=100,
+            row_index_in_page=1,
+            metadata={
+                "row_text": (
+                    "续 159 软件功能 2.6 射频消\n"
+                    "融仪 与脉冲电场消融仪、导管接口单元 CIU、灌注泵、控制器和电生理三维导航系统通信 ——"
+                )
+            },
+        )
+    )
+    return items
+
+
 def _scope_aware_report_items_with_incomplete_item_157_atomic_rows() -> list[InspectionItem]:
     items: list[InspectionItem] = []
     for item in _scope_aware_report_items():
@@ -3654,6 +3722,86 @@ def _scope_aware_report_item_157_b55_split_waveform_and_159_prefixed_software_pa
                 "159 软件功能 2.6 射频脉冲电场消融系统软件应具备以下功能： 表 6 软件功能 符合 /"
             ),
         ),
+    ]
+
+
+def _scope_aware_report_item_159_real_split_software_pages() -> list[PdfPage]:
+    return [
+        PdfPage(
+            page_number=99,
+            text=(
+                "159 软件功能 2.6\n"
+                "射频脉冲电场消融系统软件应具备以下功能：\n"
+                "表 6 软件功能\n"
+                "符合\n"
+                "/\n"
+                "组件\n"
+                "功能\n\n"
+                "射频消\n"
+                "融仪\n"
+                "功率监测\n"
+                "——\n"
+                "阻抗监测\n"
+                "——\n"
+                "温度监测\n"
+                "——\n"
+            ),
+        ),
+        PdfPage(
+            page_number=100,
+            text=(
+                "续\n"
+                "159 软件功能 2.6\n"
+                "射频消\n"
+                "融仪\n"
+                "控制射频消融或脉冲电场消融应用\n"
+                "的启动和停止\n"
+                "——\n"
+                "符合\n"
+                "/\n"
+                "灌注泵流量监测\n"
+                "——\n"
+                "射频消融或脉冲电场消融模式选择\n"
+                "——\n"
+                "接触质量监测\n"
+                "——\n"
+                "与脉冲电场消融仪、导管接口单元\n"
+                "CIU、灌注泵、控制器和电生理三维\n"
+                "导航系统通信\n"
+                "——\n"
+                "参数显示与控制，包括阻抗、流\n"
+                "量、功率、时间、能量、温度和电\n"
+                "流水平\n"
+                "——\n"
+                "显示能量输送状态\n"
+                "——\n"
+                "显示消融图\n"
+                "——\n"
+                "预设选择\n"
+                "——\n"
+                "心脏脉\n"
+                "冲电场\n"
+                "消融仪\n"
+                "阻抗监测\n"
+                "符合要求\n"
+                "温度监测\n"
+                "符合要求\n"
+                "与射频消融仪、导管接口单元 CIU\n"
+                "通信\n"
+                "符合要求\n"
+            ),
+        ),
+    ]
+
+
+def _scope_aware_report_item_157_waveform_with_real_split_159_software_pages() -> list[PdfPage]:
+    waveform_pages = _scope_aware_report_item_157_b55_split_waveform_and_159_prefixed_software_pages()
+    software_pages = _scope_aware_report_item_159_real_split_software_pages()
+    page99_prefix = waveform_pages[0].text.split("159 软件功能", 1)[0]
+    return [
+        waveform_pages[0].model_copy(update={"text": f"{page99_prefix}{software_pages[0].text}"}),
+        waveform_pages[1].model_copy(update={"text": f"{waveform_pages[1].text}\n{software_pages[1].text}"}),
+        waveform_pages[2],
     ]
 
 

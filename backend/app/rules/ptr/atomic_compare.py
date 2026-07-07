@@ -950,25 +950,84 @@ def _software_requirement_window(group_text: str, requirement: PTRAtomicRequirem
     parameter_name = str(requirement.metadata.get("parameter_name") or requirement.label or "")
     dimensions = requirement.metadata.get("dimensions") if isinstance(requirement.metadata, dict) else {}
     component = str(dimensions.get("组件") or "") if isinstance(dimensions, dict) else ""
-    parameter_keys = [_compact_for_match(alias) for alias in _software_function_aliases(parameter_name)]
+    parameter_aliases = _software_function_aliases(parameter_name)
+    parameter_keys = [_compact_for_match(alias) for alias in parameter_aliases]
     component_key = _compact_for_match(component)
+    candidates: list[tuple[int, str]] = []
     for current_component, window in _software_context_windows(group_text):
         if component and current_component != component:
             continue
         window_key = _compact_for_match(window)
         if any(parameter_key and parameter_key in window_key for parameter_key in parameter_keys):
-            return window.strip()
+            if _software_other_component_before_parameter(window, parameter_aliases, component):
+                continue
+            candidates.append((3, _trim_software_window_to_parameter(window, parameter_aliases)))
     for _current_component, window in _software_context_windows(group_text):
         window_key = _compact_for_match(window)
         if component_key and component_key not in window_key:
             continue
         if any(parameter_key and parameter_key in window_key for parameter_key in parameter_keys):
-            return window.strip()
+            if _software_other_component_before_parameter(window, parameter_aliases, component):
+                continue
+            candidates.append((2, _trim_software_window_to_parameter(window, parameter_aliases)))
     label_key = _compact_for_match(requirement.label)
     for _current_component, window in _software_context_windows(group_text):
         if label_key and label_key in _compact_for_match(window):
-            return window.strip()
-    return ""
+            candidates.append((1, _trim_software_window_to_parameter(window, parameter_aliases)))
+    if not candidates:
+        return ""
+    return max(candidates, key=lambda candidate: _software_window_score(candidate[0], candidate[1]))[1]
+
+
+def _software_window_score(priority: int, window: str) -> tuple[int, int, int]:
+    has_actual = 1 if _software_actual_from_window(window) is not None else 0
+    return has_actual, priority, -len(str(window or ""))
+
+
+def _trim_software_window_to_parameter(window: str, parameter_aliases: Sequence[str]) -> str:
+    text = str(window or "")
+    match = _software_parameter_match(text, parameter_aliases)
+    if match is not None:
+        return text[match.start() :].strip()
+    return text.strip()
+
+
+def _software_other_component_before_parameter(window: str, parameter_aliases: Sequence[str], component: str) -> bool:
+    text = str(window or "")
+    parameter_match = _software_parameter_match(text, parameter_aliases)
+    if parameter_match is None:
+        return False
+    before_parameter = text[: parameter_match.start()]
+    expected_component = str(component or "")
+    for candidate_component in SOFTWARE_COMPONENTS:
+        if candidate_component == expected_component:
+            continue
+        if _loose_component_pattern(candidate_component).search(before_parameter):
+            return True
+    return False
+
+
+def _software_parameter_match(window: str, parameter_aliases: Sequence[str]) -> re.Match[str] | None:
+    text = str(window or "")
+    matches = [
+        match
+        for alias in sorted(parameter_aliases, key=len, reverse=True)
+        if (match := _loose_software_alias_pattern(alias).search(text)) is not None
+    ]
+    return min(matches, key=lambda match: match.start()) if matches else None
+
+
+def _loose_software_alias_pattern(alias: str) -> re.Pattern[str]:
+    parts: list[str] = []
+    for char in str(alias or ""):
+        if char.isspace():
+            parts.append(r"\s*")
+        elif char in {"、", "，", ",", "/", "／"}:
+            parts.append(r"[\s、，,/／]*")
+        else:
+            parts.append(re.escape(char))
+            parts.append(r"\s*")
+    return re.compile("".join(parts), re.IGNORECASE)
 
 
 def _software_actual_from_window(window: str) -> str | None:
@@ -1001,11 +1060,13 @@ def _software_context_windows(group_text: str) -> list[tuple[str | None, str]]:
     current_component: str | None = None
     for index, line in enumerate(lines):
         declared_component = _software_declared_component(line)
-        if declared_component is None:
-            declared_component = _software_declared_component(" ".join(lines[index : index + 2]))
+        for span in range(2, 5):
+            if declared_component is not None:
+                break
+            declared_component = _software_declared_component(" ".join(lines[index : index + span]))
         if declared_component is not None:
             current_component = declared_component
-        window = " ".join(lines[index : index + 2])
+        window = " ".join(lines[index : index + 8])
         windows.append((current_component, window))
     return windows
 
