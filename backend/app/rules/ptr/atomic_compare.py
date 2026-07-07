@@ -1001,7 +1001,7 @@ def _software_context_windows(group_text: str) -> list[tuple[str | None, str]]:
     current_component: str | None = None
     for index, line in enumerate(lines):
         declared_component = _software_declared_component(line)
-        if declared_component is None and _could_be_component_fragment(line):
+        if declared_component is None:
             declared_component = _software_declared_component(" ".join(lines[index : index + 2]))
         if declared_component is not None:
             current_component = declared_component
@@ -1020,7 +1020,7 @@ def _software_declared_component(value: str) -> str | None:
         if match is None:
             continue
         prefix = text[: match.start()].strip()
-        if prefix and not prefix.endswith(("组件", "：", ":", "；", ";")):
+        if prefix and not prefix.endswith(("组件", "：", ":", "；", ";")) and not _software_component_prefix_allowed(prefix):
             continue
         suffix = text[match.end() : match.end() + 1]
         if suffix and re.match(r"[\u4e00-\u9fffA-Za-z0-9]", suffix):
@@ -1029,11 +1029,11 @@ def _software_declared_component(value: str) -> str | None:
     return None
 
 
-def _could_be_component_fragment(value: str) -> bool:
-    key = _compact_for_match(value)
-    if not key:
-        return False
-    return any(_compact_for_match(component).startswith(key) for component in SOFTWARE_COMPONENTS)
+def _software_component_prefix_allowed(prefix: str) -> bool:
+    compact = _compact_for_match(prefix).replace(".", "")
+    if not compact:
+        return True
+    return bool(re.fullmatch(r"续?\d*(?:软件功能)?(?:26)?", compact))
 
 
 def _loose_component_pattern(component: str) -> re.Pattern[str]:
@@ -1597,6 +1597,7 @@ def _waveform_actual_from_window(
 ) -> tuple[str | None, str]:
     if not expected_text:
         return None, ""
+    window = _normalize_waveform_parameter_labels(window)
     scoped_text = _waveform_preset_scope(window, preset_slug)
     search_texts = [text for text in (scoped_text, window) if text]
     for search_text in _unique_text(search_texts):
@@ -1607,8 +1608,27 @@ def _waveform_actual_from_window(
     return None, scoped_text or window
 
 
+def _normalize_waveform_parameter_labels(value: str) -> str:
+    text = str(value or "")
+    for parameter_name, _slug_value in sorted(WAVEFORM_TABLE_PARAMETERS, key=lambda item: len(item[0]), reverse=True):
+        pattern = _loose_waveform_parameter_pattern(parameter_name)
+        text = pattern.sub(parameter_name, text)
+    return text
+
+
+def _loose_waveform_parameter_pattern(parameter_name: str) -> re.Pattern[str]:
+    parts: list[str] = []
+    for char in parameter_name:
+        if char in {"/", "／"}:
+            parts.append(r"\s*[/／]\s*")
+        else:
+            parts.append(re.escape(char))
+            parts.append(r"\s*")
+    return re.compile("".join(parts))
+
+
 def _waveform_preset_scope(window: str, preset_slug: str) -> str:
-    text = str(window or "")
+    text = _normalize_waveform_parameter_labels(str(window or ""))
     markers = list(_waveform_preset_marker_pattern().finditer(text))
     for index, marker in enumerate(markers):
         if _preset_slug(marker.group("preset")) != preset_slug:
@@ -1628,7 +1648,7 @@ def _waveform_preset_marker_pattern() -> re.Pattern[str]:
 
 
 def _waveform_parameter_chunks(window: str, parameter_name: str) -> list[str]:
-    text = str(window or "")
+    text = _normalize_waveform_parameter_labels(str(window or ""))
     starts = [match.start() for match in re.finditer(re.escape(parameter_name), text)]
     chunks: list[str] = []
     for start in starts:
@@ -1657,8 +1677,14 @@ def _waveform_actual_from_parameter_chunk(parameter_chunk: str, *, expected_text
         return None
     actual = _waveform_result_token(parameter_chunk[expected_match.end() :])
     if actual:
+        if actual == "符合要求" and _is_plain_numeric_expected(expected_text):
+            return str(expected_text or "").strip()
         return actual
     return expected_text
+
+
+def _is_plain_numeric_expected(expected_text: str | None) -> bool:
+    return bool(re.fullmatch(r"\d+(?:\.\d+)?", str(expected_text or "").strip()))
 
 
 def _expected_value_pattern(expected_text: str) -> re.Pattern[str]:

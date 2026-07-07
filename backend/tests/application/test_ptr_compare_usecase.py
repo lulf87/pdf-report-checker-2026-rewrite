@@ -29,6 +29,7 @@ from app.infrastructure.codex.fake_codex_runner import FakeCodexRunner
 from app.infrastructure.codex.prompt_builder import PromptBuilder
 from app.infrastructure.storage.local_file_store import LocalFileStore
 from app.rules.ptr import atomic_compare
+from app.rules.ptr.clause_text_compare import compare_clause_texts
 from app.rules.ptr.report_item_grouping import build_ptr_report_item_groups, ptr_group_test_result
 from app.rules.ptr.scope_filter import ScopeDecision, ScopeFilterResult
 from tests.fixtures.table_fixture_builder import build_pdf_table
@@ -1411,9 +1412,9 @@ def test_ptr_compare_scope_aware_1539_binds_real_report_waveform_and_software_ta
     assert waveform_rows["2.2.2:peak_ratio:pulse3"]["status"] == "match"
     assert waveform_rows["2.2.2:current_level:pulse3"]["actual"] == "符合要求"
     assert waveform_rows["2.2.2:current_level:pulse3"]["status"] == "match"
-    assert waveform_rows["2.2.2:pulse_count:pf_reversible"]["actual"] == "符合要求"
+    assert waveform_rows["2.2.2:pulse_count:pf_reversible"]["actual"] == "1"
     assert waveform_rows["2.2.2:pulse_count:pf_reversible"]["status"] == "match"
-    assert waveform_rows["2.2.2:pulse_group_count:pf_reversible"]["actual"] == "符合要求"
+    assert waveform_rows["2.2.2:pulse_group_count:pf_reversible"]["actual"] == "1"
     assert waveform_rows["2.2.2:pulse_group_count:pf_reversible"]["status"] == "match"
     assert waveform_rows["2.2.2:pulse_width:pf_reversible"]["actual"] == "+1%"
     assert waveform_rows["2.2.2:pulse_width:pf_reversible"]["status"] == "match"
@@ -1461,6 +1462,58 @@ def test_ptr_compare_scope_aware_1539_binds_real_report_waveform_and_software_ta
     assert details["manual_review_required_count"] == 0
     assert details["overall_status"] == "passed"
     assert result.metadata["codex_audit"]["final_audit_status"] == "passed"
+    assert result.summary.final_audit_status == "passed"
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_ptr_compare_scope_aware_1539_b55_like_split_rows_resolve_without_codex_cache(tmp_path: Path) -> None:
+    result = _run_scope_aware_usecase(
+        tmp_path,
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(
+            _scope_aware_report_items_with_b55_item_159_software_table_requirement()
+        ),
+        table_reference_compare=RefutedMissingTableCompare({"2.6"}),
+        clause_text_compare=NoopClauseCompare(),
+        extra_report_pages=_scope_aware_report_item_157_b55_split_waveform_and_159_prefixed_software_pages(),
+    )
+
+    details = result.metadata["ptr_comparison_details"]
+    items = {item["ptr_clause_id"]: item for item in details["items"]}
+
+    waveform_rows = {
+        row["atomic_id"]: row
+        for row in items["2.2.2"]["atomic_comparison_rows"]
+    }
+    assert waveform_rows["2.2.2:pulse_count:pulse3"]["actual"] == "1500"
+    assert waveform_rows["2.2.2:pulse_count:pulse3"]["status"] == "match"
+    assert waveform_rows["2.2.2:pulse_count:pf_reversible"]["actual"] == "1"
+    assert waveform_rows["2.2.2:pulse_count:pf_reversible"]["status"] == "match"
+    assert waveform_rows["2.2.2:pulse_group_count:pulse3"]["actual"] == "12"
+    assert waveform_rows["2.2.2:pulse_group_count:pulse3"]["status"] == "match"
+    assert not any(row["status"] == "needs_review" for row in waveform_rows.values())
+
+    software_rows = {
+        row["atomic_id"]: row
+        for row in items["2.6"]["atomic_comparison_rows"]
+    }
+    rf_communication_id = (
+        "2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信"
+    )
+    assert software_rows[rf_communication_id]["actual"] == "——"
+    assert software_rows[rf_communication_id]["status"] == "not_applicable"
+    assert all(row["status"] in {"match", "not_applicable"} for row in software_rows.values())
+    assert items["2.6"]["coverage_status"] == "covered_passed"
+    assert items["2.6"]["final_status"] == "passed"
+
+    ptr_table_result = _check_result(result, "PTR_TABLE")
+    assert not any(
+        finding.code == "PTR_TABLE_MISSING" and finding.metadata.get("clause_number") == "2.6"
+        for finding in ptr_table_result.findings
+    )
+    assert details["confirmed_errors_count"] == 0
+    assert details["manual_review_required_count"] == 0
+    assert result.summary.confirmed_errors_count == 0
+    assert result.summary.manual_review_required_count == 0
     assert result.summary.final_audit_status == "passed"
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
@@ -2466,6 +2519,7 @@ def _run_scope_aware_usecase(
     report_extractor: ScopeAwareReportExtractor | None = None,
     inspection_table_extractor: ScopeAwareInspectionTableExtractor | None = None,
     table_reference_compare=None,
+    clause_text_compare=None,
     codex_audit_service=None,
     extra_report_pages: list[PdfPage] | None = None,
 ):
@@ -2497,6 +2551,7 @@ def _run_scope_aware_usecase(
         ptr_extractor=FakePTRExtractor(_scope_aware_ptr_document()),
         report_extractor=report_extractor or ScopeAwareReportExtractor(),
         inspection_table_extractor=inspection_table_extractor or ScopeAwareInspectionTableExtractor(),
+        clause_text_compare=clause_text_compare or compare_clause_texts,
         table_reference_compare=table_reference_compare or TrackingTableCompare(),
         codex_audit_service=codex_audit_service,
     )
@@ -3309,6 +3364,23 @@ def _scope_aware_report_items_with_clause_window_split_atomic_source() -> list[I
     return items
 
 
+def _scope_aware_report_items_with_b55_item_159_software_table_requirement() -> list[InspectionItem]:
+    items: list[InspectionItem] = []
+    for item in _scope_aware_report_items():
+        if item.sequence_raw == "159":
+            items.append(
+                item.model_copy(
+                    update={
+                        "standard_requirement": "射频脉冲电场消融系统软件应具备以下功能：\n表 6 软件功能",
+                        "source_page": 99,
+                    }
+                )
+            )
+            continue
+        items.append(item)
+    return items
+
+
 def _scope_aware_report_items_with_incomplete_item_157_atomic_rows() -> list[InspectionItem]:
     items: list[InspectionItem] = []
     for item in _scope_aware_report_items():
@@ -3491,6 +3563,95 @@ def _scope_aware_report_item_157_real_waveform_and_159_full_page_text_pages() ->
                 "单个脉冲最大输出能量应小于 258mJ。\n"
                 "检验结果 159 mJ\n"
                 "2.2.7 保护功能 温度超限保护和过流保护功能符合要求。"
+            ),
+        ),
+    ]
+
+
+def _scope_aware_report_item_157_b55_split_waveform_and_159_prefixed_software_pages() -> list[PdfPage]:
+    return [
+        PdfPage(
+            page_number=99,
+            text=(
+                "157 心脏脉冲\n"
+                "电场消融\n"
+                "仪 2.2 2.2.1 心脏脉冲电场消融仪输出\n"
+                "电压：3333V（峰值） 单位：V𝑝 3375 符合 /\n"
+                "电流：57A（峰值） 单位：A𝑝 59 /\n"
+                "2.2.2 心脏脉冲电场消融仪输出波形图和波形参数\n"
+                "心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满足表 6 的要求。\n"
+                "参数 PULSE3 预设 /\n"
+                "脉冲个\n"
+                "数 1500 符合要求 /\n"
+                "脉冲组\n"
+                "数 12 符合要求 /\n"
+                "脉冲组\n"
+                "间隔 210±1msec 单位：ms -0.1 /\n"
+                "脉冲对\n"
+                "间隔 1.12msec±4μsec 单位：μs +0 /\n"
+                "脉冲宽\n"
+                "度 0.9μsec±20% -9% /\n"
+                "159 软件功能 2.6 射频脉冲电场消融系统软件应具备以下功能： 表 6 软件功能 符合 /\n"
+                "组件 功能 射频消\n"
+                "融仪 功率监测 —— 阻抗监测 —— 温度监测 ——\n"
+                "续 159 软件功能 2.6 射频消\n"
+                "融仪 控制射频消融或脉冲电场消融应用 的启动和停止 —— 符合 /\n"
+                "灌注泵流量监测 ——\n"
+                "射频消融或脉冲电场消融模式选择 ——\n"
+                "接触质量监测 ——\n"
+                "与脉冲电场消融仪、导管接口单元 CIU、灌注泵、控制器和电生理三维\n"
+                "导航系统通信 ——\n"
+                "参数显示与控制，包括阻抗、流量、功率、时间、能量、温度和电流水平 ——\n"
+                "显示能量输送状态 —— 显示消融图 —— 预设选择 ——\n"
+                "心脏脉冲电场消融仪 阻抗监测 符合要求 温度监测 符合要求\n"
+                "与射频消融仪、导管接口单元 CIU 通信 符合要求"
+            ),
+        ),
+        PdfPage(
+            page_number=100,
+            text=(
+                "续 157 心脏脉冲 电场消融 仪 2.2\n"
+                "脉冲相\n"
+                "间隔 1μsec±20% -13%～-8% 符合 /\n"
+                "波形类\n"
+                "型 三相 符合要求 /\n"
+                "正峰值\n"
+                "/负峰\n"
+                "值 5±20% -9% /\n"
+                "电流水\n"
+                "平 1-100% 符合要求 /\n"
+                "参数 PFReversible 预设 /\n"
+                "脉冲个\n"
+                "数 1 符合要求 /\n"
+                "脉冲组\n"
+                "数 1 符合要求 /\n"
+                "脉冲组\n"
+                "间隔 / —— /\n"
+                "脉冲对\n"
+                "间隔 / —— /\n"
+                "脉冲宽\n"
+                "度 0.9μsec±20% +1% /\n"
+                "脉冲相\n"
+                "间隔 1μsec±20% +11% /\n"
+                "波形类\n"
+                "型 双相 符合要求 /\n"
+                "正峰值\n"
+                "/负峰\n"
+                "值 1±0.1 +0.02 /\n"
+                "电流水\n"
+                "平 1-100% 符合要求 /\n"
+                "2.2.3 脉冲上升时间 单位：ns 430 PULSE3 预设 455 PFReversible 预设\n"
+                "2.2.4 脉冲下降时间 单位：ns 260 PULSE3 预设 205 PFReversible 预设"
+            ),
+        ),
+        PdfPage(
+            page_number=101,
+            text=(
+                "续 157 2.2.5 脉冲衰减 1% 符合 /\n"
+                "2.2.6 最大输出能量 单位：mJ 159 /\n"
+                "2.2.7 保护功能 符合要求 /\n"
+                "158 电气安全 2.5 符合 /\n"
+                "159 软件功能 2.6 射频脉冲电场消融系统软件应具备以下功能： 表 6 软件功能 符合 /"
             ),
         ),
     ]

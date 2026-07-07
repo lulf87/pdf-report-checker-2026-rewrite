@@ -499,6 +499,7 @@ class PTRCompareUseCase:
             for finding in findings
             if not self._table_2_1_missing_has_report_coverage(finding, report_groups)
             and not self._table_2_2_pvc_only_missing_has_report_coverage(finding, report_groups)
+            and not self._table_6_software_missing_has_report_coverage(finding, report_groups)
         ]
 
     def _table_2_1_missing_has_report_coverage(self, finding: Finding, report_groups: list) -> bool:
@@ -542,6 +543,32 @@ class PTRCompareUseCase:
         )
         compact = re.sub(r"\s+", "", evidence_text).lower()
         return "仅检" in compact and "pvc" in compact and "反应" in compact and "符合" in compact and "不符合" not in compact
+
+    def _table_6_software_missing_has_report_coverage(self, finding: Finding, report_groups: list) -> bool:
+        if finding.code != "PTR_TABLE_MISSING":
+            return False
+        if str(finding.metadata.get("table_number") or "") != "6":
+            return False
+        if str(finding.metadata.get("clause_number") or "").strip() != "2.6":
+            return False
+        group = ptr_group_for_clause("2.6", report_groups)
+        if group is None:
+            return False
+        evidence_text = " ".join(
+            str(value or "")
+            for row in group.rows
+            for value in (
+                row.sequence_raw,
+                row.item_name,
+                row.standard_clause,
+                row.standard_requirement,
+                row.test_result,
+                row.conclusion,
+                row.remark,
+            )
+        )
+        compact = re.sub(r"\s+", "", evidence_text)
+        return "表6软件功能" in compact and "符合" in compact and "不符合" not in compact
 
     def _included_main_requirement_clauses(
         self,
