@@ -226,6 +226,8 @@ class PtrCodexEvidenceBuilder:
             for finding in result.findings:
                 if finding.check_id not in {"PTR_CLAUSE", "PTR_TABLE", "PTR_SCOPE", "PTR_REPORT_SCOPE"}:
                     continue
+                if finding.metadata.get("codex_required") is False or finding.metadata.get("final_status"):
+                    continue
                 if not self.target_selection.allows(finding):
                     continue
                 findings.append(finding)

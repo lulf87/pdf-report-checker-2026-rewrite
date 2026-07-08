@@ -45,7 +45,7 @@ def compare_clause_texts(
                 continue
             expected = normalize_text(clause.body_text or "")
             actual = normalize_text(report_item.standard_requirement or "")
-            if _compact(expected) == _compact(actual):
+            if _clause_text_equivalent(clause, expected, actual):
                 continue
             if report_group is not None and len(report_group.rows) > 1 and ptr_group_supports_clause(clause_number, report_group):
                 continue
@@ -66,7 +66,7 @@ def compare_clause_texts(
 
         expected = normalize_text(clause.body_text or "")
         actual = normalize_text(ptr_group_standard_requirement(report_group) if report_group is not None else report_item.standard_requirement or "")
-        if _compact(expected) == _compact(actual):
+        if _clause_text_equivalent(clause, expected, actual):
             continue
         findings.append(_mismatch_finding(clause, report_item, expected, actual, task_id))
     return findings
@@ -133,10 +133,21 @@ def _direct_report_group_satisfies_clause(
     ptr_text = _compact(" ".join([clause.title or "", clause.body_text or "", clause.full_text or ""])).lower()
     if "符合" not in report_text or "不符合" in report_text:
         return False
-    if clause_number == "2.2.2" and "紧急起搏" in ptr_text and "紧急起搏" in report_text:
+    if "紧急起搏" in ptr_text and "紧急起搏" in report_text:
         return all(token in report_text for token in ("vvi", "7.5", "0.6", "325")) and re.search(r"70\s*min", report_text)
-    if clause_number == "2.8.2" and "扭矩扳手" in ptr_text and "扭矩扳手" in report_text:
+    if "扭矩扳手" in ptr_text and "扭矩扳手" in report_text:
         return all(token in report_text for token in ("0.884", "0.993"))
+    return False
+
+
+def _clause_text_equivalent(clause: PTRClause, expected: str, actual: str) -> bool:
+    expected_compact = _compact(expected)
+    actual_compact = _compact(actual)
+    if expected_compact == actual_compact:
+        return True
+    title = _compact(clause.title or "")
+    if title and expected_compact.startswith(title) and expected_compact[len(title) :] == actual_compact:
+        return True
     return False
 
 

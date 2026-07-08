@@ -51,6 +51,34 @@ def test_extracts_chapter2_by_number_not_fixed_title_and_table_refs() -> None:
     assert leaf.parent_id == parent.clause_id
 
 
+def test_textless_pdf_without_chapter2_marks_ocr_required_pages() -> None:
+    parsed_pdf = ParsedPdf(
+        file_id="scanned-ptr",
+        file_name="消化道脉冲电场消融仪技术要求.pdf",
+        page_count=13,
+        pages=[
+            PdfPage(
+                page_number=page_number,
+                text="",
+                is_textless=True,
+                diagnostics=[f"Page {page_number}: empty page: no text extracted; OCR not run"],
+            )
+            for page_number in range(1, 14)
+        ],
+        diagnostics=["text extraction completed without OCR"],
+    )
+
+    document = PTRExtractor().extract(parsed_pdf)
+
+    assert document.clauses == []
+    assert "chapter_2_not_found" in document.diagnostics
+    assert "PTR_TEXT_LAYER_MISSING" in document.diagnostics
+    assert document.metadata["ptr_extraction_status"] == "ocr_required"
+    assert document.metadata["ptr_ocr_required"] is True
+    assert document.metadata["ptr_pages_need_ocr"] == list(range(1, 14))
+    assert document.metadata["source_type"] == "image_only_pdf"
+
+
 def test_extracts_hyphenated_table_reference_numbers_without_truncation() -> None:
     for separator in ("-", "‑", "－", "–"):
         parsed_pdf = ParsedPdf(

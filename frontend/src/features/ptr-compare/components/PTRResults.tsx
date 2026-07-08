@@ -23,6 +23,7 @@ export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps
   const [filter, setFilter] = useState<PTRFilterMode>("issues");
   const [exportError, setExportError] = useState<string | null>(null);
   const ptrDetails = result.metadata.ptr_comparison_details;
+  const ptrOcrRequired = isPtrOcrRequired(ptrDetails);
   const resultBadge = finalResultBadge(result, ptrDetails);
   const clauses = useMemo(
     () => toPTRClauseViewModels(result),
@@ -45,7 +46,9 @@ export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps
         <Badge variant={resultBadge.variant}>{resultBadge.label}</Badge>
       </header>
 
-      {ptrDetails ? (
+      {ptrDetails && ptrOcrRequired ? <PtrOcrRequiredNotice details={ptrDetails} /> : null}
+
+      {ptrDetails && !ptrOcrRequired ? (
         <div className="metric-grid">
           {ptrDetails.scope_consistency ? (
             <StatusMetric
@@ -140,6 +143,23 @@ function StatusMetric({
   );
 }
 
+function PtrOcrRequiredNotice({ details }: { details: PTRComparisonDetails }) {
+  const pages = details.ptr_pages_need_ocr ?? [];
+  return (
+    <GlassCard className="result-card issue-warn">
+      <div className="row-head">
+        <div>
+          <p className="row-title">PTR 文档需要 OCR</p>
+          <p className="muted">该技术要求 PDF 无文本层，系统未能解析第 2 章，尚未完成 PTR/report 比对。</p>
+          <p className="muted">请启用 OCR/视觉增强，或上传可检索文本 PDF。</p>
+          {pages.length > 0 ? <p className="muted">需 OCR 页码：{pages.join("、")}</p> : null}
+        </div>
+        <Badge variant="warn">需处理</Badge>
+      </div>
+    </GlassCard>
+  );
+}
+
 function scopeStatusLabel(status: string): string {
   if (status === "passed") return "通过";
   if (status === "failed") return "不一致";
@@ -154,6 +174,9 @@ function scopeStatusTone(status: string): "info" | "danger" | "warn" {
 }
 
 function finalResultBadge(result: TaskResult, ptrDetails?: PTRComparisonDetails): { label: string; variant: "success" | "danger" | "warn" | "info" } {
+  if (isPtrOcrRequired(ptrDetails)) {
+    return { label: "PTR 文档需要 OCR", variant: "warn" };
+  }
   if (ptrDetails?.overall_status === "passed") {
     return { label: "最终结论：通过", variant: "success" };
   }
@@ -191,6 +214,10 @@ function finalResultBadge(result: TaskResult, ptrDetails?: PTRComparisonDetails)
     return { label: "候选错误待审核", variant: "warn" };
   }
   return { label: "未见最终错误", variant: "success" };
+}
+
+function isPtrOcrRequired(ptrDetails?: PTRComparisonDetails): boolean {
+  return ptrDetails?.ptr_ocr_required === true || ptrDetails?.ptr_extraction_status === "ocr_required";
 }
 
 function CodexAuditScopeNotice({ metadata }: { metadata: Record<string, unknown> }) {

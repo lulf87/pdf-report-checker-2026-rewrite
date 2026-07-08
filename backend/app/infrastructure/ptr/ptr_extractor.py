@@ -36,7 +36,16 @@ class PTRExtractor:
     def extract(self, parsed_pdf: ParsedPdf) -> PTRDocument:
         chapter_pages = self._find_chapter2_pages(parsed_pdf)
         if not chapter_pages:
-            return PTRDocument(parsed_pdf=parsed_pdf, source_info=parsed_pdf.file_name, diagnostics=["chapter_2_not_found"])
+            diagnostics = ["chapter_2_not_found"]
+            metadata = self._textless_pdf_metadata(parsed_pdf)
+            if metadata:
+                diagnostics.append("PTR_TEXT_LAYER_MISSING")
+            return PTRDocument(
+                parsed_pdf=parsed_pdf,
+                source_info=parsed_pdf.file_name,
+                diagnostics=diagnostics,
+                metadata=metadata,
+            )
 
         clauses: list[PTRClause] = []
         page_by_number = {page.page_number: page for page in parsed_pdf.pages}
@@ -89,6 +98,28 @@ class PTRExtractor:
                     break
 
         return pages
+
+    def _textless_pdf_metadata(self, parsed_pdf: ParsedPdf) -> dict[str, object]:
+        if not parsed_pdf.pages:
+            return {}
+        empty_pages = [page for page in parsed_pdf.pages if not (page.text or "").strip()]
+        if len(empty_pages) != len(parsed_pdf.pages):
+            return {}
+        has_textless_signal = any(
+            page.is_textless or any("OCR not run" in diagnostic or "empty page" in diagnostic for diagnostic in page.diagnostics)
+            for page in empty_pages
+        )
+        if not has_textless_signal:
+            return {}
+        pages_need_ocr = [page.page_number for page in empty_pages]
+        return {
+            "ptr_extraction_status": "ocr_required",
+            "ptr_ocr_required": True,
+            "ptr_pages_need_ocr": pages_need_ocr,
+            "source_type": "image_only_pdf",
+            "textless_page_count": len(empty_pages),
+            "page_count": parsed_pdf.page_count or len(parsed_pdf.pages),
+        }
 
     def _is_chapter2_start(self, line: str) -> bool:
         match = TOP_LEVEL_CHAPTER_RE.match(line)

@@ -399,6 +399,10 @@ export interface PTRExcludedComparisonItem {
 export interface PTRComparisonDetails {
   overall_status: PTRComparisonOverallStatus;
   overall_summary: string;
+  ptr_extraction_status?: string | null;
+  ptr_ocr_required?: boolean;
+  ptr_pages_need_ocr?: number[];
+  source_type?: string | null;
   scope_consistency?: PTRScopeConsistency | null;
   requirements_count: number;
   covered_count: number;

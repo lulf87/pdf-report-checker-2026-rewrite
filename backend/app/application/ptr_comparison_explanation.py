@@ -103,6 +103,7 @@ def build_ptr_comparison_details(
         items,
         excluded_items=_excluded_items(ptr_doc=ptr_doc, check_results=check_results),
         scope_consistency=scope_consistency,
+        ptr_extraction_metadata=_ptr_extraction_metadata(ptr_doc),
     )
 
 
@@ -250,8 +251,11 @@ def _details_from_items(
     *,
     excluded_items: list[PTRExcludedComparisonItem] | None = None,
     scope_consistency: dict[str, Any] | None = None,
+    ptr_extraction_metadata: dict[str, Any] | None = None,
 ) -> PTRComparisonDetails:
     excluded_items = excluded_items or []
+    ptr_extraction_metadata = ptr_extraction_metadata or {}
+    ptr_ocr_required = ptr_extraction_metadata.get("ptr_ocr_required") is True
     requirements_count = len(items)
     covered_count = sum(1 for item in items if item.user_facing_status in {PTRUserFacingStatus.COVERED_PASSED, PTRUserFacingStatus.REFUTED})
     missing_count = sum(1 for item in items if item.rule_status == PTRUserFacingStatus.MISSING_IN_REPORT and item.user_facing_status != PTRUserFacingStatus.REFUTED)
@@ -270,8 +274,11 @@ def _details_from_items(
             PTRUserFacingStatus.AUDIT_INCOMPLETE,
         }
     )
+    if ptr_ocr_required:
+        needs_review_count = max(needs_review_count, 1)
+        manual_review_required_count = max(manual_review_required_count, 1)
 
-    if any(item.user_facing_status == PTRUserFacingStatus.AUDIT_INCOMPLETE for item in items):
+    if ptr_ocr_required or any(item.user_facing_status == PTRUserFacingStatus.AUDIT_INCOMPLETE for item in items):
         overall_status = PTRComparisonOverallStatus.AUDIT_INCOMPLETE
     elif confirmed_errors_count > 0:
         overall_status = PTRComparisonOverallStatus.FAILED
@@ -280,12 +287,21 @@ def _details_from_items(
     else:
         overall_status = PTRComparisonOverallStatus.PASSED
 
-    return PTRComparisonDetails(
-        overall_status=overall_status,
-        overall_summary=(
+    if ptr_ocr_required:
+        overall_summary = "PTR 文档无文本层，无法解析第 2 章。请启用 OCR/视觉抽取或上传可检索 PDF。"
+    else:
+        overall_summary = (
             f"本次共比对 {requirements_count} 条技术要求，其中 {covered_count} 条已覆盖，"
             f"{needs_review_count} 条需复核，{missing_count} 条未覆盖。"
-        ),
+        )
+
+    return PTRComparisonDetails(
+        overall_status=overall_status,
+        overall_summary=overall_summary,
+        ptr_extraction_status=_safe_text(ptr_extraction_metadata.get("ptr_extraction_status")),
+        ptr_ocr_required=ptr_ocr_required,
+        ptr_pages_need_ocr=_int_list(ptr_extraction_metadata.get("ptr_pages_need_ocr")),
+        source_type=_safe_text(ptr_extraction_metadata.get("source_type")),
         scope_consistency=_safe_payload(scope_consistency),
         requirements_count=requirements_count,
         covered_count=covered_count,
@@ -515,7 +531,14 @@ def _direct_report_match_passes_clause(
     clause_number = str(clause.number)
     group = report_matches[0]
     if not any(_same_clause_number(clause_number, row.standard_clause or "") for row in group.rows):
-        return False
+        parent_matches = any(
+            _same_clause_number(ancestor, row.standard_clause or "")
+            for row in group.rows
+            for ancestor in _ancestor_clause_numbers(clause_number)
+        )
+        group_requirement = _compact(ptr_group_standard_requirement(group))
+        if not parent_matches or _compact(clause_number) not in group_requirement:
+            return False
     report_text = _compact(
         " ".join(
             [
@@ -537,6 +560,11 @@ def _direct_report_match_passes_clause(
 
 def _same_clause_number(left: str, right: str) -> bool:
     return _compact(left) == _compact(right)
+
+
+def _ancestor_clause_numbers(clause_number: str) -> list[str]:
+    parts = str(clause_number or "").split(".")
+    return [".".join(parts[:index]) for index in range(len(parts) - 1, 1, -1)]
 
 
 def _compact(value: str) -> str:
@@ -694,6 +722,8 @@ def _atomic_rows_override_refuted_missing_table(
         return False
     if finding.code not in MISSING_CODES:
         return False
+    if all(row.status in RESOLVED_ATOMIC_STATUSES for row in atomic_rows):
+        return True
     return finding.metadata.get("final_status") == "refuted" or finding.metadata.get("codex_verdict") == "refute"
 
 
@@ -971,6 +1001,31 @@ def _report_inspection_scope(report_doc: ReportDocument) -> ReportInspectionScop
     return None
 
 
+def _ptr_extraction_metadata(ptr_doc: PTRDocument) -> dict[str, Any]:
+    metadata = ptr_doc.metadata or {}
+    keys = (
+        "ptr_extraction_status",
+        "ptr_ocr_required",
+        "ptr_pages_need_ocr",
+        "source_type",
+        "textless_page_count",
+        "page_count",
+    )
+    return _safe_payload({key: metadata[key] for key in keys if key in metadata})
+
+
+def _int_list(value: Any) -> list[int]:
+    if not isinstance(value, list):
+        return []
+    result: list[int] = []
+    for item in value:
+        if isinstance(item, int):
+            result.append(item)
+        elif isinstance(item, str) and item.isdigit():
+            result.append(int(item))
+    return result
+
+
 def _scope_consistency_metadata(
     check_results: Sequence[CheckResult],
     report_scope: ReportInspectionScope | None,
@@ -1039,7 +1094,7 @@ def _scope_decisions(check_results: Sequence[CheckResult]) -> list[dict[str, Any
 
 def _excluded_reason(topic: str) -> str:
     if "电磁兼容" in topic:
-        return "报告首页声明除电磁兼容性，且第5页说明电磁兼容性检验见 QW2025 第1540号。"
+        return "报告首页声明除电磁兼容性，且报告说明该项另见单独电磁兼容性检验报告。"
     if topic:
         return f"报告首页声明除{topic}，不参与本次比对。"
     return "报告首页范围声明排除该条款，不参与本次比对。"

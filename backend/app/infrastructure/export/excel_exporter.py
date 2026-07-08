@@ -301,6 +301,12 @@ def _ptr_comparison_detail_rows(payload: dict[str, Any]) -> list[list[Any]]:
     for item in items:
         if not isinstance(item, dict):
             continue
+        atomic_rows = item.get("atomic_comparison_rows") if isinstance(item.get("atomic_comparison_rows"), list) else []
+        if atomic_rows:
+            for atomic_row in atomic_rows:
+                if isinstance(atomic_row, dict):
+                    rows.append(_ptr_atomic_comparison_detail_row(item, atomic_row))
+            continue
         coverage_rows = item.get("coverage_comparison_rows") if isinstance(item.get("coverage_comparison_rows"), list) else []
         if coverage_rows:
             for coverage_row in coverage_rows:
@@ -335,6 +341,29 @@ def _ptr_comparison_detail_row(item: dict[str, Any], match: dict[str, Any]) -> l
     ]
 
 
+def _ptr_atomic_comparison_detail_row(item: dict[str, Any], row: dict[str, Any]) -> list[Any]:
+    match = _primary_report_match(item)
+    label = row.get("label") or item.get("ptr_title") or ""
+    preset = row.get("preset") or ""
+    ptr_requirement = item.get("ptr_requirement_text") or ""
+    atomic_label = f"{label} {preset}".strip()
+    return [
+        row.get("clause_id") or item.get("ptr_clause_id") or "",
+        item.get("ptr_title") or "",
+        "；".join(value for value in [ptr_requirement, atomic_label] if value),
+        row.get("report_item_no") or match.get("item_no") or "",
+        row.get("report_page") or match.get("report_page") or "",
+        match.get("standard_clause") or "",
+        row.get("expected") or "",
+        _atomic_actual_display(row),
+        match.get("single_conclusion") or "",
+        row.get("status") or "",
+        row.get("reason") or item.get("reason") or "",
+        item.get("user_facing_status") or "",
+        item.get("final_status") or "",
+    ]
+
+
 def _ptr_coverage_comparison_detail_row(item: dict[str, Any], row: dict[str, Any]) -> list[Any]:
     return [
         row.get("ptr_clause_id") or item.get("ptr_clause_id") or "",
@@ -351,6 +380,24 @@ def _ptr_coverage_comparison_detail_row(item: dict[str, Any], row: dict[str, Any
         item.get("user_facing_status") or "",
         item.get("final_status") or "",
     ]
+
+
+def _primary_report_match(item: dict[str, Any]) -> dict[str, Any]:
+    matches = item.get("report_matches") if isinstance(item.get("report_matches"), list) else []
+    for match in matches:
+        if isinstance(match, dict):
+            return match
+    return {}
+
+
+def _atomic_actual_display(row: dict[str, Any]) -> str:
+    actual = row.get("actual")
+    if actual is None:
+        candidates = row.get("candidate_actuals") if isinstance(row.get("candidate_actuals"), list) else []
+        return "候选值：" + "、".join(str(value) for value in candidates if str(value).strip()) if candidates else ""
+    unit = str(row.get("unit") or "").strip()
+    actual_text = str(actual).strip()
+    return f"{actual_text} {unit}" if unit and unit not in actual_text else actual_text
 
 
 def _ptr_comparison_details(payload: dict[str, Any]) -> dict[str, Any] | None:

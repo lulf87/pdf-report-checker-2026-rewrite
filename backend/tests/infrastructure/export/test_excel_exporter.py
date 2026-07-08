@@ -106,7 +106,11 @@ def test_excel_exporter_includes_ptr_comparison_summary_and_details_sheets() -> 
     assert "report_result" in details_text
     assert "2.1" in details_text
     assert "输入功率应≤110%。" in details_text
-    assert "40%; 46%; 12%" in details_text
+    assert "输入功率 @240Ω" in details_text
+    assert "≤110%" in details_text
+    assert "40%" in details_text
+    assert "报告序号 11 参数级结果满足 PTR 要求。" in details_text
+    assert "报告序号 11 覆盖输入功率要求。" not in details_text
     assert "covered_passed" in details_text
 
 
@@ -153,6 +157,22 @@ def _ptr_comparison_details() -> dict:
                         "report_conclusion": "符合",
                         "status": "covered_passed",
                         "reason": "报告序号 11 覆盖输入功率要求。",
+                    }
+                ],
+                "atomic_comparison_rows": [
+                    {
+                        "atomic_id": "2.1:input_power:240ohm",
+                        "clause_id": "2.1",
+                        "label": "输入功率",
+                        "preset": "@240Ω",
+                        "expected": "≤110%",
+                        "actual": "40%",
+                        "unit": "%",
+                        "status": "match",
+                        "reason": "报告序号 11 参数级结果满足 PTR 要求。",
+                        "report_page": 19,
+                        "report_item_no": "11",
+                        "source": "ptr_table",
                     }
                 ],
                 "normalized_comparison": {

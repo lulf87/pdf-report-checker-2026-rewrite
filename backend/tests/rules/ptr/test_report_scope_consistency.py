@@ -65,6 +65,67 @@ def test_report_scope_consistency_reports_excluded_topic_present() -> None:
     assert result.findings[0].metadata["excluded_topic"] == "电磁兼容性"
 
 
+def test_report_scope_consistency_marks_excluded_placeholder_without_finding() -> None:
+    result = check_report_scope_consistency(
+        _scope_5780(),
+        [
+            InspectionItem(
+                sequence_raw="164",
+                sequence=164,
+                standard_clause="2.6",
+                standard_requirement="电磁兼容性",
+                test_result="/",
+                conclusion="/",
+                remark="/",
+                source_page=66,
+            ),
+        ],
+        task_id="task-5780-excluded-placeholder",
+    )
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    scope_consistency = result.metadata["scope_consistency"]
+    assert scope_consistency["actual_report_scope"] == []
+    assert scope_consistency["excluded_placeholders"] == [
+        {
+            "item_no": "164",
+            "clause_number": "2.6",
+            "excluded_topic": "电磁兼容性",
+            "standard_requirement": "电磁兼容性",
+            "test_result": "/",
+            "single_conclusion": "/",
+            "remark": "/",
+            "reason": "报告首页已排除电磁兼容性，实际检验表仅保留空白占位行。",
+        }
+    ]
+
+
+def test_report_scope_consistency_reports_excluded_topic_when_placeholder_has_result() -> None:
+    result = check_report_scope_consistency(
+        _scope_5780(),
+        [
+            InspectionItem(
+                sequence_raw="164",
+                sequence=164,
+                standard_clause="2.6",
+                standard_requirement="电磁兼容性",
+                test_result="符合要求",
+                conclusion="符合",
+                remark="/",
+                source_page=66,
+            ),
+        ],
+        task_id="task-5780-excluded-substantive",
+    )
+
+    assert result.status == CheckStatus.FAIL
+    assert [finding.code for finding in result.findings] == ["PTR_SCOPE_EXCLUDED_TOPIC_PRESENT"]
+    assert result.findings[0].metadata["excluded_topic"] == "电磁兼容性"
+    assert result.findings[0].metadata["test_result"] == "符合要求"
+    assert result.findings[0].metadata["single_conclusion"] == "符合"
+
+
 def test_report_scope_consistency_reports_external_standard_range_mismatch() -> None:
     result = check_report_scope_consistency(
         _scope(),
@@ -221,6 +282,15 @@ def _scope() -> ReportInspectionScope:
             ),
         ],
         ptr_direct_content_starts_after="156",
+    )
+
+
+def _scope_5780() -> ReportInspectionScope:
+    return ReportInspectionScope(
+        declared_scope_ranges=[ReportScopeRange(start="2.1", end="2.6", source_text="2.1～2.6")],
+        excluded_topics=["生物相容性", "电磁兼容性"],
+        source_page=1,
+        source_text="2.1～2.6（除生物相容性、电磁兼容性）。电磁兼容性检验见国医检(磁)字 QW2025 第 5781 号",
     )
 
 

@@ -158,6 +158,10 @@ class PTRExcludedComparisonItem(BaseModel):
 class PTRComparisonDetails(BaseModel):
     overall_status: PTRComparisonOverallStatus
     overall_summary: str
+    ptr_extraction_status: str | None = None
+    ptr_ocr_required: bool = False
+    ptr_pages_need_ocr: list[int] = Field(default_factory=list)
+    source_type: str | None = None
     scope_consistency: dict[str, Any] | None = None
     requirements_count: int = Field(default=0, ge=0)
     covered_count: int = Field(default=0, ge=0)

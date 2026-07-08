@@ -17,6 +17,7 @@ from app.application.ptr_codex_evidence_builder import PtrCodexEvidenceBuilder
 from app.application.ptr_comparison_explanation import build_ptr_comparison_details
 from app.application.report_page_texts import report_page_text_by_page
 from app.application.task_service import TaskService
+from app.domain.common import Evidence, EvidenceMethod, Location, SourceType
 from app.domain.codex_review import CodexReviewError, CodexReviewRequest, CodexReviewResult, CodexReviewStatus
 from app.domain.evidence_package import EvidencePackage
 from app.domain.finding import Finding, FindingSeverity
@@ -349,7 +350,7 @@ class PTRCompareUseCase:
         )
 
         check_results = [
-            self._scope_check_result(task_id, scope_result, included_clauses),
+            self._scope_check_result(task_id, ptr_doc, scope_result, included_clauses),
             self._finding_check_result(
                 task_id,
                 check_id="PTR_CLAUSE",
@@ -636,20 +637,27 @@ class PTRCompareUseCase:
     def _scope_check_result(
         self,
         task_id: str,
+        ptr_doc: PTRDocument,
         scope_result: ScopeFilterResult,
         included_clauses: list[PTRClause],
     ) -> CheckResult:
+        findings = _ptr_extraction_findings(task_id, ptr_doc)
+        summary = f"纳入 {len(included_clauses)} 个 PTR 主要求条款。"
+        if findings:
+            summary = "PTR 文档无文本层，无法解析第 2 章，需要 OCR/视觉抽取后再完成比对。"
         return CheckResult(
             task_id=task_id,
             check_id="PTR_SCOPE",
             check_name="PTR 第 2 章核对范围过滤",
-            status=CheckStatus.PASS,
-            summary=f"纳入 {len(included_clauses)} 个 PTR 主要求条款。",
-            findings=[],
+            status=_status_for_findings(findings),
+            summary=summary,
+            findings=findings,
+            evidence=[evidence for finding in findings for evidence in finding.evidence],
             metadata={
                 "included_clause_ids": list(scope_result.included_clause_ids),
                 "excluded_clause_ids": list(scope_result.excluded_clause_ids),
                 "decisions": [decision.model_dump(mode="json") for decision in scope_result.decisions],
+                **_ptr_extraction_metadata(ptr_doc),
             },
         )
 
@@ -752,6 +760,65 @@ def _status_for_findings(findings: list[Finding]) -> CheckStatus:
     if any(finding.severity == FindingSeverity.WARN for finding in findings):
         return CheckStatus.REVIEW
     return CheckStatus.PASS
+
+
+def _ptr_extraction_metadata(ptr_doc: PTRDocument) -> dict[str, Any]:
+    metadata = ptr_doc.metadata or {}
+    keys = (
+        "ptr_extraction_status",
+        "ptr_ocr_required",
+        "ptr_pages_need_ocr",
+        "source_type",
+        "textless_page_count",
+        "page_count",
+    )
+    return {key: metadata[key] for key in keys if key in metadata}
+
+
+def _ptr_extraction_findings(task_id: str, ptr_doc: PTRDocument) -> list[Finding]:
+    metadata = _ptr_extraction_metadata(ptr_doc)
+    if metadata.get("ptr_ocr_required") is not True:
+        return []
+    pages_need_ocr = metadata.get("ptr_pages_need_ocr")
+    page_count = metadata.get("page_count")
+    raw_text = "；".join([*ptr_doc.diagnostics, *(_page_diagnostics(ptr_doc.parsed_pdf))])
+    evidence = Evidence(
+        id=f"{task_id}:PTR_TEXT_LAYER_MISSING:evidence",
+        source_type=SourceType.PTR,
+        location=Location(source_type=SourceType.PTR, section="chapter_2"),
+        raw_text=raw_text,
+        method=EvidenceMethod.SYSTEM,
+        metadata=metadata,
+    )
+    return [
+        Finding(
+            id=f"{task_id}:PTR_SCOPE:PTR_TEXT_LAYER_MISSING",
+            task_id=task_id,
+            check_id="PTR_SCOPE",
+            severity=FindingSeverity.WARN,
+            code="PTR_TEXT_LAYER_MISSING",
+            message="PTR 文档无文本层，无法解析第 2 章。请启用 OCR/视觉抽取或上传可检索 PDF。",
+            expected="可检索的 PTR 第 2 章文本",
+            actual=f"{len(pages_need_ocr) if isinstance(pages_need_ocr, list) else page_count or 0} 页需要 OCR",
+            evidence=[evidence],
+            metadata={
+                **metadata,
+                "final_status": "manual_review_required",
+                "codex_required": False,
+                "user_facing_status": "needs_review",
+            },
+        )
+    ]
+
+
+def _page_diagnostics(parsed_pdf: ParsedPdf | None) -> list[str]:
+    if parsed_pdf is None:
+        return []
+    diagnostics: list[str] = []
+    for page in parsed_pdf.pages:
+        diagnostics.extend(page.diagnostics)
+    diagnostics.extend(parsed_pdf.diagnostics)
+    return diagnostics
 
 
 def _dedupe(values: list[str]) -> list[str]:

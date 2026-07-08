@@ -664,6 +664,61 @@ def test_ptr_compare_usecase_process_submitted_task_updates_progress_and_complet
     assert result.check_results[0].check_id == "PTR_SCOPE"
 
 
+def test_ptr_compare_usecase_marks_textless_ptr_as_ocr_required_not_passed(tmp_path: Path) -> None:
+    task_service = TaskService()
+    ptr_pdf = ParsedPdf(
+        file_id="scanned-ptr",
+        file_name="ptr.pdf",
+        page_count=13,
+        pages=[
+            PdfPage(
+                page_number=page_number,
+                text="",
+                is_textless=True,
+                diagnostics=[f"Page {page_number}: empty page: no text extracted; OCR not run"],
+            )
+            for page_number in range(1, 14)
+        ],
+    )
+    parser = FakePdfParser(parsed_by_name={"ptr.pdf": ptr_pdf})
+    usecase = PTRCompareUseCase(
+        task_service=task_service,
+        file_store=LocalFileStore(tmp_path),
+        pdf_parser=parser,
+        report_extractor=FakeReportFieldExtractor(),
+        inspection_table_extractor=FakeInspectionTableExtractor(),
+        table_reference_compare=TrackingTableCompare(),
+    )
+
+    status = usecase.run(
+        ptr_file_name="ptr.pdf",
+        ptr_content=b"%PDF-1.4 ptr",
+        report_file_name="report.pdf",
+        report_content=b"%PDF-1.4 report",
+        content_type="application/pdf",
+    )
+
+    result = task_service.get_result(status.task_id)
+    details = result.metadata["ptr_comparison_details"]
+    ptr_scope = _check_result(result, "PTR_SCOPE")
+
+    assert result.summary.final_audit_status == "needs_manual_review"
+    assert result.summary.confirmed_errors_count == 0
+    assert result.summary.manual_review_required_count == 1
+    assert details["overall_status"] == "audit_incomplete"
+    assert details["ptr_extraction_status"] == "ocr_required"
+    assert details["ptr_ocr_required"] is True
+    assert details["ptr_pages_need_ocr"] == list(range(1, 14))
+    assert details["source_type"] == "image_only_pdf"
+    assert details["requirements_count"] == 0
+    assert "PTR 文档无文本层" in details["overall_summary"]
+    assert "本次共比对 0 条技术要求" not in details["overall_summary"]
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+    assert [finding.code for finding in ptr_scope.findings] == ["PTR_TEXT_LAYER_MISSING"]
+    assert ptr_scope.findings[0].metadata["final_status"] == "manual_review_required"
+    assert ptr_scope.findings[0].metadata["codex_required"] is False
+
+
 def test_ptr_compare_usecase_includes_parameter_value_mismatch_in_final_result(tmp_path: Path) -> None:
     result = _run_parameter_compare_usecase(
         tmp_path,
@@ -2838,7 +2893,7 @@ def _scope_aware_ptr_document() -> PTRDocument:
                 clause_id="ptr-2.2.1",
                 number=PTRClauseNumber.from_string("2.2.1"),
                 title="心脏脉冲电场消融仪输出",
-                body_text="心脏脉冲电场消融仪输出电压、电流应符合产品技术要求。",
+                body_text="心脏脉冲电场消融仪输出电压应不小于3333V（峰值），输出电流应不小于57A（峰值）。",
                 scope_type=PTRScopeType.REQUIREMENT,
             ),
             PTRClause(
@@ -2866,8 +2921,8 @@ def _scope_aware_ptr_document() -> PTRDocument:
             PTRClause(
                 clause_id="ptr-2.2.4",
                 number=PTRClauseNumber.from_string("2.2.4"),
-                title="脉冲宽度",
-                body_text="脉冲宽度应符合产品技术要求。",
+                title="脉冲下降时间",
+                body_text="脉冲下降时间应不超过 700ns。",
                 scope_type=PTRScopeType.REQUIREMENT,
             ),
             PTRClause(

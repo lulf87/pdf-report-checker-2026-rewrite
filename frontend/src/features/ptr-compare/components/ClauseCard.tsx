@@ -106,7 +106,7 @@ function PTRClausePreview({ item }: { item: PTRComparisonItem }) {
   return (
     <div className="comparison-source-list">
       {item.atomic_comparison_rows?.length ? (
-        <span className="comparison-source">参数级比对 · {item.atomic_comparison_rows.length} 项</span>
+        <span className="comparison-source">{atomicPreviewSummary(item.atomic_comparison_rows)}</span>
       ) : item.coverage_comparison_rows?.length ? (
         <span className="comparison-source">条款覆盖对比 · {item.coverage_comparison_rows.length} 项</span>
       ) : null}
@@ -342,6 +342,17 @@ function atomicComparisonTitle(rows: PTRAtomicComparisonRow[]): string {
   const match = /^.+:表([^:]+):(.+)$/.exec(tableKeys[0] ?? "");
   if (!match) return tableKeys[0] ?? "Atomic requirements";
   return `表 ${match[1]} ${match[2]}比对表`;
+}
+
+function atomicPreviewSummary(rows: PTRAtomicComparisonRow[]): string {
+  const matchCount = rows.filter((row) => row.status === "match").length;
+  const notApplicableCount = rows.filter((row) => row.status === "not_applicable").length;
+  const mismatchCount = rows.filter((row) => row.status === "mismatch").length;
+  const reviewCount = rows.filter((row) => row.status === "needs_review" || row.status === "candidate_found_needs_mapping").length;
+  if (mismatchCount > 0) return `参数级比对 ${rows.length} 项，${mismatchCount} 项不满足`;
+  if (reviewCount > 0) return `参数级比对 ${rows.length} 项，${reviewCount} 项需复核`;
+  if (matchCount + notApplicableCount === rows.length) return `参数级比对 ${rows.length} 项，全部满足`;
+  return `参数级比对 ${rows.length} 项`;
 }
 
 function ReportMatchLine({ match }: { match: PTRReportMatch }) {

@@ -8,105 +8,14 @@ from app.domain.inspection_group import InspectionItemGroup
 from app.domain.ptr import PTRClause, PTRDocument, PTRTable
 from app.domain.ptr_comparison import PTRAtomicComparisonRow, PTRAtomicRequirement, PTRReportAtomicResult
 from app.domain.table import ParameterRecord
-from app.rules.ptr.report_item_grouping import ptr_group_text
+from app.rules.ptr.requirement_classifier import RequirementType, classify_requirement
+from app.rules.ptr.report_item_grouping import (
+    ptr_group_single_conclusion,
+    ptr_group_standard_requirement,
+    ptr_group_test_result,
+    ptr_group_text,
+)
 
-
-TEXT_REQUIREMENTS: dict[str, list[dict[str, Any]]] = {
-    "2.2.1": [
-        {
-            "suffix": "voltage",
-            "label": "电压",
-            "expected_text": "3333V（峰值）",
-            "expected_value": 3333,
-            "operator": ">=",
-            "unit": "V",
-        },
-        {
-            "suffix": "current",
-            "label": "电流",
-            "expected_text": "57A（峰值）",
-            "expected_value": 57,
-            "operator": ">=",
-            "unit": "A",
-        },
-    ],
-    "2.2.3": [
-        {
-            "suffix": "rise_time:pulse3",
-            "label": "脉冲上升时间",
-            "expected_text": "不超过 700ns",
-            "expected_value": 700,
-            "operator": "<=",
-            "unit": "ns",
-            "preset": "PULSE3",
-        },
-        {
-            "suffix": "rise_time:pf_reversible",
-            "label": "脉冲上升时间",
-            "expected_text": "不超过 700ns",
-            "expected_value": 700,
-            "operator": "<=",
-            "unit": "ns",
-            "preset": "PF Reversible",
-        }
-    ],
-    "2.2.4": [
-        {
-            "suffix": "fall_time:pulse3",
-            "label": "脉冲下降时间",
-            "expected_text": "不超过 700ns",
-            "expected_value": 700,
-            "operator": "<=",
-            "unit": "ns",
-            "preset": "PULSE3",
-        },
-        {
-            "suffix": "fall_time:pf_reversible",
-            "label": "脉冲下降时间",
-            "expected_text": "不超过 700ns",
-            "expected_value": 700,
-            "operator": "<=",
-            "unit": "ns",
-            "preset": "PF Reversible",
-        }
-    ],
-    "2.2.5": [
-        {
-            "suffix": "decay",
-            "label": "脉冲衰减",
-            "expected_text": "不超过 10%",
-            "expected_value": 10,
-            "operator": "<=",
-            "unit": "%",
-        }
-    ],
-    "2.2.6": [
-        {
-            "suffix": "max_energy",
-            "label": "单个脉冲最大输出能量",
-            "expected_text": "小于 258mJ",
-            "expected_value": 258,
-            "operator": "<",
-            "unit": "mJ",
-        }
-    ],
-    "2.2.7.1": [
-        {
-            "suffix": "temperature_limit_protection",
-            "label": "温度超限保护",
-            "expected_text": "具有温度超限保护功能",
-            "operator": "functional",
-        }
-    ],
-    "2.2.7.2": [
-        {
-            "suffix": "over_current_protection",
-            "label": "过流保护",
-            "expected_text": "具有过流保护功能",
-            "operator": "functional",
-        }
-    ],
-}
 
 WAVEFORM_TABLE_PARAMETERS: tuple[tuple[str, str], ...] = (
     ("脉冲个数", "pulse_count"),
@@ -160,8 +69,8 @@ SOFTWARE_FUNCTION_ALIASES: dict[str, tuple[str, ...]] = {
     "预设选择": ("预设选择",),
     "与射频消融仪、导管接口单元CIU通信": ("与射频消融仪、导管接口单元CIU通信",),
 }
-PM3562_TABLE2_1_TABLE_KEY = "2.1:表2-1:基本电性能参数"
-PM3562_TABLE2_1_SPECS: dict[str, dict[str, Any]] = {
+BASIC_ELECTRICAL_TABLE2_1_TABLE_KEY = "2.1:表2-1:基本电性能参数"
+BASIC_ELECTRICAL_TABLE2_1_SPECS: dict[str, dict[str, Any]] = {
     "2.1.1": {"slug": "basic_rate", "label": "基本频率", "aliases": ("基本频率",)},
     "2.1.2": {"slug": "pulse_width", "label": "脉宽", "aliases": ("脉宽",)},
     "2.1.3": {"slug": "pulse_amplitude", "label": "脉冲振幅", "aliases": ("脉冲振幅",)},
@@ -175,22 +84,22 @@ PM3562_TABLE2_1_SPECS: dict[str, dict[str, Any]] = {
     "2.1.11": {"slug": "escape_interval", "label": "逸搏间期", "aliases": ("逸搏间期",)},
     "2.1.12": {"slug": "pvarp", "label": "室后房不应期", "aliases": ("室后房不应期", "PVARP")},
 }
-PM3562_LOADS: tuple[tuple[str, str], ...] = (
+BASIC_ELECTRICAL_LOADS: tuple[tuple[str, str], ...] = (
     ("240ohm", "@240Ω"),
     ("500ohm", "@500Ω"),
     ("2000ohm", "@2000Ω"),
 )
-PM3562_PULSE_WIDTH_SITES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+BASIC_ELECTRICAL_PULSE_WIDTH_SITES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("atrial", "心房", ("脉宽（心房）", "脉宽(心房)")),
     ("right_ventricle", "右心室", ("脉宽（右心室）", "脉宽(右心室)")),
     ("left_ventricle", "左心室", ("脉宽（左心室）", "脉宽(左心室)")),
 )
-PM3562_PULSE_AMPLITUDE_SITES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+BASIC_ELECTRICAL_PULSE_AMPLITUDE_SITES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("atrial", "心房", ("脉冲振幅（心房）", "脉冲振幅(心房)")),
     ("right_ventricle", "右心室", ("脉冲振幅（右心室）", "脉冲振幅(右心室)")),
     ("left_ventricle", "左心室", ("脉冲振幅（左心室）", "脉冲振幅(左心室)")),
 )
-PM3562_PULSE_AMPLITUDE_SEGMENTS: dict[str, tuple[tuple[str, str], ...]] = {
+BASIC_ELECTRICAL_PULSE_AMPLITUDE_SEGMENTS: dict[str, tuple[tuple[str, str], ...]] = {
     "240ohm": (
         ("0.25V、0.5V", "0.25V、0.5V：±0.25 V"),
         ("0.75V、1.0V", "0.75V、1.0V：-38%/+0.25V"),
@@ -206,7 +115,7 @@ PM3562_PULSE_AMPLITUDE_SEGMENTS: dict[str, tuple[tuple[str, str], ...]] = {
         ("1.25V～7.5V", "1.25V～7.5V：-20%/+20%"),
     ),
 }
-PM3562_AV_INTERVAL_CONDITIONS: tuple[tuple[str, str, tuple[str, ...], str, str, str], ...] = (
+BASIC_ELECTRICAL_AV_INTERVAL_CONDITIONS: tuple[tuple[str, str, tuple[str, ...], str, str, str], ...] = (
     (
         "pacing",
         "起搏房室间期",
@@ -227,14 +136,14 @@ PM3562_AV_INTERVAL_CONDITIONS: tuple[tuple[str, str, tuple[str, ...], str, str, 
 
 
 def build_atomic_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtomicRequirement]:
-    clause_number = str(clause.number)
-    if clause_number in TEXT_REQUIREMENTS:
-        return [_text_requirement(clause_number, spec) for spec in TEXT_REQUIREMENTS[clause_number]]
-    if _clause_references_pm3562_table2_1(clause):
-        return _pm3562_table2_1_requirements(clause, ptr_doc)
+    classification = classify_requirement(clause, ptr_doc)
+    if classification.atomic_requirements:
+        return classification.atomic_requirements
+    if _clause_references_basic_electrical_table2_1(clause):
+        return _basic_electrical_table2_1_requirements(clause, ptr_doc)
     if _clause_indicates_torque_wrench_size(clause):
-        return _torque_wrench_size_requirements(clause_number)
-    if clause_number in {"2.2.2", "2.6"}:
+        return _torque_wrench_size_requirements(str(clause.number))
+    if classification.requirement_type == RequirementType.SOFTWARE_FUNCTION_TABLE or _clause_indicates_waveform_table(clause):
         return _table_requirements(clause, ptr_doc)
     return []
 
@@ -288,7 +197,7 @@ def build_report_atomic_results(
         )
     )
     results.extend(
-        _pm3562_table2_1_report_atomic_results(
+        _basic_electrical_table2_1_report_atomic_results(
             group,
             group_text=group_text,
             item_no=item_no,
@@ -471,33 +380,17 @@ def table_for_clause(clause: PTRClause, ptr_doc: PTRDocument) -> PTRTable | None
     return None
 
 
-def _text_requirement(clause_number: str, spec: dict[str, Any]) -> PTRAtomicRequirement:
-    return PTRAtomicRequirement(
-        atomic_id=f"{clause_number}:{spec['suffix']}",
-        clause_id=clause_number,
-        label=spec["label"],
-        expected_text=spec.get("expected_text"),
-        expected_value=spec.get("expected_value"),
-        operator=spec.get("operator"),
-        unit=spec.get("unit"),
-        source="ptr_text",
-        metadata={"preset": spec["preset"]} if spec.get("preset") else {},
-    )
-
-
 def _table_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtomicRequirement]:
     clause_number = str(clause.number)
     table = table_for_clause(clause, ptr_doc)
     if table is None or table.canonical_table is None:
-        if clause_number == "2.2.2" and _clause_indicates_waveform_table(clause):
+        if _clause_indicates_waveform_table(clause):
             return _fallback_waveform_table_requirements(clause_number)
-        if clause_number == "2.6" and _clause_indicates_software_table(clause):
+        if _clause_indicates_software_table(clause):
             return _fallback_software_table_requirements(clause_number)
         return []
-    if clause_number == "2.2.2" and _clause_indicates_waveform_table(clause):
+    if _clause_indicates_waveform_table(clause):
         return _waveform_table_requirements(clause_number, table)
-    if clause_number == "2.2.2":
-        return []
     title = _table_title(table)
     table_key = table_key_for_clause_table(clause_number, table)
     return [
@@ -609,28 +502,28 @@ def _fallback_software_table_requirements(clause_number: str) -> list[PTRAtomicR
     ]
 
 
-def _clause_references_pm3562_table2_1(clause: PTRClause) -> bool:
+def _clause_references_basic_electrical_table2_1(clause: PTRClause) -> bool:
     clause_number = str(clause.number)
-    if clause_number not in PM3562_TABLE2_1_SPECS:
+    if clause_number not in BASIC_ELECTRICAL_TABLE2_1_SPECS:
         return False
     text = _compact(" ".join([clause.title or "", clause.body_text or "", clause.full_text or ""]))
     refs = {str(ref) for ref in [*clause.table_refs, *(reference.table_number for reference in clause.table_references)]}
     return "表2-1" in text or "表2－1" in text or "2-1" in refs or "2－1" in refs
 
 
-def _pm3562_table2_1_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtomicRequirement]:
+def _basic_electrical_table2_1_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtomicRequirement]:
     clause_number = str(clause.number)
-    spec = PM3562_TABLE2_1_SPECS.get(clause_number)
+    spec = BASIC_ELECTRICAL_TABLE2_1_SPECS.get(clause_number)
     if spec is None:
         return []
     if clause_number == "2.1.1":
-        return _pm3562_basic_rate_requirements()
+        return _basic_electrical_basic_rate_requirements()
     if clause_number == "2.1.2":
-        return _pm3562_pulse_width_requirements()
+        return _basic_electrical_pulse_width_requirements()
     if clause_number == "2.1.3":
-        return _pm3562_pulse_amplitude_requirements()
+        return _basic_electrical_pulse_amplitude_requirements()
     if clause_number == "2.1.8":
-        return _pm3562_simple_parameter_requirements(
+        return _basic_electrical_simple_parameter_requirements(
             clause_number=clause_number,
             spec=spec,
             setting="125；157；190；220；250（自动感知参数应设置为[打开]）；125；160；190；220；250；280；310；340；370；400；440；470；500（自动感知参数应设置为[关闭]）",
@@ -638,9 +531,9 @@ def _pm3562_table2_1_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> li
             tolerance="±5 ms",
         )
     if clause_number == "2.1.10":
-        return _pm3562_av_interval_requirements()
+        return _basic_electrical_av_interval_requirements()
     if clause_number == "2.1.11":
-        return _pm3562_simple_parameter_requirements(
+        return _basic_electrical_simple_parameter_requirements(
             clause_number=clause_number,
             spec=spec,
             setting="--",
@@ -648,7 +541,7 @@ def _pm3562_table2_1_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> li
             tolerance="±15 ms",
         )
     if clause_number == "2.1.12":
-        return _pm3562_simple_parameter_requirements(
+        return _basic_electrical_simple_parameter_requirements(
             clause_number=clause_number,
             spec=spec,
             setting="125-500，步幅25",
@@ -656,14 +549,14 @@ def _pm3562_table2_1_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> li
             tolerance="±10 ms",
         )
 
-    expected_values = _pm3562_expected_values_from_ptr_table(clause_number, ptr_doc)
+    expected_values = _basic_electrical_expected_values_from_ptr_table(clause_number, ptr_doc)
     requirements: list[PTRAtomicRequirement] = []
     for suffix, label in (("setting", "设置"), ("nominal", "标称值"), ("tolerance", "允差")):
         expected = expected_values.get(suffix)
         if not expected:
             continue
         requirements.append(
-            _pm3562_table2_1_requirement(
+            _basic_electrical_table2_1_requirement(
                 clause_number=clause_number,
                 suffix=f"{spec['slug']}:{suffix}",
                 label=label,
@@ -674,7 +567,7 @@ def _pm3562_table2_1_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> li
         )
     if not requirements:
         requirements.append(
-            _pm3562_table2_1_requirement(
+            _basic_electrical_table2_1_requirement(
                 clause_number=clause_number,
                 suffix=f"{spec['slug']}:report_detail",
                 label=spec["label"],
@@ -686,7 +579,7 @@ def _pm3562_table2_1_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> li
     return requirements
 
 
-def _pm3562_basic_rate_requirements() -> list[PTRAtomicRequirement]:
+def _basic_electrical_basic_rate_requirements() -> list[PTRAtomicRequirement]:
     specs = [
         ("basic_rate:setting", "设置", None, "30-130，步幅5；140-170，步幅10", "setting"),
         ("basic_rate:nominal", "标称值", None, "60 min⁻¹", "nominal"),
@@ -695,86 +588,86 @@ def _pm3562_basic_rate_requirements() -> list[PTRAtomicRequirement]:
         ("basic_rate:tolerance:2000ohm", "允差", "@2000Ω", "±15 ms", "tolerance_2000ohm"),
     ]
     return [
-        _pm3562_table2_1_requirement(
+        _basic_electrical_table2_1_requirement(
             clause_number="2.1.1",
             suffix=suffix,
             label=label,
             expected=expected,
             metadata_key=metadata_key,
-            spec=PM3562_TABLE2_1_SPECS["2.1.1"],
+            spec=BASIC_ELECTRICAL_TABLE2_1_SPECS["2.1.1"],
             preset=preset,
         )
         for suffix, label, preset, expected, metadata_key in specs
     ]
 
 
-def _pm3562_pulse_width_requirements() -> list[PTRAtomicRequirement]:
+def _basic_electrical_pulse_width_requirements() -> list[PTRAtomicRequirement]:
     requirements: list[PTRAtomicRequirement] = []
-    for site_slug, site_label, _aliases in PM3562_PULSE_WIDTH_SITES:
+    for site_slug, site_label, _aliases in BASIC_ELECTRICAL_PULSE_WIDTH_SITES:
         for suffix, label, preset, expected, metadata_key in [
             ("setting", "设置", site_label, "0.05；0.1-1.5，步幅0.1", "setting"),
             ("nominal", "标称值", site_label, "0.4 ms", "nominal"),
             *[
                 (f"tolerance:{load_slug}", "允差", f"{site_label} / {load_label}", "±0.04 ms", f"tolerance_{load_slug}")
-                for load_slug, load_label in PM3562_LOADS
+                for load_slug, load_label in BASIC_ELECTRICAL_LOADS
             ],
         ]:
             requirements.append(
-                _pm3562_table2_1_requirement(
+                _basic_electrical_table2_1_requirement(
                     clause_number="2.1.2",
                     suffix=f"pulse_width:{site_slug}:{suffix}",
                     label=label,
                     expected=expected,
                     metadata_key=metadata_key,
-                    spec=PM3562_TABLE2_1_SPECS["2.1.2"],
+                    spec=BASIC_ELECTRICAL_TABLE2_1_SPECS["2.1.2"],
                     preset=preset,
                 )
             )
     return requirements
 
 
-def _pm3562_pulse_amplitude_requirements() -> list[PTRAtomicRequirement]:
+def _basic_electrical_pulse_amplitude_requirements() -> list[PTRAtomicRequirement]:
     requirements: list[PTRAtomicRequirement] = []
-    for site_slug, site_label, _aliases in PM3562_PULSE_AMPLITUDE_SITES:
+    for site_slug, site_label, _aliases in BASIC_ELECTRICAL_PULSE_AMPLITUDE_SITES:
         requirements.append(
-            _pm3562_table2_1_requirement(
+            _basic_electrical_table2_1_requirement(
                 clause_number="2.1.3",
                 suffix=f"pulse_amplitude:{site_slug}:setting",
                 label="设置",
                 expected="0.25-4.0，步幅0.25；4.5-7.5，步幅0.5",
                 metadata_key="setting",
-                spec=PM3562_TABLE2_1_SPECS["2.1.3"],
+                spec=BASIC_ELECTRICAL_TABLE2_1_SPECS["2.1.3"],
                 preset=site_label,
             )
         )
         requirements.append(
-            _pm3562_table2_1_requirement(
+            _basic_electrical_table2_1_requirement(
                 clause_number="2.1.3",
                 suffix=f"pulse_amplitude:{site_slug}:nominal",
                 label="标称值",
                 expected="2.5 V",
                 metadata_key="nominal",
-                spec=PM3562_TABLE2_1_SPECS["2.1.3"],
+                spec=BASIC_ELECTRICAL_TABLE2_1_SPECS["2.1.3"],
                 preset=site_label,
             )
         )
-        for load_slug, load_label in PM3562_LOADS:
-            for segment_index, (_segment_key, expected) in enumerate(PM3562_PULSE_AMPLITUDE_SEGMENTS[load_slug]):
+        for load_slug, load_label in BASIC_ELECTRICAL_LOADS:
+            for segment_index, (_segment_key, expected) in enumerate(BASIC_ELECTRICAL_PULSE_AMPLITUDE_SEGMENTS[load_slug]):
                 requirements.append(
-                    _pm3562_table2_1_requirement(
+                    _basic_electrical_table2_1_requirement(
                         clause_number="2.1.3",
                         suffix=f"pulse_amplitude:{site_slug}:tolerance:{load_slug}:segment_{segment_index}",
                         label="允差",
                         expected=expected,
                         metadata_key=f"tolerance_{load_slug}_segment_{segment_index}",
-                        spec=PM3562_TABLE2_1_SPECS["2.1.3"],
+                        spec=BASIC_ELECTRICAL_TABLE2_1_SPECS["2.1.3"],
                         preset=f"{site_label} / {load_label}",
                     )
                 )
     return requirements
 
 
-def _pm3562_simple_parameter_requirements(
+def _basic_electrical_simple_parameter_requirements(
     *,
     clause_number: str,
     spec: dict[str, Any],
@@ -783,7 +676,7 @@ def _pm3562_simple_parameter_requirements(
     tolerance: str,
 ) -> list[PTRAtomicRequirement]:
     return [
-        _pm3562_table2_1_requirement(
+        _basic_electrical_table2_1_requirement(
             clause_number=clause_number,
             suffix=f"{spec['slug']}:{suffix}",
             label=label,
@@ -799,17 +692,17 @@ def _pm3562_simple_parameter_requirements(
     ]
 
 
-def _pm3562_av_interval_requirements() -> list[PTRAtomicRequirement]:
+def _basic_electrical_av_interval_requirements() -> list[PTRAtomicRequirement]:
     requirements: list[PTRAtomicRequirement] = []
-    spec = PM3562_TABLE2_1_SPECS["2.1.10"]
-    for condition_slug, condition_label, _aliases, setting, nominal, tolerance in PM3562_AV_INTERVAL_CONDITIONS:
+    spec = BASIC_ELECTRICAL_TABLE2_1_SPECS["2.1.10"]
+    for condition_slug, condition_label, _aliases, setting, nominal, tolerance in BASIC_ELECTRICAL_AV_INTERVAL_CONDITIONS:
         for suffix, label, expected in (
             ("setting", "设置", setting),
             ("nominal", "标称值", nominal),
             ("tolerance", "允差", tolerance),
         ):
             requirements.append(
-                _pm3562_table2_1_requirement(
+                _basic_electrical_table2_1_requirement(
                     clause_number="2.1.10",
                     suffix=f"av_interval:{condition_slug}:{suffix}",
                     label=label,
@@ -822,7 +715,7 @@ def _pm3562_av_interval_requirements() -> list[PTRAtomicRequirement]:
     return requirements
 
 
-def _pm3562_table2_1_requirement(
+def _basic_electrical_table2_1_requirement(
     *,
     clause_number: str,
     suffix: str,
@@ -848,14 +741,12 @@ def _pm3562_table2_1_requirement(
         source="ptr_table",
         table_number="2-1",
         table_title="基本电性能参数",
-        table_key=PM3562_TABLE2_1_TABLE_KEY,
+        table_key=BASIC_ELECTRICAL_TABLE2_1_TABLE_KEY,
         metadata=metadata,
     )
 
 
 def _clause_indicates_torque_wrench_size(clause: PTRClause) -> bool:
-    if str(clause.number) != "2.8.2":
-        return False
     text = _compact(" ".join([clause.title or "", clause.body_text or "", clause.full_text or ""]))
     return "扭矩扳手" in text and "尺寸" in text
 
@@ -887,16 +778,16 @@ def _torque_wrench_size_requirements(clause_number: str) -> list[PTRAtomicRequir
     ]
 
 
-def _pm3562_expected_values_from_ptr_table(clause_number: str, ptr_doc: PTRDocument) -> dict[str, str]:
-    spec = PM3562_TABLE2_1_SPECS.get(clause_number)
+def _basic_electrical_expected_values_from_ptr_table(clause_number: str, ptr_doc: PTRDocument) -> dict[str, str]:
+    spec = BASIC_ELECTRICAL_TABLE2_1_SPECS.get(clause_number)
     if spec is None:
         return {}
-    parent_text = _pm3562_table2_1_ptr_text(ptr_doc)
-    window = _pm3562_parameter_window(parent_text, spec.get("aliases") or (spec["label"],))
-    return _pm3562_expected_values_from_window(window)
+    parent_text = _basic_electrical_table2_1_ptr_text(ptr_doc)
+    window = _basic_electrical_parameter_window(parent_text, spec.get("aliases") or (spec["label"],))
+    return _basic_electrical_expected_values_from_window(window)
 
 
-def _pm3562_table2_1_ptr_text(ptr_doc: PTRDocument) -> str:
+def _basic_electrical_table2_1_ptr_text(ptr_doc: PTRDocument) -> str:
     values: list[str] = []
     for clause in ptr_doc.clauses:
         if str(clause.number) == "2.1":
@@ -910,17 +801,17 @@ def _pm3562_table2_1_ptr_text(ptr_doc: PTRDocument) -> str:
     return "\n".join(_unique_non_empty(values))
 
 
-def _pm3562_expected_values_from_window(window: str) -> dict[str, str]:
-    lines = _pm3562_window_lines(window)
+def _basic_electrical_expected_values_from_window(window: str) -> dict[str, str]:
+    lines = _basic_electrical_window_lines(window)
     if len(lines) <= 1:
         return {}
     payload = lines[1:]
-    nominal_index = _pm3562_nominal_line_index(payload)
+    nominal_index = _basic_electrical_nominal_line_index(payload)
     if nominal_index is None:
         return {"summary": _safe_excerpt(" ".join(payload), limit=360)} if payload else {}
-    setting = _clean_pm3562_value(" ".join(payload[:nominal_index]))
-    nominal = _clean_pm3562_value(payload[nominal_index])
-    tolerance = _clean_pm3562_value(" ".join(payload[nominal_index + 1 :]))
+    setting = _clean_basic_electrical_value(" ".join(payload[:nominal_index]))
+    nominal = _clean_basic_electrical_value(payload[nominal_index])
+    tolerance = _clean_basic_electrical_value(" ".join(payload[nominal_index + 1 :]))
     result: dict[str, str] = {}
     if setting:
         result["setting"] = setting
@@ -931,7 +822,7 @@ def _pm3562_expected_values_from_window(window: str) -> dict[str, str]:
     return result
 
 
-def _pm3562_nominal_line_index(lines: Sequence[str]) -> int | None:
+def _basic_electrical_nominal_line_index(lines: Sequence[str]) -> int | None:
     for index, line in enumerate(lines):
         compact = _compact(line)
         if not compact:
@@ -999,7 +890,7 @@ def _actual_for_requirement(requirement: PTRAtomicRequirement, group: Inspection
     if requirement.source == "ptr_table":
         if _is_not_applicable_requirement(requirement):
             return "/", _first_page(group), item_no
-        if _is_pm3562_table2_1_requirement(requirement):
+        if _is_basic_electrical_table2_1_requirement(requirement):
             return _group_result_text(group), _first_page(group), item_no
         if requirement.clause_id == "2.6":
             return None, _first_page(group), item_no
@@ -1011,12 +902,28 @@ def _actual_for_requirement(requirement: PTRAtomicRequirement, group: Inspection
             actual = _row_actual(requirement, row)
             if actual:
                 return actual, row.source_page or _first_page(group), item_no
+    if requirement.operator == "functional":
+        group_text = " ".join(
+            [
+                ptr_group_standard_requirement(group),
+                ptr_group_test_result(group),
+                ptr_group_single_conclusion(group) or "",
+                ptr_group_text(group),
+            ]
+        )
+        if _row_matches_requirement(requirement, group_text) and _group_passed(group):
+            return "符合要求", _first_page(group), item_no
     return None, _first_page(group), item_no
 
 
 def _row_matches_requirement(requirement: PTRAtomicRequirement, row_text: str) -> bool:
     compact = _compact(row_text)
     atomic_id = requirement.atomic_id
+    if requirement.operator == "functional":
+        keywords = requirement.metadata.get("match_keywords") if isinstance(requirement.metadata, dict) else None
+        if isinstance(keywords, list) and keywords:
+            return any(_compact(str(keyword)) in compact for keyword in keywords)
+        return _compact(requirement.label) in compact
     if atomic_id.endswith(":voltage"):
         return "电压" in compact
     if atomic_id.endswith(":current"):
@@ -1080,8 +987,8 @@ def _status_and_reason(
         if actual is None:
             item_no = (group.display_item_no or group.item_no) if group else "未编号"
             return "needs_review", f"报告序号 {item_no} 未稳定展开表格参数结果，需复核。"
-        if _is_pm3562_table2_1_requirement(requirement):
-            return _pm3562_table2_1_status_and_reason(requirement, actual, group)
+        if _is_basic_electrical_table2_1_requirement(requirement):
+            return _basic_electrical_table2_1_status_and_reason(requirement, actual, group)
         if _is_torque_wrench_requirement(requirement):
             return _torque_wrench_status_and_reason(requirement, actual, group)
         if requirement.clause_id == "2.2.2" and _waveform_report_actual_satisfies(requirement.expected_text, actual):
@@ -1133,12 +1040,12 @@ def _report_results_for_requirement(
     ]
 
 
-def _is_pm3562_table2_1_requirement(requirement: PTRAtomicRequirement) -> bool:
-    return requirement.source == "ptr_table" and requirement.table_key == PM3562_TABLE2_1_TABLE_KEY
+def _is_basic_electrical_table2_1_requirement(requirement: PTRAtomicRequirement) -> bool:
+    return requirement.source == "ptr_table" and requirement.table_key == BASIC_ELECTRICAL_TABLE2_1_TABLE_KEY
 
 
 def _is_torque_wrench_requirement(requirement: PTRAtomicRequirement) -> bool:
-    return requirement.source == "ptr_table" and requirement.clause_id == "2.8.2" and "torque_wrench" in requirement.atomic_id
+    return requirement.source == "ptr_table" and "torque_wrench" in requirement.atomic_id
 
 
 def _torque_wrench_status_and_reason(
@@ -1154,7 +1061,7 @@ def _torque_wrench_status_and_reason(
     return "needs_review", f"报告序号 {item_no} 未稳定展开扭矩扳手尺寸，需复核。"
 
 
-def _pm3562_table2_1_status_and_reason(
+def _basic_electrical_table2_1_status_and_reason(
     requirement: PTRAtomicRequirement,
     actual: str | None,
     group: InspectionItemGroup | None,
@@ -1167,14 +1074,14 @@ def _pm3562_table2_1_status_and_reason(
         actual_values = _signed_numbers(actual)
         if tolerance is not None and actual_values and all(abs(value) <= tolerance for value in actual_values):
             return "match", f"报告偏差 {actual} 在 {requirement.expected_text} 范围内。"
-    if _table_value_matches(requirement.expected_text, actual) or _pm3562_text_contains_expected(requirement.expected_text, actual):
+    if _table_value_matches(requirement.expected_text, actual) or _basic_electrical_text_contains_expected(requirement.expected_text, actual):
         return "match", "报告表2-1参数与 PTR 要求一致。"
     if _group_passed(group):
         return "match", "报告已展开表2-1参数结果，单项结论符合。"
     return "needs_review", f"报告表2-1参数结果 {actual} 需人工复核。"
 
 
-def _pm3562_text_contains_expected(expected: str | None, actual: str | None) -> bool:
+def _basic_electrical_text_contains_expected(expected: str | None, actual: str | None) -> bool:
     expected_text = _normalize_table_value(expected)
     actual_text = _normalize_table_value(actual)
     if not expected_text or not actual_text:
@@ -1314,30 +1221,30 @@ def _group_window_atomic_results(
     return results
 
 
-def _pm3562_table2_1_report_atomic_results(
+def _basic_electrical_table2_1_report_atomic_results(
     group: InspectionItemGroup,
     *,
     group_text: str,
     item_no: str | None,
     page_text_by_page: Mapping[int, str] | None = None,
 ) -> list[PTRReportAtomicResult]:
-    clause_id = _pm3562_group_clause_id(group)
-    spec = PM3562_TABLE2_1_SPECS.get(clause_id)
+    clause_id = _basic_electrical_group_clause_id(group)
+    spec = BASIC_ELECTRICAL_TABLE2_1_SPECS.get(clause_id)
     if spec is None:
         return []
-    window = _pm3562_report_window(group_text, clause_id, spec)
+    window = _basic_electrical_report_window(group_text, clause_id, spec)
     if not window:
         return []
-    page = _page_for_pm3562_table2_1(group, clause_id, page_text_by_page=page_text_by_page)
+    page = _page_for_basic_electrical_table2_1(group, clause_id, page_text_by_page=page_text_by_page)
     if clause_id == "2.1.1":
-        return _pm3562_basic_rate_report_results(window=window, item_no=item_no, page=page, full_group_text=group_text)
+        return _basic_electrical_basic_rate_report_results(window=window, item_no=item_no, page=page, full_group_text=group_text)
     if clause_id == "2.1.2":
-        return _pm3562_pulse_width_report_results(window=window, item_no=item_no, page=page, full_group_text=group_text)
+        return _basic_electrical_pulse_width_report_results(window=window, item_no=item_no, page=page, full_group_text=group_text)
     if clause_id == "2.1.3":
-        return _pm3562_pulse_amplitude_report_results(window=window, item_no=item_no, page=page, full_group_text=group_text)
+        return _basic_electrical_pulse_amplitude_report_results(window=window, item_no=item_no, page=page, full_group_text=group_text)
     if clause_id == "2.1.10":
-        return _pm3562_av_interval_report_results(window=window, item_no=item_no, page=page, full_group_text=group_text)
-    return _pm3562_generic_table2_1_report_results(
+        return _basic_electrical_av_interval_report_results(window=window, item_no=item_no, page=page, full_group_text=group_text)
+    return _basic_electrical_generic_table2_1_report_results(
         clause_id=clause_id,
         spec=spec,
         window=window,
@@ -1347,19 +1254,19 @@ def _pm3562_table2_1_report_atomic_results(
     )
 
 
-def _pm3562_group_clause_id(group: InspectionItemGroup) -> str | None:
+def _basic_electrical_group_clause_id(group: InspectionItemGroup) -> str | None:
     for row in group.rows:
         clause = str(row.standard_clause or "").strip()
-        if clause in PM3562_TABLE2_1_SPECS:
+        if clause in BASIC_ELECTRICAL_TABLE2_1_SPECS:
             return clause
     text = ptr_group_text(group)
-    for clause_id in PM3562_TABLE2_1_SPECS:
+    for clause_id in BASIC_ELECTRICAL_TABLE2_1_SPECS:
         if _clause_header_pattern(clause_id).search(text):
             return clause_id
     return None
 
 
-def _pm3562_basic_rate_report_results(
+def _basic_electrical_basic_rate_report_results(
     *,
     window: str,
     item_no: str | None,
@@ -1367,11 +1274,11 @@ def _pm3562_basic_rate_report_results(
     full_group_text: str,
 ) -> list[PTRReportAtomicResult]:
     specs = [
-        ("2.1.1:basic_rate:setting", "设置", None, _pm3562_report_label_value(window, "设置", ("标称值",))),
-        ("2.1.1:basic_rate:nominal", "标称值", None, _pm3562_report_label_value(window, "标称值", ("符合要求", "允差"))),
-        ("2.1.1:basic_rate:tolerance:240ohm", "允差", "@240Ω", _pm3562_load_result(window, "@240Ω")),
-        ("2.1.1:basic_rate:tolerance:500ohm", "允差", "@500Ω", _pm3562_load_result(window, "@500Ω")),
-        ("2.1.1:basic_rate:tolerance:2000ohm", "允差", "@2000Ω", _pm3562_load_result(window, "@2000Ω")),
+        ("2.1.1:basic_rate:setting", "设置", None, _basic_electrical_report_label_value(window, "设置", ("标称值",))),
+        ("2.1.1:basic_rate:nominal", "标称值", None, _basic_electrical_report_label_value(window, "标称值", ("符合要求", "允差"))),
+        ("2.1.1:basic_rate:tolerance:240ohm", "允差", "@240Ω", _basic_electrical_load_result(window, "@240Ω")),
+        ("2.1.1:basic_rate:tolerance:500ohm", "允差", "@500Ω", _basic_electrical_load_result(window, "@500Ω")),
+        ("2.1.1:basic_rate:tolerance:2000ohm", "允差", "@2000Ω", _basic_electrical_load_result(window, "@2000Ω")),
     ]
     results: list[PTRReportAtomicResult] = []
     for atomic_id, label, preset, actual in specs:
@@ -1388,14 +1295,14 @@ def _pm3562_basic_rate_report_results(
                 page=page,
                 source_text=window,
                 confidence="high",
-                method="pm3562_table2_1_basic_rate",
+                method="basic_electrical_table2_1_basic_rate",
                 full_group_text=full_group_text,
             )
         )
     return results
 
 
-def _pm3562_pulse_width_report_results(
+def _basic_electrical_pulse_width_report_results(
     *,
     window: str,
     item_no: str | None,
@@ -1403,17 +1310,17 @@ def _pm3562_pulse_width_report_results(
     full_group_text: str,
 ) -> list[PTRReportAtomicResult]:
     results: list[PTRReportAtomicResult] = []
-    all_site_aliases = [alias for _slug_value, _label, aliases in PM3562_PULSE_WIDTH_SITES for alias in aliases]
-    for site_slug, site_label, aliases in PM3562_PULSE_WIDTH_SITES:
-        site_window = _pm3562_condition_window(window, aliases, all_site_aliases)
+    all_site_aliases = [alias for _slug_value, _label, aliases in BASIC_ELECTRICAL_PULSE_WIDTH_SITES for alias in aliases]
+    for site_slug, site_label, aliases in BASIC_ELECTRICAL_PULSE_WIDTH_SITES:
+        site_window = _basic_electrical_condition_window(window, aliases, all_site_aliases)
         if not site_window:
             continue
         for suffix, label, preset, actual in [
-            ("setting", "设置", site_label, _pm3562_report_label_value(site_window, "设置", ("标称值",))),
-            ("nominal", "标称值", site_label, _pm3562_report_label_value(site_window, "标称值", ("符合要求", "允差"))),
+            ("setting", "设置", site_label, _basic_electrical_report_label_value(site_window, "设置", ("标称值",))),
+            ("nominal", "标称值", site_label, _basic_electrical_report_label_value(site_window, "标称值", ("符合要求", "允差"))),
             *[
-                (f"tolerance:{load_slug}", "允差", f"{site_label} / {load_label}", _pm3562_load_result(site_window, load_label))
-                for load_slug, load_label in PM3562_LOADS
+                (f"tolerance:{load_slug}", "允差", f"{site_label} / {load_label}", _basic_electrical_load_result(site_window, load_label))
+                for load_slug, load_label in BASIC_ELECTRICAL_LOADS
             ],
         ]:
             if not actual:
@@ -1429,14 +1336,14 @@ def _pm3562_pulse_width_report_results(
                     page=page,
                     source_text=site_window,
                     confidence="high",
-                    method="pm3562_table2_1_pulse_width_condition",
+                    method="basic_electrical_table2_1_pulse_width_condition",
                     full_group_text=full_group_text,
                 )
             )
     return results
 
 
-def _pm3562_pulse_amplitude_report_results(
+def _basic_electrical_pulse_amplitude_report_results(
     *,
     window: str,
     item_no: str | None,
@@ -1444,14 +1351,14 @@ def _pm3562_pulse_amplitude_report_results(
     full_group_text: str,
 ) -> list[PTRReportAtomicResult]:
     results: list[PTRReportAtomicResult] = []
-    all_site_aliases = [alias for _slug_value, _label, aliases in PM3562_PULSE_AMPLITUDE_SITES for alias in aliases]
-    for site_slug, site_label, aliases in PM3562_PULSE_AMPLITUDE_SITES:
-        site_window = _pm3562_condition_window(window, aliases, all_site_aliases)
+    all_site_aliases = [alias for _slug_value, _label, aliases in BASIC_ELECTRICAL_PULSE_AMPLITUDE_SITES for alias in aliases]
+    for site_slug, site_label, aliases in BASIC_ELECTRICAL_PULSE_AMPLITUDE_SITES:
+        site_window = _basic_electrical_condition_window(window, aliases, all_site_aliases)
         if not site_window:
             continue
         for suffix, label, actual in [
-            ("setting", "设置", _pm3562_report_label_value(site_window, "设置", ("标称值",))),
-            ("nominal", "标称值", _pm3562_report_label_value(site_window, "标称值", ("符合要求", "允差"))),
+            ("setting", "设置", _basic_electrical_report_label_value(site_window, "设置", ("标称值",))),
+            ("nominal", "标称值", _basic_electrical_report_label_value(site_window, "标称值", ("符合要求", "允差"))),
         ]:
             if not actual:
                 continue
@@ -1466,14 +1373,14 @@ def _pm3562_pulse_amplitude_report_results(
                     page=page,
                     source_text=site_window,
                     confidence="high",
-                    method="pm3562_table2_1_pulse_amplitude_condition",
+                    method="basic_electrical_table2_1_pulse_amplitude_condition",
                     full_group_text=full_group_text,
                 )
             )
-        for load_slug, load_label in PM3562_LOADS:
-            load_block = _pm3562_load_block(site_window, load_label)
-            for segment_index, (segment_key, _expected) in enumerate(PM3562_PULSE_AMPLITUDE_SEGMENTS[load_slug]):
-                actual = _pm3562_segment_actual(load_block, segment_key)
+        for load_slug, load_label in BASIC_ELECTRICAL_LOADS:
+            load_block = _basic_electrical_load_block(site_window, load_label)
+            for segment_index, (segment_key, _expected) in enumerate(BASIC_ELECTRICAL_PULSE_AMPLITUDE_SEGMENTS[load_slug]):
+                actual = _basic_electrical_segment_actual(load_block, segment_key)
                 if not actual:
                     continue
                 results.append(
@@ -1487,14 +1394,14 @@ def _pm3562_pulse_amplitude_report_results(
                         page=page,
                         source_text=load_block or site_window,
                         confidence="high",
-                        method="pm3562_table2_1_pulse_amplitude_segment",
+                        method="basic_electrical_table2_1_pulse_amplitude_segment",
                         full_group_text=full_group_text,
                     )
                 )
     return results
 
 
-def _pm3562_av_interval_report_results(
+def _basic_electrical_av_interval_report_results(
     *,
     window: str,
     item_no: str | None,
@@ -1502,15 +1409,15 @@ def _pm3562_av_interval_report_results(
     full_group_text: str,
 ) -> list[PTRReportAtomicResult]:
     results: list[PTRReportAtomicResult] = []
-    all_aliases = [alias for _slug_value, _label, aliases, _setting, _nominal, _tolerance in PM3562_AV_INTERVAL_CONDITIONS for alias in aliases]
-    for condition_slug, condition_label, aliases, _setting, _nominal, _tolerance in PM3562_AV_INTERVAL_CONDITIONS:
-        condition_window = _pm3562_condition_window(window, aliases, all_aliases)
+    all_aliases = [alias for _slug_value, _label, aliases, _setting, _nominal, _tolerance in BASIC_ELECTRICAL_AV_INTERVAL_CONDITIONS for alias in aliases]
+    for condition_slug, condition_label, aliases, _setting, _nominal, _tolerance in BASIC_ELECTRICAL_AV_INTERVAL_CONDITIONS:
+        condition_window = _basic_electrical_condition_window(window, aliases, all_aliases)
         if not condition_window:
             continue
         for suffix, label, actual in (
-            ("setting", "设置", _pm3562_report_label_value(condition_window, "设置", ("标称值",))),
-            ("nominal", "标称值", _pm3562_report_label_value(condition_window, "标称值", ("符合要求", "允差"))),
-            ("tolerance", "允差", _pm3562_report_tolerance_result(condition_window)),
+            ("setting", "设置", _basic_electrical_report_label_value(condition_window, "设置", ("标称值",))),
+            ("nominal", "标称值", _basic_electrical_report_label_value(condition_window, "标称值", ("符合要求", "允差"))),
+            ("tolerance", "允差", _basic_electrical_report_tolerance_result(condition_window)),
         ):
             if not actual:
                 continue
@@ -1525,14 +1432,14 @@ def _pm3562_av_interval_report_results(
                     page=page,
                     source_text=condition_window,
                     confidence="high",
-                    method="pm3562_table2_1_av_interval_condition",
+                    method="basic_electrical_table2_1_av_interval_condition",
                     full_group_text=full_group_text,
                 )
             )
     return results
 
 
-def _pm3562_generic_table2_1_report_results(
+def _basic_electrical_generic_table2_1_report_results(
     *,
     clause_id: str,
     spec: dict[str, Any],
@@ -1543,9 +1450,9 @@ def _pm3562_generic_table2_1_report_results(
 ) -> list[PTRReportAtomicResult]:
     slug = str(spec["slug"])
     fields = [
-        (f"{clause_id}:{slug}:setting", "设置", _pm3562_report_label_value(window, "设置", ("标称值",))),
-        (f"{clause_id}:{slug}:nominal", "标称值", _pm3562_report_label_value(window, "标称值", ("符合要求", "允差"))),
-        (f"{clause_id}:{slug}:tolerance", "允差", _pm3562_report_tolerance_result(window)),
+        (f"{clause_id}:{slug}:setting", "设置", _basic_electrical_report_label_value(window, "设置", ("标称值",))),
+        (f"{clause_id}:{slug}:nominal", "标称值", _basic_electrical_report_label_value(window, "标称值", ("符合要求", "允差"))),
+        (f"{clause_id}:{slug}:tolerance", "允差", _basic_electrical_report_tolerance_result(window)),
     ]
     results: list[PTRReportAtomicResult] = []
     for atomic_id, label, actual in fields:
@@ -1561,11 +1468,11 @@ def _pm3562_generic_table2_1_report_results(
                 page=page,
                 source_text=window,
                 confidence="high",
-                method="pm3562_table2_1_parameter_detail",
+                method="basic_electrical_table2_1_parameter_detail",
                 full_group_text=full_group_text,
             )
         )
-    summary = _pm3562_report_summary(window)
+    summary = _basic_electrical_report_summary(window)
     if summary:
         results.append(
             _report_atomic_result(
@@ -1577,19 +1484,19 @@ def _pm3562_generic_table2_1_report_results(
                 page=page,
                 source_text=window,
                 confidence="medium" if not results else "high",
-                method="pm3562_table2_1_summary",
+                method="basic_electrical_table2_1_summary",
                 full_group_text=full_group_text,
             )
         )
     return results
 
 
-def _pm3562_report_window(group_text: str, clause_id: str, spec: dict[str, Any]) -> str:
+def _basic_electrical_report_window(group_text: str, clause_id: str, spec: dict[str, Any]) -> str:
     text = str(group_text or "")
     if not text.strip():
         return ""
     windows: list[str] = []
-    next_clause = _pm3562_next_clause(clause_id)
+    next_clause = _basic_electrical_next_clause(clause_id)
     for match in _clause_header_pattern(clause_id).finditer(text):
         end = len(text)
         if next_clause:
@@ -1597,15 +1504,15 @@ def _pm3562_report_window(group_text: str, clause_id: str, spec: dict[str, Any])
             if next_match is not None:
                 end = next_match.start()
         windows.append(text[match.start() : end].strip())
-    alias_window = _pm3562_parameter_window(text, spec.get("aliases") or (spec["label"],))
+    alias_window = _basic_electrical_parameter_window(text, spec.get("aliases") or (spec["label"],))
     if alias_window:
         windows.append(alias_window)
     if not windows:
         return ""
-    return max(windows, key=lambda window: _pm3562_report_window_score_for_clause(window, clause_id))
+    return max(windows, key=lambda window: _basic_electrical_report_window_score_for_clause(window, clause_id))
 
 
-def _pm3562_report_window_score(window: str) -> tuple[int, int]:
+def _basic_electrical_report_window_score(window: str) -> tuple[int, int]:
     text = str(window or "")
     compact = _compact_for_match(text)
     detail_hits = sum(1 for token in ("设置", "标称值", "允差", "符合要求") if token in text)
@@ -1614,16 +1521,16 @@ def _pm3562_report_window_score(window: str) -> tuple[int, int]:
     return detail_hits * 10 + load_hits * 5 + signed_hits, len(text)
 
 
-def _pm3562_report_window_score_for_clause(window: str, clause_id: str) -> tuple[int, int, int]:
-    previous_clause = _pm3562_previous_clause(clause_id)
+def _basic_electrical_report_window_score_for_clause(window: str, clause_id: str) -> tuple[int, int, int]:
+    previous_clause = _basic_electrical_previous_clause(clause_id)
     previous_clause_hits = 0
     if previous_clause:
         previous_clause_hits = len(_clause_header_pattern(previous_clause).findall(str(window or "")))
-    data_score, length_score = _pm3562_report_window_score(window)
+    data_score, length_score = _basic_electrical_report_window_score(window)
     return -previous_clause_hits, data_score, length_score
 
 
-def _pm3562_condition_window(text: str, aliases: Sequence[str], all_aliases: Sequence[str]) -> str:
+def _basic_electrical_condition_window(text: str, aliases: Sequence[str], all_aliases: Sequence[str]) -> str:
     source = str(text or "")
     compact_source = _compact_for_match(source)
     starts: list[int] = []
@@ -1655,31 +1562,31 @@ def _pm3562_condition_window(text: str, aliases: Sequence[str], all_aliases: Seq
                 if source_index > start:
                     end = min(end, source_index)
         windows.append(source[start:end].strip())
-    return max(windows, key=_pm3562_report_window_score)
+    return max(windows, key=_basic_electrical_report_window_score)
 
 
-def _pm3562_load_block(window: str, load_label: str) -> str:
+def _basic_electrical_load_block(window: str, load_label: str) -> str:
     text = str(window or "")
-    start_match = _pm3562_load_heading_pattern(load_label).search(text)
+    start_match = _basic_electrical_load_heading_pattern(load_label).search(text)
     if start_match is None:
         return ""
     end = len(text)
-    for _load_slug, other_load_label in PM3562_LOADS:
+    for _load_slug, other_load_label in BASIC_ELECTRICAL_LOADS:
         if other_load_label == load_label:
             continue
-        other_match = _pm3562_load_heading_pattern(other_load_label).search(text, start_match.end())
+        other_match = _basic_electrical_load_heading_pattern(other_load_label).search(text, start_match.end())
         if other_match is not None:
             end = min(end, other_match.start())
     return text[start_match.start() : end].strip()
 
 
-def _pm3562_load_heading_pattern(load_label: str) -> re.Pattern[str]:
+def _basic_electrical_load_heading_pattern(load_label: str) -> re.Pattern[str]:
     number = re.escape(re.sub(r"\D", "", load_label))
     return re.compile(rf"(?:允差\s*[:：]?\s*)?{number}\s*[ΩΩ欧]\s*[:：]", re.IGNORECASE)
 
 
-def _pm3562_segment_actual(load_block: str, segment_key: str) -> str | None:
-    lines = _pm3562_window_lines(load_block)
+def _basic_electrical_segment_actual(load_block: str, segment_key: str) -> str | None:
+    lines = _basic_electrical_window_lines(load_block)
     compact_segment = _compact_for_match(segment_key)
     starts = [
         index
@@ -1690,7 +1597,7 @@ def _pm3562_segment_actual(load_block: str, segment_key: str) -> str | None:
         return None
     start = starts[0]
     end = len(lines)
-    all_segment_keys = [key for segments in PM3562_PULSE_AMPLITUDE_SEGMENTS.values() for key, _expected in segments]
+    all_segment_keys = [key for segments in BASIC_ELECTRICAL_PULSE_AMPLITUDE_SEGMENTS.values() for key, _expected in segments]
     for index in range(start + 1, len(lines)):
         compact_line = _compact_for_match(lines[index])
         if any(_compact_for_match(key) and _compact_for_match(key) in compact_line for key in all_segment_keys):
@@ -1699,16 +1606,16 @@ def _pm3562_segment_actual(load_block: str, segment_key: str) -> str | None:
         if re.search(r"^\s*允差\s*[:：]?", lines[index]):
             end = index
             break
-    actual = _pm3562_trailing_signed_actual(" ".join(lines[start:end]))
+    actual = _basic_electrical_trailing_signed_actual(" ".join(lines[start:end]))
     if actual:
         return actual
     signed_lines = [line for line in lines[start + 1 : end] if _line_starts_with_signed_result(line)]
     if not signed_lines:
         return None
-    return _clean_pm3562_actual(" ".join(signed_lines))
+    return _clean_basic_electrical_actual(" ".join(signed_lines))
 
 
-def _pm3562_trailing_signed_actual(value: str) -> str | None:
+def _basic_electrical_trailing_signed_actual(value: str) -> str | None:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     match = re.search(
         r"([+＋\-－]\s*\d+(?:\.\d+)?\s*(?:%|V|mV|ms)?"
@@ -1718,14 +1625,14 @@ def _pm3562_trailing_signed_actual(value: str) -> str | None:
         r")\s*$",
         text,
     )
-    return _clean_pm3562_actual(match.group(1)) if match else None
+    return _clean_basic_electrical_actual(match.group(1)) if match else None
 
 
 def _line_starts_with_signed_result(line: str) -> bool:
     return bool(re.match(r"\s*[+＋\-－]\s*\d", str(line or "")))
 
 
-def _clean_pm3562_actual(value: str) -> str:
+def _clean_basic_electrical_actual(value: str) -> str:
     text = re.sub(r"\s+", "", str(value or ""))
     text = text.replace("＋", "+").replace("－", "-").replace("~", "～").replace("至", "～")
     text = text.replace("，", "、").strip("、")
@@ -1733,7 +1640,7 @@ def _clean_pm3562_actual(value: str) -> str:
     return text
 
 
-def _pm3562_parameter_window(text: str, aliases: Sequence[str]) -> str:
+def _basic_electrical_parameter_window(text: str, aliases: Sequence[str]) -> str:
     source = str(text or "")
     compact_source = _compact_for_match(source)
     starts = [
@@ -1746,7 +1653,7 @@ def _pm3562_parameter_window(text: str, aliases: Sequence[str]) -> str:
         return ""
     start = min(starts)
     end = len(source)
-    for other_spec in PM3562_TABLE2_1_SPECS.values():
+    for other_spec in BASIC_ELECTRICAL_TABLE2_1_SPECS.values():
         for alias in other_spec.get("aliases") or (other_spec["label"],):
             key = _compact_for_match(alias)
             if not key:
@@ -1760,14 +1667,14 @@ def _pm3562_parameter_window(text: str, aliases: Sequence[str]) -> str:
     return source[start:end].strip()
 
 
-def _pm3562_next_clause(clause_id: str) -> str | None:
+def _basic_electrical_next_clause(clause_id: str) -> str | None:
     match = re.fullmatch(r"2\.1\.(\d+)", clause_id)
     if not match:
         return None
     return f"2.1.{int(match.group(1)) + 1}"
 
 
-def _pm3562_previous_clause(clause_id: str) -> str | None:
+def _basic_electrical_previous_clause(clause_id: str) -> str | None:
     match = re.fullmatch(r"2\.1\.(\d+)", clause_id)
     if not match:
         return None
@@ -1775,7 +1682,7 @@ def _pm3562_previous_clause(clause_id: str) -> str | None:
     return f"2.1.{previous}" if previous >= 1 else None
 
 
-def _page_for_pm3562_table2_1(
+def _page_for_basic_electrical_table2_1(
     group: InspectionItemGroup,
     clause_id: str,
     *,
@@ -1789,7 +1696,7 @@ def _page_for_pm3562_table2_1(
     return _first_page(group)
 
 
-def _pm3562_report_label_value(window: str, label: str, end_markers: Sequence[str]) -> str | None:
+def _basic_electrical_report_label_value(window: str, label: str, end_markers: Sequence[str]) -> str | None:
     text = str(window or "")
     match = re.search(rf"{re.escape(label)}\s*[:：]\s*", text)
     if match is None:
@@ -1800,12 +1707,12 @@ def _pm3562_report_label_value(window: str, label: str, end_markers: Sequence[st
         marker_match = re.search(re.escape(marker), text[start:])
         if marker_match is not None:
             end = min(end, start + marker_match.start())
-    return _clean_pm3562_value(text[start:end])
+    return _clean_basic_electrical_value(text[start:end])
 
 
-def _pm3562_load_result(window: str, load_marker: str) -> str | None:
+def _basic_electrical_load_result(window: str, load_marker: str) -> str | None:
     text = str(window or "")
-    pattern = _pm3562_load_pattern(load_marker)
+    pattern = _basic_electrical_load_pattern(load_marker)
     match = pattern.search(text)
     if match is None:
         return None
@@ -1814,32 +1721,32 @@ def _pm3562_load_result(window: str, load_marker: str) -> str | None:
     for marker in ("@240Ω", "@500Ω", "@2000Ω"):
         if marker == load_marker:
             continue
-        next_match = _pm3562_load_pattern(marker).search(text, start)
+        next_match = _basic_electrical_load_pattern(marker).search(text, start)
         if next_match is not None:
             end = min(end, next_match.start())
     segment = text[start:end]
-    return _pm3562_signed_result(segment)
+    return _basic_electrical_signed_result(segment)
 
 
-def _pm3562_load_pattern(load_marker: str) -> re.Pattern[str]:
+def _basic_electrical_load_pattern(load_marker: str) -> re.Pattern[str]:
     marker = str(load_marker or "").lstrip("@")
     number = re.escape(re.sub(r"\D", "", marker))
     return re.compile(rf"@\s*{number}\s*[ΩΩ欧]", re.IGNORECASE)
 
 
-def _pm3562_report_tolerance_result(window: str) -> str | None:
+def _basic_electrical_report_tolerance_result(window: str) -> str | None:
     for load_marker in ("@240Ω", "@500Ω", "@2000Ω"):
-        value = _pm3562_load_result(window, load_marker)
+        value = _basic_electrical_load_result(window, load_marker)
         if value:
             return value
     tolerance_match = re.search(r"允差\s*[:：]?", str(window or ""))
     if tolerance_match is None:
         return "符合要求" if "符合要求" in str(window or "") or "符合" in str(window or "") else None
     segment = str(window or "")[tolerance_match.end() :]
-    return _pm3562_signed_result(segment) or ("符合要求" if "符合" in segment else None)
+    return _basic_electrical_signed_result(segment) or ("符合要求" if "符合" in segment else None)
 
 
-def _pm3562_signed_result(value: str) -> str | None:
+def _basic_electrical_signed_result(value: str) -> str | None:
     text = str(value or "")
     range_match = re.search(
         r"([+＋\-－]\s*\d+(?:\.\d+)?\s*[~～至-]\s*[+＋\-－]?\s*\d+(?:\.\d+)?)",
@@ -1853,16 +1760,16 @@ def _pm3562_signed_result(value: str) -> str | None:
     return None
 
 
-def _pm3562_report_summary(window: str) -> str | None:
-    lines = [line for line in _pm3562_window_lines(window) if not _looks_like_report_table_header(line)]
+def _basic_electrical_report_summary(window: str) -> str | None:
+    lines = [line for line in _basic_electrical_window_lines(window) if not _looks_like_report_table_header(line)]
     return _safe_excerpt("；".join(lines[:8]), limit=360) if lines else None
 
 
-def _pm3562_window_lines(window: str) -> list[str]:
-    return [_clean_pm3562_value(line) for line in str(window or "").splitlines() if _clean_pm3562_value(line)]
+def _basic_electrical_window_lines(window: str) -> list[str]:
+    return [_clean_basic_electrical_value(line) for line in str(window or "").splitlines() if _clean_basic_electrical_value(line)]
 
 
-def _clean_pm3562_value(value: str | None) -> str:
+def _clean_basic_electrical_value(value: str | None) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     text = text.replace(" ，", "，").replace("， ", "，").replace(" ；", "；").replace("； ", "；")
     text = re.sub(r"步\s*幅\s*为\s*", "步幅为", text)
@@ -1884,7 +1791,7 @@ def _torque_wrench_report_atomic_results(
     item_no: str | None,
     page_text_by_page: Mapping[int, str] | None = None,
 ) -> list[PTRReportAtomicResult]:
-    if _pm3562_group_clause_id(group) is not None:
+    if _basic_electrical_group_clause_id(group) is not None:
         return []
     if not any(str(row.standard_clause or "").strip() == "2.8.2" for row in group.rows):
         return []
@@ -1908,7 +1815,7 @@ def _torque_wrench_report_atomic_results(
                 page=page,
                 source_text=group_text,
                 confidence="high",
-                method="pm3562_torque_wrench_dimension",
+                method="basic_electrical_torque_wrench_dimension",
                 full_group_text=group_text,
             )
         )

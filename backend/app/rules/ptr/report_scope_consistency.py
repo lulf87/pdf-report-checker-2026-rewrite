@@ -20,6 +20,7 @@ def check_report_scope_consistency(
     task_id: str,
 ) -> CheckResult:
     actual_scope = _actual_direct_scope(report_scope, report_items)
+    excluded_placeholders = _excluded_placeholder_items(report_scope, report_items)
     findings: list[Finding] = []
 
     findings.extend(_declared_missing_findings(report_scope, actual_scope, task_id))
@@ -27,7 +28,7 @@ def check_report_scope_consistency(
     findings.extend(_excluded_topic_findings(report_scope, report_items, task_id))
     findings.extend(_external_standard_range_findings(report_scope, report_items, task_id))
 
-    scope_consistency = _scope_consistency_metadata(report_scope, actual_scope, findings)
+    scope_consistency = _scope_consistency_metadata(report_scope, actual_scope, findings, excluded_placeholders)
     return CheckResult(
         task_id=task_id,
         check_id="PTR_REPORT_SCOPE",
@@ -123,6 +124,8 @@ def _excluded_topic_findings(
         for topic in report_scope.excluded_topics:
             if not _contains_topic(item_text, topic):
                 continue
+            if _is_excluded_placeholder_item(report_scope, item, topic):
+                continue
             clause_number = _first_ptr_clause_number(item) or _root_scope_number(_first_ptr_clause_number(item)) or ""
             key = (topic, clause_number or _item_no(item) or "")
             if key in seen:
@@ -143,6 +146,9 @@ def _excluded_topic_findings(
                         "excluded_topic": topic,
                         "clause_number": clause_number,
                         "item_no": _item_no(item),
+                        "test_result": item.test_result,
+                        "single_conclusion": item.conclusion,
+                        "remark": item.remark,
                     },
                 )
             )
@@ -196,6 +202,7 @@ def _scope_consistency_metadata(
     report_scope: ReportInspectionScope,
     actual_scope: list[str],
     findings: list[Finding],
+    excluded_placeholders: list[dict[str, Any]],
 ) -> dict[str, Any]:
     status = "passed" if not findings else "failed"
     return {
@@ -207,6 +214,7 @@ def _scope_consistency_metadata(
         "actual_report_scope": actual_scope,
         "external_standard_ranges": [item.model_dump(mode="json") for item in report_scope.external_standard_ranges],
         "excluded_topics": list(report_scope.excluded_topics),
+        "excluded_placeholders": excluded_placeholders,
         "ptr_direct_content_starts_after": report_scope.ptr_direct_content_starts_after,
         "source_page": report_scope.source_page,
         "source_text": report_scope.source_text,
@@ -217,10 +225,59 @@ def _scope_consistency_metadata(
 def _actual_direct_scope(report_scope: ReportInspectionScope, report_items: list[InspectionItem]) -> list[str]:
     scope: list[str] = []
     for item in _direct_report_items(report_scope, report_items):
+        if _excluded_placeholder_topic(report_scope, item):
+            continue
         clause_number = _first_ptr_clause_number(item)
         if clause_number and clause_number not in scope:
             scope.append(clause_number)
     return scope
+
+
+def _excluded_placeholder_items(report_scope: ReportInspectionScope, report_items: list[InspectionItem]) -> list[dict[str, Any]]:
+    placeholders: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for item in _direct_report_items(report_scope, report_items):
+        for topic in report_scope.excluded_topics:
+            if not _is_excluded_placeholder_item(report_scope, item, topic):
+                continue
+            clause_number = _first_ptr_clause_number(item)
+            key = (topic, clause_number, _item_no(item) or "")
+            if key in seen:
+                continue
+            seen.add(key)
+            placeholders.append(
+                {
+                    "item_no": _item_no(item),
+                    "clause_number": clause_number,
+                    "excluded_topic": topic,
+                    "standard_requirement": item.standard_requirement,
+                    "test_result": item.test_result,
+                    "single_conclusion": item.conclusion,
+                    "remark": item.remark,
+                    "reason": f"报告首页已排除{topic}，实际检验表仅保留空白占位行。",
+                }
+            )
+    return placeholders
+
+
+def _excluded_placeholder_topic(report_scope: ReportInspectionScope, item: InspectionItem) -> str | None:
+    for topic in report_scope.excluded_topics:
+        if _is_excluded_placeholder_item(report_scope, item, topic):
+            return topic
+    return None
+
+
+def _is_excluded_placeholder_item(report_scope: ReportInspectionScope, item: InspectionItem, topic: str) -> bool:
+    item_text = _compact(" ".join([item.standard_clause or "", item.item_name or "", item.standard_requirement or ""]))
+    if not _contains_topic(item_text, topic):
+        return False
+    if not any(value is not None and _is_placeholder_text(value) for value in (item.test_result, item.conclusion, item.remark, *item.result_values)):
+        return False
+    if not (_is_placeholder_text(item.test_result) and _is_placeholder_text(item.conclusion) and _is_placeholder_text(item.remark)):
+        return False
+    if item.result_values and any(not _is_placeholder_text(value) for value in item.result_values):
+        return False
+    return True
 
 
 def _direct_report_items(report_scope: ReportInspectionScope, report_items: list[InspectionItem]) -> list[InspectionItem]:
@@ -331,6 +388,11 @@ def _contains_topic(item_text: str, topic: str) -> bool:
     )
 
 
+def _is_placeholder_text(value: str | None) -> bool:
+    text = _compact(str(value or ""))
+    return text in {"", "/", "／", "-", "—", "——", "不适用", "NA", "N/A"}
+
+
 def _scope_evidence(report_scope: ReportInspectionScope) -> Evidence:
     return Evidence(
         id="report-scope-declaration",
@@ -359,7 +421,7 @@ def _report_item_evidence(item: InspectionItem, clause_number: str) -> Evidence:
         source_type=SourceType.REPORT,
         location=item.row_location
         or Location(source_type=SourceType.REPORT, page_number=item.source_page, row_index=item.row_index_in_page),
-        raw_text="；".join(filter(None, [item.standard_clause, item.standard_requirement, item.test_result, item.conclusion])),
+        raw_text="；".join(filter(None, [item.standard_clause, item.item_name, item.standard_requirement, item.test_result, item.conclusion, item.remark])),
         method=EvidenceMethod.PDF_TEXT,
         metadata=_report_item_summary(item),
     )
