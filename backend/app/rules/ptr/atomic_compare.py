@@ -197,6 +197,14 @@ def build_report_atomic_results(
         )
     )
     results.extend(
+        _direct_text_report_atomic_results(
+            group,
+            group_text=group_text,
+            item_no=item_no,
+            page_text_by_page=page_text_by_page,
+        )
+    )
+    results.extend(
         _basic_electrical_table2_1_report_atomic_results(
             group,
             group_text=group_text,
@@ -1002,6 +1010,20 @@ def _status_and_reason(
         if candidate_actuals:
             return "candidate_found_needs_mapping", "报告中找到候选结果，但未完成结构化绑定。"
         return "needs_review", "报告功能性结果未能稳定抽取，需复核。"
+    if requirement.operator == "functional_or_equal":
+        if actual and "符合" in actual and "不符合" not in actual:
+            return "match", "报告检验结果显示符合。"
+        if _table_value_matches(requirement.expected_text, actual):
+            return "match", "报告结果与 PTR 要求一致。"
+        if _numbers(actual) and _numbers(requirement.expected_text) and _numbers(actual) == _numbers(requirement.expected_text):
+            return "match", "报告结果与 PTR 要求一致。"
+        return "needs_review", "报告功能/计数结果需复核。"
+    if requirement.operator == "deviation_within_tolerance":
+        tolerance = _expected_tolerance(requirement.expected_text or "")
+        actual_values = _signed_numbers(actual or "")
+        if tolerance is not None and actual_values and all(abs(value) <= tolerance for value in actual_values):
+            return "match", f"报告偏差 {actual} 在 {requirement.expected_text} 范围内。"
+        return "needs_review", "报告偏差结果需复核。"
     if actual is None:
         if candidate_actuals:
             return "candidate_found_needs_mapping", "报告中找到候选结果，但未完成结构化绑定。"
@@ -1218,6 +1240,127 @@ def _group_window_atomic_results(
             )
         )
 
+    return results
+
+
+def _direct_text_report_atomic_results(
+    group: InspectionItemGroup,
+    *,
+    group_text: str,
+    item_no: str | None,
+    page_text_by_page: Mapping[int, str] | None = None,
+) -> list[PTRReportAtomicResult]:
+    results: list[PTRReportAtomicResult] = []
+    direct_source_text = _direct_group_source_text(group, group_text)
+    for clause_id in _clause_ids_in_text(direct_source_text):
+        window = _clause_window(direct_source_text, clause_id)
+        if not window:
+            continue
+        page = _page_for_clause_window(group, clause_id, page_text_by_page=page_text_by_page)
+        compact = _compact(window)
+        if "电压" in compact and "标称值" in compact:
+            nominal = _direct_result_after_marker(window, "标称值")
+            low_voltage = _direct_result_after_marker(window, "低电压")
+            if nominal:
+                results.append(
+                    _report_atomic_result(
+                        atomic_id=f"{clause_id}:voltage:nominal",
+                        clause_id=clause_id,
+                        label="电压",
+                        actual=nominal,
+                        unit="V",
+                        item_no=item_no,
+                        page=page,
+                        source_text=window,
+                        confidence="high",
+                        method="direct_clause_window_voltage_nominal",
+                        full_group_text=direct_source_text,
+                    )
+                )
+            if low_voltage:
+                results.append(
+                    _report_atomic_result(
+                        atomic_id=f"{clause_id}:voltage:low_voltage",
+                        clause_id=clause_id,
+                        label="低电压",
+                        actual=low_voltage,
+                        unit="V",
+                        item_no=item_no,
+                        page=page,
+                        source_text=window,
+                        confidence="high",
+                        method="direct_clause_window_voltage_low",
+                        full_group_text=direct_source_text,
+                    )
+                )
+        direct_specs = (
+            ("脉宽", "pulse_width", "脉宽", "μs", "direct_clause_window_pulse_width"),
+            ("脉冲间隔", "pulse_interval", "脉冲间隔", "μs", "direct_clause_window_pulse_interval"),
+            ("脉冲群间隔", "pulse_group_interval", "脉冲群间隔", "s", "direct_clause_window_pulse_group_interval"),
+            ("上升沿时间", "rise_edge_time", "上升沿时间", "ns", "direct_clause_window_rise_edge_time"),
+            ("下降沿时间", "fall_edge_time", "下降沿时间", "ns", "direct_clause_window_fall_edge_time"),
+        )
+        for marker, suffix, label, unit, method in direct_specs:
+            if marker not in window or (marker == "脉冲间隔" and "脉冲群间隔" in window):
+                continue
+            actual = _direct_result_after_marker(window, marker)
+            if not actual:
+                continue
+            results.append(
+                _report_atomic_result(
+                    atomic_id=f"{clause_id}:{suffix}",
+                    clause_id=clause_id,
+                    label=label,
+                    actual=actual,
+                    unit=unit,
+                    item_no=item_no,
+                    page=page,
+                    source_text=window,
+                    confidence="high",
+                    method=method,
+                    full_group_text=direct_source_text,
+                )
+            )
+        functional_specs = (
+            ("每个脉冲群中的循环数", "pulse_group_cycles", "每个脉冲群中的循环数"),
+            ("每个治疗波中的脉冲群数量", "treatment_wave_pulse_group_count", "每个治疗波中的脉冲群数量"),
+        )
+        for marker, suffix, label in functional_specs:
+            if marker not in window:
+                continue
+            actual = _direct_result_after_marker(window, marker)
+            if not actual:
+                continue
+            results.append(
+                _report_atomic_result(
+                    atomic_id=f"{clause_id}:{suffix}",
+                    clause_id=clause_id,
+                    label=label,
+                    actual=actual,
+                    item_no=item_no,
+                    page=page,
+                    source_text=window,
+                    confidence="high",
+                    method="direct_clause_window_functional_or_equal",
+                    full_group_text=direct_source_text,
+                )
+            )
+        functional_actual = _direct_functional_actual(window)
+        if functional_actual:
+            results.append(
+                _report_atomic_result(
+                    atomic_id=f"{clause_id}:functional",
+                    clause_id=clause_id,
+                    label=_direct_clause_label(clause_id, window),
+                    actual=functional_actual,
+                    item_no=item_no,
+                    page=page,
+                    source_text=window,
+                    confidence="high",
+                    method="direct_clause_window_functional",
+                    full_group_text=direct_source_text,
+                )
+            )
     return results
 
 
@@ -2212,6 +2355,10 @@ def _clause_window_score(window: str, clause_number: str) -> tuple[int, int]:
         preset_hits = len(_preset_values_by_slug_from_text(text))
         waveform_noise = sum(1 for parameter_name, _slug_value in WAVEFORM_TABLE_PARAMETERS if parameter_name in text)
         return preset_hits * 10 - waveform_noise * 3, -len(text)
+    if re.fullmatch(r"2\.\d+(?:\.\d+){1,2}", clause_number):
+        result_hits = len(_direct_result_values(text))
+        functional_hits = text.count("符合要求")
+        return result_hits * 10 + functional_hits * 5, len(text)
     return 0, -len(text)
 
 
@@ -2273,6 +2420,10 @@ def _next_clause_boundaries(clause_number: str) -> list[str]:
     match = re.fullmatch(r"2\.2\.7\.(\d+)", clause_number)
     if match:
         return [f"2.2.7.{int(match.group(1)) + 1}"]
+    parts = str(clause_number).split(".")
+    if len(parts) >= 2 and all(part.isdigit() for part in parts):
+        parts[-1] = str(int(parts[-1]) + 1)
+        return [".".join(parts)]
     return []
 
 
@@ -2522,6 +2673,106 @@ def _any_preset_marker_pattern() -> re.Pattern[str]:
 
 def _number_tokens(value: str) -> list[str]:
     return re.findall(r"(?<![\d.])[-+]?\d+(?:\.\d+)?(?![\d.])", value)
+
+
+def _direct_group_source_text(group: InspectionItemGroup, group_text: str) -> str:
+    item_no = str(group.display_item_no or group.item_no or "").strip()
+    if not item_no.isdigit():
+        return group_text
+    text = str(group_text or "")
+    start_match = re.search(rf"(?<!\d)(?:续\s*)?{re.escape(item_no)}(?!\d)", text)
+    if start_match is None:
+        return text
+    end_index = len(text)
+    next_item_no = str(int(item_no) + 1)
+    next_match = re.search(rf"(?<!\d)(?:续\s*)?{re.escape(next_item_no)}(?!\d)", text[start_match.end() :])
+    if next_match is not None:
+        end_index = start_match.end() + next_match.start()
+    return text[start_match.start() : end_index].strip()
+
+
+def _clause_ids_in_text(value: str) -> list[str]:
+    pattern = re.compile(r"(?<![\d.])(2(?:\s*\.\s*[1-9]\d*){1,3})(?!\s*\.\s*\d)")
+    return _unique_text(match.group(1).replace(" ", "") for match in pattern.finditer(str(value or "")))
+
+
+def _direct_result_after_marker(window: str, marker: str) -> str | None:
+    lines = [line.strip() for line in re.split(r"[\n；;]+", str(window or "")) if line.strip()]
+    for index, line in enumerate(lines):
+        if marker not in line:
+            continue
+        same_line_tail = line[line.find(marker) + len(marker) :]
+        if "符合要求" in same_line_tail:
+            return "符合要求"
+        signed_same_line = _signed_result_value(same_line_tail)
+        if signed_same_line and "±" not in same_line_tail[: same_line_tail.find(signed_same_line)]:
+            return signed_same_line
+        for candidate in lines[index + 1 : index + 8]:
+            compact = _compact(candidate)
+            if not compact or compact in {"符合", "/", "／"}:
+                continue
+            if _clause_header_pattern("2.0").search(candidate) or re.match(r"2\s*\.\s*\d+(?:\s*\.\s*\d+){0,2}", candidate):
+                break
+            if _is_next_direct_parameter_marker(candidate, marker):
+                break
+            if "符合要求" in compact:
+                return "符合要求"
+            signed = _signed_result_value(candidate)
+            if signed:
+                return signed
+            if "单位" in compact:
+                continue
+            numeric = re.search(r"(?<![\d.])\d+(?:\.\d+)?(?![\d.])", candidate)
+            if numeric and (re.fullmatch(r"\d+(?:\.\d+)?", compact) or not _looks_like_sequence_or_clause_line(candidate)):
+                return numeric.group(0)
+    inline = re.search(rf"{re.escape(marker)}[^\n]*?(符合要求|[+＋\-－]\s*\d+(?:\.\d+)?)", str(window or ""))
+    if inline:
+        return re.sub(r"\s+", "", inline.group(1)).replace("＋", "+").replace("－", "-")
+    return None
+
+
+def _signed_result_value(value: str) -> str | None:
+    match = re.search(r"[+＋\-－]\s*\d+(?:\.\d+)?", str(value or ""))
+    return re.sub(r"\s+", "", match.group(0)).replace("＋", "+").replace("－", "-") if match else None
+
+
+def _is_next_direct_parameter_marker(value: str, current_marker: str) -> bool:
+    markers = (
+        "低电压",
+        "脉宽",
+        "脉冲间隔",
+        "脉冲群间隔",
+        "上升沿时间",
+        "下降沿时间",
+        "每个脉冲群中的循环数",
+        "每个治疗波中的脉冲群数量",
+    )
+    return any(marker != current_marker and marker in value for marker in markers)
+
+
+def _direct_result_values(value: str) -> list[str]:
+    text = str(value or "")
+    values: list[str] = []
+    values.extend(match.group(0) for match in re.finditer(r"[+＋\-－]\s*\d+(?:\.\d+)?", text))
+    values.extend("符合要求" for _match in re.finditer(r"符合要求", text))
+    return _unique_text(re.sub(r"\s+", "", value).replace("＋", "+").replace("－", "-") for value in values)
+
+
+def _direct_functional_actual(window: str) -> str | None:
+    return "符合要求" if "符合要求" in str(window or "") and "不符合" not in str(window or "") else None
+
+
+def _direct_clause_label(clause_id: str, window: str) -> str:
+    pattern = _clause_header_pattern(clause_id)
+    match = pattern.search(window)
+    if match is None:
+        return clause_id
+    tail = window[match.end() :].strip()
+    line = next((item.strip() for item in tail.splitlines() if item.strip()), "")
+    line = re.sub(r"\s+", " ", line).strip()
+    if not line:
+        return clause_id
+    return line[:80]
 
 
 def _looks_like_sequence_or_clause_line(value: str) -> bool:

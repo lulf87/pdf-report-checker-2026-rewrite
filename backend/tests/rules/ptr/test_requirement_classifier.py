@@ -75,3 +75,38 @@ def test_atomic_requirements_do_not_treat_all_2_2_1_clauses_as_voltage_current()
     assert {requirement.atomic_id for requirement in requirements} == {"2.2.1:r_wave_sync"}
     assert all(requirement.label != "电压" for requirement in requirements)
     assert all(requirement.label != "电流" for requirement in requirements)
+
+
+def test_classifier_extracts_direct_waveform_numeric_requirements_from_title_body() -> None:
+    voltage = _clause(
+        "2.1.1",
+        "电压: 标称值：1700V±100V；低电压：1345V±80V",
+        "电压: 标称值：1700V±100V；低电压：1345V±80V",
+    )
+    pulse_width = _clause("2.1.2", "脉宽：2.76μs±0.20μs", "脉宽：2.76μs±0.20μs")
+    cycles = _clause("2.1.7", "每个脉冲群中的循环数：10", "每个脉冲群中的循环数：10")
+
+    voltage_requirements = build_atomic_requirements(voltage, PTRDocument(clauses=[voltage]))
+    pulse_width_requirements = build_atomic_requirements(pulse_width, PTRDocument(clauses=[pulse_width]))
+    cycle_requirements = build_atomic_requirements(cycles, PTRDocument(clauses=[cycles]))
+
+    assert {requirement.atomic_id for requirement in voltage_requirements} == {
+        "2.1.1:voltage:nominal",
+        "2.1.1:voltage:low_voltage",
+    }
+    assert {requirement.expected_text for requirement in pulse_width_requirements} == {"2.76μs±0.20μs"}
+    assert {requirement.atomic_id for requirement in cycle_requirements} == {"2.1.7:pulse_group_cycles"}
+
+
+def test_classifier_creates_generic_functional_requirement_from_clause_content() -> None:
+    catheter_detection = _clause(
+        "2.3.1",
+        "导管检测和波形/电极选择",
+        "该功能允许消融仪检测兼容的 PFA 导管的连接状态，用户可以根据患者需要选择 PFA 波形。",
+    )
+
+    requirements = build_atomic_requirements(catheter_detection, PTRDocument(clauses=[catheter_detection]))
+
+    assert {requirement.atomic_id for requirement in requirements} == {"2.3.1:functional"}
+    assert requirements[0].label == "导管检测和波形/电极选择"
+    assert requirements[0].operator == "functional"

@@ -439,7 +439,8 @@ class PTRExtractor:
         compact = re.sub(r"\s+", "", clause.body_text or clause.title or "")
         if str(clause.number) == "2":
             return PTRScopeType.INFORMATIONAL
-        if "附录" in compact or "appendix" in compact.lower():
+        has_direct_requirement = any(marker in compact for marker in DIRECT_REQUIREMENT_MARKERS)
+        if ("附录" in compact or "appendix" in compact.lower()) and not has_direct_requirement:
             return PTRScopeType.APPENDIX
         if compact.startswith(("注:", "注：", "说明:", "说明：", "图")) or "图示仅作参考" in compact:
             return PTRScopeType.INFORMATIONAL

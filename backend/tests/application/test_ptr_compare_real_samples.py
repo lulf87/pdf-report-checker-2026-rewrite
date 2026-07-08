@@ -109,6 +109,27 @@ def test_real_2795_regression_same_2_2_1_is_r_wave_sync_not_voltage_current(tmp_
     details = result.metadata["ptr_comparison_details"]
     items = _items(details)
 
+    expected_waveform_actuals = {
+        "2.1.1": {
+            "2.1.1:voltage:nominal": "+71",
+            "2.1.1:voltage:low_voltage": "+61",
+        },
+        "2.1.2": {"2.1.2:pulse_width": "+0.16"},
+        "2.1.3": {"2.1.3:pulse_interval": "+0.099"},
+        "2.1.4": {"2.1.4:pulse_group_interval": "3"},
+        "2.1.5": {"2.1.5:rise_edge_time": "106"},
+        "2.1.6": {"2.1.6:fall_edge_time": "434"},
+        "2.1.7": {"2.1.7:pulse_group_cycles": "符合要求"},
+        "2.1.8": {"2.1.8:treatment_wave_pulse_group_count": "符合要求"},
+    }
+    for clause_id, expected_rows in expected_waveform_actuals.items():
+        item = items[clause_id]
+        rows = {row["atomic_id"]: row for row in item["atomic_comparison_rows"]}
+        for atomic_id, actual in expected_rows.items():
+            assert rows[atomic_id]["actual"] == actual
+            assert rows[atomic_id]["status"] == "match"
+        assert item["user_facing_status"] == "covered_passed"
+
     item_221 = items["2.2.1"]
     atomic_ids = {row["atomic_id"] for row in item_221["atomic_comparison_rows"]}
     assert "2.2.1:voltage" not in atomic_ids
@@ -123,12 +144,38 @@ def test_real_2795_regression_same_2_2_1_is_r_wave_sync_not_voltage_current(tmp_
     assert item_222["final_status"] == "passed"
     assert item_222["report_matches"][0]["single_conclusion"] == "符合"
 
-    for index in range(1, 9):
-        item = items[f"2.1.{index}"]
-        assert item["report_matches"][0]["item_no"] == "157"
-        assert item["final_status"] == "passed"
+    functional_clauses = ("2.3.1", "2.3.3", "2.4.1.1", "2.4.1.2", "2.4.2", "2.4.3")
+    for clause_id in functional_clauses:
+        rows = items[clause_id]["atomic_comparison_rows"]
+        assert rows
+        assert all(row["status"] == "match" for row in rows)
+        assert items[clause_id]["final_status"] == "passed"
+
+    assert "2.6.1" in items
+    assert "2.6.2" in items
+    assert items["2.6.1"]["final_status"] == "passed"
+    assert items["2.6.2"]["final_status"] == "passed"
+    assert any(
+        coverage["standard"] == "GB 9706.1-2020"
+        and coverage["start_item_no"] == "1"
+        and coverage["end_item_no"] == "118"
+        for coverage in items["2.6.1"]["external_standard_coverages"]
+    )
+    assert any(
+        coverage["standard"] == "GB 9706.202-2021"
+        and coverage["start_item_no"] == "119"
+        and coverage["end_item_no"] == "156"
+        for coverage in items["2.6.2"]["external_standard_coverages"]
+    )
 
     assert not _has_finding(result, "PTR_SCOPE_EXCLUDED_TOPIC_PRESENT", clause_number="2.7")
+    excluded_placeholders = details["scope_consistency"]["excluded_placeholders"]
+    assert any(
+        placeholder["item_no"] == "163"
+        and placeholder["clause_number"] == "2.7"
+        and placeholder["excluded_topic"] == "电磁兼容性"
+        for placeholder in excluded_placeholders
+    )
     assert details["confirmed_errors_count"] == 0
     assert details["manual_review_required_count"] == 0
     assert details["overall_status"] == "passed"

@@ -210,6 +210,33 @@ def test_classifies_non_requirement_lines_without_comparing() -> None:
     assert by_number["2.3"].scope_type == PTRScopeType.APPENDIX
 
 
+def test_requirement_that_references_appendix_is_not_classified_as_appendix() -> None:
+    parsed_pdf = ParsedPdf(
+        file_id="ptr-appendix-reference-fixture",
+        file_name="ptr.pdf",
+        page_count=1,
+        pages=[
+            PdfPage(
+                page_number=1,
+                text="\n".join(
+                    [
+                        "2 性能指标",
+                        "2.6.1 通用安全要求",
+                        "通用安全要求应符合 GB 9706.1-2020 的相关要求。电气安全特征见附录 A。",
+                    ]
+                ),
+            )
+        ],
+    )
+
+    document = PTRExtractor().extract(parsed_pdf)
+    clause = document.get_clause_by_string("2.6.1")
+
+    assert clause is not None
+    assert clause.scope_type == PTRScopeType.REQUIREMENT
+    assert clause.is_main_requirement is True
+
+
 def test_chapter2_detection_does_not_stop_at_standalone_page_number() -> None:
     parsed_pdf = ParsedPdf(
         file_id="ptr-page-number-fixture",

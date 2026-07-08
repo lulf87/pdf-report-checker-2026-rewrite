@@ -64,6 +64,10 @@ def _numeric_text_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRe
     if requirements:
         return requirements
 
+    direct_waveform = _direct_waveform_numeric_requirements(clause, text)
+    if direct_waveform:
+        return direct_waveform
+
     pulse_timing = _pulse_timing_requirements(clause, text)
     if pulse_timing:
         return pulse_timing
@@ -97,6 +101,60 @@ def _numeric_text_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRe
         )
 
     return requirements
+
+
+def _direct_waveform_numeric_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRequirement]:
+    compact = _compact(text)
+    specs: list[tuple[str, str, str, str | None, str | None, float | None]] = []
+    if "电压" in compact and "标称值" in compact:
+        nominal = _expected_after_label(text, "标称值")
+        low_voltage = _expected_after_label(text, "低电压")
+        if nominal:
+            specs.append(("voltage:nominal", "电压", nominal, "deviation_within_tolerance", "V", None))
+        if low_voltage:
+            specs.append(("voltage:low_voltage", "低电压", low_voltage, "deviation_within_tolerance", "V", None))
+    if "脉宽" in compact:
+        expected = _direct_expected_text(text, "脉宽")
+        if expected:
+            specs.append(("pulse_width", "脉宽", expected, "deviation_within_tolerance", "μs", None))
+    if "脉冲间隔" in compact and "脉冲群间隔" not in compact:
+        expected = _direct_expected_text(text, "脉冲间隔")
+        if expected:
+            specs.append(("pulse_interval", "脉冲间隔", expected, "deviation_within_tolerance", "μs", None))
+    if "脉冲群间隔" in compact:
+        value = _limit_value(text, unit="s")
+        if value is not None:
+            specs.append(("pulse_group_interval", "脉冲群间隔", _direct_expected_text(text, "脉冲群间隔") or f"≥{value:g}s", ">=", "s", value))
+    if "上升沿时间" in compact:
+        value = _limit_value(text, unit="ns")
+        if value is not None:
+            specs.append(("rise_edge_time", "上升沿时间", _direct_expected_text(text, "上升沿时间") or f"≤{value:g}ns", "<=", "ns", value))
+    if "下降沿时间" in compact:
+        value = _limit_value(text, unit="ns")
+        if value is not None:
+            specs.append(("fall_edge_time", "下降沿时间", _direct_expected_text(text, "下降沿时间") or f"≤{value:g}ns", "<=", "ns", value))
+    if "每个脉冲群中的循环数" in compact:
+        expected = _direct_expected_text(text, "每个脉冲群中的循环数")
+        if expected:
+            specs.append(("pulse_group_cycles", "每个脉冲群中的循环数", expected, "functional_or_equal", None, None))
+    if "每个治疗波中的脉冲群数量" in compact:
+        expected = _direct_expected_text(text, "每个治疗波中的脉冲群数量")
+        if expected:
+            specs.append(("treatment_wave_pulse_group_count", "每个治疗波中的脉冲群数量", expected, "functional_or_equal", None, None))
+
+    return [
+        _text_requirement(
+            clause,
+            suffix=suffix,
+            label=label,
+            expected_text=expected,
+            expected_value=expected_value,
+            operator=operator,
+            unit=unit,
+            metadata={"match_keywords": [label], "result_binding": "clause_window"},
+        )
+        for suffix, label, expected, operator, unit, expected_value in specs
+    ]
 
 
 def _output_voltage_current_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRequirement]:
@@ -208,7 +266,43 @@ def _functional_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRequ
                     metadata={"match_keywords": list(keywords)},
                 )
             )
+    generic = _generic_functional_requirement(clause, text)
+    if generic is not None and not requirements:
+        requirements.append(generic)
     return requirements
+
+
+def _generic_functional_requirement(clause: PTRClause, text: str) -> PTRAtomicRequirement | None:
+    compact = _compact(text)
+    if not compact or _is_external_standard_coverage(text) or _has_table_reference(clause, text):
+        return None
+    title = str(clause.title or "").strip()
+    if not title:
+        return None
+    functional_markers = (
+        "该功能",
+        "应具有",
+        "应该",
+        "应有",
+        "允许",
+        "可以",
+        "接口",
+        "存储",
+        "检测",
+        "选择",
+        "访问",
+        "验证",
+    )
+    if not any(_compact(marker) in compact for marker in functional_markers):
+        return None
+    return _text_requirement(
+        clause,
+        suffix="functional",
+        label=title,
+        expected_text="符合要求",
+        operator="functional",
+        metadata={"match_keywords": [title], "result_binding": "clause_window"},
+    )
 
 
 def _text_requirement(
@@ -264,6 +358,25 @@ def _value_after_keyword(text: str, *, keyword: str, unit: str) -> float | None:
     pattern = re.compile(rf"{re.escape(keyword)}[^\n。；;，,]{{0,80}}?(\d+(?:\.\d+)?)\s*{re.escape(unit)}", flags=re.IGNORECASE)
     match = pattern.search(text)
     return float(match.group(1)) if match else None
+
+
+def _expected_after_label(text: str, label: str) -> str | None:
+    pattern = re.compile(
+        rf"{re.escape(label)}\s*[:：]\s*([^；;，,\n]+(?:±\s*\d+(?:\.\d+)?\s*[A-Za-zΩμµ⁻¹\-−]*)?)"
+    )
+    match = pattern.search(text)
+    return _clean_expected_text(match.group(1)) if match else None
+
+
+def _direct_expected_text(text: str, label: str) -> str | None:
+    pattern = re.compile(rf"{re.escape(label)}\s*[:：]\s*([^；;\n]+)")
+    match = pattern.search(text)
+    return _clean_expected_text(match.group(1)) if match else None
+
+
+def _clean_expected_text(value: str) -> str:
+    text = re.sub(r"\s+", "", str(value or ""))
+    return text.strip("。；;，,").replace("µ", "μ")
 
 
 def _limit_value(text: str, *, unit: str) -> float | None:
