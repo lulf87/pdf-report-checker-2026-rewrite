@@ -163,6 +163,8 @@ class PTRComparisonDetails(BaseModel):
     ptr_pages_need_ocr: list[int] = Field(default_factory=list)
     source_type: str | None = None
     scope_consistency: dict[str, Any] | None = None
+    report_model_context: dict[str, Any] | None = None
+    ptr_table_registry: list[dict[str, Any]] = Field(default_factory=list)
     requirements_count: int = Field(default=0, ge=0)
     covered_count: int = Field(default=0, ge=0)
     missing_count: int = Field(default=0, ge=0)

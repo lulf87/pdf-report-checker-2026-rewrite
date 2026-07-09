@@ -37,3 +37,48 @@ def test_table_reference_compare_reports_ambiguous_duplicate_candidates() -> Non
     assert findings[0].code == "PTR_TABLE_CANDIDATE_AMBIGUOUS"
     assert findings[0].actual == ["table-1-a", "table-1-b"]
 
+
+def test_child_clause_inherits_table_defined_in_parent_clause_text() -> None:
+    parent = PTRClause(
+        clause_id="ptr-2.1",
+        number="2.1",
+        title="基本电性能指标",
+        body_text="2.1 基本电性能指标\n表2 基本参数\n表3 功能参数\n起搏模式 VVI DDD",
+    )
+    child = PTRClause(
+        clause_id="ptr-2.1.1",
+        number="2.1.1",
+        title="起搏模式",
+        body_text="心脏起搏器的起搏模式应符合表3的要求。",
+        table_references=[TableReference(table_number="3", reference_text="表3", clause_id="ptr-2.1.1")],
+    )
+
+    findings = check_table_references(PTRDocument(clauses=[parent, child]), task_id="task-ptr")
+
+    assert findings == []
+
+
+def test_child_clause_inherits_table_defined_before_it_in_same_parent_section() -> None:
+    parent = PTRClause(
+        clause_id="ptr-2.1",
+        number="2.1",
+        title="基本电性能指标",
+        body_text="基本电性能指标。",
+    )
+    sibling = PTRClause(
+        clause_id="ptr-2.1.0",
+        number="2.1.0",
+        title="表格说明",
+        body_text="表2 基本参数\n参数 A B C",
+    )
+    child = PTRClause(
+        clause_id="ptr-2.1.12",
+        number="2.1.12",
+        title="产品物理特性及参数",
+        body_text="产品物理特性及参数应符合表2的要求。",
+        table_references=[TableReference(table_number="2", reference_text="表2", clause_id="ptr-2.1.12")],
+    )
+
+    findings = check_table_references(PTRDocument(clauses=[parent, sibling, child]), task_id="task-ptr")
+
+    assert findings == []

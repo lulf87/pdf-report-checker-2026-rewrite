@@ -139,6 +139,8 @@ export const CODEX_TIMEOUT_PTR_USER_MESSAGE =
   "LLM/Codex 复核超时：本次 PTR 规则核对已完成，但复核批次在限定时间内没有返回。请重试，或在高级审核设置中增大超时/缩小复核范围后再试。这不是报告确认错误。";
 export const CODEX_CLI_UNAVAILABLE_PTR_USER_MESSAGE =
   "本机 Codex CLI 不可用：本次 PTR 规则核对已完成，但本机 LLM/Codex 复核环境未能启动。请检查 Codex CLI 后重试。这不是报告确认错误。";
+export const CODEX_DISALLOWED_EVIDENCE_REF_USER_MESSAGE =
+  "LLM 复核引用了未授权的证据：本次规则核对已完成，但复审证据范围配置不完整。请重试或联系维护人员。这不是报告确认错误。";
 
 export const CODEX_MISSING_TARGET_USER_MESSAGE = CODEX_MISSING_TARGET_REPORT_USER_MESSAGE;
 export const CODEX_TIMEOUT_USER_MESSAGE = CODEX_TIMEOUT_REPORT_USER_MESSAGE;
@@ -172,6 +174,12 @@ export function formatCodexRuntimeError(
       detail: raw,
     };
   }
+  if (isDisallowedEvidenceRefError(raw)) {
+    return {
+      message: CODEX_DISALLOWED_EVIDENCE_REF_USER_MESSAGE,
+      detail: raw,
+    };
+  }
   return { message: raw || "报告自检失败", detail: null };
 }
 
@@ -195,6 +203,12 @@ export function formatCodexReviewError(
   if (error.code === "CODEX_CLI_UNAVAILABLE" || isCliUnavailableError(raw)) {
     return {
       message: codexRuntimeMessages(context).cliUnavailable,
+      detail: raw,
+    };
+  }
+  if (error.code === "CODEX_OUTPUT_DISALLOWED_EVIDENCE_REF" || isDisallowedEvidenceRefError(raw)) {
+    return {
+      message: CODEX_DISALLOWED_EVIDENCE_REF_USER_MESSAGE,
       detail: raw,
     };
   }
@@ -351,6 +365,10 @@ function isTimeoutError(value: string): boolean {
 
 function isCliUnavailableError(value: string): boolean {
   return value.includes("CODEX_CLI_UNAVAILABLE") || value.includes("Codex CLI unavailable");
+}
+
+function isDisallowedEvidenceRefError(value: string): boolean {
+  return value.includes("CODEX_OUTPUT_DISALLOWED_EVIDENCE_REF") || value.includes("evidence not allowed");
 }
 
 function codexRuntimeMessages(context: CodexRuntimeErrorContext): {

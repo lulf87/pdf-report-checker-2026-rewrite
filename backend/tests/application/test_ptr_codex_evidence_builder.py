@@ -233,6 +233,58 @@ def test_package_contains_finding_clause_ptr_table_and_report_table_evidence() -
     assert "rule_context:task-1:PTR_TABLE:2.1:table-1:脉冲宽度:value" in items_by_ref
 
 
+def test_ptr_table_target_includes_parent_clause_evidence_for_inherited_table() -> None:
+    finding = _finding(
+        code="PTR_TABLE_MISSING",
+        check_id="PTR_TABLE",
+        metadata={"clause_number": "2.1.1", "table_number": "3"},
+        message="PTR 条款 2.1.1 引用的表 3 未找到。",
+    )
+    ptr_table = _canonical_table("ptr-table-3", "3", [_record("起搏模式", "VVI")])
+    ptr_doc = PTRDocument(
+        clauses=[
+            PTRClause(
+                clause_id="ptr-2.1",
+                number=PTRClauseNumber.from_string("2.1"),
+                title="基本电性能指标",
+                body_text="表2 基本参数\n表3 功能参数",
+            ),
+            PTRClause(
+                clause_id="ptr-2.1.1",
+                number=PTRClauseNumber.from_string("2.1.1"),
+                title="起搏模式",
+                body_text="心脏起搏器的起搏模式应符合表3的要求。",
+                table_references=[TableReference(table_number="3", reference_text="表3", clause_id="ptr-2.1.1")],
+            ),
+        ],
+        tables=[
+            PTRTable(
+                table_id="ptr-table-3",
+                table_number="3",
+                title="表3 功能参数",
+                canonical_table=ptr_table,
+                referenced_by_clause_ids=["ptr-2.1"],
+            )
+        ],
+    )
+
+    bundle = PtrCodexEvidenceBuilder().build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=ptr_doc,
+        report_doc=_report_document(report_tables=[]),
+        check_results=[_check_result("PTR_TABLE", [finding])],
+    )
+
+    assert bundle is not None
+    target_refs = {ref.ref_id for ref in bundle.request.targets[0].evidence_refs}
+    item_refs = {item.ref_id for item in bundle.evidence_package.items}
+    assert "ptr_clause:ptr-2.1.1" in target_refs
+    assert "ptr_clause:ptr-2.1" in target_refs
+    assert "ptr_table:ptr-table-3" in target_refs
+    assert target_refs <= item_refs
+
+
 def test_target_evidence_refs_all_exist_in_package_items() -> None:
     finding = _finding(code="PTR_CLAUSE_MISSING", check_id="PTR_CLAUSE", metadata={"clause_number": "2.1"})
 

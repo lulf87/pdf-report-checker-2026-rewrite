@@ -6,9 +6,11 @@ from pathlib import Path
 APP_ROOT = Path(__file__).resolve().parents[3] / "app"
 FORBIDDEN_SAMPLE_TOKENS = (
     "1539",
+    "0596",
     "2795",
     "4788",
     "5780",
+    "QW2025-0596",
     "PM3562",
     "pm3562",
     "QW2025 第1540号",

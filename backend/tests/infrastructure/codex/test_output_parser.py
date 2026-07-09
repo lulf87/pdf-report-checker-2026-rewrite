@@ -375,6 +375,21 @@ def test_disallowed_target_evidence_ref_falls_back_to_failed_results() -> None:
     _assert_failed(results, "CODEX_OUTPUT_DISALLOWED_EVIDENCE_REF")
 
 
+def test_allowed_parent_evidence_ref_succeeds_when_target_lists_it() -> None:
+    request = _request([_target("target-1", ["ev-1", "ptr_clause:ptr-2.1"])])
+    package = _package(item_refs=["ev-1", "ptr_clause:ptr-2.1"])
+
+    results = _parse(
+        _output_payload([_review_payload(evidence_refs=["ptr_clause:ptr-2.1"])]),
+        request,
+        package,
+    )
+
+    assert len(results) == 1
+    assert results[0].status is CodexReviewStatus.SUCCEEDED
+    assert results[0].evidence_refs == ["ptr_clause:ptr-2.1"]
+
+
 def test_add_finding_without_suggested_finding_falls_back_with_specific_code() -> None:
     _assert_failed(
         _parse(_output_payload([_review_payload(verdict="add_finding", suggested_finding=None)])),

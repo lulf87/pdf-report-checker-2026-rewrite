@@ -104,6 +104,8 @@ def build_ptr_comparison_details(
         excluded_items=_excluded_items(ptr_doc=ptr_doc, check_results=check_results),
         scope_consistency=scope_consistency,
         ptr_extraction_metadata=_ptr_extraction_metadata(ptr_doc),
+        report_model_context=report_doc.metadata.get("report_model_context"),
+        ptr_table_registry=ptr_doc.metadata.get("ptr_table_registry"),
     )
 
 
@@ -252,6 +254,8 @@ def _details_from_items(
     excluded_items: list[PTRExcludedComparisonItem] | None = None,
     scope_consistency: dict[str, Any] | None = None,
     ptr_extraction_metadata: dict[str, Any] | None = None,
+    report_model_context: dict[str, Any] | None = None,
+    ptr_table_registry: list[dict[str, Any]] | None = None,
 ) -> PTRComparisonDetails:
     excluded_items = excluded_items or []
     ptr_extraction_metadata = ptr_extraction_metadata or {}
@@ -303,6 +307,8 @@ def _details_from_items(
         ptr_pages_need_ocr=_int_list(ptr_extraction_metadata.get("ptr_pages_need_ocr")),
         source_type=_safe_text(ptr_extraction_metadata.get("source_type")),
         scope_consistency=_safe_payload(scope_consistency),
+        report_model_context=_safe_payload(report_model_context),
+        ptr_table_registry=_safe_payload(ptr_table_registry or []),
         requirements_count=requirements_count,
         covered_count=covered_count,
         missing_count=missing_count,

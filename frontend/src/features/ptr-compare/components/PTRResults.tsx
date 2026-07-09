@@ -81,6 +81,8 @@ export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps
 
       <CodexAuditScopeNotice metadata={result.metadata} />
 
+      {ptrDetails && !ptrOcrRequired ? <ModelTableContextNotice details={ptrDetails} /> : null}
+
       <CodexReviewOverview reviews={codexReviews} />
 
       <GlassCard className="result-card">
@@ -158,6 +160,61 @@ function PtrOcrRequiredNotice({ details }: { details: PTRComparisonDetails }) {
       </div>
     </GlassCard>
   );
+}
+
+function ModelTableContextNotice({ details }: { details: PTRComparisonDetails }) {
+  const modelContext = details.report_model_context;
+  const primaryModel = modelContext?.primary_model?.trim();
+  const candidates = modelContext?.model_candidates ?? [];
+  const modelTables = (details.ptr_table_registry ?? []).filter((entry) =>
+    entry.column_axes?.some((axis) => axis.axis_type === "model"),
+  );
+
+  if (!primaryModel && candidates.length === 0 && modelTables.length === 0) return null;
+
+  const primaryCandidate = primaryModel ? candidates.find((candidate) => candidate.value === primaryModel) : undefined;
+
+  return (
+    <GlassCard className="result-card">
+      <div className="row-head">
+        <div>
+          <p className="row-title">型号与 PTR 表格依据</p>
+          <div className="comparison-source-list">
+            <span className="comparison-source">
+              报告型号 · {primaryModel || "待确认"}
+              {primaryCandidate?.source ? ` · ${modelCandidateSourceLabel(primaryCandidate.source)}` : ""}
+              {primaryCandidate?.page ? ` · 第 ${primaryCandidate.page} 页` : ""}
+            </span>
+            {modelTables.map((entry) => {
+              const modelAxis = entry.column_axes?.find((axis) => axis.axis_type === "model");
+              const applicableColumn =
+                primaryModel && modelAxis?.labels.some((label) => sameDisplayLabel(label, primaryModel)) ? primaryModel : "待确认";
+              return (
+                <span className="comparison-source" key={`${entry.table_id ?? entry.table_number}-${entry.parent_clause ?? "parent"}`}>
+                  PTR 表格 · 父级条款 {entry.parent_clause || "未标注"} · 表 {entry.table_number}
+                  {entry.table_title ? ` ${entry.table_title}` : ""} · 适用列 {applicableColumn}
+                  {entry.row_labels?.length ? ` · ${entry.row_labels.length} 行` : ""}
+                  {entry.source_page ? ` · PTR 第 ${entry.source_page} 页` : ""}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+        <Badge variant={primaryModel ? "info" : "warn"}>{primaryModel ? "已识别" : "待复核"}</Badge>
+      </div>
+    </GlassCard>
+  );
+}
+
+function modelCandidateSourceLabel(source: string): string {
+  if (source === "report_homepage") return "报告首页";
+  if (source === "sample_description") return "样品描述";
+  if (source === "model_specification") return "型号规格字段";
+  return source;
+}
+
+function sameDisplayLabel(left: string, right: string): boolean {
+  return left.replace(/\s+/g, "").toUpperCase() === right.replace(/\s+/g, "").toUpperCase();
 }
 
 function scopeStatusLabel(status: string): string {

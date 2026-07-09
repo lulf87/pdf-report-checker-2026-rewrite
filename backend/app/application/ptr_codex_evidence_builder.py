@@ -292,6 +292,8 @@ class PtrCodexEvidenceBuilder:
         clause = self._clause_for_finding(finding, ptr_doc)
         if clause is not None:
             self._add_item(items_by_ref, self._clause_item(clause), refs)
+            for parent_clause in self._parent_clauses_for_finding(finding, clause, ptr_doc):
+                self._add_item(items_by_ref, self._clause_item(parent_clause), refs)
 
         group_item = self._report_inspection_group_item_for_finding(finding, report_doc)
         if group_item is not None:
@@ -614,6 +616,23 @@ class PtrCodexEvidenceBuilder:
         if clause_number:
             return ptr_doc.get_clause_by_string(clause_number)
         return None
+
+    def _parent_clauses_for_finding(
+        self,
+        finding: Finding,
+        clause: PTRClause,
+        ptr_doc: PTRDocument,
+    ) -> list[PTRClause]:
+        if finding.check_id != "PTR_TABLE":
+            return []
+        parents: list[PTRClause] = []
+        parent_number = clause.number.parent()
+        while parent_number is not None:
+            parent = ptr_doc.get_clause_by_number(parent_number)
+            if parent is not None:
+                parents.append(parent)
+            parent_number = parent_number.parent()
+        return parents
 
     def _ptr_tables_for_finding(self, finding: Finding, ptr_doc: PTRDocument) -> list[PTRTable]:
         table_number = str(finding.metadata.get("table_number") or "")

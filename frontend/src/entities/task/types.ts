@@ -351,6 +351,34 @@ export interface PTRScopeConsistency {
   reason?: string | null;
 }
 
+export interface PTRReportModelCandidate {
+  value: string;
+  source: string;
+  page?: number | null;
+  confidence?: string | null;
+}
+
+export interface PTRReportModelContext {
+  primary_model?: string | null;
+  model_candidates?: PTRReportModelCandidate[];
+  diagnostics?: string[];
+}
+
+export interface PTRTableAxis {
+  axis_type: "model" | "preset" | "load" | "condition" | "unknown" | string;
+  labels: string[];
+}
+
+export interface PTRTableRegistryEntry {
+  parent_clause?: string | null;
+  table_number: string;
+  table_title?: string | null;
+  row_labels?: string[];
+  column_axes?: PTRTableAxis[];
+  source_page?: number | null;
+  table_id?: string | null;
+}
+
 export interface PTRExternalStandardCoverage {
   standard?: string | null;
   start_item_no?: string | null;
@@ -404,6 +432,8 @@ export interface PTRComparisonDetails {
   ptr_pages_need_ocr?: number[];
   source_type?: string | null;
   scope_consistency?: PTRScopeConsistency | null;
+  report_model_context?: PTRReportModelContext | null;
+  ptr_table_registry?: PTRTableRegistryEntry[];
   requirements_count: number;
   covered_count: number;
   missing_count: number;

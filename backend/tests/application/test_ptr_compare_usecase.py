@@ -14,12 +14,12 @@ from app.domain.codex_review import (
     CodexReviewVerdict,
     CodexSuggestedFinding,
 )
-from app.domain.common import Evidence, EvidenceMethod, SourceType
+from app.domain.common import Evidence, EvidenceMethod, Location, SourceType
 from app.domain.evidence_package import EvidencePackage
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.pdf import ParsedPdf, PdfPage, PdfTable
 from app.domain.ptr import PTRClause, PTRClauseNumber, PTRDocument, PTRScopeType, PTRTable, TableReference
-from app.domain.report import InspectionItem, InspectionTable, ReportDocument, ReportField, ThirdPageInfo
+from app.domain.report import FirstPageInfo, InspectionItem, InspectionTable, ReportDocument, ReportField, ThirdPageInfo
 from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope, ReportScopeRange
 from app.domain.result import CheckStatus
 from app.domain.table import CanonicalTable, ParameterRecord
@@ -2610,6 +2610,92 @@ def _run_pm3562_usecase(
     return task_service.get_result(status.task_id)
 
 
+def test_ptr_compare_usecase_exposes_model_context_and_parent_table_projection_rows(tmp_path: Path) -> None:
+    model_field = ReportField(
+        name="型号规格",
+        value="6232",
+        normalized_value="6232",
+        location=Location(source_type=SourceType.REPORT, page_number=1),
+    )
+    scope_field = ReportField(name="检验项目", value="2.1", metadata={"items": ["2.1"]})
+    report_doc = ReportDocument(
+        first_page=FirstPageInfo(model_spec=model_field, fields=[model_field]),
+        third_page=ThirdPageInfo(fields=[scope_field]),
+        fields=[scope_field],
+    )
+    report_pdf = ParsedPdf(
+        file_id="report-0596-like",
+        file_name="report.pdf",
+        page_count=20,
+        pages=[
+            PdfPage(page_number=1, text="型号规格：6232"),
+            PdfPage(page_number=20, text="序号 38 基本电性能指标 2.1 2.1.1 起搏模式 检验结果 符合要求 单项结论 符合"),
+        ],
+    )
+
+    class ScopeExtractor:
+        def extract(self, report: ReportDocument) -> ReportInspectionScope:
+            del report
+            return ReportInspectionScope(declared_scope_items=["2.1"], source_text="2.1")
+
+    task_service = TaskService()
+    usecase = PTRCompareUseCase(
+        task_service=task_service,
+        file_store=LocalFileStore(tmp_path),
+        pdf_parser=FakePdfParser({"report.pdf": report_pdf}),
+        ptr_extractor=FakePTRExtractor(_model_axis_parent_table_ptr_document()),
+        report_extractor=FakeReportFieldExtractor(report_doc),
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(
+            [
+                InspectionItem(
+                    sequence_raw="38",
+                    sequence=38,
+                    standard_clause="2.1",
+                    item_name="基本电性能指标",
+                    standard_requirement="2.1 基本电性能指标\n2.1.1 起搏模式",
+                    test_result="符合要求",
+                    conclusion="符合",
+                    source_page=20,
+                )
+            ]
+        ),
+        inspection_scope_extractor=ScopeExtractor(),
+        scope_filter=IncludeAllScopeFilter(),
+        clause_text_compare=NoopClauseCompare(),
+        table_reference_compare=TrackingTableCompare(),
+        codex_audit_service=FakePtrCodexAuditService(verdict=CodexReviewVerdict.REFUTE),
+    )
+
+    status = usecase.run(
+        ptr_file_name="ptr.pdf",
+        ptr_content=b"%PDF-1.4 ptr",
+        report_file_name="report.pdf",
+        report_content=b"%PDF-1.4 report",
+        content_type="application/pdf",
+    )
+
+    assert status.status == TaskState.COMPLETED, status.error_message
+    details = task_service.get_result(status.task_id).metadata["ptr_comparison_details"]
+    assert details["report_model_context"]["primary_model"] == "6232"
+    registry_entry = next(item for item in details["ptr_table_registry"] if item["table_number"] == "3")
+    assert registry_entry["parent_clause"] == "2.1"
+    assert registry_entry["table_title"] == "功能参数"
+    assert registry_entry["column_axes"][0]["axis_type"] == "model"
+    assert registry_entry["column_axes"][0]["labels"] == ["6232", "5826"]
+
+    item = next(entry for entry in details["items"] if entry["ptr_clause_id"] == "2.1.1")
+    rows = {row["atomic_id"]: row for row in item["atomic_comparison_rows"]}
+    selected = rows["2.1.1:table3:起搏模式:6232"]
+    other = rows["2.1.1:table3:起搏模式:5826"]
+    assert selected["expected"] == "VVI"
+    assert selected["actual"] == "符合要求"
+    assert selected["status"] == "match"
+    assert selected["table_key"] == "2.1:表3:功能参数"
+    assert other["status"] == "not_applicable"
+    assert item["coverage_status"] == "covered_passed"
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
 def _run_scope_aware_usecase(
     tmp_path: Path,
     *,
@@ -3994,6 +4080,48 @@ def _ptr_table(canonical_table: CanonicalTable) -> PTRTable:
         table_number=canonical_table.table_number,
         title=canonical_table.caption,
         canonical_table=canonical_table,
+    )
+
+
+def _model_axis_parent_table_ptr_document() -> PTRDocument:
+    canonical_table = CanonicalTable(
+        table_id="ptr-table-3",
+        table_number="3",
+        caption="表3 功能参数",
+        page_start=3,
+        value_columns=["6232", "5826"],
+        parameter_records=[
+            ParameterRecord(parameter_name="起搏模式", values={"6232": "VVI", "5826": "DDD"}),
+            ParameterRecord(parameter_name="模式转换", values={"6232": "具备", "5826": "具备"}),
+        ],
+    )
+    return PTRDocument(
+        clauses=[
+            PTRClause(
+                clause_id="ptr-2.1",
+                number=PTRClauseNumber.from_string("2.1"),
+                title="基本电性能指标",
+                body_text="表2 基本参数\n表3 功能参数",
+                scope_type=PTRScopeType.GROUP_CLAUSE,
+            ),
+            PTRClause(
+                clause_id="ptr-2.1.1",
+                number=PTRClauseNumber.from_string("2.1.1"),
+                title="起搏模式",
+                body_text="心脏起搏器的起搏模式应符合表3的要求。",
+                table_references=[TableReference(table_number="3", reference_text="表3", clause_id="ptr-2.1.1")],
+            ),
+        ],
+        tables=[
+            PTRTable(
+                table_id="ptr-table-3",
+                table_number="3",
+                title="表3 功能参数",
+                page=3,
+                canonical_table=canonical_table,
+                referenced_by_clause_ids=["ptr-2.1"],
+            )
+        ],
     )
 
 

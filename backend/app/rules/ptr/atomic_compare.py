@@ -15,6 +15,7 @@ from app.rules.ptr.report_item_grouping import (
     ptr_group_test_result,
     ptr_group_text,
 )
+from app.rules.ptr.table_registry import model_aware_table_requirements
 
 
 WAVEFORM_TABLE_PARAMETERS: tuple[tuple[str, str], ...] = (
@@ -143,6 +144,9 @@ def build_atomic_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[P
         return _basic_electrical_table2_1_requirements(clause, ptr_doc)
     if _clause_indicates_torque_wrench_size(clause):
         return _torque_wrench_size_requirements(str(clause.number))
+    model_table_requirements = model_aware_table_requirements(clause, ptr_doc)
+    if model_table_requirements:
+        return model_table_requirements
     if classification.requirement_type == RequirementType.SOFTWARE_FUNCTION_TABLE or _clause_indicates_waveform_table(clause):
         return _table_requirements(clause, ptr_doc)
     return []
@@ -375,9 +379,14 @@ def table_key_for_clause_table(clause_number: str, table: PTRTable) -> str:
 
 def table_for_clause(clause: PTRClause, ptr_doc: PTRDocument) -> PTRTable | None:
     table_numbers = [reference.table_number for reference in clause.table_references] + list(clause.table_refs)
+    related_clause_ids = {clause.clause_id, *(_ancestor_clause_ids(clause, ptr_doc))}
     for table_number in table_numbers:
         candidates = ptr_doc.get_tables_by_number(table_number)
-        anchored = [table for table in candidates if clause.clause_id in table.referenced_by_clause_ids]
+        anchored = [
+            table
+            for table in candidates
+            if any(clause_id in table.referenced_by_clause_ids for clause_id in related_clause_ids)
+        ]
         if len(anchored) == 1:
             return anchored[0]
         contextual = [table for table in candidates if _reference_context_matches_table(clause, table)]
@@ -386,6 +395,17 @@ def table_for_clause(clause: PTRClause, ptr_doc: PTRDocument) -> PTRTable | None
         if len(candidates) == 1:
             return candidates[0]
     return None
+
+
+def _ancestor_clause_ids(clause: PTRClause, ptr_doc: PTRDocument) -> list[str]:
+    ids: list[str] = []
+    parent_number = clause.number.parent()
+    while parent_number is not None:
+        parent = ptr_doc.get_clause_by_number(parent_number)
+        if parent is not None:
+            ids.append(parent.clause_id)
+        parent_number = parent_number.parent()
+    return ids
 
 
 def _table_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtomicRequirement]:
@@ -896,12 +916,27 @@ def _actual_for_requirement(requirement: PTRAtomicRequirement, group: Inspection
         return None, None, None
     item_no = group.display_item_no or group.item_no
     if requirement.source == "ptr_table":
+        if requirement.metadata.get("not_applicable_by_model") is True:
+            return "/", _first_page(group), item_no
+        if requirement.metadata.get("model_projection_status") == "model_unknown":
+            return None, _first_page(group), item_no
         if _is_not_applicable_requirement(requirement):
             return "/", _first_page(group), item_no
         if _is_basic_electrical_table2_1_requirement(requirement):
             return _group_result_text(group), _first_page(group), item_no
         if requirement.clause_id == "2.6":
             return None, _first_page(group), item_no
+        if requirement.metadata.get("axis_type") == "model" and requirement.operator in {"functional", "functional_or_equal"}:
+            group_text = " ".join(
+                [
+                    ptr_group_standard_requirement(group),
+                    ptr_group_test_result(group),
+                    ptr_group_single_conclusion(group) or "",
+                    ptr_group_text(group),
+                ]
+            )
+            if _group_text_matches_requirement(requirement, group_text) and _group_passed(group):
+                return "符合要求", _first_page(group), item_no
         return None, _first_page(group), item_no
 
     for row in group.rows:
@@ -951,6 +986,14 @@ def _row_matches_requirement(requirement: PTRAtomicRequirement, row_text: str) -
     return False
 
 
+def _group_text_matches_requirement(requirement: PTRAtomicRequirement, group_text: str) -> bool:
+    compact = _compact(group_text)
+    keywords = requirement.metadata.get("match_keywords") if isinstance(requirement.metadata, dict) else None
+    if isinstance(keywords, list) and keywords:
+        return any(_compact(str(keyword)) in compact for keyword in keywords)
+    return _compact(requirement.label) in compact
+
+
 def _row_actual(requirement: PTRAtomicRequirement, row) -> str | None:
     if requirement.operator == "functional":
         text = " ".join(str(value or "") for value in [row.standard_requirement, row.test_result, row.conclusion])
@@ -981,6 +1024,12 @@ def _status_and_reason(
     candidate_actuals: Sequence[str] | None = None,
 ) -> tuple[str, str]:
     if requirement.source == "ptr_table":
+        if requirement.metadata.get("not_applicable_by_model") is True:
+            model = requirement.metadata.get("primary_model") or "本报告型号"
+            column = requirement.metadata.get("model_column") or "该列"
+            return "not_applicable", f"报告型号 {model} 不适用型号列 {column}。"
+        if requirement.metadata.get("model_projection_status") == "model_unknown":
+            return "needs_review", "报告型号未能稳定抽取，无法选择 PTR 表格适用型号列。"
         if _is_not_applicable_requirement(requirement):
             return "not_applicable", "PTR 表格要求为 /，该预设不适用。"
         if requirement.clause_id == "2.6":
@@ -1001,6 +1050,9 @@ def _status_and_reason(
             return _torque_wrench_status_and_reason(requirement, actual, group)
         if requirement.clause_id == "2.2.2" and _waveform_report_actual_satisfies(requirement.expected_text, actual):
             return "match", "报告表 6 波形参数结果满足 PTR 要求。"
+        if requirement.metadata.get("axis_type") == "model" and actual and "符合" in actual and "不符合" not in actual:
+            model = requirement.metadata.get("model_column") or requirement.metadata.get("primary_model") or "适用型号"
+            return "match", f"报告结果符合，PTR 父级表格按型号 {model} 投影后的要求已覆盖。"
         if _table_value_matches(requirement.expected_text, actual):
             return "match", "报告表格结果与 PTR 表格要求一致。"
         return "mismatch", f"报告结果 {actual} 与 PTR 要求 {requirement.expected_text or '无'} 不一致。"

@@ -48,6 +48,8 @@ from app.rules.ptr.report_item_grouping import (
 from app.rules.ptr.report_scope_consistency import check_report_scope_consistency
 from app.rules.ptr.scope_filter import ScopeFilterResult, filter_ptr_scope
 from app.rules.ptr.table_candidate_selector import TableCandidateSelection, select_report_table_candidate
+from app.rules.ptr.model_context import build_report_model_context
+from app.rules.ptr.table_registry import build_ptr_table_registry
 from app.rules.ptr.table_reference_compare import check_table_references
 
 
@@ -299,6 +301,12 @@ class PTRCompareUseCase:
         self.task_service.update_progress(task_id, progress=35, current_step="extracting ptr and report documents")
         ptr_doc = self.ptr_extractor.extract(ptr_pdf)
         report_doc = self._build_report_document(report_pdf)
+        report_model_context = build_report_model_context(report_doc)
+        report_doc.metadata["report_model_context"] = report_model_context.model_dump(mode="json")
+        ptr_doc.metadata["report_model_context"] = report_model_context.model_dump(mode="json")
+        ptr_doc.metadata["ptr_table_registry"] = [
+            entry.model_dump(mode="json") for entry in build_ptr_table_registry(ptr_doc, report_model_context)
+        ]
         report_scope = self._report_inspection_scope(report_doc)
         page_text_by_page = report_page_text_by_page(report_doc)
 
