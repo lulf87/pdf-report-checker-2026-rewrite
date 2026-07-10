@@ -27,9 +27,9 @@ class PTRTableRegistryEntry(BaseModel):
 
 
 def classify_table_axis(labels: list[str], model_context: ReportModelContext | dict[str, Any] | None = None) -> TableAxis:
-    clean_labels = _unique(_clean_label(label) for label in labels)
     context = coerce_report_model_context(model_context)
     model_values = {_normalize_axis_label(candidate.value) for candidate in context.model_candidates}
+    clean_labels = _expand_grouped_model_labels(labels, model_values)
     if clean_labels and model_values and any(_normalize_axis_label(label) in model_values for label in clean_labels):
         return TableAxis(axis_type="model", labels=clean_labels)
     if clean_labels and all(_looks_like_load_label(label) for label in clean_labels):
@@ -105,7 +105,8 @@ def _requirements_from_model_axis_table(
     for record in records:
         row_label = record.parameter_name or record.raw_name or record.parameter_id or "参数"
         for model_label in axis.labels:
-            if model_label not in record.values:
+            expected = _record_value_for_model(record, model_label)
+            if expected is None:
                 continue
             is_selected = primary_model is not None and _same_axis_label(model_label, primary_model)
             model_unknown = primary_model is None
@@ -121,14 +122,13 @@ def _requirements_from_model_axis_table(
                 metadata["not_applicable_by_model"] = True
             if model_unknown:
                 metadata["model_projection_status"] = "model_unknown"
-            expected = record.values[model_label]
             requirements.append(
                 PTRAtomicRequirement(
                     atomic_id=f"{clause.number}:table{table_number}:{_slug(row_label)}:{_slug(model_label)}",
                     clause_id=str(clause.number),
                     label=row_label,
                     expected_text=str(expected or ""),
-                    operator=_operator_for_projected_value(str(expected or "")),
+                    operator=_operator_for_projected_value(str(expected or ""), row_label=row_label),
                     source="ptr_table",
                     table_number=table_number,
                     table_title=table_title,
@@ -159,13 +159,24 @@ def _tables_for_clause(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRTable
 
 def _records_for_clause(clause: PTRClause, records: list[ParameterRecord]) -> list[ParameterRecord]:
     title = str(clause.title or "").strip()
-    body = str(clause.body_text or clause.full_text or "")
+    body = _clause_body_without_attached_table(clause)
     matched = [record for record in records if _record_matches_clause(record, title, body)]
     if matched:
         return matched
     if "产品物理特性" in _compact(title + body):
         return records
     return []
+
+
+def _clause_body_without_attached_table(clause: PTRClause) -> str:
+    body = str(clause.body_text or clause.full_text or "")
+    if clause.metadata.get("referenced_table_text_attached") is not True:
+        return body
+    table_numbers = [re.escape(str(number)) for number in clause.get_all_table_numbers() if str(number)]
+    if not table_numbers:
+        return body
+    match = re.search(rf"\n\s*表\s*(?:{'|'.join(table_numbers)})(?:\D|$)", body)
+    return body[: match.start()].strip() if match else body
 
 
 def _record_matches_clause(record: ParameterRecord, title: str, body: str) -> bool:
@@ -187,6 +198,31 @@ def _table_value_labels(table: PTRTable) -> list[str]:
     return _unique(_clean_label(label) for label in labels)
 
 
+def _expand_grouped_model_labels(labels: list[str], model_values: set[str]) -> list[str]:
+    expanded: list[str] = []
+    for label in labels:
+        clean = _clean_label(label)
+        parts = [part.strip() for part in re.split(r"[、，,；;]+", clean) if part.strip()]
+        if len(parts) > 1 and all(
+            _looks_like_model_label(part) or _normalize_axis_label(part) in model_values
+            for part in parts
+        ):
+            expanded.extend(parts)
+        elif clean:
+            expanded.append(clean)
+    return _unique(expanded)
+
+
+def _record_value_for_model(record: ParameterRecord, model_label: str) -> str | None:
+    for column_label, value in record.values.items():
+        if _same_axis_label(column_label, model_label):
+            return value
+        grouped = [part.strip() for part in re.split(r"[、，,；;]+", column_label) if part.strip()]
+        if any(_same_axis_label(part, model_label) for part in grouped):
+            return value
+    return None
+
+
 def _table_row_labels(table: PTRTable) -> list[str]:
     canonical = table.canonical_table
     if canonical is None:
@@ -198,6 +234,9 @@ def _table_row_labels(table: PTRTable) -> list[str]:
 
 
 def _parent_clause_for_table(table: PTRTable, ptr_doc: PTRDocument) -> str | None:
+    parent_clause = str(table.metadata.get("parent_clause") or "").strip()
+    if parent_clause:
+        return parent_clause
     for clause_id in table.referenced_by_clause_ids:
         clause = next((item for item in ptr_doc.clauses if item.clause_id == clause_id), None)
         if clause is not None:
@@ -224,10 +263,12 @@ def _ancestor_clause_number(clause_number: str) -> str | None:
     return ".".join(parts[:-1]) if len(parts) > 1 else None
 
 
-def _operator_for_projected_value(value: str) -> str | None:
+def _operator_for_projected_value(value: str, *, row_label: str = "") -> str | None:
     compact = _compact(value)
     if not compact:
         return None
+    if "模式" in _compact(row_label):
+        return "functional_or_equal"
     if "符合" in compact or "具备" in compact:
         return "functional_or_equal"
     if re.fullmatch(r"[A-Z]{2,5}R?", compact, flags=re.IGNORECASE):

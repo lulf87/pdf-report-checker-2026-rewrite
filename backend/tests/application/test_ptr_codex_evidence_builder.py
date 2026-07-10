@@ -132,6 +132,69 @@ def test_table_value_mismatch_finding_builds_ptr_parameter_target() -> None:
     assert bundle.evidence_package.targets[0].metadata["atomic_id"] == "2.1:table1:脉冲宽度:pulse3"
 
 
+def test_numeric_limit_mismatch_target_keeps_semantic_fields_and_report_group() -> None:
+    metadata = {
+        "clause_number": "2.6",
+        "parameter_name": "环氧乙烷残留量",
+        "atomic_id": "2.6:numeric_limit:环氧乙烷残留量",
+        "item_no": "40",
+        "expected_operator": "<=",
+        "expected_value": 10.0,
+        "expected_unit": "μg/g",
+        "actual_operator": "=",
+        "actual_value": 11.0,
+        "actual_unit": "μg/g",
+        "report_conclusion": "符合",
+    }
+    finding = _finding(
+        code="PTR_TABLE_VALUE_MISMATCH",
+        check_id="PTR_TABLE",
+        metadata=metadata,
+    )
+    ptr_doc = PTRDocument(
+        clauses=[
+            PTRClause(
+                clause_id="ptr-2.6",
+                number=PTRClauseNumber.from_string("2.6"),
+                title="环氧乙烷残留量",
+                body_text="应不超过 10µg/g。",
+            )
+        ]
+    )
+    report_doc = ReportDocument(
+        inspection_items=[
+            InspectionItem(
+                sequence_raw="40",
+                sequence=40,
+                item_name="环氧乙烷残留量",
+                standard_clause="2.6",
+                standard_requirement="应不超过 10µg/g。\n单位：µg/g",
+                test_result="11",
+                conclusion="符合",
+                source_page=32,
+            )
+        ]
+    )
+
+    bundle = PtrCodexEvidenceBuilder().build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=ptr_doc,
+        report_doc=report_doc,
+        check_results=[_check_result("PTR_TABLE", [finding])],
+    )
+
+    assert bundle is not None
+    target_metadata = bundle.request.targets[0].metadata
+    for key, value in metadata.items():
+        assert target_metadata[key] == value
+    items_by_ref = {item.ref_id: item for item in bundle.evidence_package.items}
+    assert "report_inspection_group:40" in items_by_ref
+    report_group = items_by_ref["report_inspection_group:40"].structured["inspection_item_group"]
+    assert report_group["test_result"] == "11"
+    assert report_group["single_conclusion"] == "符合"
+
+
 def test_scope_finding_builds_ptr_clause_target_when_scope_rule_outputs_finding() -> None:
     finding = _finding(
         code="PTR_SCOPE_FILTER_REVIEW",

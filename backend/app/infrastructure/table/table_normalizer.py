@@ -42,6 +42,8 @@ class TableNormalizer:
         header_rows = [rows[index] for index in header_indices]
         column_paths = self._column_paths(header_rows, n_cols)
         roles = self.semantics.infer_column_roles(column_paths)
+        if self._is_model_axis_header(header_rows):
+            roles = ["parameter", *["value" for _ in range(max(n_cols - 1, 0))]]
         columns = [
             TableColumn(name=" / ".join(path) if path else f"列{idx + 1}", normalized_name="".join(path), column_index=idx)
             for idx, path in enumerate(column_paths)
@@ -109,6 +111,8 @@ class TableNormalizer:
         if not non_empty:
             return False
         merged = "".join(non_empty)
+        if compact[0] in {"型号", "规格型号", "型号规格", "适用型号"}:
+            return True
         if any(token in merged for token in ["参数", "常规数值", "标准设置", "允许误差", "检验结果", "单项结论", "备注", "单位"]):
             return True
         numeric_ratio = sum(1 for value in non_empty if self._is_numeric_like(value)) / len(non_empty)
@@ -117,6 +121,12 @@ class TableNormalizer:
         if index in {1, 2} and numeric_ratio <= 0.2 and any(not cell for cell in compact):
             return True
         return False
+
+    def _is_model_axis_header(self, header_rows: list[list[str]]) -> bool:
+        if not header_rows:
+            return False
+        first_row = [re.sub(r"\s+", "", cell or "") for cell in header_rows[0]]
+        return bool(first_row and first_row[0] in {"型号", "规格型号", "型号规格", "适用型号"} and any(first_row[1:]))
 
     def _column_paths(self, header_rows: list[list[str]], n_cols: int) -> list[list[str]]:
         if not header_rows:

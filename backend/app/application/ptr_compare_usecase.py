@@ -341,15 +341,14 @@ class PTRCompareUseCase:
                 task_id=task_id,
             )
         )
-        table_findings.extend(
-            check_atomic_result_bindings(
-                ptr_doc,
-                report_doc.inspection_items,
-                clauses=direct_compare_clauses,
-                task_id=task_id,
-                page_text_by_page=page_text_by_page,
-            )
+        atomic_findings = check_atomic_result_bindings(
+            ptr_doc,
+            report_doc.inspection_items,
+            clauses=direct_compare_clauses,
+            task_id=task_id,
+            page_text_by_page=page_text_by_page,
         )
+        table_findings.extend(_without_redundant_atomic_binding_findings(atomic_findings, clause_findings))
         table_findings = self._resolve_table_missing_with_report_coverage(table_findings, report_doc.inspection_items)
         report_scope_check_result = check_report_scope_consistency(
             report_scope,
@@ -620,6 +619,12 @@ class PTRCompareUseCase:
                 if selection.findings:
                     findings.extend(selection.findings)
                     continue
+                if selection.selected_table is None and self._report_group_covers_table_reference(
+                    clause,
+                    table_number,
+                    report_doc.inspection_items,
+                ):
+                    continue
                 findings.extend(
                     self.parameter_compare(
                         expected_table,
@@ -630,6 +635,33 @@ class PTRCompareUseCase:
                     )
                 )
         return findings
+
+    def _report_group_covers_table_reference(
+        self,
+        clause: PTRClause,
+        table_number: str,
+        report_items: list[InspectionItem],
+    ) -> bool:
+        group = ptr_group_for_clause(str(clause.number), build_ptr_report_item_groups(report_items))
+        if group is None:
+            return False
+        conclusion_text = " ".join(
+            [
+                ptr_group_test_result(group),
+                ptr_group_single_conclusion(group) or "",
+            ]
+        )
+        if "符合" not in conclusion_text or "不符合" in conclusion_text:
+            return False
+        evidence_text = " ".join(
+            [
+                ptr_group_standard_requirement(group),
+                ptr_group_test_result(group),
+            ]
+        )
+        compact_evidence = re.sub(r"\s+", "", evidence_text)
+        compact_table_number = re.sub(r"\s+", "", str(table_number or ""))
+        return bool(compact_table_number and f"表{compact_table_number}" in compact_evidence)
 
     def _table_reference_numbers(self, clause: PTRClause) -> list[str]:
         numbers = [reference.table_number for reference in clause.table_references]
@@ -883,6 +915,25 @@ def _attach_reviews_to_check_results(
         if target_result is None:
             continue
         target_result.codex_reviews.append(review)
+
+
+def _without_redundant_atomic_binding_findings(
+    atomic_findings: list[Finding],
+    clause_findings: list[Finding],
+) -> list[Finding]:
+    clauses_with_text_mismatch = {
+        str(finding.metadata.get("clause_number") or "").strip()
+        for finding in clause_findings
+        if finding.code == "PTR_CLAUSE_TEXT_MISMATCH"
+    }
+    return [
+        finding
+        for finding in atomic_findings
+        if not (
+            finding.code in {"PTR_ATOMIC_RESULT_UNBOUND", "PTR_ATOMIC_RESULT_NEEDS_REVIEW"}
+            and str(finding.metadata.get("clause_number") or "").strip() in clauses_with_text_mismatch
+        )
+    ]
 
 
 def _attach_ptr_comparison_details(check_results: list[CheckResult], details: dict[str, Any]) -> None:

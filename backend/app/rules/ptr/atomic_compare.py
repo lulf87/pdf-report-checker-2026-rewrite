@@ -8,7 +8,12 @@ from app.domain.inspection_group import InspectionItemGroup
 from app.domain.ptr import PTRClause, PTRDocument, PTRTable
 from app.domain.ptr_comparison import PTRAtomicComparisonRow, PTRAtomicRequirement, PTRReportAtomicResult
 from app.domain.table import ParameterRecord
-from app.rules.ptr.requirement_classifier import RequirementType, classify_requirement
+from app.rules.ptr.requirement_classifier import (
+    RequirementType,
+    classify_requirement,
+    extract_numeric_limit_expressions,
+    extract_standalone_numeric_unit,
+)
 from app.rules.ptr.report_item_grouping import (
     ptr_group_single_conclusion,
     ptr_group_standard_requirement,
@@ -137,16 +142,16 @@ BASIC_ELECTRICAL_AV_INTERVAL_CONDITIONS: tuple[tuple[str, str, tuple[str, ...], 
 
 
 def build_atomic_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtomicRequirement]:
-    classification = classify_requirement(clause, ptr_doc)
-    if classification.atomic_requirements:
-        return classification.atomic_requirements
-    if _clause_references_basic_electrical_table2_1(clause):
-        return _basic_electrical_table2_1_requirements(clause, ptr_doc)
     if _clause_indicates_torque_wrench_size(clause):
         return _torque_wrench_size_requirements(str(clause.number))
+    if _clause_references_basic_electrical_table2_1(clause):
+        return _basic_electrical_table2_1_requirements(clause, ptr_doc)
     model_table_requirements = model_aware_table_requirements(clause, ptr_doc)
     if model_table_requirements:
         return model_table_requirements
+    classification = classify_requirement(clause, ptr_doc)
+    if classification.atomic_requirements:
+        return classification.atomic_requirements
     if classification.requirement_type == RequirementType.SOFTWARE_FUNCTION_TABLE or _clause_indicates_waveform_table(clause):
         return _table_requirements(clause, ptr_doc)
     return []
@@ -380,8 +385,16 @@ def table_key_for_clause_table(clause_number: str, table: PTRTable) -> str:
 def table_for_clause(clause: PTRClause, ptr_doc: PTRDocument) -> PTRTable | None:
     table_numbers = [reference.table_number for reference in clause.table_references] + list(clause.table_refs)
     related_clause_ids = {clause.clause_id, *(_ancestor_clause_ids(clause, ptr_doc))}
+    related_clause_numbers = {str(clause.number), *(_ancestor_clause_numbers(clause))}
     for table_number in table_numbers:
         candidates = ptr_doc.get_tables_by_number(table_number)
+        parent_anchored = [
+            table
+            for table in candidates
+            if str(table.metadata.get("parent_clause") or "").strip() in related_clause_numbers
+        ]
+        if len(parent_anchored) == 1:
+            return parent_anchored[0]
         anchored = [
             table
             for table in candidates
@@ -395,6 +408,15 @@ def table_for_clause(clause: PTRClause, ptr_doc: PTRDocument) -> PTRTable | None
         if len(candidates) == 1:
             return candidates[0]
     return None
+
+
+def _ancestor_clause_numbers(clause: PTRClause) -> list[str]:
+    numbers: list[str] = []
+    parent_number = clause.number.parent()
+    while parent_number is not None:
+        numbers.append(str(parent_number))
+        parent_number = parent_number.parent()
+    return numbers
 
 
 def _ancestor_clause_ids(clause: PTRClause, ptr_doc: PTRDocument) -> list[str]:
@@ -883,20 +905,37 @@ def _comparison_row(
         confidence = None
         source_text = None
         preset = requirement.metadata.get("preset") if isinstance(requirement.metadata, dict) else None
-        unit = requirement.unit
+        unit = (
+            _numeric_result_unit(requirement, group) or requirement.unit
+            if requirement.metadata.get("numeric_limit") is True
+            else requirement.unit
+        )
         atomic_id = requirement.atomic_id
         if _is_not_applicable_requirement(requirement):
             actual = "/"
 
     status, reason = _status_and_reason(requirement, actual, group, candidate_actuals=candidate_actuals)
+    numeric_limit = requirement.metadata.get("numeric_limit") is True
+    actual_operator, actual_value = _numeric_actual_semantics(actual) if numeric_limit else (None, None)
     return PTRAtomicComparisonRow(
         atomic_id=atomic_id,
         clause_id=requirement.clause_id,
         label=requirement.label,
         preset=preset,
+        condition=requirement.metadata.get("condition"),
+        model_column=requirement.metadata.get("model_column"),
+        table_row_label=requirement.metadata.get("table_row_label"),
+        parent_clause=requirement.metadata.get("parent_clause"),
         expected=_expected_display(requirement),
         actual=actual,
         unit=unit,
+        expected_operator=requirement.operator if numeric_limit else None,
+        expected_value=requirement.expected_value if numeric_limit else None,
+        expected_unit=requirement.unit if numeric_limit else None,
+        actual_operator=actual_operator,
+        actual_value=actual_value,
+        actual_unit=unit if numeric_limit else None,
+        report_conclusion=ptr_group_single_conclusion(group) if group is not None else None,
         candidate_actuals=candidate_actuals,
         status=status,
         reason=reason,
@@ -909,6 +948,22 @@ def _comparison_row(
         table_title=requirement.table_title,
         table_key=requirement.table_key,
     )
+
+
+def _numeric_actual_semantics(actual: str | None) -> tuple[str | None, float | None]:
+    normalized = (
+        str(actual or "")
+        .strip()
+        .replace("＜", "<")
+        .replace("＞", ">")
+        .replace("≦", "≤")
+        .replace("≧", "≥")
+    )
+    match = re.search(r"(?P<operator><=|>=|≤|≥|<|>)?\s*(?P<value>[+-]?\d+(?:\.\d+)?)", normalized)
+    if match is None:
+        return None, None
+    operator = match.group("operator") or "="
+    return {"≤": "<=", "≥": ">="}.get(operator, operator), float(match.group("value"))
 
 
 def _actual_for_requirement(requirement: PTRAtomicRequirement, group: InspectionItemGroup | None) -> tuple[str | None, int | None, str | None]:
@@ -926,17 +981,10 @@ def _actual_for_requirement(requirement: PTRAtomicRequirement, group: Inspection
             return _group_result_text(group), _first_page(group), item_no
         if requirement.clause_id == "2.6":
             return None, _first_page(group), item_no
-        if requirement.metadata.get("axis_type") == "model" and requirement.operator in {"functional", "functional_or_equal"}:
-            group_text = " ".join(
-                [
-                    ptr_group_standard_requirement(group),
-                    ptr_group_test_result(group),
-                    ptr_group_single_conclusion(group) or "",
-                    ptr_group_text(group),
-                ]
-            )
-            if _group_text_matches_requirement(requirement, group_text) and _group_passed(group):
-                return "符合要求", _first_page(group), item_no
+        if requirement.metadata.get("axis_type") == "model":
+            projected_actual, projected_page = _model_projected_actual(requirement, group)
+            if projected_actual is not None:
+                return projected_actual, projected_page or _first_page(group), item_no
         return None, _first_page(group), item_no
 
     for row in group.rows:
@@ -962,6 +1010,16 @@ def _actual_for_requirement(requirement: PTRAtomicRequirement, group: Inspection
 def _row_matches_requirement(requirement: PTRAtomicRequirement, row_text: str) -> bool:
     compact = _compact(row_text)
     atomic_id = requirement.atomic_id
+    if requirement.metadata.get("numeric_limit") is True:
+        if _compact(requirement.label) in compact:
+            return True
+        expected_unit = _normalize_table_value(requirement.unit)
+        return any(
+            expression.operator == requirement.operator
+            and expression.value == requirement.expected_value
+            and (not expected_unit or _normalize_table_value(expression.unit) == expected_unit)
+            for expression in extract_numeric_limit_expressions(row_text)
+        )
     if requirement.operator == "functional":
         keywords = requirement.metadata.get("match_keywords") if isinstance(requirement.metadata, dict) else None
         if isinstance(keywords, list) and keywords:
@@ -994,6 +1052,45 @@ def _group_text_matches_requirement(requirement: PTRAtomicRequirement, group_tex
     return _compact(requirement.label) in compact
 
 
+def _model_projected_actual(
+    requirement: PTRAtomicRequirement,
+    group: InspectionItemGroup,
+) -> tuple[str | None, int | None]:
+    expected = str(requirement.expected_text or "").strip()
+    expected_normalized = _normalize_table_value(expected)
+    label_normalized = _compact_for_match(requirement.label)
+    for row in group.rows:
+        row_text = " ".join(
+            str(value or "")
+            for value in [row.sequence_raw, row.item_name, row.standard_requirement, row.test_result, row.conclusion]
+        )
+        row_normalized = _normalize_table_value(row_text)
+        row_label_normalized = _compact_for_match(row_text)
+        if label_normalized and label_normalized not in row_label_normalized:
+            continue
+        page = row.source_page or _first_page(group)
+        if requirement.operator in {"functional", "functional_or_equal"} and _group_passed(group):
+            return "符合要求", page
+        if expected_normalized and expected_normalized in row_normalized:
+            return expected, page
+
+    group_text = " ".join(
+        [
+            ptr_group_standard_requirement(group),
+            ptr_group_test_result(group),
+            ptr_group_single_conclusion(group) or "",
+            ptr_group_text(group),
+        ]
+    )
+    if not _group_text_matches_requirement(requirement, group_text):
+        return None, None
+    if requirement.operator in {"functional", "functional_or_equal"} and _group_passed(group):
+        return "符合要求", _first_page(group)
+    if expected and _normalize_table_value(expected) in _normalize_table_value(group_text):
+        return expected, _first_page(group)
+    return None, None
+
+
 def _row_actual(requirement: PTRAtomicRequirement, row) -> str | None:
     if requirement.operator == "functional":
         text = " ".join(str(value or "") for value in [row.standard_requirement, row.test_result, row.conclusion])
@@ -1010,10 +1107,86 @@ def _row_actual(requirement: PTRAtomicRequirement, row) -> str | None:
 
 def _actual_subset(requirement: PTRAtomicRequirement, value: str) -> str:
     text = str(value or "").strip()
+    if requirement.metadata.get("numeric_limit") is True:
+        normalized = (
+            text.replace("＜", "<")
+            .replace("＞", ">")
+            .replace("≦", "≤")
+            .replace("≧", "≥")
+            .replace("＝", "=")
+        )
+        range_match = re.search(r"[+-]?\d+(?:\.\d+)?\s*(?:～|~|至)\s*[+-]?\d+(?:\.\d+)?", normalized)
+        if range_match:
+            return re.sub(r"\s+", "", range_match.group(0)).replace("~", "～").replace("至", "～")
+        match = re.search(r"(?:<=|>=|<|>|≤|≥)?\s*[+-]?\d+(?:\.\d+)?", normalized)
+        return re.sub(r"\s+", "", match.group(0)) if match else normalized
     if ":fall_time" in requirement.atomic_id:
         numbers = re.findall(r"\d+(?:\.\d+)?", text)
         return " / ".join(numbers[:2]) if len(numbers) >= 2 else text
     return text
+
+
+def _numeric_result_unit(requirement: PTRAtomicRequirement, group: InspectionItemGroup | None) -> str | None:
+    if group is None:
+        return None
+    for row in group.rows:
+        row_text = " ".join(
+            str(value or "")
+            for value in [row.sequence_raw, row.item_name, row.standard_requirement, row.test_result]
+        )
+        if not _row_matches_requirement(requirement, row_text):
+            continue
+        unit = extract_standalone_numeric_unit(row.standard_requirement or "")
+        if unit:
+            return unit
+    return None
+
+
+def _convert_numeric_values(
+    values: Sequence[float],
+    *,
+    actual_unit: str | None,
+    expected_unit: str | None,
+) -> list[float] | None:
+    actual = _normalize_numeric_unit_for_conversion(actual_unit)
+    expected = _normalize_numeric_unit_for_conversion(expected_unit)
+    if actual == expected or not actual or not expected:
+        return list(values) if actual == expected or (not actual and not expected) else None
+    actual_parts = _metric_unit_parts(actual)
+    expected_parts = _metric_unit_parts(expected)
+    if actual_parts is None or expected_parts is None:
+        return None
+    actual_factor, actual_base = actual_parts
+    expected_factor, expected_base = expected_parts
+    if actual_base != expected_base:
+        return None
+    factor = actual_factor / expected_factor
+    return [value * factor for value in values]
+
+
+def _normalize_numeric_unit_for_conversion(unit: str | None) -> str:
+    return re.sub(r"\s+", "", str(unit or "")).replace("µ", "μ").replace("／", "/")
+
+
+def _metric_unit_parts(unit: str) -> tuple[float, str] | None:
+    match = re.fullmatch(r"(?P<prefix>[pnumkMGTμ]?)(?P<base>Ω|g|V|A|J|s)(?P<suffix>/.*)?", unit)
+    if not match:
+        return None
+    factors = {
+        "p": 1e-12,
+        "n": 1e-9,
+        "μ": 1e-6,
+        "u": 1e-6,
+        "m": 1e-3,
+        "": 1.0,
+        "k": 1e3,
+        "M": 1e6,
+        "G": 1e9,
+        "T": 1e12,
+    }
+    prefix = match.group("prefix")
+    base = f"{match.group('base')}{match.group('suffix') or ''}"
+    return factors[prefix], base
 
 
 def _status_and_reason(
@@ -1050,7 +1223,13 @@ def _status_and_reason(
             return _torque_wrench_status_and_reason(requirement, actual, group)
         if requirement.clause_id == "2.2.2" and _waveform_report_actual_satisfies(requirement.expected_text, actual):
             return "match", "报告表 6 波形参数结果满足 PTR 要求。"
-        if requirement.metadata.get("axis_type") == "model" and actual and "符合" in actual and "不符合" not in actual:
+        if (
+            requirement.metadata.get("axis_type") == "model"
+            and requirement.operator in {"functional", "functional_or_equal"}
+            and actual
+            and "符合" in actual
+            and "不符合" not in actual
+        ):
             model = requirement.metadata.get("model_column") or requirement.metadata.get("primary_model") or "适用型号"
             return "match", f"报告结果符合，PTR 父级表格按型号 {model} 投影后的要求已覆盖。"
         if _table_value_matches(requirement.expected_text, actual):
@@ -1084,8 +1263,22 @@ def _status_and_reason(
     expected = requirement.expected_value
     if expected is None or not actual_numbers:
         return "needs_review", "缺少可计算的数值证据，需复核。"
-    matched = _compare_numbers(actual_numbers, expected, requirement.operator or "")
+    comparison_values = actual_numbers
+    actual_unit = requirement.unit
+    if requirement.metadata.get("numeric_limit") is True:
+        actual_unit = _numeric_result_unit(requirement, group) or requirement.unit
+        converted_values = _convert_numeric_values(actual_numbers, actual_unit=actual_unit, expected_unit=requirement.unit)
+        if converted_values is None:
+            return "needs_review", f"报告结果单位 {actual_unit or '未标注'} 无法换算为 {requirement.unit or '未标注'}。"
+        comparison_values = converted_values
+    matched = _compare_numbers(comparison_values, expected, requirement.operator or "")
     symbol = _display_operator(requirement.operator)
+    if requirement.metadata.get("numeric_limit") is True:
+        actual_unit_text = f" {actual_unit}" if actual_unit else ""
+        expected_unit_text = f" {requirement.unit}" if requirement.unit else ""
+        if matched:
+            return "match", f"{actual}{actual_unit_text} {symbol} {expected:g}{expected_unit_text}"
+        return "mismatch", f"{actual}{actual_unit_text} 不满足 {symbol} {expected:g}{expected_unit_text}"
     if matched:
         return "match", f"{actual} {symbol} {int(expected) if expected.is_integer() else expected}"
     return "mismatch", f"{actual} 不满足 {symbol} {int(expected) if expected.is_integer() else expected}"
@@ -2938,6 +3131,7 @@ def _normalize_table_value(value: str | None) -> str:
     text = str(value or "")
     text = text.replace("μ", "u").replace("µ", "u")
     text = text.replace("％", "%").replace("－", "-").replace("～", "-")
+    text = text.replace("×", "x")
     text = re.sub(r"\s+", "", text)
     return text.lower()
 

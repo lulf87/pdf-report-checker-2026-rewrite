@@ -27,6 +27,14 @@ class RequirementClassification:
     diagnostics: list[dict[str, Any]] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class NumericLimitExpression:
+    operator: str
+    value: float
+    unit: str | None
+    raw_text: str
+
+
 def classify_requirement(clause: PTRClause, ptr_doc: PTRDocument | None = None) -> RequirementClassification:
     text = _clause_text(clause)
     numeric_requirements = _numeric_text_requirements(clause, text)
@@ -100,7 +108,110 @@ def _numeric_text_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRe
             )
         )
 
+    if not requirements:
+        requirements.extend(_generic_numeric_limit_requirements(clause, text))
+
     return requirements
+
+
+def _generic_numeric_limit_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRequirement]:
+    expressions = extract_numeric_limit_expressions(text)
+    if not expressions:
+        return []
+    label = _generic_numeric_label(clause)
+    requirements: list[PTRAtomicRequirement] = []
+    for index, expression in enumerate(expressions, start=1):
+        suffix = "numeric_limit" if len(expressions) == 1 else f"numeric_limit:{index}"
+        unit = f"{expression.unit}" if expression.unit else ""
+        requirements.append(
+            _text_requirement(
+                clause,
+                suffix=suffix,
+                label=label,
+                expected_text=f"{_display_limit_operator(expression.operator)}{expression.value:g}{unit}",
+                expected_value=expression.value,
+                operator=expression.operator,
+                unit=expression.unit,
+                metadata={
+                    "match_keywords": [label],
+                    "numeric_limit": True,
+                    "result_binding": "clause_window",
+                },
+            )
+        )
+    return requirements
+
+
+def extract_numeric_limit_expressions(text: str) -> list[NumericLimitExpression]:
+    normalized_text = str(text or "").replace("µ", "μ").replace("／", "/").replace("％", "%")
+    standalone_unit = extract_standalone_numeric_unit(normalized_text)
+    expressions: list[NumericLimitExpression] = []
+    seen: set[tuple[str, float, str]] = set()
+    pattern = re.compile(
+        r"(?P<operator>不超过|不大于|小于等于|不高于|至多|不小于|不少于|大于等于|至少|"
+        r"<=|>=|≤|≥|≦|≧|<|>|＜|＞|小于|低于|少于|大于|高于|多于)"
+        r"\s*(?:为|[:：])?\s*"
+        r"(?P<value>[+-]?\d+(?:\.\d+)?)\s*"
+        r"(?P<unit>[A-Za-zμΩ%℃°]+(?:\s*/\s*[A-Za-zμΩ%℃°\u4e00-\u9fff]+)?)?",
+        flags=re.IGNORECASE,
+    )
+    for match in pattern.finditer(normalized_text):
+        operator = _normalized_limit_operator(match.group("operator"))
+        value = float(match.group("value"))
+        unit = _normalize_numeric_unit(match.group("unit") or standalone_unit)
+        key = (operator, value, (unit or "").casefold())
+        if key in seen:
+            continue
+        seen.add(key)
+        expressions.append(
+            NumericLimitExpression(
+                operator=operator,
+                value=value,
+                unit=unit,
+                raw_text=match.group(0).strip(),
+            )
+        )
+    return expressions
+
+
+def extract_standalone_numeric_unit(text: str) -> str | None:
+    match = re.search(
+        r"单位\s*[:：]\s*([A-Za-zμΩ%℃°]+(?:\s*/\s*[A-Za-zμΩ%℃°\u4e00-\u9fff]+)?)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return _normalize_numeric_unit(match.group(1)) if match else None
+
+
+def _normalize_numeric_unit(unit: str | None) -> str | None:
+    value = re.sub(r"\s+", "", str(unit or "")).replace("µ", "μ").replace("／", "/").replace("％", "%")
+    return value or None
+
+
+def _normalized_limit_operator(value: str) -> str:
+    compact = _compact(value)
+    if compact in {"不超过", "不大于", "小于等于", "不高于", "至多", "<=", "≤", "≦"}:
+        return "<="
+    if compact in {"不小于", "不少于", "大于等于", "至少", ">=", "≥", "≧"}:
+        return ">="
+    if compact in {"小于", "低于", "少于", "<", "＜"}:
+        return "<"
+    return ">"
+
+
+def _display_limit_operator(operator: str) -> str:
+    return {"<=": "≤", ">=": "≥"}.get(operator, operator)
+
+
+def _generic_numeric_label(clause: PTRClause) -> str:
+    title = re.sub(r"\s+", "", str(clause.title or "")).strip("：:。；;")
+    if title:
+        return title
+    body = str(clause.body_text or "")
+    marker = re.search(r"不超过|不大于|小于等于|≤|不小于|不少于|大于等于|≥|小于|大于", body)
+    prefix = body[: marker.start()] if marker else body
+    label = re.sub(r"\s+", "", prefix).strip("：:。；;，,应")
+    return label or f"条款 {clause.number} 数值限值"
 
 
 def _direct_waveform_numeric_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRequirement]:
@@ -406,7 +517,10 @@ def _compact(value: str) -> str:
 
 
 __all__ = [
+    "NumericLimitExpression",
     "RequirementClassification",
     "RequirementType",
     "classify_requirement",
+    "extract_numeric_limit_expressions",
+    "extract_standalone_numeric_unit",
 ]

@@ -134,12 +134,15 @@ class CheckResult(BaseModel):
 
 USER_FACING_CONFIRMED_ERROR = "confirmed_error"
 USER_FACING_NEEDS_REVIEW = "needs_review"
+USER_FACING_NEEDS_POLICY_REVIEW = "needs_policy_review"
 USER_FACING_CANDIDATE_ISSUE = "candidate_issue"
 USER_FACING_REFUTED = "refuted"
 USER_FACING_PASSED = "passed"
 
 
 def user_facing_status_for_finding(finding: Finding) -> str:
+    if finding.metadata.get("policy_review_required") is True:
+        return USER_FACING_NEEDS_POLICY_REVIEW
     final_status = finding.metadata.get("final_status")
     if final_status == "confirmed":
         return USER_FACING_CONFIRMED_ERROR if finding.severity == FindingSeverity.ERROR else USER_FACING_NEEDS_REVIEW

@@ -2115,6 +2115,36 @@ def test_ptr_compare_usecase_completes_when_report_side_has_no_canonical_table(t
     assert _finding_codes(ptr_table_result) == ["PTR_TABLE_PARAM_MISSING"]
 
 
+def test_ptr_compare_skips_whole_table_missing_when_passing_inspection_group_covers_reference(tmp_path: Path) -> None:
+    ptr_doc = _ptr_document(
+        ptr_table=_canonical_table("ptr-table-1", "1", [_record("脉冲宽度(ms)", "0.4")]),
+        extra_tables=[],
+    )
+    report_doc = ReportDocument(
+        inspection_items=[
+            InspectionItem(
+                sequence_raw="38",
+                sequence=38,
+                standard_clause="2.1",
+                standard_requirement="脉冲参数应符合表1。",
+                test_result="符合要求",
+                conclusion="符合",
+                source_page=20,
+            )
+        ]
+    )
+    usecase = PTRCompareUseCase(task_service=TaskService())
+
+    findings = usecase._parameter_table_findings(
+        ptr_doc=ptr_doc,
+        report_doc=report_doc,
+        clauses=ptr_doc.clauses,
+        task_id="table-coverage",
+    )
+
+    assert findings == []
+
+
 def test_ptr_compare_usecase_does_not_emit_parameter_error_when_table_records_match(tmp_path: Path) -> None:
     result = _run_parameter_compare_usecase(
         tmp_path,

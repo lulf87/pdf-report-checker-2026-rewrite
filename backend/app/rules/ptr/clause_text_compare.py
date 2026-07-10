@@ -20,6 +20,11 @@ from app.rules.ptr.report_item_grouping import (
     ptr_group_text,
 )
 from app.infrastructure.text.normalizer import normalize_text
+from app.rules.ptr.requirement_classifier import (
+    RequirementType,
+    classify_requirement,
+    extract_numeric_limit_expressions,
+)
 
 
 def compare_clause_texts(
@@ -43,6 +48,18 @@ def compare_clause_texts(
                 report_group,
             ):
                 continue
+            report_requirement_text = (
+                ptr_group_standard_requirement(report_group)
+                if report_group is not None
+                else report_item.standard_requirement or ""
+            )
+            report_context_text = (
+                ptr_group_text(report_group)
+                if report_group is not None
+                else " ".join([report_item.item_name or "", report_requirement_text])
+            )
+            if _numeric_limit_requirement_equivalent(clause, report_requirement_text, report_context_text):
+                continue
             expected = normalize_text(clause.body_text or "")
             actual = normalize_text(report_item.standard_requirement or "")
             if _clause_text_equivalent(clause, expected, actual):
@@ -65,7 +82,19 @@ def compare_clause_texts(
             continue
 
         expected = normalize_text(clause.body_text or "")
-        actual = normalize_text(ptr_group_standard_requirement(report_group) if report_group is not None else report_item.standard_requirement or "")
+        report_requirement_text = (
+            ptr_group_standard_requirement(report_group)
+            if report_group is not None
+            else report_item.standard_requirement or ""
+        )
+        report_context_text = (
+            ptr_group_text(report_group)
+            if report_group is not None
+            else " ".join([report_item.item_name or "", report_requirement_text])
+        )
+        if _numeric_limit_requirement_equivalent(clause, report_requirement_text, report_context_text):
+            continue
+        actual = normalize_text(report_requirement_text)
         if _clause_text_equivalent(clause, expected, actual):
             continue
         findings.append(_mismatch_finding(clause, report_item, expected, actual, task_id))
@@ -151,6 +180,44 @@ def _clause_text_equivalent(clause: PTRClause, expected: str, actual: str) -> bo
     return False
 
 
+def _numeric_limit_requirement_equivalent(
+    clause: PTRClause,
+    report_requirement_text: str,
+    report_context_text: str,
+) -> bool:
+    classification = classify_requirement(clause)
+    if classification.requirement_type != RequirementType.NUMERIC_LIMIT:
+        return False
+    expected_labels = {
+        _compact(requirement.label)
+        for requirement in classification.atomic_requirements
+        if _compact(requirement.label)
+    }
+    compact_report_context = _compact(report_context_text)
+    if any(label not in compact_report_context for label in expected_labels):
+        return False
+    expected_limits = {
+        (
+            str(requirement.operator or ""),
+            requirement.expected_value,
+            _normalized_unit(requirement.unit),
+        )
+        for requirement in classification.atomic_requirements
+        if requirement.expected_value is not None and requirement.operator in {"<=", ">=", "<", ">"}
+    }
+    if not expected_limits:
+        return False
+    report_limits = {
+        (expression.operator, expression.value, _normalized_unit(expression.unit))
+        for expression in extract_numeric_limit_expressions(report_requirement_text)
+    }
+    return expected_limits.issubset(report_limits)
+
+
+def _normalized_unit(value: str | None) -> str:
+    return re.sub(r"\s+", "", str(value or "")).replace("µ", "μ").replace("／", "/").casefold()
+
+
 def _index_report_items(report_items: list[InspectionItem]) -> dict[str, InspectionItem]:
     indexed: dict[str, InspectionItem] = {}
     for item in report_items:
@@ -204,11 +271,24 @@ def _mismatch_finding(
     task_id: str,
 ) -> Finding:
     clause_number = str(clause.number)
+    version_mismatch = _standard_version_mismatch(expected, actual)
+    metadata: dict[str, object] = {"clause_number": clause_number}
+    severity = FindingSeverity.ERROR
+    if version_mismatch is not None:
+        severity = FindingSeverity.WARN
+        metadata.update(
+            {
+                "requirement_type": "standard_version_mismatch",
+                "user_facing_status": "needs_policy_review",
+                "policy_review_required": True,
+                "standard_version_comparison": version_mismatch,
+            }
+        )
     return Finding(
         id=f"{task_id}:PTR_CLAUSE:{clause_number}:mismatch",
         task_id=task_id,
         check_id="PTR_CLAUSE",
-        severity=FindingSeverity.ERROR,
+        severity=severity,
         code="PTR_CLAUSE_TEXT_MISMATCH",
         message=f"PTR 条款 {clause_number} 正文与报告标准要求不一致。",
         location=clause.location,
@@ -216,8 +296,32 @@ def _mismatch_finding(
         actual=actual,
         evidence=[_ptr_evidence(clause), _report_evidence(report_item, clause_number)],
         diff_fragments=_build_diff(_compact(expected), _compact(actual)),
-        metadata={"clause_number": clause_number},
+        metadata=metadata,
     )
+
+
+def _standard_version_mismatch(expected: str, actual: str) -> dict[str, str] | None:
+    pattern = re.compile(
+        r"(?P<standard>(?:GB|YY/T|YY|IEC|ISO)\s*\d+(?:\.\d+)*)\s*[-－–—]\s*(?P<year>\d{4})",
+        flags=re.IGNORECASE,
+    )
+    expected_versions = {
+        re.sub(r"\s+", "", match.group("standard")).upper(): match.group("year")
+        for match in pattern.finditer(expected or "")
+    }
+    actual_versions = {
+        re.sub(r"\s+", "", match.group("standard")).upper(): match.group("year")
+        for match in pattern.finditer(actual or "")
+    }
+    for standard, expected_year in expected_versions.items():
+        actual_year = actual_versions.get(standard)
+        if actual_year and actual_year != expected_year:
+            return {
+                "standard": standard,
+                "ptr_version": expected_year,
+                "report_version": actual_year,
+            }
+    return None
 
 
 def _invalid_match_candidate_finding(

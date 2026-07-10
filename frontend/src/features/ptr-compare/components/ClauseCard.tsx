@@ -262,7 +262,7 @@ function PTRAtomicComparisonTable({ rows }: { rows: PTRAtomicComparisonRow[] }) 
             {rows.map((row) => (
               <tr className={`comparison-row comparison-row-${ptrAtomicStatusTone(row.status)}`} key={row.atomic_id}>
                 <td>{row.label}</td>
-                <td>{row.preset || "不适用"}</td>
+                <td>{row.model_column || row.condition || row.preset || "不适用"}</td>
                 <td>{row.expected || "无"}</td>
                 <td>{formatAtomicActual(row)}</td>
                 <td>{ptrAtomicSourceLabel(row.source)}</td>
@@ -470,6 +470,7 @@ function ptrStatusLabel(status: string): string {
   if (status === "missing_in_report") return "报告中未找到";
   if (status === "value_mismatch") return "结果不一致";
   if (status === "needs_review") return "需人工复核";
+  if (status === "needs_policy_review") return "标准版本政策待确认";
   if (status === "candidate_issue") return "规则初筛候选";
   if (status === "refuted") return "候选问题已排除";
   if (status === "confirmed_error") return "复审确认问题";
@@ -483,6 +484,7 @@ function ptrStatusTone(status: string): "success" | "danger" | "warn" | "info" |
   if (status === "confirmed_error" || status === "audit_incomplete") return "danger";
   if (
     status === "needs_review"
+    || status === "needs_policy_review"
     || status === "coverage_only_needs_review"
     || status === "candidate_issue"
     || status === "missing_in_report"

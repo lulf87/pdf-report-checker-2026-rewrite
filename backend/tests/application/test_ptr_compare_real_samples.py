@@ -40,6 +40,10 @@ REAL_SAMPLES = {
         OLD_MATERIAL_DIR / "ptr/5780/消化道脉冲电场消融仪技术要求.pdf",
         OLD_MATERIAL_DIR / "report/5780/QW2025-5780 Draft.pdf",
     ),
+    "0596": (
+        OLD_MATERIAL_DIR / "ptr/0596/0596技术要求.pdf",
+        OLD_MATERIAL_DIR / "report/0596/0596报告.pdf",
+    ),
 }
 
 
@@ -192,6 +196,77 @@ def test_real_5780_regression_textless_ptr_needs_ocr_and_emc_placeholder_is_not_
     assert "OCR" in details["overall_summary"] or "无文本层" in details["overall_summary"]
     assert not _has_finding(result, "PTR_SCOPE_EXCLUDED_TOPIC_PRESENT", clause_number="2.6")
     assert details["confirmed_errors_count"] == 0
+    assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_real_0596_numeric_limits_ignore_title_and_unit_formatting(tmp_path: Path) -> None:
+    result = _run_real_sample_or_skip(tmp_path, "0596")
+    details = result.metadata["ptr_comparison_details"]
+    items = _items(details)
+
+    assert details["report_model_context"]["primary_model"] == "6232"
+    registry = {entry["table_number"]: entry for entry in details["ptr_table_registry"]}
+    assert {"2", "3"} <= set(registry)
+    assert registry["3"]["parent_clause"] == "2.1"
+    assert registry["3"]["table_title"] == "功能参数"
+    assert registry["3"]["column_axes"][0] == {
+        "axis_type": "model",
+        "labels": ["6131", "6132", "6231", "6232"],
+    }
+
+    pacing_rows = [
+        row
+        for row in items["2.1.1"]["atomic_comparison_rows"]
+        if row.get("model_column") == "6232" and row["label"] == "起搏模式"
+    ]
+    assert len(pacing_rows) == 1
+    assert pacing_rows[0]["parent_clause"] == "2.1"
+    assert pacing_rows[0]["table_key"] == "2.1:表3:功能参数"
+    assert "DDD" in pacing_rows[0]["expected"]
+    assert pacing_rows[0]["actual"] == "符合要求"
+    assert pacing_rows[0]["status"] == "match"
+
+    physical_item = next(item for item in details["items"] if "产品物理特性" in (item.get("ptr_title") or ""))
+    physical_rows = [
+        row
+        for row in physical_item["atomic_comparison_rows"]
+        if row.get("model_column") == "6232"
+    ]
+    assert {row["label"].split(" (")[0].replace("\n", "") for row in physical_rows} >= {"尺寸", "重量", "体积"}
+    assert all(row["table_key"] == "2.1:表2:基本参数" for row in physical_rows)
+    assert all(row["status"] == "match" for row in physical_rows)
+    assert all(row["report_page"] == 32 for row in physical_rows)
+
+    ethylene_oxide_row = items["2.6"]["atomic_comparison_rows"][0]
+    assert ethylene_oxide_row["label"] == "环氧乙烷残留量"
+    assert ethylene_oxide_row["expected"] == "≤10 μg/g"
+    assert ethylene_oxide_row["actual"] == "<0.5"
+    assert ethylene_oxide_row["status"] == "match"
+    assert ethylene_oxide_row["report_item_no"] == "40"
+
+    endotoxin_row = items["2.7"]["atomic_comparison_rows"][0]
+    assert endotoxin_row["label"] == "细菌内毒素"
+    assert endotoxin_row["expected"] == "≤20 EU/件"
+    assert endotoxin_row["actual"] == "<20"
+    assert endotoxin_row["status"] == "match"
+    assert endotoxin_row["report_item_no"] == "41"
+
+    assert not _has_finding(result, "PTR_CLAUSE_TEXT_MISMATCH", clause_number="2.6")
+    assert not _has_finding(result, "PTR_CLAUSE_TEXT_MISMATCH", clause_number="2.7")
+    remaining_text_mismatches = {
+        finding["metadata"].get("clause_number")
+        for finding in result.findings
+        if finding["code"] == "PTR_CLAUSE_TEXT_MISMATCH"
+    }
+    assert remaining_text_mismatches == {"2.10", "2.11"}
+    version_findings = [
+        finding
+        for finding in result.findings
+        if finding["code"] == "PTR_CLAUSE_TEXT_MISMATCH"
+        and finding["metadata"].get("clause_number") in {"2.10", "2.11"}
+    ]
+    assert all(finding["metadata"].get("requirement_type") == "standard_version_mismatch" for finding in version_findings)
+    assert all(finding["metadata"].get("user_facing_status") == "needs_policy_review" for finding in version_findings)
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
 

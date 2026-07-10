@@ -77,9 +77,20 @@ class PTRAtomicComparisonRow(BaseModel):
     clause_id: str
     label: str
     preset: str | None = None
+    condition: str | None = None
+    model_column: str | None = None
+    table_row_label: str | None = None
+    parent_clause: str | None = None
     expected: str | None = None
     actual: str | None = None
     unit: str | None = None
+    expected_operator: str | None = None
+    expected_value: float | None = None
+    expected_unit: str | None = None
+    actual_operator: str | None = None
+    actual_value: float | None = None
+    actual_unit: str | None = None
+    report_conclusion: str | None = None
     candidate_actuals: list[str] = Field(default_factory=list)
     status: str = "needs_review"
     reason: str | None = None

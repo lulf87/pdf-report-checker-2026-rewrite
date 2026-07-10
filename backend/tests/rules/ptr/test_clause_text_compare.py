@@ -34,6 +34,26 @@ def test_clause_text_compare_outputs_finding_for_strict_mismatch() -> None:
     assert any(fragment.kind.value in {"delete", "insert", "replace"} for fragment in finding.diff_fragments)
 
 
+def test_clause_text_compare_marks_standard_year_difference_for_policy_review() -> None:
+    findings = compare_clause_texts(
+        [_clause("2.10", "通用要求应符合 GB 16174.1-2015。")],
+        [
+            InspectionItem(
+                standard_clause="2.10",
+                item_name="通用要求",
+                standard_requirement="通用要求应符合 GB 16174.1-2024。",
+                test_result="符合要求",
+                conclusion="符合",
+            )
+        ],
+    )
+
+    assert len(findings) == 1
+    assert findings[0].code == "PTR_CLAUSE_TEXT_MISMATCH"
+    assert findings[0].metadata["requirement_type"] == "standard_version_mismatch"
+    assert findings[0].metadata["user_facing_status"] == "needs_policy_review"
+
+
 def test_clause_text_compare_accepts_pm3562_only_pvc_response_modifier() -> None:
     findings = compare_clause_texts(
         [

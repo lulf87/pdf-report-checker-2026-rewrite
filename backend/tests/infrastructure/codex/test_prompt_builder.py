@@ -126,6 +126,33 @@ def test_prompt_contains_auditor_role_safety_and_json_only_requirements() -> Non
     assert "不要臆测" in prompt
 
 
+def test_prompt_prioritizes_numeric_limit_semantics_over_formatting_differences() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    target = _review_target(target_type=CodexReviewTargetType.PTR_PARAMETER)
+    target.metadata.update(
+        {
+            "requirement_type": "numeric_limit",
+            "parameter_name": "环氧乙烷残留量",
+            "expected_operator": "<=",
+            "expected_value": 10.0,
+            "expected_unit": "μg/g",
+            "actual_operator": "<",
+            "actual_value": 0.5,
+            "actual_unit": "μg/g",
+            "report_conclusion": "符合",
+        }
+    )
+    request = _request([target])
+    package = _package(kind=EvidencePackageKind.PTR_PARAMETER_REVIEW, target_type="ptr_parameter")
+
+    prompt = PromptBuilder().build_review_prompt(request, package)
+
+    assert "首先判断报告实测值是否满足 PTR 数值限值" in prompt
+    assert "标题、换行、冒号或单位单独成行" in prompt
+    assert "数值语义满足" in prompt
+
+
 def test_prompt_declares_codex_as_mandatory_final_auditor_and_rules_as_candidates() -> None:
     from app.infrastructure.codex.prompt_builder import PromptBuilder
 

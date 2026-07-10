@@ -151,11 +151,37 @@ class PromptBuilder:
 
     def _render_target_specific_instructions(self, targets: list[CodexReviewTarget]) -> str:
         sections: list[str] = []
+        if self._has_numeric_requirement_target(targets):
+            sections.append(self._render_numeric_requirement_instructions())
         if self._has_c07_visual_target(targets):
             sections.append(self._render_c07_visual_instructions())
         if self._has_c07_complex_matrix_target(targets):
             sections.append(self._render_c07_complex_matrix_instructions())
         return "\n\n".join(sections)
+
+    def _has_numeric_requirement_target(self, targets: list[CodexReviewTarget]) -> bool:
+        for target in targets:
+            metadata = target.metadata if isinstance(target.metadata, dict) else {}
+            if metadata.get("requirement_type") == "numeric_limit":
+                return True
+            if target.finding_code == "PTR_TABLE_VALUE_MISMATCH" and all(
+                key in metadata for key in ("expected_operator", "expected_value", "actual_value")
+            ):
+                return True
+        return False
+
+    def _render_numeric_requirement_instructions(self) -> str:
+        return "\n".join(
+            [
+                "## PTR Numeric Requirement Review Instructions",
+                "",
+                "- 首先判断报告实测值是否满足 PTR 数值限值，使用 target metadata 中的 parameter/operator/value/unit 和报告结论。",
+                "- 标题、换行、冒号或单位单独成行等格式差异不能单独构成正文不一致。",
+                "- 统一识别 µ/μ/u、＜/<、≤/不超过、≥/不小于，并在兼容单位之间换算后比较。",
+                "- 数值语义满足时，应 refute 仅由文本格式差异产生的 mismatch 候选。",
+                "- 单位无法兼容、实测值绑定不确定或证据不足时，应 uncertain，不要直接 confirm。",
+            ]
+        )
 
     def _has_c07_visual_target(self, targets: list[CodexReviewTarget]) -> bool:
         for target in targets:

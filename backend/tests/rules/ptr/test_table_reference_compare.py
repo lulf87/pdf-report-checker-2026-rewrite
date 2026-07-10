@@ -1,4 +1,5 @@
 from app.domain.ptr import PTRClause, PTRDocument, PTRTable, TableReference
+from app.rules.ptr.atomic_compare import table_for_clause
 from app.rules.ptr.table_reference_compare import check_table_references
 
 
@@ -36,6 +37,41 @@ def test_table_reference_compare_reports_ambiguous_duplicate_candidates() -> Non
     assert len(findings) == 1
     assert findings[0].code == "PTR_TABLE_CANDIDATE_AMBIGUOUS"
     assert findings[0].actual == ["table-1-a", "table-1-b"]
+
+
+def test_duplicate_table_numbers_are_disambiguated_by_parent_clause_metadata() -> None:
+    target = _clause("2.1.3")
+    other = PTRClause(
+        clause_id="ptr-2.2",
+        number="2.2",
+        title="其他参数",
+        body_text="其他参数应符合表1。",
+        table_references=[TableReference(table_number="1", reference_text="表1")],
+    )
+    document = PTRDocument(
+        clauses=[target, other],
+        tables=[
+            PTRTable(
+                table_id="table-1-target",
+                table_number="1",
+                title="表1 脉冲参数",
+                page_span=(3, 3),
+                metadata={"parent_clause": "2.1.3"},
+            ),
+            PTRTable(
+                table_id="table-1-other",
+                table_number="1",
+                title="表1 其他参数",
+                page_span=(5, 5),
+                metadata={"parent_clause": "2.2"},
+            ),
+        ],
+    )
+
+    findings = check_table_references(document, task_id="task-ptr")
+
+    assert findings == []
+    assert table_for_clause(target, document).table_id == "table-1-target"
 
 
 def test_child_clause_inherits_table_defined_in_parent_clause_text() -> None:

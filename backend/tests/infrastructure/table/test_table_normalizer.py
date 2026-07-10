@@ -94,6 +94,31 @@ def test_parameter_records_include_condition_and_tolerance_synonym_fields() -> N
     assert record.values["限值"] == ">=2.0"
 
 
+def test_model_axis_header_uses_model_labels_as_value_columns() -> None:
+    table = build_pdf_table(
+        rows=[
+            ["型号", "6131", "6132", "6231", "6232"],
+            ["起搏模式", "VVI", "VVIR", "DDD", "DDDR"],
+            ["脉冲宽度", "0.35ms", "0.35ms", "0.35ms", "0.35ms"],
+        ],
+        table_number="3",
+        caption="表 3 功能参数",
+    )
+
+    canonical = TableNormalizer().normalize(table)
+
+    assert canonical.header_rows == [["型号", "6131", "6132", "6231", "6232"]]
+    assert canonical.value_columns == ["6131", "6132", "6231", "6232"]
+    assert canonical.parameter_name_column == "型号"
+    assert canonical.parameter_records[0].parameter_name == "起搏模式"
+    assert canonical.parameter_records[0].values == {
+        "6131": "VVI",
+        "6132": "VVIR",
+        "6231": "DDD",
+        "6232": "DDDR",
+    }
+
+
 def test_continuation_table_preserves_source_and_diagnostics() -> None:
     first = build_pdf_table(
         rows=[["参数", "型号", "标准设置"], ["频率", "全部", "60"]],

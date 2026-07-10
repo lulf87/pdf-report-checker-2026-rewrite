@@ -139,6 +139,7 @@ function checkStatusProgressLabel(status: TaskCheckProgressStatus): string {
     failed: "候选问题",
     skipped: "跳过",
     needs_review: "需复核",
+    needs_policy_review: "标准版本政策待确认",
     error: "异常",
   };
   return labels[status];

@@ -49,6 +49,18 @@ OLD_PROJECT_ROOT = "/Users/lulingfeng/Documents/工作/开发/报告核对工具
 NEW_PROJECT_ROOT = "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3"
 REDACTED_PATH = "[redacted-path]"
 
+NUMERIC_TARGET_METADATA_KEYS = (
+    "requirement_type",
+    "item_no",
+    "expected_operator",
+    "expected_value",
+    "expected_unit",
+    "actual_operator",
+    "actual_value",
+    "actual_unit",
+    "report_conclusion",
+)
+
 CLAUSE_CODES = {
     "PTR_CLAUSE_TEXT_MISMATCH",
     "PTR_CLAUSE_MISSING",
@@ -153,13 +165,14 @@ class PtrCodexEvidenceBuilder:
                     evidence_refs=evidence_refs,
                     metadata={
                         "source": "ptr_compare_usecase",
-                    "finding_code": finding.code,
-                    "clause_number": finding.metadata.get("clause_number"),
-                    "table_number": finding.metadata.get("table_number"),
-                    "parameter_name": finding.metadata.get("parameter_name"),
-                    "atomic_id": finding.metadata.get("atomic_id"),
-                },
-            )
+                        "finding_code": finding.code,
+                        "clause_number": finding.metadata.get("clause_number"),
+                        "table_number": finding.metadata.get("table_number"),
+                        "parameter_name": finding.metadata.get("parameter_name"),
+                        "atomic_id": finding.metadata.get("atomic_id"),
+                        **_selected_metadata(finding, NUMERIC_TARGET_METADATA_KEYS),
+                    },
+                )
             )
             review_targets.append(
                 CodexReviewTarget(
@@ -182,6 +195,7 @@ class PtrCodexEvidenceBuilder:
                         "table_number": finding.metadata.get("table_number"),
                         "parameter_name": finding.metadata.get("parameter_name"),
                         "atomic_id": finding.metadata.get("atomic_id"),
+                        **_selected_metadata(finding, NUMERIC_TARGET_METADATA_KEYS),
                     },
                 )
             )
@@ -208,7 +222,7 @@ class PtrCodexEvidenceBuilder:
             task_type=task_type,
             mode="verify",
             targets=review_targets,
-            prompt_version="ptr-review-v1",
+            prompt_version="ptr-review-v2",
             schema_version="codex-review-output-v1",
             created_at=_utc_now(),
             metadata={
@@ -886,7 +900,12 @@ def _finding_can_use_report_group(finding: Finding) -> bool:
     return finding.check_id == "PTR_CLAUSE" or finding.code in {
         "PTR_ATOMIC_RESULT_NEEDS_REVIEW",
         "PTR_ATOMIC_RESULT_UNBOUND",
+        "PTR_TABLE_VALUE_MISMATCH",
     }
+
+
+def _selected_metadata(finding: Finding, keys: tuple[str, ...]) -> dict[str, Any]:
+    return {key: finding.metadata.get(key) for key in keys if key in finding.metadata}
 
 
 def _first_ptr_clause_number(item: InspectionItem) -> str:

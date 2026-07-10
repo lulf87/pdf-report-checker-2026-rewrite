@@ -24,6 +24,7 @@ export type TaskCheckProgressStatus =
   | "failed"
   | "skipped"
   | "needs_review"
+  | "needs_policy_review"
   | "error";
 export type CodexAuditProgressStatus = "pending" | "running" | "retrying" | "completed" | "failed";
 
@@ -294,9 +295,20 @@ export interface PTRAtomicComparisonRow {
   clause_id: string;
   label: string;
   preset?: string | null;
+  condition?: string | null;
+  model_column?: string | null;
+  table_row_label?: string | null;
+  parent_clause?: string | null;
   expected?: string | null;
   actual?: string | null;
   unit?: string | null;
+  expected_operator?: string | null;
+  expected_value?: number | null;
+  expected_unit?: string | null;
+  actual_operator?: string | null;
+  actual_value?: number | null;
+  actual_unit?: string | null;
+  report_conclusion?: string | null;
   candidate_actuals?: string[];
   status: "match" | "mismatch" | "needs_review" | "candidate_found_needs_mapping" | "not_applicable" | string;
   reason?: string | null;

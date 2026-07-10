@@ -66,8 +66,9 @@ class PTRExtractor:
         self._link_hierarchy(clauses)
         self._classify_clauses(clauses)
 
-        tables = self._extract_tables(parsed_pdf)
+        tables = self._extract_tables(parsed_pdf, allowed_pages=set(chapter_pages))
         tables = self._merge_continuation_tables(tables)
+        self._assign_table_parent_clauses(clauses, tables)
         self._attach_referenced_table_text(clauses, tables)
         table_references = [ref for clause in clauses for ref in clause.table_references]
 
@@ -465,28 +466,43 @@ class PTRExtractor:
         }
         clause.taxonomy = taxonomy_map[scope_type]
 
-    def _extract_tables(self, parsed_pdf: ParsedPdf) -> list[PTRTable]:
+    def _extract_tables(self, parsed_pdf: ParsedPdf, *, allowed_pages: set[int] | None = None) -> list[PTRTable]:
         raw_tables = list(parsed_pdf.tables)
         for page in parsed_pdf.pages:
             raw_tables.extend(page.tables)
 
+        page_by_number = {page.page_number: page for page in parsed_pdf.pages}
         seen: set[str] = set()
         tables: list[PTRTable] = []
         for table in raw_tables:
             if table.table_id in seen:
                 continue
+            table_pages = set(table.page_numbers or [])
+            if allowed_pages is not None and table_pages and not (table_pages & allowed_pages):
+                continue
             seen.add(table.table_id)
-            tables.append(self._convert_pdf_table(table))
+            page_number = min(table.page_numbers) if table.page_numbers else None
+            page = page_by_number.get(page_number) if page_number is not None else None
+            tables.append(self._convert_pdf_table(table, page=page))
         return tables
 
-    def _convert_pdf_table(self, table: PdfTable) -> PTRTable:
-        canonical = self.table_normalizer.normalize(table)
-        table_number = self._extract_table_number(table)
+    def _convert_pdf_table(self, table: PdfTable, *, page: PdfPage | None = None) -> PTRTable:
+        caption = table.caption or table.title or self._nearby_table_caption(table, page)
+        table_number = self._extract_table_number_from_text(caption) or self._extract_table_number(table)
+        normalized_source = table.model_copy(
+            update={
+                "caption": caption,
+                "title": caption or table.title,
+                "metadata": {**dict(table.metadata or {}), "table_number": table_number},
+            }
+        )
+        canonical = self.table_normalizer.normalize(normalized_source)
+        canonical.parameter_records = self._merge_parameter_record_fragments(list(canonical.parameter_records))
         page_span = self._page_span_for_pdf_table(table)
         return PTRTable(
             table_id=table.table_id,
             table_number=table_number,
-            title=table.caption or table.title,
+            title=caption,
             canonical_table=canonical,
             page_span=page_span,
             evidence=[
@@ -494,12 +510,52 @@ class PTRExtractor:
                     id=f"{table.table_id}:table",
                     source_type=SourceType.PTR,
                     location=Location(source_type=SourceType.PTR, page_number=page_span[0], table_id=table.table_id),
-                    raw_text=table.caption or table.title or table_number or "",
+                    raw_text=caption or table_number or "",
                     method=EvidenceMethod.PDF_LAYOUT,
                 )
             ],
-            metadata={"y0": table.bbox.y0 if table.bbox else 0.0, **dict(table.metadata or {})},
+            metadata={
+                "y0": table.bbox.y0 if table.bbox else 0.0,
+                "y1": table.bbox.y1 if table.bbox else 0.0,
+                "page_height": page.height if page is not None else None,
+                "raw_rows": [list(row) for row in table.rows],
+                "raw_columns": list(table.columns),
+                "page_numbers": list(table.page_numbers),
+                **dict(table.metadata or {}),
+            },
         )
+
+    def _nearby_table_caption(self, table: PdfTable, page: PdfPage | None) -> str | None:
+        if page is None or table.bbox is None:
+            return None
+        blocks = [block for block in page.text_blocks if block.bbox is not None and block.text.strip()]
+        blocks.sort(key=lambda block: (block.bbox.y0, block.bbox.x0))
+        lines: list[list] = []
+        for block in blocks:
+            if not lines:
+                lines.append([block])
+                continue
+            line_y = sum(item.bbox.y0 for item in lines[-1]) / len(lines[-1])
+            if abs(block.bbox.y0 - line_y) <= 3:
+                lines[-1].append(block)
+            else:
+                lines.append([block])
+
+        candidates: list[tuple[float, str]] = []
+        for line in lines:
+            ordered = sorted(line, key=lambda item: item.bbox.x0)
+            line_bottom = max(item.bbox.y1 for item in ordered)
+            gap = table.bbox.y0 - line_bottom
+            if gap < -1 or gap > 36:
+                continue
+            text = re.sub(r"\s+", " ", "".join(item.text for item in ordered)).strip()
+            if re.search(r"(?:续\s*)?表\s*[A-Za-z]?\d+(?:\s*[-‑－–—]\s*\d+)?", text):
+                candidates.append((gap, text))
+        return min(candidates, key=lambda item: item[0])[1] if candidates else None
+
+    def _extract_table_number_from_text(self, text: str | None) -> str | None:
+        match = re.search(r"(?:续\s*)?表\s*([A-Za-z]?\d+(?:\s*[-‑－–—]\s*\d+)?)", text or "")
+        return self._normalize_table_reference_number(match.group(1)) if match else None
 
     def _extract_table_number(self, table: PdfTable) -> str | None:
         raw = table.metadata.get("table_number") if table.metadata else None
@@ -510,6 +566,25 @@ class PTRExtractor:
             if match:
                 return match.group(1)
         return None
+
+    def _assign_table_parent_clauses(self, clauses: list[PTRClause], tables: list[PTRTable]) -> None:
+        for table in tables:
+            table_number = self._normalize_table_reference_number(table.table_number or "")
+            if not table_number:
+                continue
+            page = (table.page_span or (None, None))[0]
+            candidates = []
+            for clause in clauses:
+                if clause.location is None or clause.location.page_number != page:
+                    continue
+                compact_body = re.sub(r"\s+", "", clause.body_text or "")
+                if re.search(rf"表{re.escape(table_number)}(?:\D|$)", compact_body):
+                    candidates.append(clause)
+            if not candidates:
+                continue
+            parent = max(candidates, key=lambda clause: len(clause.number.parts))
+            table.metadata["parent_clause"] = str(parent.number)
+            table.metadata["parent_clause_id"] = parent.clause_id
 
     def _page_span_for_pdf_table(self, table: PdfTable) -> tuple[int, int]:
         pages = table.page_numbers or []
@@ -550,14 +625,45 @@ class PTRExtractor:
             return False, "current_has_table_number"
 
         overlap = self._header_overlap(previous, current)
-        position_bridge = float(previous.metadata.get("y0", 0.0)) >= 450.0 and float(current.metadata.get("y0", 0.0)) <= 150.0
+        previous_y1 = float(previous.metadata.get("y1", 0.0) or 0.0)
+        previous_page_height = float(previous.metadata.get("page_height", 0.0) or 0.0)
+        previous_near_bottom = (
+            previous_y1 >= previous_page_height - 120.0
+            if previous_page_height > 0
+            else float(previous.metadata.get("y0", 0.0)) >= 450.0
+        )
+        position_bridge = previous_near_bottom and float(current.metadata.get("y0", 0.0)) <= 150.0
         if overlap >= 0.95:
             return True, "same_header_continuation"
         if position_bridge and overlap >= 0.55:
             return True, "top_bottom_with_header_overlap"
+        previous_column_count = self._table_column_count(previous)
+        current_column_count = self._table_column_count(current)
+        if (
+            position_bridge
+            and previous.table_number
+            and previous_column_count > 0
+            and previous_column_count == current_column_count
+        ):
+            return True, "top_bottom_with_matching_column_count"
         if overlap < 0.35:
             return False, "header_mismatch"
         return False, "missing_table_number_without_strong_evidence"
+
+    def _table_column_count(self, table: PTRTable) -> int:
+        raw_rows = table.metadata.get("raw_rows")
+        if isinstance(raw_rows, list):
+            count = max((len(row) for row in raw_rows if isinstance(row, list)), default=0)
+            if count > 0:
+                return count
+        canonical = table.canonical_table
+        if canonical is None:
+            return 0
+        if canonical.header_rows:
+            return max((len(row) for row in canonical.header_rows), default=0)
+        if canonical.headers:
+            return max((header.column_count for header in canonical.headers), default=0)
+        return len(canonical.columns)
 
     def _header_overlap(self, previous: PTRTable, current: PTRTable) -> float:
         left = set(self._header_tokens(previous))
@@ -587,7 +693,36 @@ class PTRExtractor:
         if base.table_number is None:
             base.table_number = fragment.table_number
 
-        if base.canonical_table is not None and fragment.canonical_table is not None:
+        base_rows = [list(row) for row in base.metadata.get("raw_rows", []) if isinstance(row, list)]
+        fragment_rows = [list(row) for row in fragment.metadata.get("raw_rows", []) if isinstance(row, list)]
+        if base_rows and fragment_rows:
+            if fragment_rows[0] == base_rows[0]:
+                fragment_rows = fragment_rows[1:]
+            combined_rows = [*base_rows, *fragment_rows]
+            page_numbers = _unique_ints(
+                [
+                    *[int(page) for page in base.metadata.get("page_numbers", []) if str(page).isdigit()],
+                    *[int(page) for page in fragment.metadata.get("page_numbers", []) if str(page).isdigit()],
+                ]
+            )
+            normalized_source = PdfTable(
+                table_id=base.table_id or "merged-ptr-table",
+                page_numbers=page_numbers,
+                title=base.title,
+                caption=base.title,
+                columns=list(base.metadata.get("raw_columns", [])),
+                rows=combined_rows,
+                extraction_method="pymupdf_merged_continuation",
+                metadata={"table_number": base.table_number, "continuation_of": base.table_id},
+            )
+            base.canonical_table = self.table_normalizer.normalize(normalized_source)
+            base.canonical_table.parameter_records = self._merge_parameter_record_fragments(
+                list(base.canonical_table.parameter_records)
+            )
+            base.canonical_table.diagnostics.append(f"merged continuation table {fragment.table_id}")
+            base.metadata["raw_rows"] = combined_rows
+            base.metadata["page_numbers"] = page_numbers
+        elif base.canonical_table is not None and fragment.canonical_table is not None:
             base_records = list(base.canonical_table.parameter_records)
             seen = {self._record_identity(record) for record in base_records}
             for record in fragment.canonical_table.parameter_records:
@@ -609,6 +744,26 @@ class PTRExtractor:
             tuple(sorted((str(key), str(value)) for key, value in record.dimensions.items())),
         )
 
+    def _merge_parameter_record_fragments(self, records: list[ParameterRecord]) -> list[ParameterRecord]:
+        merged: list[ParameterRecord] = []
+        by_identity: dict[tuple[str, tuple[tuple[str, str], ...]], ParameterRecord] = {}
+        for record in records:
+            identity = self._record_identity(record)
+            existing = by_identity.get(identity)
+            if existing is None:
+                copied = record.model_copy(deep=True)
+                by_identity[identity] = copied
+                merged.append(copied)
+                continue
+            for column, value in record.values.items():
+                current = existing.values.get(column, "")
+                if not current:
+                    existing.values[column] = value
+                elif value and value not in current:
+                    existing.values[column] = f"{current}\n{value}"
+            existing.source_rows = _unique_ints([*existing.source_rows, *record.source_rows])
+        return merged
+
 
 def _unique_non_empty(values: Iterable[str | None]) -> list[str]:
     result: list[str] = []
@@ -617,6 +772,14 @@ def _unique_non_empty(values: Iterable[str | None]) -> list[str]:
         if not text or text in result:
             continue
         result.append(text)
+    return result
+
+
+def _unique_ints(values: Iterable[int]) -> list[int]:
+    result: list[int] = []
+    for value in values:
+        if value not in result:
+            result.append(value)
     return result
 
 

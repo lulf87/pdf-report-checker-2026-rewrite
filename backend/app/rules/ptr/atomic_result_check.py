@@ -30,10 +30,66 @@ def check_atomic_result_bindings(
         group = ptr_group_for_clause(clause_number, report_groups)
         report_matches = [group] if group is not None else []
         for row in build_atomic_comparison_rows(clause, ptr_doc, report_matches, page_text_by_page=page_text_by_page):
+            if row.status == "mismatch":
+                findings.append(
+                    _atomic_value_mismatch_finding(
+                        clause,
+                        row,
+                        group,
+                        task_id,
+                        page_text_by_page=page_text_by_page,
+                    )
+                )
+                continue
             if row.status not in UNBOUND_ATOMIC_STATUSES:
                 continue
             findings.append(_atomic_result_finding(clause, row, group, task_id, page_text_by_page=page_text_by_page))
     return findings
+
+
+def _atomic_value_mismatch_finding(
+    clause: PTRClause,
+    row,
+    group,
+    task_id: str,
+    *,
+    page_text_by_page: Mapping[int, str] | None = None,
+) -> Finding:
+    clause_number = str(clause.number)
+    item_no = (group.display_item_no or group.item_no) if group is not None else row.report_item_no
+    return Finding(
+        id=f"{task_id}:PTR_ATOMIC:{clause_number}:{row.atomic_id}:mismatch",
+        task_id=task_id,
+        check_id="PTR_TABLE",
+        severity=FindingSeverity.ERROR,
+        code="PTR_TABLE_VALUE_MISMATCH",
+        message=f"PTR 条款 {clause_number} 的参数 {row.label} 实测值不满足数值限值。",
+        location=clause.location,
+        expected=row.expected,
+        actual=row.actual,
+        evidence=[
+            _ptr_atomic_evidence(clause, row),
+            _report_group_evidence(row, group, page_text_by_page=page_text_by_page),
+        ],
+        metadata={
+            "clause_number": clause_number,
+            "atomic_id": row.atomic_id,
+            "atomic_label": row.label,
+            "parameter_name": row.label,
+            "item_no": item_no,
+            "report_page": row.report_page,
+            "requirement_type": "numeric_limit",
+            "expected_operator": row.expected_operator,
+            "expected_value": row.expected_value,
+            "expected_unit": row.expected_unit,
+            "actual_operator": row.actual_operator,
+            "actual_value": row.actual_value,
+            "actual_unit": row.actual_unit,
+            "report_conclusion": row.report_conclusion,
+            "codex_required": True,
+            "review_hint": "请优先按结构化 operator/value/unit 判断报告实测值是否满足 PTR 数值限值。",
+        },
+    )
 
 
 def _atomic_result_finding(clause: PTRClause, row, group, task_id: str, *, page_text_by_page: Mapping[int, str] | None = None) -> Finding:
@@ -103,12 +159,6 @@ def _report_group_evidence(row, group, *, page_text_by_page: Mapping[int, str] |
 def _review_hint(row) -> str:
     if row.candidate_actuals:
         return f"报告中找到候选值 {', '.join(row.candidate_actuals)}，需确认是否绑定到 {row.label}。"
-    if row.atomic_id.startswith("2.2.3"):
-        return "请在报告序号 157 的 page 100 行中查找 PULSE3=430 ns、PF Reversible=455 ns。"
-    if row.atomic_id.startswith("2.2.4"):
-        return "请在报告序号 157 的 page 100 行中查找 PULSE3=260 ns、PF Reversible=205 ns。"
-    if row.atomic_id.startswith("2.2.6"):
-        return "请在报告序号 157 的 page 101 行中查找最大输出能量 159 mJ。"
     return f"请复核报告序号 {row.report_item_no or '未知'} 中与 {row.label} 对应的完整行证据。"
 
 

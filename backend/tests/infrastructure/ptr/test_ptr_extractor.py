@@ -1,4 +1,5 @@
-from app.domain.pdf import ParsedPdf, PdfPage
+from app.domain.common import BoundingBox
+from app.domain.pdf import ParsedPdf, PdfPage, PdfTextBlock
 from app.domain.ptr import PTRScopeType
 from app.infrastructure.ptr.ptr_extractor import PTRExtractor
 from tests.fixtures.table_fixture_builder import build_pdf_table
@@ -453,3 +454,87 @@ def test_extracts_1539_like_chapter2_until_method_chapter() -> None:
     assert "2.5.2.1" in numbers
     assert "2.5.2.2" in numbers
     assert "2.6" in numbers
+
+
+def test_extracts_parent_model_tables_from_nearby_captions_and_merges_cross_page_continuation() -> None:
+    table_2 = build_pdf_table(
+        rows=[
+            ["型号", "6232、6231", "6132、6131"],
+            ["尺寸", "41.2 x 41.5 x 6.1", "37.4 x 41.5 x 6.1"],
+            ["重量", "20", "19"],
+        ],
+        table_id="p1-t2",
+    ).model_copy(update={"bbox": BoundingBox(x0=58, y0=590, x1=537, y1=646)})
+    table_3 = build_pdf_table(
+        rows=[
+            ["型号", "6131", "6132", "6231", "6232"],
+            ["起搏模式", "VVI", "VVIR", "DDD", "DDDR"],
+        ],
+        table_id="p1-t3",
+    ).model_copy(update={"bbox": BoundingBox(x0=58, y0=676, x1=537, y1=780)})
+    table_3_continuation = build_pdf_table(
+        rows=[
+            ["", "", "", "DDIR", "SafeR"],
+            ["脉冲幅度", "3.5V", "3.5V", "3.5V", "3.5V"],
+            ["脉冲宽度", "0.35ms", "0.35ms", "0.35ms", "0.35ms"],
+        ],
+        page=2,
+        table_id="p2-t1",
+    ).model_copy(update={"bbox": BoundingBox(x0=58, y0=56, x1=537, y1=300)})
+    parsed_pdf = ParsedPdf(
+        file_id="parent-model-tables",
+        file_name="ptr.pdf",
+        page_count=4,
+        pages=[
+            PdfPage(
+                page_number=1,
+                width=595,
+                height=842,
+                text="2 性能指标\n2.1 基本电性能指标\n表 2 基本参数\n表 3 功能参数",
+                text_blocks=[
+                    PdfTextBlock(text="表", bbox=BoundingBox(x0=260, y0=575, x1=272, y1=588), page_number=1),
+                    PdfTextBlock(text=" 2 ", bbox=BoundingBox(x0=272, y0=575, x1=284, y1=588), page_number=1),
+                    PdfTextBlock(text="基本参数", bbox=BoundingBox(x0=287, y0=575, x1=335, y1=588), page_number=1),
+                    PdfTextBlock(text="表", bbox=BoundingBox(x0=260, y0=662, x1=272, y1=675), page_number=1),
+                    PdfTextBlock(text=" 3 ", bbox=BoundingBox(x0=272, y0=662, x1=284, y1=675), page_number=1),
+                    PdfTextBlock(text="功能参数", bbox=BoundingBox(x0=287, y0=662, x1=335, y1=675), page_number=1),
+                ],
+                tables=[table_2, table_3],
+            ),
+            PdfPage(page_number=2, width=595, height=842, text="脉冲幅度\n脉冲宽度", tables=[table_3_continuation]),
+            PdfPage(
+                page_number=3,
+                text="\n".join(
+                    [
+                        "2.1.1 起搏模式",
+                        "心脏起搏器的起搏模式应符合表3的要求。",
+                        "2.1.2 脉冲幅度",
+                        "心脏起搏器的脉冲幅度应符合表3的要求。",
+                        "2.1.3 脉冲宽度",
+                        "心脏起搏器的脉冲宽度应符合表3的要求。",
+                        "2.1.12 产品物理特性及参数",
+                        "产品物理特性及参数应符合表2的要求。",
+                    ]
+                ),
+            ),
+            PdfPage(page_number=4, text="3 检验方法"),
+        ],
+    )
+
+    document = PTRExtractor().extract(parsed_pdf)
+
+    table_2_result = document.get_tables_by_number("2")[0]
+    table_3_result = document.get_tables_by_number("3")[0]
+    assert table_2_result.title == "表 2 基本参数"
+    assert table_2_result.metadata["parent_clause"] == "2.1"
+    assert table_3_result.title == "表 3 功能参数"
+    assert table_3_result.page_span == (1, 2)
+    assert table_3_result.metadata["parent_clause"] == "2.1"
+    parameter_names = [record.parameter_name for record in table_3_result.canonical_table.parameter_records]
+    assert set(parameter_names) >= {
+        "起搏模式",
+        "脉冲幅度",
+        "脉冲宽度",
+    }
+    assert parameter_names.count("起搏模式") == 1
+    assert table_3_result.canonical_table.value_columns == ["6131", "6132", "6231", "6232"]

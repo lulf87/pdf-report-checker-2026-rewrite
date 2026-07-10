@@ -71,6 +71,17 @@ def test_table_axis_classifier_distinguishes_model_preset_and_load_axes() -> Non
     assert classify_table_axis(["正常状态", "单一故障状态"], model_context).axis_type == "condition"
 
 
+def test_table_axis_classifier_expands_grouped_model_column_labels() -> None:
+    model_context = build_report_model_context(
+        ReportDocument(fields=[ReportField(name="型号规格", value="6232")])
+    )
+
+    axis = classify_table_axis(["6232、6231", "6132、6131"], model_context)
+
+    assert axis.axis_type == "model"
+    assert axis.labels == ["6232", "6231", "6132", "6131"]
+
+
 def test_ptr_table_registry_indexes_parent_table_with_model_axis() -> None:
     model_context = build_report_model_context(ReportDocument(fields=[ReportField(name="型号规格", value="6232")]))
     ptr_doc = _model_table_ptr_document()
@@ -157,6 +168,48 @@ def test_model_aware_table_projection_maps_product_physical_clause_to_parent_tab
     assert selected_rows[0].expected_text == "10 mm"
     assert selected_rows[1].expected_text == "20 g"
     assert all(requirement.metadata.get("not_applicable_by_model") is True for requirement in other_rows)
+
+
+def test_model_projected_result_uses_page_of_matching_report_subrow() -> None:
+    ptr_doc = _model_physical_table_ptr_document()
+    ptr_doc.metadata["report_model_context"] = build_report_model_context(
+        ReportDocument(fields=[ReportField(name="型号规格", value="6232")])
+    ).model_dump(mode="json")
+    child = ptr_doc.get_clause_by_string("2.1.12")
+    group = InspectionItemGroup(
+        item_no="38",
+        display_item_no="38",
+        pages=[20, 22],
+        rows=[
+            InspectionItem(
+                sequence_raw="38",
+                sequence=38,
+                standard_clause="2.1",
+                standard_requirement="2.1 基本电性能指标",
+                conclusion="符合",
+                source_page=20,
+            ),
+            InspectionItem(
+                sequence_raw="尺寸：10 mm",
+                item_name="尺寸",
+                test_result="10 mm",
+                source_page=22,
+            ),
+            InspectionItem(
+                sequence_raw="重量：20 g",
+                item_name="重量",
+                test_result="20 g",
+                source_page=22,
+            ),
+        ],
+    )
+
+    rows = build_atomic_comparison_rows(child, ptr_doc, [group])
+    selected = [row for row in rows if row.model_column == "6232"]
+
+    assert selected
+    assert all(row.status == "match" for row in selected)
+    assert all(row.report_page == 22 for row in selected)
 
 
 def _model_table_ptr_document() -> PTRDocument:
