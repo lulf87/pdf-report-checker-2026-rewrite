@@ -1,0 +1,1163 @@
+{
+  "package_id": "codex-ptr-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-batch-1",
+  "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+  "task_type": "ptr_compare",
+  "kind": "ptr_table_review",
+  "schema_version": "evidence-package-v1",
+  "created_at": "2026-07-06T10:34:25.543540Z",
+  "targets": [
+    {
+      "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.6:table-2:missing",
+      "target_type": "ptr_table",
+      "check_id": "PTR_TABLE",
+      "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.6:table-2:missing",
+      "finding_code": "PTR_TABLE_MISSING",
+      "summary": "PTR 条款 2.1.6 引用的表 2 未找到。",
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.6:table-2:missing",
+        "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.6:table-2:missing",
+        "report_scope:declaration",
+        "report_scope:external_standard_ranges",
+        "report_scope:inspection_items",
+        "ptr_clause:ptr-2.1.6"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_TABLE_MISSING",
+        "clause_number": "2.1.6",
+        "table_number": "2",
+        "parameter_name": null,
+        "atomic_id": null
+      }
+    },
+    {
+      "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.7:table-2:missing",
+      "target_type": "ptr_table",
+      "check_id": "PTR_TABLE",
+      "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.7:table-2:missing",
+      "finding_code": "PTR_TABLE_MISSING",
+      "summary": "PTR 条款 2.1.7 引用的表 2 未找到。",
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.7:table-2:missing",
+        "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.7:table-2:missing",
+        "report_scope:declaration",
+        "report_scope:external_standard_ranges",
+        "report_scope:inspection_items",
+        "ptr_clause:ptr-2.1.7"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_TABLE_MISSING",
+        "clause_number": "2.1.7",
+        "table_number": "2",
+        "parameter_name": null,
+        "atomic_id": null
+      }
+    },
+    {
+      "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.8:table-2:missing",
+      "target_type": "ptr_table",
+      "check_id": "PTR_TABLE",
+      "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.8:table-2:missing",
+      "finding_code": "PTR_TABLE_MISSING",
+      "summary": "PTR 条款 2.1.8 引用的表 2 未找到。",
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.8:table-2:missing",
+        "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.8:table-2:missing",
+        "report_scope:declaration",
+        "report_scope:external_standard_ranges",
+        "report_scope:inspection_items",
+        "ptr_clause:ptr-2.1.8"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_TABLE_MISSING",
+        "clause_number": "2.1.8",
+        "table_number": "2",
+        "parameter_name": null,
+        "atomic_id": null
+      }
+    },
+    {
+      "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.9:table-2:missing",
+      "target_type": "ptr_table",
+      "check_id": "PTR_TABLE",
+      "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.9:table-2:missing",
+      "finding_code": "PTR_TABLE_MISSING",
+      "summary": "PTR 条款 2.1.9 引用的表 2 未找到。",
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.9:table-2:missing",
+        "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.9:table-2:missing",
+        "report_scope:declaration",
+        "report_scope:external_standard_ranges",
+        "report_scope:inspection_items",
+        "ptr_clause:ptr-2.1.9"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_TABLE_MISSING",
+        "clause_number": "2.1.9",
+        "table_number": "2",
+        "parameter_name": null,
+        "atomic_id": null
+      }
+    },
+    {
+      "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.10:table-2:missing",
+      "target_type": "ptr_table",
+      "check_id": "PTR_TABLE",
+      "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.10:table-2:missing",
+      "finding_code": "PTR_TABLE_MISSING",
+      "summary": "PTR 条款 2.1.10 引用的表 2 未找到。",
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.10:table-2:missing",
+        "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.10:table-2:missing",
+        "report_scope:declaration",
+        "report_scope:external_standard_ranges",
+        "report_scope:inspection_items",
+        "ptr_clause:ptr-2.1.10"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_TABLE_MISSING",
+        "clause_number": "2.1.10",
+        "table_number": "2",
+        "parameter_name": null,
+        "atomic_id": null
+      }
+    }
+  ],
+  "items": [
+    {
+      "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.6:table-2:missing",
+      "source_type": "finding",
+      "title": "PTR 条款 2.1.6 引用的表 2 未找到。",
+      "text": null,
+      "structured": {
+        "id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.6:table-2:missing",
+        "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+        "check_id": "PTR_TABLE",
+        "severity": "error",
+        "code": "PTR_TABLE_MISSING",
+        "message": "PTR 条款 2.1.6 引用的表 2 未找到。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 4,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "表2",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-2.1.6:table-reference",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 4,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "心室起搏不应期\n应符合表2-1规定的要求。",
+            "normalized_text": null,
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "表2",
+            "reason": "PTR 文档中未找到对应表格。",
+            "expected_source": "ptr",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.1.6",
+          "table_number": "2"
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.6:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.6:table-2:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.6:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "code": "PTR_TABLE_MISSING",
+        "severity": "error",
+        "message": "PTR 条款 2.1.6 引用的表 2 未找到。",
+        "expected": "表2",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.1.6",
+          "table_number": "2"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.6:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING"
+      }
+    },
+    {
+      "ref_id": "report_scope:declaration",
+      "source_type": "report_field",
+      "title": "Report homepage inspection scope declaration",
+      "text": "2.1.1～2.1.12、2.2.2、2.3（仅检 PVC 反应）、2.6、2.7、2.8.2（除有源植入式",
+      "structured": {
+        "declared_scope_items": [
+          "2.2.2",
+          "2.3",
+          "2.6",
+          "2.7",
+          "2.8.2"
+        ],
+        "declared_scope_ranges": [
+          {
+            "start": "2.1.1",
+            "end": "2.1.12",
+            "source_text": "2.1.1～2.1.12、2.2.2、2.3（仅检 PVC 反应）、2.6、2.7、2.8.2（除有源植入式"
+          }
+        ],
+        "excluded_topics": [
+          "有源植入式"
+        ],
+        "source_page": 3,
+        "source_text": "2.1.1～2.1.12、2.2.2、2.3（仅检 PVC 反应）、2.6、2.7、2.8.2（除有源植入式",
+        "ptr_direct_content_starts_after": "37"
+      },
+      "file_path": null,
+      "page_number": 3,
+      "section": "report_scope",
+      "location": null,
+      "metadata": {
+        "source": "report_homepage",
+        "field_name": "检验项目"
+      }
+    },
+    {
+      "ref_id": "report_scope:external_standard_ranges",
+      "source_type": "metadata",
+      "title": "Report external standard sequence ranges",
+      "text": null,
+      "structured": {
+        "external_standard_ranges": [
+          {
+            "start_item_no": "1",
+            "end_item_no": "24",
+            "standard": "GB 16174.1-2024",
+            "source_page": 4,
+            "source_text": "序号 1～序号 24 为 GB 16174.1-2024 的内容； 4.",
+            "item_count": 24,
+            "passed_count": 20,
+            "sample_items": [
+              {
+                "item_no": "1",
+                "page": 5,
+                "standard_clause": "5",
+                "standard_requirement": "5.1 非植入部分的通用要求 \n除那些已被本文件或专用要求所取代的要求\n外，连接到电源或配有电源的有源植入式医疗\n器械的非植入部分应符合风险分析所确定的\nGB 9706.1-2020 的适当要求。注：本文件的\n其他子条款也要求遵守 GB 9706.1-2020 的某\n些子条款，未通电的非植入部分也是如此。",
+                "test_result": "——",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "2",
+                "page": 6,
+                "standard_clause": "6",
+                "standard_requirement": "对特定有源植入式医疗器械，本文件没有详细\n提出要求，但可在专用要求中规定。",
+                "test_result": "见序号 25",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "3",
+                "page": 6,
+                "standard_clause": "7",
+                "standard_requirement": "7.1 有源植入式医疗器械的植入部分应使用不\n可重复使用包装（见 14.1）。 \n注：不可重复使用包装的设计，使制造商对其\n内容物进行灭菌和包装密封。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "4",
+                "page": 6,
+                "standard_clause": "8",
+                "standard_requirement": "8.1 本文件要求的任何警告均应突出显示。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "5",
+                "page": 6,
+                "standard_clause": "9",
+                "standard_requirement": "9.1 如果销售包装内装有任何放射性物质，则\n销售包装上应有标记，注明放射性物质的类型\n和活性。",
+                "test_result": "——",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "6",
+                "page": 7,
+                "standard_clause": "10",
+                "standard_requirement": "10.1 有源植入式医疗器械的销售包装，其构\n造应能保护医疗器械，使其能经受住在制造商\n规定的存储或处理期间可能发生的跌落（冲\n击）、堆叠（加压）、振动和温度变化。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "7",
+                "page": 8,
+                "standard_clause": "11",
+                "standard_requirement": "11.1 无菌包装应有制造商的名称或商标，以\n及制造商的地址（国家和城市）。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "8",
+                "page": 8,
+                "standard_clause": "12",
+                "standard_requirement": "12.1 不可重复使用包装应符合 GB/T \n19633.1。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              }
+            ]
+          },
+          {
+            "start_item_no": "25",
+            "end_item_no": "37",
+            "standard": "GB 16174.2-2024",
+            "source_page": 4,
+            "source_text": "序号 25～序号 37 为 GB 16174.2-2024 的内容； 5. 本次检验，植入式心脏起搏器样品数量共 2 台，序列号和生产日期分别是： 序号 序列号 生产日期 1 8165366 2024-02-23 2 8165362 2024-03-27 6. 本次检验配合使用设备：心脏节律管理设备程控仪（型号: MER3700 序列号：13005160 软件 版本：V1.1.5 制造商：圣犹达心脏医学节律管理有限公司 St. Jude Medical Cardiac Rhythm Management Division）； 7. 本次检验植入式心脏起搏器的固件版本是： 17.01.4A； 8. 本报告中有检验项目不涉及国家标准、行业标准，不能直接作为资质认定许可的依据，但本实 验室对报告涉及的检验项目具备相应的承检能力。",
+            "item_count": 13,
+            "passed_count": 10,
+            "sample_items": [
+              {
+                "item_no": "25",
+                "page": 17,
+                "standard_clause": "6",
+                "standard_requirement": "6.1 植入式脉冲发生器特性的测量 \n6.1.2 脉冲幅度、脉冲宽度、脉冲间期和脉冲\n频率的测量",
+                "test_result": "见序号\n38～序号\n40",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "26",
+                "page": 18,
+                "standard_clause": "9",
+                "standard_requirement": "9.4 \n附录 B 中定义的模式代码可使用于标记和随附\n文件中,用来指明植入式脉冲发生器缓慢性心\n律失常的起搏模式,代替文字描述。 \n9.4.1 如适用,包含植入式脉冲发生器的销售\n包装应具有下列信息。 \na)最全面的起搏模式和(如果不同)出厂时的起\n搏模式。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "27",
+                "page": 19,
+                "standard_clause": "11",
+                "standard_requirement": "11.10 包含植入式脉冲发生器的无菌包装应具\n备下列信息: \na)可用的最全面的起搏模式和出厂时的起搏模\n式(见 9.4):",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "28",
+                "page": 20,
+                "standard_clause": "13",
+                "standard_requirement": "13.1 GB 16174.1-2024 中 13.1 不适用。",
+                "test_result": "——",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "29",
+                "page": 21,
+                "standard_clause": "16",
+                "standard_requirement": "16.2 GB 16174.1-2024 规定了在任何电极上\n的最大直流电流密度不大于 0.75μA/mm²。这\n种限制适用于任何起搏/感知端口允许的任何\n净直流电流与连接此类端口的电极导线导体的\n电极面积的组合。由于电极导线的结构(以及\n电极导线电极的面积)不受植入式脉冲发生器\n制造商的控制,因此在假定电极面积足够大不\n超过规定电流密度的情况下,通过限制净直流\n电流可满足 GB 16174.1-2024 限制的意图。 \n除了其设计功能之外,植入式脉冲发生器使用\n时应为电中性。在外壳端口的任何电流通道中\n直流电流不应超过 1μA,且在任何其他端口的\n电流通道中直流电流不应超过 0.1μA。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "30",
+                "page": 21,
+                "standard_clause": "17",
+                "standard_requirement": "17.1 对患者热伤害的防护 \n在没有外部影响的情况下,植入式系统的植入\n式部件,在植入时和正常运行时,应至少符合下\n列条件之一[a)、b)或 c)],在正常运行时,假\n设植入时周围正常体温为 37 ℃。 \na)外表面不应超过 39℃。或 \nb)组织接收 CEM43 热剂量不应大于 2。或 \nc)制造商的证据表明,温度升高对于特定应用\n来说是合理的。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "31",
+                "page": 21,
+                "standard_clause": "19",
+                "standard_requirement": "19.2 GB 16174.1-2024 中 19.2 不适用。",
+                "test_result": "——",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "32",
+                "page": 22,
+                "standard_clause": "20",
+                "standard_requirement": "20.1 试验和符合性应符合 YY/T 1874-2023。",
+                "test_result": "/",
+                "single_conclusion": "/",
+                "remark": "/"
+              }
+            ]
+          }
+        ]
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": "external_standard_ranges",
+      "location": null,
+      "metadata": {
+        "source": "report_model_spec_or_notes"
+      }
+    },
+    {
+      "ref_id": "report_scope:inspection_items",
+      "source_type": "table",
+      "title": "Report inspection table items relevant to scope",
+      "text": null,
+      "structured": {
+        "items": [
+          {
+            "item_no": "43",
+            "page": 30,
+            "standard_clause": "2.1.6",
+            "standard_requirement": "应符合表 2-1 规定的要求。",
+            "test_result": "符合",
+            "single_conclusion": "/",
+            "remark": ""
+          }
+        ],
+        "item_count": 1,
+        "truncated": false
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": "inspection_items",
+      "location": null,
+      "metadata": {
+        "source": "report_inspection_table"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.1.6",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.1.6",
+      "text": "心室起搏不应期\n应符合表2-1规定的要求。",
+      "structured": {
+        "clause_id": "ptr-2.1.6",
+        "number": "2.1.6",
+        "title": "心室起搏",
+        "body_text": "心室起搏不应期\n应符合表2-1规定的要求。",
+        "table_numbers": [
+          "2"
+        ],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "2.1.6",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.1.6",
+        "clause_number": "2.1.6"
+      }
+    },
+    {
+      "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.7:table-2:missing",
+      "source_type": "finding",
+      "title": "PTR 条款 2.1.7 引用的表 2 未找到。",
+      "text": null,
+      "structured": {
+        "id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.7:table-2:missing",
+        "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+        "check_id": "PTR_TABLE",
+        "severity": "error",
+        "code": "PTR_TABLE_MISSING",
+        "message": "PTR 条款 2.1.7 引用的表 2 未找到。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 4,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "表2",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-2.1.7:table-reference",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 4,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "心房起搏不应期\n应符合表2-1规定的要求。",
+            "normalized_text": null,
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "表2",
+            "reason": "PTR 文档中未找到对应表格。",
+            "expected_source": "ptr",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.1.7",
+          "table_number": "2"
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.7:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.7:table-2:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.7:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "code": "PTR_TABLE_MISSING",
+        "severity": "error",
+        "message": "PTR 条款 2.1.7 引用的表 2 未找到。",
+        "expected": "表2",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.1.7",
+          "table_number": "2"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.7:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.1.7",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.1.7",
+      "text": "心房起搏不应期\n应符合表2-1规定的要求。",
+      "structured": {
+        "clause_id": "ptr-2.1.7",
+        "number": "2.1.7",
+        "title": "心房起搏",
+        "body_text": "心房起搏不应期\n应符合表2-1规定的要求。",
+        "table_numbers": [
+          "2"
+        ],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "2.1.7",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.1.7",
+        "clause_number": "2.1.7"
+      }
+    },
+    {
+      "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.8:table-2:missing",
+      "source_type": "finding",
+      "title": "PTR 条款 2.1.8 引用的表 2 未找到。",
+      "text": null,
+      "structured": {
+        "id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.8:table-2:missing",
+        "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+        "check_id": "PTR_TABLE",
+        "severity": "error",
+        "code": "PTR_TABLE_MISSING",
+        "message": "PTR 条款 2.1.8 引用的表 2 未找到。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 4,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "表2",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-2.1.8:table-reference",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 4,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "心室感知不应期\n应符合表2-1规定的要求。",
+            "normalized_text": null,
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "表2",
+            "reason": "PTR 文档中未找到对应表格。",
+            "expected_source": "ptr",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.1.8",
+          "table_number": "2"
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.8:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.8:table-2:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.8:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "code": "PTR_TABLE_MISSING",
+        "severity": "error",
+        "message": "PTR 条款 2.1.8 引用的表 2 未找到。",
+        "expected": "表2",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.1.8",
+          "table_number": "2"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.8:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.1.8",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.1.8",
+      "text": "心室感知不应期\n应符合表2-1规定的要求。",
+      "structured": {
+        "clause_id": "ptr-2.1.8",
+        "number": "2.1.8",
+        "title": "心室感知",
+        "body_text": "心室感知不应期\n应符合表2-1规定的要求。",
+        "table_numbers": [
+          "2"
+        ],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "2.1.8",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.1.8",
+        "clause_number": "2.1.8"
+      }
+    },
+    {
+      "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.9:table-2:missing",
+      "source_type": "finding",
+      "title": "PTR 条款 2.1.9 引用的表 2 未找到。",
+      "text": null,
+      "structured": {
+        "id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.9:table-2:missing",
+        "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+        "check_id": "PTR_TABLE",
+        "severity": "error",
+        "code": "PTR_TABLE_MISSING",
+        "message": "PTR 条款 2.1.9 引用的表 2 未找到。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 4,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "表2",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-2.1.9:table-reference",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 4,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "心房感知不应期\n应符合表2-1规定的要求。",
+            "normalized_text": null,
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "表2",
+            "reason": "PTR 文档中未找到对应表格。",
+            "expected_source": "ptr",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.1.9",
+          "table_number": "2"
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.9:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.9:table-2:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.9:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "code": "PTR_TABLE_MISSING",
+        "severity": "error",
+        "message": "PTR 条款 2.1.9 引用的表 2 未找到。",
+        "expected": "表2",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.1.9",
+          "table_number": "2"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.9:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.1.9",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.1.9",
+      "text": "心房感知不应期\n应符合表2-1规定的要求。",
+      "structured": {
+        "clause_id": "ptr-2.1.9",
+        "number": "2.1.9",
+        "title": "心房感知",
+        "body_text": "心房感知不应期\n应符合表2-1规定的要求。",
+        "table_numbers": [
+          "2"
+        ],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "2.1.9",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.1.9",
+        "clause_number": "2.1.9"
+      }
+    },
+    {
+      "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.10:table-2:missing",
+      "source_type": "finding",
+      "title": "PTR 条款 2.1.10 引用的表 2 未找到。",
+      "text": null,
+      "structured": {
+        "id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.10:table-2:missing",
+        "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+        "check_id": "PTR_TABLE",
+        "severity": "error",
+        "code": "PTR_TABLE_MISSING",
+        "message": "PTR 条款 2.1.10 引用的表 2 未找到。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 4,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "表2",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-2.1.10:table-reference",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 4,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "房室间期\n应符合表2-1规定的要求。",
+            "normalized_text": null,
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "表2",
+            "reason": "PTR 文档中未找到对应表格。",
+            "expected_source": "ptr",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.1.10",
+          "table_number": "2"
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.10:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.10:table-2:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.10:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "code": "PTR_TABLE_MISSING",
+        "severity": "error",
+        "message": "PTR 条款 2.1.10 引用的表 2 未找到。",
+        "expected": "表2",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.1.10",
+          "table_number": "2"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.10:table-2:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.1.10",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.1.10",
+      "text": "房室间期\n应符合表2-1规定的要求。",
+      "structured": {
+        "clause_id": "ptr-2.1.10",
+        "number": "2.1.10",
+        "title": "房室间期",
+        "body_text": "房室间期\n应符合表2-1规定的要求。",
+        "table_numbers": [
+          "2"
+        ],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "2.1.10",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.1.10",
+        "clause_number": "2.1.10"
+      }
+    }
+  ],
+  "metadata": {
+    "source": "ptr_compare_usecase",
+    "deterministic_finding_count": 17,
+    "target_count": 5,
+    "total_candidate_targets": 17,
+    "emitted_targets": 5,
+    "truncated": true,
+    "omitted_targets_count": 7,
+    "target_offset": 5,
+    "batch_index": 1,
+    "batch_size": 5,
+    "max_targets_per_task": 5,
+    "max_targets_per_batch": 5
+  }
+}

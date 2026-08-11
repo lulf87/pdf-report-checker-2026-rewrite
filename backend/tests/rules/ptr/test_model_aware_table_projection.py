@@ -212,6 +212,73 @@ def test_model_projected_result_uses_page_of_matching_report_subrow() -> None:
     assert all(row.report_page == 22 for row in selected)
 
 
+def test_generic_referenced_tables_expand_chamber_and_condition_rows() -> None:
+    sensed_clause = PTRClause(
+        clause_id="ptr-2.1.6.1",
+        number=PTRClauseNumber.from_string("2.1.6.1"),
+        title="感知不应期",
+        body_text="感知不应期应符合表4的要求。",
+        table_references=[TableReference(table_number="4", reference_text="表4", clause_id="ptr-2.1.6.1")],
+    )
+    blanking_clause = PTRClause(
+        clause_id="ptr-2.1.11",
+        number=PTRClauseNumber.from_string("2.1.11"),
+        title="空白期/最短不应期",
+        body_text="空白期/最短不应期应符合表6的要求。",
+        table_references=[TableReference(table_number="6", reference_text="表6", clause_id="ptr-2.1.11")],
+    )
+    document = PTRDocument(
+        clauses=[sensed_clause, blanking_clause],
+        tables=[
+            PTRTable(
+                table_id="ptr-table-4",
+                table_number="4",
+                title="表4 感知不应期",
+                canonical_table=CanonicalTable(table_id="canonical-table-4"),
+                referenced_by_clause_ids=["ptr-2.1.6.1"],
+                metadata={
+                    "raw_rows": [
+                        ["腔室", "模式", "感知不应期"],
+                        ["心室", "VVI", "95 ms ±10 ms"],
+                        ["心房", "AAI", "345 ms -10/+15 ms"],
+                    ]
+                },
+            ),
+            PTRTable(
+                table_id="ptr-table-6",
+                table_number="6",
+                title="表6 空白期/最短不应期",
+                canonical_table=CanonicalTable(table_id="canonical-table-6"),
+                referenced_by_clause_ids=["ptr-2.1.11"],
+                metadata={
+                        "raw_rows": [
+                            ["事件", "心房", "心室"],
+                            ["心房感知", "80 ms ±10 ms", "-"],
+                            ["心室感知", "可程控(PVAB-55ms) ±10 ms", "95 ms ±10 ms"],
+                            ["模式", "事件", "心房"],
+                            ["DDTA、DDTAV", "心房感知", "205 ms -10/+15 ms"],
+                        ]
+                },
+            ),
+        ],
+    )
+
+    sensed = build_atomic_requirements(sensed_clause, document)
+    blanking = build_atomic_requirements(blanking_clause, document)
+
+    assert {(row.label, row.condition, row.expected_text) for row in sensed} == {
+        ("心室 / VVI", "心室 / VVI", "95 ms ±10 ms"),
+        ("心房 / AAI", "心房 / AAI", "345 ms -10/+15 ms"),
+    }
+    assert {(row.label, row.condition, row.expected_text) for row in blanking} >= {
+        ("心房感知", "心房", "80 ms ±10 ms"),
+        ("心室感知", "心房", "可程控(PVAB-55ms) ±10 ms"),
+        ("心室感知", "心室", "95 ms ±10 ms"),
+        ("DDTA、DDTAV / 心房感知", "DDTA、DDTAV / 心房感知", "205 ms -10/+15 ms"),
+    }
+    assert all(row.label != "模式" for row in blanking)
+
+
 def _model_table_ptr_document() -> PTRDocument:
     table = CanonicalTable(
         table_id="ptr-table-3",

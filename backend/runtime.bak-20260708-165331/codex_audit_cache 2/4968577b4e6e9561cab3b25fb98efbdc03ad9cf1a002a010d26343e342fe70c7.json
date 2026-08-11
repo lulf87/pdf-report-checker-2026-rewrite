@@ -1,0 +1,770 @@
+{
+  "cache_key": "4968577b4e6e9561cab3b25fb98efbdc03ad9cf1a002a010d26343e342fe70c7",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-1-ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_count:pf_reversible:unbound",
+      "request_id": "codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-1",
+      "task_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea",
+      "target": {
+        "target_id": "ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_count:pf_reversible:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_count:pf_reversible:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 脉冲组数 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_count:pf_reversible:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_count:pf_reversible:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "rule_context 给出 expected=1；report_inspection_group:157 的 PFReversible 预设表中可见“脉冲组数 1 符合要求 /”，证据足以人工绑定该参数，故反驳 unbound 候选。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_count:pf_reversible:unbound",
+        "report_inspection_group:157",
+        "ptr_clause:ptr-2.2.2"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:07:18.079441Z",
+      "completed_at": "2026-07-06T06:07:18.079441Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "report_inspection_group:157",
+            "expected_value": "1",
+            "field_name": "脉冲组数 / PF Reversible 预设",
+            "observed_value": "报告序号157续页中 PFReversible 预设下列出“脉冲组数 1 符合要求 /”。",
+            "reasoning": "完整 InspectionItemGroup 显示该参数行存在，报告标准要求值为 1，与 rule_context 的 expected=1 一致，因此不支持“结果未绑定”的候选结论。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 182.378253,
+        "exit_code": 0,
+        "stdout_size_bytes": 6721,
+        "stderr_size_bytes": 181446,
+        "output_size_bytes": 6720,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-5367df3f-03dd-4083-be1b-8c8b3cb49aea-batch-1",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.003327,
+          "evidence_package_size_bytes": 215348,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.002878,
+          "prompt_size_bytes": 30771,
+          "schema_prepare_seconds": 0.00069,
+          "codex_exec_seconds": 182.378253,
+          "result_validation_seconds": 1.3e-05
+        },
+        "cache_key": "4968577b4e6e9561cab3b25fb98efbdc03ad9cf1a002a010d26343e342fe70c7"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-1-ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_interval:pulse3:unbound",
+      "request_id": "codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-1",
+      "task_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea",
+      "target": {
+        "target_id": "ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_interval:pulse3:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_interval:pulse3:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 脉冲组间隔 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_interval:pulse3:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_interval:pulse3:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "rule_context 给出 expected=210±1 msec；report_inspection_group:157 的 PULSE3 表格行可见“脉冲组间隔 210±1msec 单位：ms -0.1 /”，可完成参数绑定，故反驳 unbound 候选。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_group_interval:pulse3:unbound",
+        "report_inspection_group:157",
+        "ptr_clause:ptr-2.2.2"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:07:18.079441Z",
+      "completed_at": "2026-07-06T06:07:18.079441Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "report_inspection_group:157",
+            "expected_value": "210±1 msec",
+            "field_name": "脉冲组间隔 / PULSE3 预设",
+            "observed_value": "报告序号157中 PULSE3 预设下列出“脉冲组间隔 210±1msec 单位：ms -0.1 /”。",
+            "reasoning": "完整 InspectionItemGroup 的 2.2.2 表格行包含该参数及检验结果，报告标准要求值与 rule_context 的 expected=210±1 msec 一致，因此不支持“结果未绑定”的候选结论。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 182.378253,
+        "exit_code": 0,
+        "stdout_size_bytes": 6721,
+        "stderr_size_bytes": 181446,
+        "output_size_bytes": 6720,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-5367df3f-03dd-4083-be1b-8c8b3cb49aea-batch-1",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.003327,
+          "evidence_package_size_bytes": 215348,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.002878,
+          "prompt_size_bytes": 30771,
+          "schema_prepare_seconds": 0.00069,
+          "codex_exec_seconds": 182.378253,
+          "result_validation_seconds": 1.3e-05
+        },
+        "cache_key": "4968577b4e6e9561cab3b25fb98efbdc03ad9cf1a002a010d26343e342fe70c7"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-1-ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_pair_interval:pulse3:unbound",
+      "request_id": "codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-1",
+      "task_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea",
+      "target": {
+        "target_id": "ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_pair_interval:pulse3:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_pair_interval:pulse3:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 脉冲对间隔 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_pair_interval:pulse3:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_pair_interval:pulse3:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "rule_context 给出 expected=1.12msec±4μsec；report_inspection_group:157 可见 PULSE3 的“脉冲对间隔 1.12msec±4μsec 单位：μs +0 /”，可完成参数绑定，故反驳 unbound 候选。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_pair_interval:pulse3:unbound",
+        "report_inspection_group:157",
+        "ptr_clause:ptr-2.2.2"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:07:18.079441Z",
+      "completed_at": "2026-07-06T06:07:18.079441Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "report_inspection_group:157",
+            "expected_value": "1.12msec±4μsec",
+            "field_name": "脉冲对间隔 / PULSE3 预设",
+            "observed_value": "报告序号157中 PULSE3 预设下列出“脉冲对间隔 1.12msec±4μsec 单位：μs +0 /”。",
+            "reasoning": "完整 InspectionItemGroup 的 2.2.2 表格行包含该参数及检验结果，报告标准要求值与 rule_context 的 expected=1.12msec±4μsec 一致，因此不支持“结果未绑定”的候选结论。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 182.378253,
+        "exit_code": 0,
+        "stdout_size_bytes": 6721,
+        "stderr_size_bytes": 181446,
+        "output_size_bytes": 6720,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-5367df3f-03dd-4083-be1b-8c8b3cb49aea-batch-1",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.003327,
+          "evidence_package_size_bytes": 215348,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.002878,
+          "prompt_size_bytes": 30771,
+          "schema_prepare_seconds": 0.00069,
+          "codex_exec_seconds": 182.378253,
+          "result_validation_seconds": 1.3e-05
+        },
+        "cache_key": "4968577b4e6e9561cab3b25fb98efbdc03ad9cf1a002a010d26343e342fe70c7"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-1-ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pulse3:unbound",
+      "request_id": "codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-1",
+      "task_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea",
+      "target": {
+        "target_id": "ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pulse3:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pulse3:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 脉冲宽度 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pulse3:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pulse3:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "rule_context 给出 expected=0.9μsec±20%；report_inspection_group:157 可见 PULSE3 的“脉冲宽度 0.9μsec±20% -9% /”，可完成参数绑定，故反驳 unbound 候选。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pulse3:unbound",
+        "report_inspection_group:157",
+        "ptr_clause:ptr-2.2.2"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:07:18.079441Z",
+      "completed_at": "2026-07-06T06:07:18.079441Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "report_inspection_group:157",
+            "expected_value": "0.9μsec±20%",
+            "field_name": "脉冲宽度 / PULSE3 预设",
+            "observed_value": "报告序号157中 PULSE3 预设下列出“脉冲宽度 0.9μsec±20% -9% /”。",
+            "reasoning": "完整 InspectionItemGroup 的 2.2.2 表格行包含该参数及检验结果，报告标准要求值与 rule_context 的 expected=0.9μsec±20% 一致，因此不支持“结果未绑定”的候选结论。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 182.378253,
+        "exit_code": 0,
+        "stdout_size_bytes": 6721,
+        "stderr_size_bytes": 181446,
+        "output_size_bytes": 6720,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-5367df3f-03dd-4083-be1b-8c8b3cb49aea-batch-1",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.003327,
+          "evidence_package_size_bytes": 215348,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.002878,
+          "prompt_size_bytes": 30771,
+          "schema_prepare_seconds": 0.00069,
+          "codex_exec_seconds": 182.378253,
+          "result_validation_seconds": 1.3e-05
+        },
+        "cache_key": "4968577b4e6e9561cab3b25fb98efbdc03ad9cf1a002a010d26343e342fe70c7"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-1-ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pf_reversible:unbound",
+      "request_id": "codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-1",
+      "task_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea",
+      "target": {
+        "target_id": "ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pf_reversible:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pf_reversible:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 脉冲宽度 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pf_reversible:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pf_reversible:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "rule_context 给出 expected=0.9μsec±20%；report_inspection_group:157 的 PFReversible 预设表中可见“脉冲宽度 0.9μsec±20% +1% /”，可完成参数绑定，故反驳 unbound 候选。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.2.2:2.2.2:pulse_width:pf_reversible:unbound",
+        "report_inspection_group:157",
+        "ptr_clause:ptr-2.2.2"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:07:18.079441Z",
+      "completed_at": "2026-07-06T06:07:18.079441Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "report_inspection_group:157",
+            "expected_value": "0.9μsec±20%",
+            "field_name": "脉冲宽度 / PF Reversible 预设",
+            "observed_value": "报告序号157续页中 PFReversible 预设下列出“脉冲宽度 0.9μsec±20% +1% /”。",
+            "reasoning": "完整 InspectionItemGroup 的 2.2.2 续页表格行包含该参数及检验结果，报告标准要求值与 rule_context 的 expected=0.9μsec±20% 一致，因此不支持“结果未绑定”的候选结论。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 182.378253,
+        "exit_code": 0,
+        "stdout_size_bytes": 6721,
+        "stderr_size_bytes": 181446,
+        "output_size_bytes": 6720,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-5367df3f-03dd-4083-be1b-8c8b3cb49aea-batch-1",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.003327,
+          "evidence_package_size_bytes": 215348,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.002878,
+          "prompt_size_bytes": 30771,
+          "schema_prepare_seconds": 0.00069,
+          "codex_exec_seconds": 182.378253,
+          "result_validation_seconds": 1.3e-05
+        },
+        "cache_key": "4968577b4e6e9561cab3b25fb98efbdc03ad9cf1a002a010d26343e342fe70c7"
+      }
+    }
+  ]
+}

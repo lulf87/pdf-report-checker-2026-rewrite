@@ -212,6 +212,110 @@ def test_numeric_limit_atomic_row_is_mismatch_only_when_actual_exceeds_limit() -
     assert findings[0].metadata["report_conclusion"] == "符合"
 
 
+@pytest.mark.parametrize(
+    ("clause", "report_item", "expected_actual"),
+    [
+        (
+            _clause("2.2.1", "工作频率", "射频治疗仪工作频率为 5MHz，偏差为±5%。"),
+            _report_item(
+                item_no="158",
+                clause_number="2.2.1",
+                title="工作频率",
+                requirement="射频治疗仪工作频率为 5MHz，偏差为±5%。",
+                actual="-0.5%",
+            ),
+            "-0.5%",
+        ),
+        (
+            _clause(
+                "2.2.2",
+                "额定功率",
+                "射频治疗仪额定负载为 100Ω 时，额定功率为 32W，偏差为±20%。",
+            ),
+            _report_item(
+                item_no="158",
+                clause_number="2.2.2",
+                title="额定功率",
+                requirement="射频治疗仪额定负载为 100Ω 时，额定功率为 32W，偏差为±20%。",
+                actual="+0%",
+            ),
+            "+0%",
+        ),
+        (
+            _clause("2.2.8.2", "治疗电极温度测量精度", "治疗电极温度测量精度不大于±3℃。"),
+            _report_item(
+                item_no="158",
+                clause_number="2.2.8.2",
+                title="治疗电极温度测量精度",
+                requirement="治疗电极温度测量精度不大于±3℃。\n单位：℃",
+                actual="-1～+2",
+            ),
+            "-1～+2",
+        ),
+    ],
+)
+def test_deviation_requirement_binds_report_measurement_and_matches(
+    clause: PTRClause,
+    report_item: InspectionItem,
+    expected_actual: str,
+) -> None:
+    group = InspectionItemGroup(
+        item_no=report_item.sequence_raw,
+        display_item_no=report_item.sequence_raw,
+        pages=[report_item.source_page or 32],
+        rows=[report_item],
+    )
+
+    rows = build_atomic_comparison_rows(clause, PTRDocument(clauses=[clause]), [group])
+
+    assert len(rows) == 1
+    assert rows[0].actual == expected_actual
+    assert rows[0].status == "match"
+    assert "范围内" in rows[0].reason
+
+
+@pytest.mark.parametrize(
+    ("clause", "title", "requirement"),
+    [
+        (
+            _clause("2.2.5", "输出能量", "射频治疗仪输出能量可调等级为 1~16，步进为 1。"),
+            "输出能量",
+            "射频治疗仪输出能量可调等级为 1~16，步进为 1。",
+        ),
+        (
+            _clause("2.2.8.1", "治疗电极温度测量范围", "治疗电极温度测量范围不小于 10℃-46℃。"),
+            "治疗电极温度测量范围",
+            "治疗电极温度测量范围不小于 10℃-46℃。",
+        ),
+    ],
+)
+def test_programmable_range_passes_from_matching_requirement_and_report_conclusion(
+    clause: PTRClause,
+    title: str,
+    requirement: str,
+) -> None:
+    report_item = _report_item(
+        item_no="158",
+        clause_number=str(clause.number),
+        title=title,
+        requirement=requirement,
+        actual="符合要求",
+    )
+    group = InspectionItemGroup(
+        item_no="158",
+        display_item_no="158",
+        pages=[32],
+        rows=[report_item],
+    )
+
+    rows = build_atomic_comparison_rows(clause, PTRDocument(clauses=[clause]), [group])
+
+    assert len(rows) == 1
+    assert rows[0].expected == requirement
+    assert rows[0].actual == "符合要求"
+    assert rows[0].status == "match"
+
+
 def test_numeric_limit_converts_report_result_unit_before_comparison() -> None:
     clause = _clause("2.5", "连接电缆绝缘电阻", "连接电缆任意两芯脚之间的绝缘电阻应不小于 5MΩ。")
     report_item = _report_item(

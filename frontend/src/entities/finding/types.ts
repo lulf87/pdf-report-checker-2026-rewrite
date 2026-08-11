@@ -70,7 +70,7 @@ export interface Finding {
 }
 
 export function severityLabel(severity: FindingSeverity): string {
-  if (severity === "error") return "候选错误";
+  if (severity === "error") return "问题";
   if (severity === "warn") return "需复核";
   return "信息";
 }
@@ -99,8 +99,8 @@ export function findingUserFacingStatus(
 
 export function findingUserFacingStatusLabel(status: UserFacingFindingStatus, finding?: Finding): string {
   if (status === "confirmed_error") return "确认错误";
-  if (status === "refuted") return "候选问题已排除";
-  if (status === "candidate_issue") return "候选问题";
+  if (status === "refuted") return "通过";
+  if (status === "candidate_issue") return "需人工复核";
   if (status === "passed") return "通过";
   if (finding?.code === "CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN") return "表格抽取不确定/需视觉复核";
   if (finding?.code === "CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX") return "复杂矩阵需复核";

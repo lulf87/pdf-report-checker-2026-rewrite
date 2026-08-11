@@ -36,6 +36,7 @@ def test_parse_caption_subject_removes_number_direction_and_category_words() -> 
     assert parse_caption_subject("№2 一次性使用消化道脉冲电场消融导管 中文标签") == "一次性使用消化道脉冲电场消融导管"
     assert parse_caption_subject("图1: 正面图：导管外观照片") == "导管"
     assert parse_caption_subject("No.3 手柄包装标签样张") == "手柄"
+    assert parse_caption_subject("№5 射频皮肤治疗仪 中文铭牌") == "射频皮肤治疗仪"
 
 
 def test_extracts_label_ocr_field_candidates_from_text_layer() -> None:
@@ -70,6 +71,54 @@ def test_extracts_label_ocr_field_candidates_from_text_layer() -> None:
     assert fields["expiration_date"] == "2027-12-09"
     assert fields["registrant_address"] == "中国（江苏）自由贸易试验区苏州片区苏州工业园区星湖街328号创意产业园五期A3-403-3单元"
     assert all(field.raw_value is not None for field in label.fields)
+
+
+def test_extracts_one_label_candidate_per_caption_on_same_page() -> None:
+    parsed = _parsed_pdf(
+        PdfPage(
+            page_number=8,
+            text=(
+                "照片和说明\n"
+                "№9 监视器 中文标签样张\n"
+                "№10 扩展坞 中文标签样张\n"
+            ),
+        )
+    )
+
+    labels = PhotoLabelExtractor().extract_labels(parsed)
+
+    assert len(labels) == 2
+    assert [label.caption_text for label in labels] == [
+        "№9 监视器 中文标签样张",
+        "№10 扩展坞 中文标签样张",
+    ]
+    assert [label.metadata["subject_name"] for label in labels] == ["监视器", "扩展坞"]
+    assert all(label.fields == [] for label in labels)
+    assert all(label.metadata["multiple_label_captions_on_page"] is True for label in labels)
+
+
+def test_ordinary_report_pages_with_generic_fields_are_not_emitted_as_labels() -> None:
+    parsed = _parsed_pdf(
+        PdfPage(
+            page_number=1,
+            text=(
+                "检验报告\n报告编号：QW2026-0145\n"
+                "样品名称：射频皮肤治疗仪\n型号规格：IM-RFT 100\n"
+                "生产日期：2026-01-08\n"
+            ),
+        ),
+        PdfPage(
+            page_number=102,
+            text="检验报告照片页\n报告编号：QW2026-0145\n№5 射频皮肤治疗仪 中文铭牌\n",
+        ),
+    )
+
+    labels = PhotoLabelExtractor().extract_labels(parsed)
+
+    assert len(labels) == 1
+    assert labels[0].page_number == 102
+    assert labels[0].caption_text == "№5 射频皮肤治疗仪 中文铭牌"
+    assert labels[0].metadata["subject_name"] == "射频皮肤治疗仪"
 
 
 def test_field_candidate_fallbacks_for_ref_lot_and_standalone_dates() -> None:

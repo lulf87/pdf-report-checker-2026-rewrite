@@ -80,7 +80,7 @@ export class ApiClient {
 
   exportTask(taskId: string, format: ExportFormat): Promise<{ blob: Blob; fileName: string }> {
     return this.download(
-      `/api/tasks/${encodeURIComponent(taskId)}/export?format=${encodeURIComponent(format)}`,
+      `/api/tasks/${encodeURIComponent(taskId)}/export?format=${encodeURIComponent(format)}&view=final`,
       `${taskId}.${format}`,
     );
   }

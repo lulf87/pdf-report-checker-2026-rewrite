@@ -11,6 +11,7 @@ from app.application.task_repository import (
     TaskResult,
     TaskResultNotFoundError,
 )
+from app.application.report_comparison_finalization import attach_final_comparison_details
 from app.domain.result import CheckResult, CheckSummary, annotate_user_facing_statuses
 from app.domain.task import TaskProgressDetails, TaskState, TaskStatus, TaskType
 from app.domain.task import InputFileRef
@@ -106,6 +107,7 @@ class TaskService:
         task = self.get_task(task_id)
         result_metadata = metadata or {}
         annotate_user_facing_statuses(check_results)
+        attach_final_comparison_details(check_results)
         summary = CheckSummary.from_results(check_results)
         _apply_codex_audit_summary_metadata(summary, result_metadata.get("codex_audit"))
         result = TaskResult(
@@ -152,7 +154,9 @@ class TaskService:
         )
 
     def get_result(self, task_id: str) -> TaskResult:
-        return self.repository.get_result(task_id)
+        result = self.repository.get_result(task_id)
+        attach_final_comparison_details(result.check_results)
+        return result
 
     def list_tasks(self) -> list[TaskStatus]:
         return self.repository.list_tasks()
@@ -176,6 +180,26 @@ def _apply_codex_audit_summary_metadata(summary: CheckSummary, codex_audit_metad
     final_audit_status = codex_audit_metadata.get("final_audit_status")
     if isinstance(final_audit_status, str):
         summary.final_audit_status = final_audit_status
+
+    manual_review_required_count = codex_audit_metadata.get("manual_review_required_count")
+    if isinstance(manual_review_required_count, int):
+        summary.manual_review_required_count = manual_review_required_count
+
+    confirmed_errors_count = codex_audit_metadata.get("confirmed_errors_count")
+    if isinstance(confirmed_errors_count, int):
+        summary.confirmed_errors_count = confirmed_errors_count
+
+    confirmed_findings_count = codex_audit_metadata.get("confirmed_findings_count")
+    if isinstance(confirmed_findings_count, int):
+        summary.confirmed_findings_count = confirmed_findings_count
+
+    confirmed_document_issue_count = codex_audit_metadata.get("confirmed_document_issue_count")
+    if isinstance(confirmed_document_issue_count, int):
+        summary.confirmed_document_issue_count = confirmed_document_issue_count
+
+    policy_review_required_count = codex_audit_metadata.get("policy_review_required_count")
+    if isinstance(policy_review_required_count, int):
+        summary.policy_review_required_count = policy_review_required_count
 
 
 def _metadata_with_progress_details(

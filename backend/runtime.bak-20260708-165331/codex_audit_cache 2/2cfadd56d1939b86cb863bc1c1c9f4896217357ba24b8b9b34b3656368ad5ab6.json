@@ -1,0 +1,266 @@
+{
+  "cache_key": "2cfadd56d1939b86cb863bc1c1c9f4896217357ba24b8b9b34b3656368ad5ab6",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-9c5a436f-17c5-412b-92a9-0de3d809a1a7-ptr-batch-0-ptr_review:9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_CLAUSE:2.2.1:mismatch",
+      "request_id": "codex-request-9c5a436f-17c5-412b-92a9-0de3d809a1a7-ptr-batch-0",
+      "task_id": "9c5a436f-17c5-412b-92a9-0de3d809a1a7",
+      "target": {
+        "target_id": "ptr_review:9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_CLAUSE:2.2.1:mismatch",
+        "target_type": "ptr_clause",
+        "check_id": "PTR_CLAUSE",
+        "finding_id": "9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_CLAUSE:2.2.1:mismatch",
+        "finding_code": "PTR_CLAUSE_TEXT_MISMATCH",
+        "title": "PTR 条款 2.2.1 正文与报告标准要求不一致。",
+        "summary": "规则初判 PTR_CLAUSE_TEXT_MISMATCH；check_id=PTR_CLAUSE；clause=2.2.1",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_CLAUSE:2.2.1:mismatch",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_CLAUSE:2.2.1:mismatch",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.1",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_CLAUSE_TEXT_MISMATCH",
+          "severity": "error",
+          "clause_number": "2.2.1",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "confirm",
+      "confidence": "high",
+      "reasoning_summary": "PTR 2.2.1 证据要求包含电压3333V和电流57A；报告相关条目仅保留电压内容并出现单位/V符号文本，缺少电流57A，支持正文不一致判断。",
+      "suggested_severity": "error",
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_CLAUSE:2.2.1:mismatch",
+        "ptr_clause:ptr-2.2.1",
+        "report_scope:inspection_items"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-05T04:10:11.475759Z",
+      "completed_at": "2026-07-05T04:10:11.475759Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex_review_output.v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 118.334201,
+        "exit_code": 0,
+        "stdout_size_bytes": 1695,
+        "stderr_size_bytes": 61673,
+        "output_size_bytes": 1694,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-9c5a436f-17c5-412b-92a9-0de3d809a1a7-batch-0",
+          "check_id": "PTR_CLAUSE",
+          "target_count": 2,
+          "evidence_write_seconds": 0.002749,
+          "evidence_package_size_bytes": 32204,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "externalized_text_bytes": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_items_count": 0,
+          "image_path_collection_seconds": 2e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.00101,
+          "prompt_size_bytes": 29658,
+          "schema_prepare_seconds": 0.00041,
+          "codex_exec_seconds": 118.334201,
+          "result_validation_seconds": 8e-06
+        },
+        "cache_key": "2cfadd56d1939b86cb863bc1c1c9f4896217357ba24b8b9b34b3656368ad5ab6"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-9c5a436f-17c5-412b-92a9-0de3d809a1a7-ptr-batch-0-ptr_review:9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_REPORT_SCOPE:2.14:undeclared",
+      "request_id": "codex-request-9c5a436f-17c5-412b-92a9-0de3d809a1a7-ptr-batch-0",
+      "task_id": "9c5a436f-17c5-412b-92a9-0de3d809a1a7",
+      "target": {
+        "target_id": "ptr_review:9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_REPORT_SCOPE:2.14:undeclared",
+        "target_type": "inspection_item",
+        "check_id": "PTR_REPORT_SCOPE",
+        "finding_id": "9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_REPORT_SCOPE:2.14:undeclared",
+        "finding_code": "PTR_SCOPE_UNDECLARED_REPORT_ITEM",
+        "title": "实际检验表出现首页未声明的 PTR 检验项目 2.14。",
+        "summary": "规则初判 PTR_SCOPE_UNDECLARED_REPORT_ITEM；check_id=PTR_REPORT_SCOPE；clause=2.14",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_REPORT_SCOPE:2.14:undeclared",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_REPORT_SCOPE:2.14:undeclared",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_SCOPE_UNDECLARED_REPORT_ITEM",
+          "severity": "error",
+          "clause_number": "2.14",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "首页声明 PTR 范围为2.2、2.5、2.6，但该候选中的2.14来自序号129的201.7.9.2.14；外部标准范围证据说明119-156属于GB 9706.202-2021且PTR直接内容在156之后，因此不能作为未声明PTR项目确认。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:9c5a436f-17c5-412b-92a9-0de3d809a1a7:PTR_REPORT_SCOPE:2.14:undeclared",
+        "report_scope:declaration",
+        "report_scope:external_standard_ranges"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-05T04:10:11.475759Z",
+      "completed_at": "2026-07-05T04:10:11.475759Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex_review_output.v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 118.334201,
+        "exit_code": 0,
+        "stdout_size_bytes": 1695,
+        "stderr_size_bytes": 61673,
+        "output_size_bytes": 1694,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-9c5a436f-17c5-412b-92a9-0de3d809a1a7-batch-0",
+          "check_id": "PTR_CLAUSE",
+          "target_count": 2,
+          "evidence_write_seconds": 0.002749,
+          "evidence_package_size_bytes": 32204,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "externalized_text_bytes": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_items_count": 0,
+          "image_path_collection_seconds": 2e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.00101,
+          "prompt_size_bytes": 29658,
+          "schema_prepare_seconds": 0.00041,
+          "codex_exec_seconds": 118.334201,
+          "result_validation_seconds": 8e-06
+        },
+        "cache_key": "2cfadd56d1939b86cb863bc1c1c9f4896217357ba24b8b9b34b3656368ad5ab6"
+      }
+    }
+  ]
+}

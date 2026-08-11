@@ -7,6 +7,7 @@ from app.domain.result import CheckResult, CheckStatus
 from app.rules.report.common import (
     component_field_value,
     component_is_supporting_equipment,
+    component_name_aliases,
     component_not_used,
     compact,
     evidence_for_component,
@@ -87,7 +88,11 @@ def check_c04_sample_description(
                 )
             )
             continue
-        match = _find_component_label(component, document.labels)
+        match = _find_component_label(
+            component,
+            document.labels,
+            name_aliases=component_name_aliases(document, component),
+        )
         label = match.label if match else None
         matching_strategy = match.strategy if match else None
         if label is None:
@@ -209,11 +214,16 @@ class _LabelMatch:
         self.strategy = strategy
 
 
-def _find_component_label(component: SampleComponent, labels: list[LabelOCRResult]) -> _LabelMatch | None:
+def _find_component_label(
+    component: SampleComponent,
+    labels: list[LabelOCRResult],
+    *,
+    name_aliases: tuple[str, ...] = (),
+) -> _LabelMatch | None:
     chinese_labels = [label for label in labels if is_chinese_label(label)]
     scored_matches: list[tuple[tuple[int, int, int, int], LabelOCRResult, str]] = []
     for label in chinese_labels:
-        score, strategy = _score_label(component, label)
+        score, strategy = _score_label(component, label, name_aliases=name_aliases)
         if score is None:
             continue
         scored_matches.append((score, label, strategy))
@@ -229,8 +239,12 @@ def _find_component_label(component: SampleComponent, labels: list[LabelOCRResul
 def _score_label(
     component: SampleComponent,
     label: LabelOCRResult,
+    *,
+    name_aliases: tuple[str, ...] = (),
 ) -> tuple[tuple[int, int, int, int] | None, str]:
-    name_match = match_name(component.component_name, label_product_name(label))
+    names = name_aliases or ((component.component_name or ""),)
+    name_matches = [match_name(name, label_product_name(label)) for name in names]
+    name_match = "exact" if "exact" in name_matches else "partial" if "partial" in name_matches else None
     name_score = 2 if name_match == "exact" else 1 if name_match == "partial" else 0
     identity_matches = 0
     identity_mismatches = 0

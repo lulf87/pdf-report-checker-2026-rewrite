@@ -27,6 +27,7 @@ class CodexReviewCache:
         prompt: str,
         schema_text: str,
         image_paths: list[Path],
+        runtime_identity: dict[str, Any] | None = None,
     ) -> str:
         payload = {
             "task_type": request.task_type,
@@ -44,6 +45,7 @@ class CodexReviewCache:
                 }
                 for path in image_paths
             ],
+            "runtime_identity": _normalize(runtime_identity or {}),
         }
         return _sha256_text(json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
 

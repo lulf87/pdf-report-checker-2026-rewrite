@@ -1,0 +1,23 @@
+{
+  "code": "CODEX_EXIT_NONZERO",
+  "exit_code": 1,
+  "retry_after_text": null,
+  "workspace_dir": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/17d199ef-5521-4175-ab50-3abb56fd2056/codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C10-summary/input",
+  "prompt_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/17d199ef-5521-4175-ab50-3abb56fd2056/codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C10-summary/input/prompt.md",
+  "prompt_size_bytes": 13379,
+  "evidence_package_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/17d199ef-5521-4175-ab50-3abb56fd2056/codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C10-summary/input/evidence_package.json",
+  "evidence_package_size_bytes": 2066,
+  "output_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/17d199ef-5521-4175-ab50-3abb56fd2056/codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C10-summary/input/codex_review_output.json",
+  "output_exists": false,
+  "output_schema_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/17d199ef-5521-4175-ab50-3abb56fd2056/codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C10-summary/input/codex_review_output.schema.json",
+  "stdout_size_bytes": 0,
+  "stderr_size_bytes": 14850,
+  "output_size_bytes": 0,
+  "stderr_tail": "正确\", \"target_id\": \"report-codex-check-summary-C10\", \"target_type\": \"check_result\", \"title\": \"续表标记\"}\n\n## Evidence Items\n\n### Evidence check_result:C10\n{\"file_path\": null, \"location\": null, \"metadata\": \"{\\\"check_id\\\": \\\"C10\\\", \\\"summary_only\\\": true, \\\"target_kind\\\": \\\"check_result_summary\\\"}\", \"page_number\": null, \"ref_id\": \"check_result:C10\", \"section\": \"C10\", \"source_type\": \"rule_context\", \"structured\": \"{\\\"audit_reason\\\": \\\"review deterministic report check summary and decide whether evidence is sufficient\\\", \\\"check_id\\\": \\\"C10\\\", \\\"check_name\\\": \\\"续表标记\\\", \\\"deterministic_finding_count\\\": 0, \\\"finding_codes\\\": [], \\\"rule_output_role\\\": \\\"candidate_summary_not_final_conclusion\\\", \\\"status\\\": \\\"pass\\\", \\\"summary\\\": \\\"续表标记位置正确\\\"}\", \"text\": \"报告自检规则初判汇总上下文。\", \"title\": \"C10 deterministic check summary\"}\n\nERROR: Reconnecting... 1/5\nERROR: Reconnecting... 2/5\nERROR: Reconnecting... 3/5\nERROR: Reconnecting... 4/5\nERROR: Reconnecting... 5/5\nERROR: stream disconnected before completion: error sending request for url (https://chatgpt.com/backend-api/codex/responses)\nERROR: stream disconnected before completion: error sending request for url (https://chatgpt.com/backend-api/codex/responses)\n",
+  "stdout_tail": "",
+  "target_ids": [
+    "report-codex-check-summary-C10"
+  ],
+  "package_id": "codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C10-summary",
+  "task_id": "17d199ef-5521-4175-ab50-3abb56fd2056"
+}

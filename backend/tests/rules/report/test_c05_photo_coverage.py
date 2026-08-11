@@ -7,7 +7,29 @@ from app.rules.report.c05_photo_coverage import (
     match_photo_subject,
 )
 
-from .helpers import base_document, component, photo_caption
+from .helpers import base_document, component, field, photo_caption
+
+
+def test_c05_uses_report_sample_name_for_generic_main_unit_photo_matching() -> None:
+    document = base_document()
+    document.first_page.sample_name = field("样品名称", "射频皮肤治疗仪", page=1)
+    document.sample_components = [
+        component(
+            "main-unit",
+            "主机",
+            model=None,
+            batch=None,
+            production_date=None,
+            expiration_date=None,
+        )
+    ]
+    document.photo_captions = [photo_caption("main-photo", "№1 射频皮肤治疗仪", subject="射频皮肤治疗仪")]
+
+    result = check_c05_photo_coverage(document, CheckContext(task_id="task-c05-main"))
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["coverage"][0]["matching_strategy"] == "sample_name_alias:exact"
 
 
 def test_extract_photo_caption_subject_removes_prefix_direction_and_category_words() -> None:
@@ -23,6 +45,8 @@ def test_match_photo_subject_uses_specified_connector_rules() -> None:
         == "component_in_subject_allowed_connector"
     )
     assert match_photo_subject("主机-前面板", "主机") == "subject_in_component_allowed_connector"
+    assert match_photo_subject("扩展坞", "监视器及扩展坞") == "compound_subject_member"
+    assert match_photo_subject("控制器", "控制台") == "equivalent_equipment_name"
     assert match_photo_subject("电极", "一次性射频消融电极") is None
 
 
@@ -65,6 +89,24 @@ def test_c05_passes_when_subject_name_is_followed_by_allowed_connector_in_compon
 
     assert result.status == CheckStatus.PASS
     assert result.metadata["coverage"][0]["matching_strategy"] == "subject_in_component_allowed_connector"
+
+
+def test_c05_allows_one_compound_caption_to_cover_each_named_component() -> None:
+    document = base_document()
+    document.sample_components = [
+        component("c1", "监视器"),
+        component("c2", "扩展坞"),
+    ]
+    document.photo_captions = [photo_caption("p1", "№7 监视器及扩展坞 正面")]
+
+    result = check_c05_photo_coverage(document, CheckContext(task_id="task-c05"))
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert [row["matching_strategy"] for row in result.metadata["coverage"]] == [
+        "component_in_subject_allowed_connector",
+        "compound_subject_member",
+    ]
 
 
 def test_c05_extracts_caption_subject_from_number_prefix_and_direction_words() -> None:

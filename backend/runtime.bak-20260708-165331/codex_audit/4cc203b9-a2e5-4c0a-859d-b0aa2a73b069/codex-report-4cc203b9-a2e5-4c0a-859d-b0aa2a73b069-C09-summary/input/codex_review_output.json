@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"high","evidence_refs":["check_result:C09"],"metadata":{},"reasoning_summary":"仅提供 check_result:C09 的规则初判汇总，未提供检验项目序号明细、跨页 rows、诊断或来源页证据，无法独立确认或反驳 1 项序号连续性问题。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C09","verdict":"uncertain"}],"schema_version":"1.0"}

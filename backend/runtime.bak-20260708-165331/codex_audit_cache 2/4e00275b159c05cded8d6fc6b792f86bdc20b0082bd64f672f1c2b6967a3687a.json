@@ -1,0 +1,174 @@
+{
+  "cache_key": "4e00275b159c05cded8d6fc6b792f86bdc20b0082bd64f672f1c2b6967a3687a",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-1-ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+      "request_id": "codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-1",
+      "task_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e",
+      "target": {
+        "target_id": "ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.6 的参数 单个脉冲最大输出能量 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告结果未能稳定抽取，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.6",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "PTR 2.2.6 期望为 <258 mJ；report_inspection_group:157 的 page 101 row 2 和 finding raw_text 均能定位到 2.2.6 最大输出能量结果 159 mJ，且 159<258，因此规则初判的 unbound 不成立。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "ptr_clause:ptr-2.2.6",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-05T09:21:46.258425Z",
+      "completed_at": "2026-07-05T09:21:46.258425Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "ptr_clause:ptr-2.2.6",
+            "expected_value": "<258 mJ",
+            "field_name": "PTR 2.2.6 单个脉冲最大输出能量要求",
+            "observed_value": "单个脉冲最大输出能量应小于 258mJ",
+            "reasoning": "PTR 条款和 finding evidence 均给出最大输出能量阈值为小于 258 mJ。",
+            "status": "match"
+          },
+          {
+            "evidence_ref": "report_inspection_group:157",
+            "expected_value": "报告序号 157 中 2.2.6 应有最大输出能量结果",
+            "field_name": "报告 2.2.6 最大输出能量结果绑定",
+            "observed_value": "159 mJ",
+            "reasoning": "完整 InspectionItemGroup 的 page 101 row 2 显示 2.2.6 最大输出能量条目，sequence_raw 为该条款及单位 mJ，紧邻解析出的数值为 159；finding raw_text 也显示“单位：mJ 159 /”。因此不是结果缺失或无法绑定。",
+            "status": "match"
+          },
+          {
+            "evidence_ref": "report_inspection_group:157",
+            "expected_value": "<258 mJ",
+            "field_name": "报告结果与 PTR 阈值比较",
+            "observed_value": "159 mJ",
+            "reasoning": "159 mJ 小于 258 mJ，未见与 PTR 阈值冲突的证据。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-audit-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 31.541058,
+        "exit_code": 0,
+        "stdout_size_bytes": 1939,
+        "stderr_size_bytes": 33635,
+        "output_size_bytes": 1938,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-batch-1",
+          "check_id": "PTR_TABLE",
+          "target_count": 1,
+          "evidence_write_seconds": 0.002406,
+          "evidence_package_size_bytes": 49251,
+          "externalized_text_count": 0,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "materialized_image_count": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_path_collection_seconds": 6e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001997,
+          "prompt_size_bytes": 30618,
+          "schema_prepare_seconds": 0.00045,
+          "codex_exec_seconds": 31.541058,
+          "result_validation_seconds": 8e-06
+        },
+        "cache_key": "4e00275b159c05cded8d6fc6b792f86bdc20b0082bd64f672f1c2b6967a3687a"
+      }
+    }
+  ]
+}

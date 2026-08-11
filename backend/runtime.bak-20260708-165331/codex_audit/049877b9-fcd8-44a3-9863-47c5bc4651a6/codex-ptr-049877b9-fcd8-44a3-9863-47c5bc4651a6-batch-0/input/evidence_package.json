@@ -1,0 +1,620 @@
+{
+  "package_id": "codex-ptr-049877b9-fcd8-44a3-9863-47c5bc4651a6-batch-0",
+  "task_id": "049877b9-fcd8-44a3-9863-47c5bc4651a6",
+  "task_type": "ptr_compare",
+  "kind": "ptr_table_review",
+  "schema_version": "evidence-package-v1",
+  "created_at": "2026-07-05T04:43:11.143363Z",
+  "targets": [
+    {
+      "target_id": "ptr_review:049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.2.2:table-6:missing",
+      "target_type": "ptr_table",
+      "check_id": "PTR_TABLE",
+      "finding_id": "049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.2.2:table-6:missing",
+      "finding_code": "PTR_TABLE_MISSING",
+      "summary": "PTR 条款 2.2.2 引用的表 6 未找到。",
+      "evidence_refs": [
+        "finding:049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.2.2:table-6:missing",
+        "rule_context:049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.2.2:table-6:missing",
+        "report_scope:declaration",
+        "report_scope:external_standard_ranges",
+        "report_scope:inspection_items",
+        "ptr_clause:ptr-2.2.2"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_TABLE_MISSING",
+        "clause_number": "2.2.2",
+        "table_number": "6",
+        "parameter_name": null
+      }
+    },
+    {
+      "target_id": "ptr_review:049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.6:table-6:missing",
+      "target_type": "ptr_table",
+      "check_id": "PTR_TABLE",
+      "finding_id": "049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.6:table-6:missing",
+      "finding_code": "PTR_TABLE_MISSING",
+      "summary": "PTR 条款 2.6 引用的表 6 未找到。",
+      "evidence_refs": [
+        "finding:049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.6:table-6:missing",
+        "rule_context:049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.6:table-6:missing",
+        "report_scope:declaration",
+        "report_scope:external_standard_ranges",
+        "report_scope:inspection_items",
+        "ptr_clause:ptr-2.6"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_TABLE_MISSING",
+        "clause_number": "2.6",
+        "table_number": "6",
+        "parameter_name": null
+      }
+    }
+  ],
+  "items": [
+    {
+      "ref_id": "finding:049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.2.2:table-6:missing",
+      "source_type": "finding",
+      "title": "PTR 条款 2.2.2 引用的表 6 未找到。",
+      "text": null,
+      "structured": {
+        "id": "049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.2.2:table-6:missing",
+        "task_id": "049877b9-fcd8-44a3-9863-47c5bc4651a6",
+        "check_id": "PTR_TABLE",
+        "severity": "error",
+        "code": "PTR_TABLE_MISSING",
+        "message": "PTR 条款 2.2.2 引用的表 6 未找到。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 4,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "表6",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-2.2.2:table-reference",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 4,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "心脏脉冲电场消融仪输出波形图和波形参数\n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满足表 6 的要求。\n图 1 心脏脉冲电场消融仪 PULSE 3 预设输出波形图\n表 6 波形参数\n参数\nPULSE 3 预设\nPF Reversible 预设\n脉冲个数\n1500\n1\n脉冲组数\n12\n1\n脉冲组间隔",
+            "normalized_text": null,
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "表6",
+            "reason": "PTR 文档中未找到对应表格。",
+            "expected_source": "ptr",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.2.2",
+          "table_number": "6"
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.2.2:table-6:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.2.2:table-6:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.2.2:table-6:missing",
+        "check_id": "PTR_TABLE",
+        "code": "PTR_TABLE_MISSING",
+        "severity": "error",
+        "message": "PTR 条款 2.2.2 引用的表 6 未找到。",
+        "expected": "表6",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.2.2",
+          "table_number": "6"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.2.2:table-6:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING"
+      }
+    },
+    {
+      "ref_id": "report_scope:declaration",
+      "source_type": "report_field",
+      "title": "Report homepage inspection scope declaration",
+      "text": "2.2、 2.5、2.6 （除生物相容性、电磁兼容性）",
+      "structured": {
+        "declared_scope_items": [
+          "2.2",
+          "2.5",
+          "2.6"
+        ],
+        "declared_scope_ranges": [],
+        "excluded_topics": [
+          "生物相容性",
+          "电磁兼容性"
+        ],
+        "source_page": 3,
+        "source_text": "2.2、 2.5、2.6 （除生物相容性、电磁兼容性）",
+        "ptr_direct_content_starts_after": "156"
+      },
+      "file_path": null,
+      "page_number": 3,
+      "section": "report_scope",
+      "location": null,
+      "metadata": {
+        "source": "report_homepage",
+        "field_name": "检验项目"
+      }
+    },
+    {
+      "ref_id": "report_scope:external_standard_ranges",
+      "source_type": "metadata",
+      "title": "Report external standard sequence ranges",
+      "text": null,
+      "structured": {
+        "external_standard_ranges": [
+          {
+            "start_item_no": "1",
+            "end_item_no": "118",
+            "standard": "GB 9706.1-2020",
+            "source_page": 5,
+            "source_text": "序号 1～序号 118 为 GB 9706.1-2020 标准的内容，序号 119～序号 156 为 GB 9706.202-2021 标准的内容。 3、本次检验，是与委托方提供的电生理三维导航系统（型号：AFR-00016，批号：25230007CW，生 产日期：2025/06/02，制造商：Medtronic, Inc.美敦力公司，软件版本为 2.1.17-0003）、台车 （型号：AFR-00013，批号：0231676121， 生产日期：2025/07/01，制造商：Medtronic, Inc.美敦 力公司）、灌注泵（型号：AFR-00005，批号：2521001CMO，生产日期：2025/05/19，制造商： Medtronic, Inc.美敦力公司，软件版本：1.1.2-0002）、泵管（型号：AFR-00002，批号： 0230958565，生产日期：2025/05/19，制造商：Medtronic, Inc.美敦力公司）、射频消融仪（型 号：AFR-00004，批号：2524004CRO，生产日期：2025/06/10，制造商：Medtronic, Inc.美敦力公 司，软件版本：1.3.1-0001，固件版本：5.01）、一次性使用磁定位三维标测射频脉冲晶格异形导管 （型号：AFR-00001，批号：0230752610，生产日期：2025-02-28，制造商：Medtronic, Inc.美敦 力公司）、导管延长线缆（型号：AFR-00006，批号：0230738609，生产日期：2025-02-20，制造 商：Medtronic, Inc.美敦力公司）、磁定位参考电极（型号：AFR-00021，批号：A11497，生产日 期：2024-11-30，制造商：Medtronic, Inc.美敦力公司）、阻抗定位参考电极（型号：AFR-00015， 批号：A11483，生产日期：2025-4-30，制造商：Medtronic, Inc.美敦力公司）配合使用时的检验 结果。 4、本次检验，电磁兼容性检验见国医检(磁)字 QW2025 第 1540 号。 5、本次检验，固件版本为 7.07。 6、本报告中有检验项目不涉及国家标准、行业标准，不能直接作为资质认定许可的依据，但本实 验室对报告涉及的检验项目具备相应的承检能力。",
+            "item_count": 118,
+            "passed_count": 73,
+            "sample_items": [
+              {
+                "item_no": "1",
+                "page": 10,
+                "standard_clause": "4.1",
+                "standard_requirement": "除非另有规定，本部分的要求应适用于正常使\n用和合理可预见的误用。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "2",
+                "page": 10,
+                "standard_clause": "4.2",
+                "standard_requirement": "4.2.2 风险管理的通用要求 \n应执行符合 YY/T 0316 的风险管理过程。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "3",
+                "page": 10,
+                "standard_clause": "4.3",
+                "standard_requirement": "在风险分析中，除了与基本安全相关的性能\n外，制造商还应识别 ME 设备或 ME 系统临床功\n能的性能，这对于实现预期用途是必需的，或\n者能够影响 ME 设备或 ME 系统的安全性。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "4",
+                "page": 11,
+                "standard_clause": "4.4",
+                "standard_requirement": "制造商应在风险管理文档中声明 ME 设备或 ME\n系统的预期使用寿命。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "5",
+                "page": 11,
+                "standard_clause": "4.5",
+                "standard_requirement": "制造商提供科学数据或临床意见或比较研究来\n证明应用替代的风险控制措施或替代的试验方\n法所得到的剩余风险仍然是可接受的，且与应\n用本部分的要求所得到的剩余风险可比，则风\n险控制替代的措施或试验方法是可接受。",
+                "test_result": "——",
+                "single_conclusion": "/",
+                "remark": "/"
+              },
+              {
+                "item_no": "6",
+                "page": 11,
+                "standard_clause": "4.6",
+                "standard_requirement": "对于那些接触患者但在应用部分定义之外的部\n分，风险管理过程应评估其是否需要符合应用\n部分的要求。除非评估确定需要适用 BF 型应\n用部分或 CF 型应用部分的要求，否则有关的\n部分应适用 B 型应用部分的要求。",
+                "test_result": "——",
+                "single_conclusion": "/",
+                "remark": "/"
+              },
+              {
+                "item_no": "7",
+                "page": 11,
+                "standard_clause": "4.7",
+                "standard_requirement": "ME 设备应被设计和制造成保持单一故障安\n全，或通过 4.2 的应用，确定风险仍然可接\n受。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "8",
+                "page": 11,
+                "standard_clause": "4.8",
+                "standard_requirement": "除本部分中特殊规定的或通过风险管理过程控\n制的特例外，其故障可能导致危险情况的所有\n元器件，包括电线，应根据它们规定的额定值\n使用。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              }
+            ]
+          },
+          {
+            "start_item_no": "119",
+            "end_item_no": "156",
+            "standard": "GB 9706.202-2021",
+            "source_page": 5,
+            "source_text": "序号 119～序号 156 为 GB 9706.202-2021 标准的内容。 3、本次检验，是与委托方提供的电生理三维导航系统（型号：AFR-00016，批号：25230007CW，生 产日期：2025/06/02，制造商：Medtronic, Inc.美敦力公司，软件版本为 2.1.17-0003）、台车 （型号：AFR-00013，批号：0231676121， 生产日期：2025/07/01，制造商：Medtronic, Inc.美敦 力公司）、灌注泵（型号：AFR-00005，批号：2521001CMO，生产日期：2025/05/19，制造商： Medtronic, Inc.美敦力公司，软件版本：1.1.2-0002）、泵管（型号：AFR-00002，批号： 0230958565，生产日期：2025/05/19，制造商：Medtronic, Inc.美敦力公司）、射频消融仪（型 号：AFR-00004，批号：2524004CRO，生产日期：2025/06/10，制造商：Medtronic, Inc.美敦力公 司，软件版本：1.3.1-0001，固件版本：5.01）、一次性使用磁定位三维标测射频脉冲晶格异形导管 （型号：AFR-00001，批号：0230752610，生产日期：2025-02-28，制造商：Medtronic, Inc.美敦 力公司）、导管延长线缆（型号：AFR-00006，批号：0230738609，生产日期：2025-02-20，制造 商：Medtronic, Inc.美敦力公司）、磁定位参考电极（型号：AFR-00021，批号：A11497，生产日 期：2024-11-30，制造商：Medtronic, Inc.美敦力公司）、阻抗定位参考电极（型号：AFR-00015， 批号：A11483，生产日期：2025-4-30，制造商：Medtronic, Inc.美敦力公司）配合使用时的检验 结果。 4、本次检验，电磁兼容性检验见国医检(磁)字 QW2025 第 1540 号。 5、本次检验，固件版本为 7.07。 6、本报告中有检验项目不涉及国家标准、行业标准，不能直接作为资质认定许可的依据，但本实 验室对报告涉及的检验项目具备相应的承检能力。",
+            "item_count": 38,
+            "passed_count": 28,
+            "sample_items": [
+              {
+                "item_no": "119",
+                "page": 79,
+                "standard_clause": "201.4.2.\n3.101",
+                "standard_requirement": "制造商在其风险分析中应包含高频手术设备和\n/或高频附件在大电流模式下使用的可能性和\n这会对中性电极下发热的影响。",
+                "test_result": "——",
+                "single_conclusion": "/",
+                "remark": "/"
+              },
+              {
+                "item_no": "120",
+                "page": 79,
+                "standard_clause": "201.4.3",
+                "standard_requirement": "增补： \n201.8.4.101 的第三个连字符和",
+                "test_result": "——",
+                "single_conclusion": "/",
+                "remark": "/"
+              },
+              {
+                "item_no": "121",
+                "page": 80,
+                "standard_clause": "201.4.7.\n101",
+                "standard_requirement": "以下单一故障状态是本文件中特殊要求和测试\n的项目： \na) 可能引起不可接受的风险的连续性监测器\n或接触质量监测器故障（见 201.8.4.101）；",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "122",
+                "page": 80,
+                "standard_clause": "201.4.11",
+                "standard_requirement": "替换符合性试验中的第一个破折号： \n——高频手术设备应在输出模式下运行，并用\n负载使设备产生最大稳态输入电流。测量输入\n电流，并与标记和技术说明书的内容进行比\n较。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "123",
+                "page": 80,
+                "standard_clause": "201.7.2.\n8.2",
+                "standard_requirement": "修改： \n通用标准中 7.2.8.2 不适用于手术输出端子或\n中性电极端子。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "124",
+                "page": 80,
+                "standard_clause": "201.7.2.\n10",
+                "standard_requirement": "增补： \n防除颤应用部分标识要求的相关符号应附加到\n前面板上，不要求加到应用部分。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "125",
+                "page": 81,
+                "standard_clause": "201.7.4.\n2",
+                "standard_requirement": "增补： \n输出控制器应具有刻度和/或合适的指示器，\n用来表示高频输出的相对强度。指示器不应标\n有“瓦（W）”，除非在 201.7.9.3.1 中规定的\n整个负载电阻范围内，指示功率的精度偏差在\n±20%以内。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "126",
+                "page": 81,
+                "standard_clause": "201.7.8.\n1",
+                "standard_requirement": "将通用标准中的表 2 替换为表 201.101 \n表 201.101 指示灯的颜色及其用于高频手术设备的含义",
+                "test_result": "符合",
+                "single_conclusion": "/",
+                "remark": ""
+              }
+            ]
+          }
+        ]
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": "external_standard_ranges",
+      "location": null,
+      "metadata": {
+        "source": "report_model_spec_or_notes"
+      }
+    },
+    {
+      "ref_id": "report_scope:inspection_items",
+      "source_type": "table",
+      "title": "Report inspection table items relevant to scope",
+      "text": null,
+      "structured": {
+        "items": [
+          {
+            "item_no": "65",
+            "page": 48,
+            "standard_clause": "9.2.2",
+            "standard_requirement": "9.2.2.1 概述 \n在可行的情况下，具有俘获区域的 ME 设备应\n符合以下一个或多个要求： \n——9.2.2.2 规定的间隙；或",
+            "test_result": "——",
+            "single_conclusion": "/",
+            "remark": "/"
+          }
+        ],
+        "item_count": 1,
+        "truncated": false
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": "inspection_items",
+      "location": null,
+      "metadata": {
+        "source": "report_inspection_table"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.2.2",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.2.2",
+      "text": "心脏脉冲电场消融仪输出波形图和波形参数\n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满足表 6 的要求。\n图 1 心脏脉冲电场消融仪 PULSE 3 预设输出波形图\n表 6 波形参数\n参数\nPULSE 3 预设\nPF Reversible 预设\n脉冲个数\n1500\n1\n脉冲组数\n12\n1\n脉冲组间隔",
+      "structured": {
+        "clause_id": "ptr-2.2.2",
+        "number": "2.2.2",
+        "title": "心脏脉冲电场消融仪输出波形图和波形参数",
+        "body_text": "心脏脉冲电场消融仪输出波形图和波形参数\n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满足表 6 的要求。\n图 1 心脏脉冲电场消融仪 PULSE 3 预设输出波形图\n表 6 波形参数\n参数\nPULSE 3 预设\nPF Reversible 预设\n脉冲个数\n1500\n1\n脉冲组数\n12\n1\n脉冲组间隔",
+        "table_numbers": [
+          "6"
+        ],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "2.2.2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.2.2",
+        "clause_number": "2.2.2"
+      }
+    },
+    {
+      "ref_id": "finding:049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.6:table-6:missing",
+      "source_type": "finding",
+      "title": "PTR 条款 2.6 引用的表 6 未找到。",
+      "text": null,
+      "structured": {
+        "id": "049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.6:table-6:missing",
+        "task_id": "049877b9-fcd8-44a3-9863-47c5bc4651a6",
+        "check_id": "PTR_TABLE",
+        "severity": "error",
+        "code": "PTR_TABLE_MISSING",
+        "message": "PTR 条款 2.6 引用的表 6 未找到。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 6,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "表6",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-2.6:table-reference",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 6,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "软件功能\n射频脉冲电场消融系统软件应具备以下功能：\n表 6 软件功能\n组件\n功能\n射频消融仪\n\n功率监测\n\n阻抗监测\n\n温度监测\n\n控制射频消融或脉冲电场消融应用的启动和停止\n\n灌注泵流量监测\n\n射频消融或脉冲电场消融模式选择\n\n接触质量监测\n\n与脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器和\n电生理三维导航系统通信\n\n参数显示与控制，包括阻抗、流量、功率、时间、能量、\n温度和电流水平\n\n显示能量输送状态\n\n显示消融图\n\n预设选择\n心脏脉冲电场消融仪\n\n阻抗监测\n\n温度监测\n\n与射频消融仪、导管接口单元CIU通信\n控制器\n\n参数显示与控制，包括阻抗、流量、功率、时间、能量、\n温度和电流水平\n\n显示能量输送状态\n\n显示消融图\n\n预设选择\n脚踏开关\n\n允许用户启用双击以切换消融预设的开关\n\n开始和停止能量输送\n灌注泵\n\n气泡检测\n\n显示和控制流量\n\n声音提示、视觉提示和信息应能显示在触摸屏面板上\n\n警告管路中有空气、泵头门打开或其他操作",
+            "normalized_text": null,
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "表6",
+            "reason": "PTR 文档中未找到对应表格。",
+            "expected_source": "ptr",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.6",
+          "table_number": "6"
+        }
+      },
+      "file_path": null,
+      "page_number": 6,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 6,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.6:table-6:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.6:table-6:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.6:table-6:missing",
+        "check_id": "PTR_TABLE",
+        "code": "PTR_TABLE_MISSING",
+        "severity": "error",
+        "message": "PTR 条款 2.6 引用的表 6 未找到。",
+        "expected": "表6",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.6",
+          "table_number": "6"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "049877b9-fcd8-44a3-9863-47c5bc4651a6:PTR_TABLE:2.6:table-6:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.6",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.6",
+      "text": "软件功能\n射频脉冲电场消融系统软件应具备以下功能：\n表 6 软件功能\n组件\n功能\n射频消融仪\n\n功率监测\n\n阻抗监测\n\n温度监测\n\n控制射频消融或脉冲电场消融应用的启动和停止\n\n灌注泵流量监测\n\n射频消融或脉冲电场消融模式选择\n\n接触质量监测\n\n与脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器和\n电生理三维导航系统通信\n\n参数显示与控制，包括阻抗、流量、功率、时间、能量、\n温度和电流水平\n\n显示能量输送状态\n\n显示消融图\n\n预设选择\n心脏脉冲电场消融仪\n\n阻抗监测\n\n温度监测\n\n与射频消融仪、导管接口单元CIU通信\n控制器\n\n参数显示与控制，包括阻抗、流量、功率、时间、能量、\n温度和电流水平\n\n显示能量输送状态\n\n显示消融图\n\n预设选择\n脚踏开关\n\n允许用户启用双击以切换消融预设的开关\n\n开始和停止能量输送\n灌注泵\n\n气泡检测\n\n显示和控制流量\n\n声音提示、视觉提示和信息应能显示在触摸屏面板上\n\n警告管路中有空气、泵头门打开或其他操作",
+      "structured": {
+        "clause_id": "ptr-2.6",
+        "number": "2.6",
+        "title": "软件功能",
+        "body_text": "软件功能\n射频脉冲电场消融系统软件应具备以下功能：\n表 6 软件功能\n组件\n功能\n射频消融仪\n\n功率监测\n\n阻抗监测\n\n温度监测\n\n控制射频消融或脉冲电场消融应用的启动和停止\n\n灌注泵流量监测\n\n射频消融或脉冲电场消融模式选择\n\n接触质量监测\n\n与脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器和\n电生理三维导航系统通信\n\n参数显示与控制，包括阻抗、流量、功率、时间、能量、\n温度和电流水平\n\n显示能量输送状态\n\n显示消融图\n\n预设选择\n心脏脉冲电场消融仪\n\n阻抗监测\n\n温度监测\n\n与射频消融仪、导管接口单元CIU通信\n控制器\n\n参数显示与控制，包括阻抗、流量、功率、时间、能量、\n温度和电流水平\n\n显示能量输送状态\n\n显示消融图\n\n预设选择\n脚踏开关\n\n允许用户启用双击以切换消融预设的开关\n\n开始和停止能量输送\n灌注泵\n\n气泡检测\n\n显示和控制流量\n\n声音提示、视觉提示和信息应能显示在触摸屏面板上\n\n警告管路中有空气、泵头门打开或其他操作",
+        "table_numbers": [
+          "6"
+        ],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 6,
+      "section": "2.6",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 6,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.6",
+        "clause_number": "2.6"
+      }
+    }
+  ],
+  "metadata": {
+    "source": "ptr_compare_usecase",
+    "deterministic_finding_count": 2,
+    "target_count": 2,
+    "total_candidate_targets": 2,
+    "emitted_targets": 2,
+    "truncated": false,
+    "omitted_targets_count": 0,
+    "target_offset": 0,
+    "batch_index": 0,
+    "batch_size": 2,
+    "max_targets_per_task": 5,
+    "max_targets_per_batch": 5
+  }
+}

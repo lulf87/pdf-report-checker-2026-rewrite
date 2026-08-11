@@ -1,0 +1,23 @@
+{
+  "code": "CODEX_EXIT_NONZERO",
+  "exit_code": 1,
+  "retry_after_text": null,
+  "workspace_dir": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/17d199ef-5521-4175-ab50-3abb56fd2056/codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C06-summary/input",
+  "prompt_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/17d199ef-5521-4175-ab50-3abb56fd2056/codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C06-summary/input/prompt.md",
+  "prompt_size_bytes": 13470,
+  "evidence_package_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/17d199ef-5521-4175-ab50-3abb56fd2056/codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C06-summary/input/evidence_package.json",
+  "evidence_package_size_bytes": 2151,
+  "output_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/17d199ef-5521-4175-ab50-3abb56fd2056/codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C06-summary/input/codex_review_output.json",
+  "output_exists": false,
+  "output_schema_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/17d199ef-5521-4175-ab50-3abb56fd2056/codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C06-summary/input/codex_review_output.schema.json",
+  "stdout_size_bytes": 0,
+  "stderr_size_bytes": 14941,
+  "output_size_bytes": 0,
+  "stderr_tail": "heck-summary-C06\", \"target_type\": \"check_result\", \"title\": \"中文标签覆盖\"}\n\n## Evidence Items\n\n### Evidence check_result:C06\n{\"file_path\": null, \"location\": null, \"metadata\": \"{\\\"check_id\\\": \\\"C06\\\", \\\"summary_only\\\": true, \\\"target_kind\\\": \\\"check_result_summary\\\"}\", \"page_number\": null, \"ref_id\": \"check_result:C06\", \"section\": \"C06\", \"source_type\": \"rule_context\", \"structured\": \"{\\\"audit_reason\\\": \\\"review deterministic report check summary and decide whether evidence is sufficient\\\", \\\"check_id\\\": \\\"C06\\\", \\\"check_name\\\": \\\"中文标签覆盖\\\", \\\"deterministic_finding_count\\\": 0, \\\"finding_codes\\\": [], \\\"rule_output_role\\\": \\\"candidate_summary_not_final_conclusion\\\", \\\"status\\\": \\\"pass\\\", \\\"summary\\\": \\\"样品描述部件均有对应中文标签\\\"}\", \"text\": \"样品描述部件与中文标签 caption/OCR 覆盖关系的规则初判上下文。\", \"title\": \"C06 deterministic check summary\"}\n\nERROR: Reconnecting... 1/5\nERROR: Reconnecting... 2/5\nERROR: Reconnecting... 3/5\nERROR: Reconnecting... 4/5\nERROR: Reconnecting... 5/5\nERROR: stream disconnected before completion: error sending request for url (https://chatgpt.com/backend-api/codex/responses)\nERROR: stream disconnected before completion: error sending request for url (https://chatgpt.com/backend-api/codex/responses)\n",
+  "stdout_tail": "",
+  "target_ids": [
+    "report-codex-check-summary-C06"
+  ],
+  "package_id": "codex-report-17d199ef-5521-4175-ab50-3abb56fd2056-C06-summary",
+  "task_id": "17d199ef-5521-4175-ab50-3abb56fd2056"
+}

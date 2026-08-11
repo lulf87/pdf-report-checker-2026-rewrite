@@ -1,0 +1,1057 @@
+{
+  "cache_key": "d20694e29cbbb20d31bf4ba1e59ef97e0a7cdc040a0a8a2aee861379eecbc415",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-c74618f5-756e-4f7a-ac37-d7f242bf047d-report-C07-batch-1-report-codex-target-c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain",
+      "request_id": "codex-request-c74618f5-756e-4f7a-ac37-d7f242bf047d-report-C07-batch-1",
+      "task_id": "c74618f5-756e-4f7a-ac37-d7f242bf047d",
+      "target": {
+        "target_id": "report-codex-target-c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain",
+        "target_type": "inspection_item",
+        "check_id": "C07",
+        "finding_id": "c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain",
+        "finding_code": "CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN",
+        "title": "序号 151 的结构化检验结果可能不完整，需结合原始表格或 Codex evidence 复核后再判断单项结论。",
+        "summary": "序号 151 的结构化检验结果可能不完整，需结合原始表格或 Codex evidence 复核后再判断单项结论。",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain",
+            "source_type": "finding",
+            "path": null,
+            "page_number": 103,
+            "section": null,
+            "description": "序号 151 的结构化检验结果可能不完整，需结合原始表格或 Codex evidence 复核后再判断单项结论。",
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": 103,
+            "section": "C07",
+            "description": "C07 deterministic rule context",
+            "metadata": {}
+          },
+          {
+            "ref_id": "inspection_item:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain",
+            "source_type": "table",
+            "path": null,
+            "page_number": 103,
+            "section": "inspection_item_group",
+            "description": "C07 检验项目 group evidence",
+            "metadata": {}
+          },
+          {
+            "ref_id": "inspection_page_text:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain",
+            "source_type": "page_text",
+            "path": null,
+            "page_number": 103,
+            "section": "inspection_group_page_text",
+            "description": "C07 inspection item page text evidence",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_page:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p103",
+            "source_type": "image",
+            "path": null,
+            "page_number": 103,
+            "section": "c07_visual_page",
+            "description": "C07 page image evidence p103",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_table:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p103",
+            "source_type": "image",
+            "path": null,
+            "page_number": 103,
+            "section": "c07_visual_table",
+            "description": "C07 table image evidence p103",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_page:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+            "source_type": "image",
+            "path": null,
+            "page_number": 104,
+            "section": "c07_visual_page",
+            "description": "C07 page image evidence p104",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_table:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+            "source_type": "image",
+            "path": null,
+            "page_number": 104,
+            "section": "c07_visual_table",
+            "description": "C07 table image evidence p104",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_item_group:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+            "source_type": "image",
+            "path": null,
+            "page_number": 104,
+            "section": "c07_visual_item_group",
+            "description": "C07 item group image evidence p104",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_result:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+            "source_type": "image",
+            "path": null,
+            "page_number": 104,
+            "section": "c07_visual_result",
+            "description": "C07 result column image evidence p104",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_conclusion:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+            "source_type": "image",
+            "path": null,
+            "page_number": 104,
+            "section": "c07_visual_conclusion",
+            "description": "C07 conclusion column image evidence p104",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_remark:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+            "source_type": "image",
+            "path": null,
+            "page_number": 104,
+            "section": "c07_visual_remark",
+            "description": "C07 remark column image evidence p104",
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "report_codex_evidence_builder",
+          "rule_id": "C07",
+          "severity": "warn",
+          "expected": "/",
+          "actual": "符合",
+          "page_number": 103,
+          "finding_code": "CONCLUSION_REVIEW_NEEDED_EXTRACTION_UNCERTAIN",
+          "evidence_incomplete": false,
+          "finding_metadata": {
+            "item_no": "151",
+            "normalized_item_no": "151",
+            "display_item_no": "151",
+            "expected_conclusion": "/",
+            "actual_conclusion": "符合",
+            "effective_test_results": [
+              "——",
+              "——"
+            ],
+            "original_effective_test_results": [
+              "——",
+              "——"
+            ],
+            "recovered_result_tokens": [],
+            "recovered_effective_test_results": [
+              "——",
+              "——"
+            ],
+            "result_token_recovery_applied": false,
+            "result_token_recovery_confidence": "uncertain",
+            "result_token_recovery_diagnostics": [
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 999,
+                "source_page": 104,
+                "source_row_index": 5,
+                "sequence_raw": "e) 高频手术设备和附属设备上的手术输出端\n子在结构、外形上应明显不同，以使单极手术\n附件、中性电极和双极手术附件不能错误连\n接。",
+                "standard_clause": "",
+                "source_text_excerpt": "e) 高频手术设备和附属设备上的手术输出端\n子在结构、外形上应明显不同，以使单极手术\n附件、中性电极和双极手术附件不能错误连\n接。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              }
+            ],
+            "result_summary": {
+              "total_count": 2,
+              "nonconforming_count": 0,
+              "placeholder_count": 2,
+              "conforming_or_non_empty_count": 0
+            },
+            "reasoning_basis": "all_placeholders_or_blank",
+            "decision_reason": "all_placeholders_or_blank",
+            "pages": [
+              103,
+              104
+            ],
+            "continuation_markers": [
+              {
+                "raw_text": "续\n151",
+                "normalized_item_no": "151",
+                "page_number": 104,
+                "row_index": 1,
+                "source_index": 995
+              }
+            ],
+            "suppressed_physical_row_count": 7,
+            "needs_codex_review": true,
+            "group_diagnostics": [
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 999,
+                "source_page": 104,
+                "source_row_index": 5,
+                "sequence_raw": "e) 高频手术设备和附属设备上的手术输出端\n子在结构、外形上应明显不同，以使单极手术\n附件、中性电极和双极手术附件不能错误连\n接。",
+                "standard_clause": "",
+                "source_text_excerpt": "e) 高频手术设备和附属设备上的手术输出端\n子在结构、外形上应明显不同，以使单极手术\n附件、中性电极和双极手术附件不能错误连\n接。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              }
+            ]
+          },
+          "complex_matrix_table": false,
+          "complex_matrix_reason": null,
+          "c07_visual_evidence": {
+            "has_visual_input": true,
+            "visual_review_mode": "inspection_item_group",
+            "page_image_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain-c07-page-p103.png",
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain-c07-page-p104.png"
+            ],
+            "table_image_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain-c07-table-p103.png",
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain-c07-table-p104.png"
+            ],
+            "item_group_crop_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain-c07-item-group-p104.png"
+            ],
+            "result_column_crop_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain-c07-result-p104.png"
+            ],
+            "conclusion_column_crop_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain-c07-conclusion-p104.png"
+            ],
+            "remark_column_crop_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain-c07-remark-p104.png"
+            ],
+            "missing_visual_evidence_reasons": [
+              "field_bbox_missing",
+              "row_bbox_missing"
+            ]
+          },
+          "evidence_has_c07_visual_input": true
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "视觉证据显示序号151跨页续表中多数检验结果为“——”，但 e) 行检验结果清楚为“符合要求”，单项结论列为“符合”、备注为“/”。因此结构化抽取的 all-placeholder 判断被图像反驳。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "c07_visual_page:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p103",
+        "c07_visual_table:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p103",
+        "c07_visual_page:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+        "c07_visual_table:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+        "c07_visual_item_group:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+        "c07_visual_result:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+        "c07_visual_conclusion:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+        "c07_visual_remark:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain:p104",
+        "rule_context:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-151-result-token-recovery-uncertain"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-03T04:26:42.352759Z",
+      "completed_at": "2026-07-03T04:26:42.352759Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex_output_schema_v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 73.35182,
+        "exit_code": 0,
+        "stdout_size_bytes": 3617,
+        "stderr_size_bytes": 37361,
+        "output_size_bytes": 3616,
+        "image_count": 20,
+        "codex_package_profile": {
+          "package_id": "codex-report-c74618f5-756e-4f7a-ac37-d7f242bf047d-C07-batch-1",
+          "check_id": "C07",
+          "target_count": 2,
+          "evidence_write_seconds": 0.474724,
+          "evidence_package_size_bytes": 1462508,
+          "externalized_text_count": 0,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 0.45117,
+          "materialized_image_bytes": 4112986,
+          "materialized_image_count": 20,
+          "image_items_count": 20,
+          "image_path_collection_seconds": 0.001125,
+          "image_count": 20,
+          "image_bytes": 4112986,
+          "prompt_build_seconds": 0.006769,
+          "prompt_size_bytes": 29042,
+          "schema_prepare_seconds": 0.000325,
+          "codex_exec_seconds": 73.35182,
+          "result_validation_seconds": 8e-06
+        },
+        "cache_key": "d20694e29cbbb20d31bf4ba1e59ef97e0a7cdc040a0a8a2aee861379eecbc415"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-c74618f5-756e-4f7a-ac37-d7f242bf047d-report-C07-batch-1-report-codex-target-c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch",
+      "request_id": "codex-request-c74618f5-756e-4f7a-ac37-d7f242bf047d-report-C07-batch-1",
+      "task_id": "c74618f5-756e-4f7a-ac37-d7f242bf047d",
+      "target": {
+        "target_id": "report-codex-target-c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch",
+        "target_type": "inspection_item",
+        "check_id": "C07",
+        "finding_id": "c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch",
+        "finding_code": "CONCLUSION_MISMATCH_002",
+        "title": "序号 195 的检验结果与单项结论逻辑不一致：存在符合要求或其他非空检验结果，期望单项结论为“符合”，实际为“2.8.1软件版本2功能1）LiveView可依据导管信号在标测模式下根据探测设置显示LiveView点，当该模块打开时，可在标测模式下显示实时标测数据。”。",
+        "summary": "序号 195 的检验结果与单项结论逻辑不一致：存在符合要求或其他非空检验结果，期望单项结论为“符合”，实际为“2.8.1软件版本2功能1）LiveView可依据导管信号在标测模式下根据探测设置显示LiveView点，当该模块打开时，可在标测模式下显示实时标测数据。”。",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch",
+            "source_type": "finding",
+            "path": null,
+            "page_number": 117,
+            "section": null,
+            "description": "序号 195 的检验结果与单项结论逻辑不一致：存在符合要求或其他非空检验结果，期望单项结论为“符合”，实际为“2.8.1软件版本2功能1）LiveView可依据导管信号在标测模式下根据探测设置显示LiveView点，当该模块打开时，可在标测模式下显示实时标测数据。”。",
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": 117,
+            "section": "C07",
+            "description": "C07 deterministic rule context",
+            "metadata": {}
+          },
+          {
+            "ref_id": "inspection_item:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch",
+            "source_type": "table",
+            "path": null,
+            "page_number": 117,
+            "section": "inspection_item_group",
+            "description": "C07 检验项目 group evidence",
+            "metadata": {}
+          },
+          {
+            "ref_id": "inspection_page_text:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch",
+            "source_type": "page_text",
+            "path": null,
+            "page_number": 117,
+            "section": "inspection_group_page_text",
+            "description": "C07 inspection item page text evidence",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_page:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+            "source_type": "image",
+            "path": null,
+            "page_number": 117,
+            "section": "c07_visual_page",
+            "description": "C07 page image evidence p117",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_table:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+            "source_type": "image",
+            "path": null,
+            "page_number": 117,
+            "section": "c07_visual_table",
+            "description": "C07 table image evidence p117",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_item_group:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+            "source_type": "image",
+            "path": null,
+            "page_number": 117,
+            "section": "c07_visual_item_group",
+            "description": "C07 item group image evidence p117",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_result:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+            "source_type": "image",
+            "path": null,
+            "page_number": 117,
+            "section": "c07_visual_result",
+            "description": "C07 result column image evidence p117",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_conclusion:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+            "source_type": "image",
+            "path": null,
+            "page_number": 117,
+            "section": "c07_visual_conclusion",
+            "description": "C07 conclusion column image evidence p117",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_remark:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+            "source_type": "image",
+            "path": null,
+            "page_number": 117,
+            "section": "c07_visual_remark",
+            "description": "C07 remark column image evidence p117",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_page:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+            "source_type": "image",
+            "path": null,
+            "page_number": 118,
+            "section": "c07_visual_page",
+            "description": "C07 page image evidence p118",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_table:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+            "source_type": "image",
+            "path": null,
+            "page_number": 118,
+            "section": "c07_visual_table",
+            "description": "C07 table image evidence p118",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_item_group:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+            "source_type": "image",
+            "path": null,
+            "page_number": 118,
+            "section": "c07_visual_item_group",
+            "description": "C07 item group image evidence p118",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_result:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+            "source_type": "image",
+            "path": null,
+            "page_number": 118,
+            "section": "c07_visual_result",
+            "description": "C07 result column image evidence p118",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_conclusion:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+            "source_type": "image",
+            "path": null,
+            "page_number": 118,
+            "section": "c07_visual_conclusion",
+            "description": "C07 conclusion column image evidence p118",
+            "metadata": {}
+          },
+          {
+            "ref_id": "c07_visual_remark:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+            "source_type": "image",
+            "path": null,
+            "page_number": 118,
+            "section": "c07_visual_remark",
+            "description": "C07 remark column image evidence p118",
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "report_codex_evidence_builder",
+          "rule_id": "C07",
+          "severity": "error",
+          "expected": "符合",
+          "actual": "2.8.1软件版本2功能1）LiveView可依据导管信号在标测模式下根据探测设置显示LiveView点，当该模块打开时，可在标测模式下显示实时标测数据。",
+          "page_number": 117,
+          "finding_code": "CONCLUSION_MISMATCH_002",
+          "evidence_incomplete": false,
+          "finding_metadata": {
+            "item_no": "195",
+            "normalized_item_no": "195",
+            "display_item_no": "195",
+            "expected_conclusion": "符合",
+            "actual_conclusion": "2.8.1软件版本2功能1）LiveView可依据导管信号在标测模式下根据探测设置显示LiveView点，当该模块打开时，可在标测模式下显示实时标测数据。",
+            "effective_test_results": [
+              "2.8.2软件版本3功能1）2.8.1中的功能",
+              "/"
+            ],
+            "original_effective_test_results": [
+              "2.8.2 软件版本\n3 功能 \n1）2.8.1 中的功\n能",
+              "/"
+            ],
+            "recovered_result_tokens": [],
+            "recovered_effective_test_results": [
+              "2.8.2 软件版本\n3 功能 \n1）2.8.1 中的功\n能",
+              "/"
+            ],
+            "result_token_recovery_applied": false,
+            "result_token_recovery_confidence": "uncertain",
+            "result_token_recovery_diagnostics": [
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1104,
+                "source_page": 117,
+                "source_row_index": 2,
+                "sequence_raw": "2) OT \n可依据导管信号\n在标测模式下根\n据探测设置显示\n全极标测波形。",
+                "standard_clause": "",
+                "source_text_excerpt": "2) OT \n可依据导管信号\n在标测模式下根\n据探测设置显示\n全极标测波形。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1105,
+                "source_page": 117,
+                "source_row_index": 3,
+                "sequence_raw": "3) Live Export \n该功能允许\nEnSite X 与经授\n权的第三方记录\n系统之间发送数\n据。",
+                "standard_clause": "",
+                "source_text_excerpt": "3) Live Export \n该功能允许\nEnSite X 与经授\n权的第三方记录\n系统之间发送数\n据。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1106,
+                "source_page": 117,
+                "source_row_index": 4,
+                "sequence_raw": "4）OT Data \n 该功能可将 OT\n数据输出。",
+                "standard_clause": "",
+                "source_text_excerpt": "4）OT Data \n 该功能可将 OT\n数据输出。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1107,
+                "source_page": 117,
+                "source_row_index": 5,
+                "sequence_raw": "5）Wave Speed \n  该功能可通过\n下拉菜单选择，\n显示波速。",
+                "standard_clause": "",
+                "source_text_excerpt": "5）Wave Speed \n  该功能可通过\n下拉菜单选择，\n显示波速。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1108,
+                "source_page": 117,
+                "source_row_index": 6,
+                "sequence_raw": "6）近场检测 \n该功能根据导管\n信号中的最高频\n率点确定局部激\n活时间(LAT)。",
+                "standard_clause": "",
+                "source_text_excerpt": "6）近场检测 \n该功能根据导管\n信号中的最高频\n率点确定局部激\n活时间(LAT)。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1109,
+                "source_page": 117,
+                "source_row_index": 7,
+                "sequence_raw": "7）峰值频率图 \n 该功能将导管\n信号的最高频率\n在标测图中显示\n为同一种颜色",
+                "standard_clause": "",
+                "source_text_excerpt": "7）峰值频率图 \n 该功能将导管\n信号的最高频率\n在标测图中显示\n为同一种颜色 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1111,
+                "source_page": 118,
+                "source_row_index": 2,
+                "sequence_raw": "2）自动标注距离 \n该功能显示自动标记或手动病变标\n记与消融导管远端电极之间的距\n离，或两个或多个病变标记之间的\n距离。",
+                "standard_clause": "",
+                "source_text_excerpt": "2）自动标注距离 \n该功能显示自动标记或手动病变标\n记与消融导管远端电极之间的距\n离，或两个或多个病变标记之间的\n距离。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1112,
+                "source_page": 118,
+                "source_row_index": 3,
+                "sequence_raw": "3）平均阻抗降低 \n该功能可提供平均阻抗、平均阻抗\n下降(AID(Ω))和百分比平均阻抗下\n降(AID(%))的信息。",
+                "standard_clause": "",
+                "source_text_excerpt": "3）平均阻抗降低 \n该功能可提供平均阻抗、平均阻抗\n下降(AID(Ω))和百分比平均阻抗下\n降(AID(%))的信息。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1113,
+                "source_page": 118,
+                "source_row_index": 4,
+                "sequence_raw": "4） Voxel Flex \n该功能可使用户能够在研究期间在\nNavX 和 VoXel 导航模式之间切换。",
+                "standard_clause": "",
+                "source_text_excerpt": "4） Voxel Flex \n该功能可使用户能够在研究期间在\nNavX 和 VoXel 导航模式之间切换。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1114,
+                "source_page": 118,
+                "source_row_index": 5,
+                "sequence_raw": "5） 实时同步 \n该功能允许在使用过程中使 EnSite \nX 系统和第三方客户端之间发送数\n据。",
+                "standard_clause": "",
+                "source_text_excerpt": "5） 实时同步 \n该功能允许在使用过程中使 EnSite \nX 系统和第三方客户端之间发送数\n据。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1115,
+                "source_page": 118,
+                "source_row_index": 6,
+                "sequence_raw": "6）Advisor HD Grid X 兼容性 \n 该功能允许本产品在电生理手术中\n与雅培生产的一次性使用网状磁电\n定位标测导管配合使用。",
+                "standard_clause": "",
+                "source_text_excerpt": "6）Advisor HD Grid X 兼容性 \n 该功能允许本产品在电生理手术中\n与雅培生产的一次性使用网状磁电\n定位标测导管配合使用。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1116,
+                "source_page": 118,
+                "source_row_index": 7,
+                "sequence_raw": "7）自动标注指数 \n该功能允许本产品通过计算导管接\n触力，射频应用时长及射频电流提\n供专用参数。",
+                "standard_clause": "",
+                "source_text_excerpt": "7）自动标注指数 \n该功能允许本产品通过计算导管接\n触力，射频应用时长及射频电流提\n供专用参数。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1117,
+                "source_page": 118,
+                "source_row_index": 8,
+                "sequence_raw": "2）Volt PFA 许可证：该功能允许在 VoXel 模\n式下与一次性使用磁电定位压力监测球囊脉冲\n电场消融导管和心脏脉冲电场消融仪配合使\n用。这使 LivePoint， PFA 自动标记和治疗后\n能量场显示成为可能。",
+                "standard_clause": "",
+                "source_text_excerpt": "2）Volt PFA 许可证：该功能允许在 VoXel 模\n式下与一次性使用磁电定位压力监测球囊脉冲\n电场消融导管和心脏脉冲电场消融仪配合使\n用。这使 LivePoint， PFA 自动标记和治疗后\n能量场显示成为可能。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1118,
+                "source_page": 118,
+                "source_row_index": 9,
+                "sequence_raw": "3）FLEX 预设常用设置的预定义值",
+                "standard_clause": "",
+                "source_text_excerpt": "3）FLEX 预设常用设置的预定义值 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              }
+            ],
+            "result_summary": {
+              "total_count": 2,
+              "nonconforming_count": 0,
+              "placeholder_count": 1,
+              "conforming_or_non_empty_count": 1
+            },
+            "reasoning_basis": "has_conforming_or_non_empty_result",
+            "decision_reason": "has_conforming_or_non_empty_result",
+            "pages": [
+              117,
+              118
+            ],
+            "continuation_markers": [
+              {
+                "raw_text": "续\n195",
+                "normalized_item_no": "195",
+                "page_number": 118,
+                "row_index": 1,
+                "source_index": 1110
+              }
+            ],
+            "suppressed_physical_row_count": 15,
+            "group_diagnostics": [
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1104,
+                "source_page": 117,
+                "source_row_index": 2,
+                "sequence_raw": "2) OT \n可依据导管信号\n在标测模式下根\n据探测设置显示\n全极标测波形。",
+                "standard_clause": "",
+                "source_text_excerpt": "2) OT \n可依据导管信号\n在标测模式下根\n据探测设置显示\n全极标测波形。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1105,
+                "source_page": 117,
+                "source_row_index": 3,
+                "sequence_raw": "3) Live Export \n该功能允许\nEnSite X 与经授\n权的第三方记录\n系统之间发送数\n据。",
+                "standard_clause": "",
+                "source_text_excerpt": "3) Live Export \n该功能允许\nEnSite X 与经授\n权的第三方记录\n系统之间发送数\n据。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1106,
+                "source_page": 117,
+                "source_row_index": 4,
+                "sequence_raw": "4）OT Data \n 该功能可将 OT\n数据输出。",
+                "standard_clause": "",
+                "source_text_excerpt": "4）OT Data \n 该功能可将 OT\n数据输出。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1107,
+                "source_page": 117,
+                "source_row_index": 5,
+                "sequence_raw": "5）Wave Speed \n  该功能可通过\n下拉菜单选择，\n显示波速。",
+                "standard_clause": "",
+                "source_text_excerpt": "5）Wave Speed \n  该功能可通过\n下拉菜单选择，\n显示波速。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1108,
+                "source_page": 117,
+                "source_row_index": 6,
+                "sequence_raw": "6）近场检测 \n该功能根据导管\n信号中的最高频\n率点确定局部激\n活时间(LAT)。",
+                "standard_clause": "",
+                "source_text_excerpt": "6）近场检测 \n该功能根据导管\n信号中的最高频\n率点确定局部激\n活时间(LAT)。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1109,
+                "source_page": 117,
+                "source_row_index": 7,
+                "sequence_raw": "7）峰值频率图 \n 该功能将导管\n信号的最高频率\n在标测图中显示\n为同一种颜色",
+                "standard_clause": "",
+                "source_text_excerpt": "7）峰值频率图 \n 该功能将导管\n信号的最高频率\n在标测图中显示\n为同一种颜色 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1111,
+                "source_page": 118,
+                "source_row_index": 2,
+                "sequence_raw": "2）自动标注距离 \n该功能显示自动标记或手动病变标\n记与消融导管远端电极之间的距\n离，或两个或多个病变标记之间的\n距离。",
+                "standard_clause": "",
+                "source_text_excerpt": "2）自动标注距离 \n该功能显示自动标记或手动病变标\n记与消融导管远端电极之间的距\n离，或两个或多个病变标记之间的\n距离。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1112,
+                "source_page": 118,
+                "source_row_index": 3,
+                "sequence_raw": "3）平均阻抗降低 \n该功能可提供平均阻抗、平均阻抗\n下降(AID(Ω))和百分比平均阻抗下\n降(AID(%))的信息。",
+                "standard_clause": "",
+                "source_text_excerpt": "3）平均阻抗降低 \n该功能可提供平均阻抗、平均阻抗\n下降(AID(Ω))和百分比平均阻抗下\n降(AID(%))的信息。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1113,
+                "source_page": 118,
+                "source_row_index": 4,
+                "sequence_raw": "4） Voxel Flex \n该功能可使用户能够在研究期间在\nNavX 和 VoXel 导航模式之间切换。",
+                "standard_clause": "",
+                "source_text_excerpt": "4） Voxel Flex \n该功能可使用户能够在研究期间在\nNavX 和 VoXel 导航模式之间切换。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1114,
+                "source_page": 118,
+                "source_row_index": 5,
+                "sequence_raw": "5） 实时同步 \n该功能允许在使用过程中使 EnSite \nX 系统和第三方客户端之间发送数\n据。",
+                "standard_clause": "",
+                "source_text_excerpt": "5） 实时同步 \n该功能允许在使用过程中使 EnSite \nX 系统和第三方客户端之间发送数\n据。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1115,
+                "source_page": 118,
+                "source_row_index": 6,
+                "sequence_raw": "6）Advisor HD Grid X 兼容性 \n 该功能允许本产品在电生理手术中\n与雅培生产的一次性使用网状磁电\n定位标测导管配合使用。",
+                "standard_clause": "",
+                "source_text_excerpt": "6）Advisor HD Grid X 兼容性 \n 该功能允许本产品在电生理手术中\n与雅培生产的一次性使用网状磁电\n定位标测导管配合使用。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1116,
+                "source_page": 118,
+                "source_row_index": 7,
+                "sequence_raw": "7）自动标注指数 \n该功能允许本产品通过计算导管接\n触力，射频应用时长及射频电流提\n供专用参数。",
+                "standard_clause": "",
+                "source_text_excerpt": "7）自动标注指数 \n该功能允许本产品通过计算导管接\n触力，射频应用时长及射频电流提\n供专用参数。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1117,
+                "source_page": 118,
+                "source_row_index": 8,
+                "sequence_raw": "2）Volt PFA 许可证：该功能允许在 VoXel 模\n式下与一次性使用磁电定位压力监测球囊脉冲\n电场消融导管和心脏脉冲电场消融仪配合使\n用。这使 LivePoint， PFA 自动标记和治疗后\n能量场显示成为可能。",
+                "standard_clause": "",
+                "source_text_excerpt": "2）Volt PFA 许可证：该功能允许在 VoXel 模\n式下与一次性使用磁电定位压力监测球囊脉冲\n电场消融导管和心脏脉冲电场消融仪配合使\n用。这使 LivePoint， PFA 自动标记和治疗后\n能量场显示成为可能。 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+                "source_index": 1118,
+                "source_page": 118,
+                "source_row_index": 9,
+                "sequence_raw": "3）FLEX 预设常用设置的预定义值",
+                "standard_clause": "",
+                "source_text_excerpt": "3）FLEX 预设常用设置的预定义值 符合要求",
+                "recovery_method": "row_text_ambiguous_result",
+                "confidence": "uncertain",
+                "possible_result_tokens": [
+                  "符合要求",
+                  "符合"
+                ]
+              },
+              {
+                "code": "CONFLICTING_EFFECTIVE_CONCLUSION",
+                "item_no": "195",
+                "values": [
+                  "2.8.1 软件版本\n2 功能 \n1）Live View \n可依据导管信号\n在标测模式下根\n据探测设置显示\nLiveView 点，当\n该模块打开时，\n可在标测模式下\n显示实时标测数\n据。",
+                  "8）Emphasize \n  该功能允许用\n户在标测图上突\n出显示符合特定\n度量标准的区\n域。"
+                ]
+              }
+            ]
+          },
+          "complex_matrix_table": false,
+          "complex_matrix_reason": null,
+          "c07_visual_evidence": {
+            "has_visual_input": true,
+            "visual_review_mode": "inspection_item_group",
+            "page_image_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-page-p117.png",
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-page-p118.png"
+            ],
+            "table_image_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-table-p117.png",
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-table-p118.png"
+            ],
+            "item_group_crop_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-item-group-p117.png",
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-item-group-p118.png"
+            ],
+            "result_column_crop_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-result-p117.png",
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-result-p118.png"
+            ],
+            "conclusion_column_crop_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-conclusion-p117.png",
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-conclusion-p118.png"
+            ],
+            "remark_column_crop_refs": [
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-remark-p117.png",
+              "items/c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch-c07-remark-p118.png"
+            ],
+            "missing_visual_evidence_reasons": []
+          },
+          "evidence_has_c07_visual_input": true
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "视觉证据显示序号195的检验结果列在第115页和续页第116页均为多处“符合要求”，单项结论列为合并单元格“符合”、备注为“/”。候选把标准要求正文误作实际单项结论，图像反驳该 mismatch。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "c07_visual_page:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+        "c07_visual_table:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+        "c07_visual_item_group:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+        "c07_visual_result:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+        "c07_visual_conclusion:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+        "c07_visual_remark:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p117",
+        "c07_visual_page:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+        "c07_visual_table:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+        "c07_visual_item_group:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+        "c07_visual_result:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+        "c07_visual_conclusion:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+        "c07_visual_remark:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch:p118",
+        "rule_context:c74618f5-756e-4f7a-ac37-d7f242bf047d-c07-195-conclusion-mismatch"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-03T04:26:42.352759Z",
+      "completed_at": "2026-07-03T04:26:42.352759Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex_output_schema_v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 73.35182,
+        "exit_code": 0,
+        "stdout_size_bytes": 3617,
+        "stderr_size_bytes": 37361,
+        "output_size_bytes": 3616,
+        "image_count": 20,
+        "codex_package_profile": {
+          "package_id": "codex-report-c74618f5-756e-4f7a-ac37-d7f242bf047d-C07-batch-1",
+          "check_id": "C07",
+          "target_count": 2,
+          "evidence_write_seconds": 0.474724,
+          "evidence_package_size_bytes": 1462508,
+          "externalized_text_count": 0,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 0.45117,
+          "materialized_image_bytes": 4112986,
+          "materialized_image_count": 20,
+          "image_items_count": 20,
+          "image_path_collection_seconds": 0.001125,
+          "image_count": 20,
+          "image_bytes": 4112986,
+          "prompt_build_seconds": 0.006769,
+          "prompt_size_bytes": 29042,
+          "schema_prepare_seconds": 0.000325,
+          "codex_exec_seconds": 73.35182,
+          "result_validation_seconds": 8e-06
+        },
+        "cache_key": "d20694e29cbbb20d31bf4ba1e59ef97e0a7cdc040a0a8a2aee861379eecbc415"
+      }
+    }
+  ]
+}

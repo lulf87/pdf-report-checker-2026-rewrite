@@ -217,8 +217,12 @@ class FakeReportAuditService:
         failed: bool = False,
         exc: Exception | None = None,
         timeout_seconds: int = 900,
+        model: str | None = None,
+        reasoning_effort: str | None = None,
         calls: list[dict[str, object]] | None = None,
         timeout_overrides: list[int] | None = None,
+        model_overrides: list[str] | None = None,
+        reasoning_effort_overrides: list[str] | None = None,
     ) -> None:
         self.verdict = verdict
         self.review_metadata = review_metadata or {}
@@ -226,7 +230,17 @@ class FakeReportAuditService:
         self.exc = exc
         self.calls: list[dict[str, object]] = calls if calls is not None else []
         self.timeout_overrides = timeout_overrides if timeout_overrides is not None else []
-        self.runner = SimpleNamespace(config=SimpleNamespace(timeout_seconds=timeout_seconds))
+        self.model_overrides = model_overrides if model_overrides is not None else []
+        self.reasoning_effort_overrides = (
+            reasoning_effort_overrides if reasoning_effort_overrides is not None else []
+        )
+        self.runner = SimpleNamespace(
+            config=SimpleNamespace(
+                timeout_seconds=timeout_seconds,
+                model=model,
+                reasoning_effort=reasoning_effort,
+            )
+        )
 
     def with_timeout_seconds(self, timeout_seconds: int) -> "FakeReportAuditService":
         self.timeout_overrides.append(timeout_seconds)
@@ -236,8 +250,44 @@ class FakeReportAuditService:
             failed=self.failed,
             exc=self.exc,
             timeout_seconds=timeout_seconds,
+            model=self.runner.config.model,
+            reasoning_effort=self.runner.config.reasoning_effort,
             calls=self.calls,
             timeout_overrides=self.timeout_overrides,
+            model_overrides=self.model_overrides,
+            reasoning_effort_overrides=self.reasoning_effort_overrides,
+        )
+
+    def with_model(self, model: str) -> "FakeReportAuditService":
+        self.model_overrides.append(model)
+        return FakeReportAuditService(
+            verdict=self.verdict,
+            review_metadata=self.review_metadata,
+            failed=self.failed,
+            exc=self.exc,
+            timeout_seconds=self.runner.config.timeout_seconds,
+            model=model,
+            reasoning_effort=self.runner.config.reasoning_effort,
+            calls=self.calls,
+            timeout_overrides=self.timeout_overrides,
+            model_overrides=self.model_overrides,
+            reasoning_effort_overrides=self.reasoning_effort_overrides,
+        )
+
+    def with_reasoning_effort(self, reasoning_effort: str) -> "FakeReportAuditService":
+        self.reasoning_effort_overrides.append(reasoning_effort)
+        return FakeReportAuditService(
+            verdict=self.verdict,
+            review_metadata=self.review_metadata,
+            failed=self.failed,
+            exc=self.exc,
+            timeout_seconds=self.runner.config.timeout_seconds,
+            model=self.runner.config.model,
+            reasoning_effort=reasoning_effort,
+            calls=self.calls,
+            timeout_overrides=self.timeout_overrides,
+            model_overrides=self.model_overrides,
+            reasoning_effort_overrides=self.reasoning_effort_overrides,
         )
 
     def review(self, request, evidence_package) -> list[CodexReviewResult]:
@@ -754,6 +804,29 @@ def test_report_check_c04_visual_observed_fields_match_refutes_candidate(tmp_pat
     assert finding_result.metadata["codex_observed_label_fields"]["batch_or_serial"] == "LOT-1"
     assert finding_result.metadata["codex_field_comparisons"][0]["status"] == "match"
     assert finding_result.metadata["codex_visual_evidence_quality"] == "clear"
+    final_details = result.check_results[0].metadata["final_comparison_details"]
+    assert final_details["overall_status"] == "passed"
+    assert final_details["fields"] == [
+        {
+            "field_key": "batch_or_serial",
+            "field_label": "序列号/批号",
+            "status": "match",
+            "reason": "视觉读取字段与样品描述一致。",
+            "evidence_ids": ["label_image:finding-1"],
+            "left": {
+                "source_key": "report_extract",
+                "label": "报告摘录",
+                "raw_text": "LOT-1",
+                "normalized_text": "LOT-1",
+            },
+            "right": {
+                "source_key": "visual_evidence",
+                "label": "中文标签图像摘录",
+                "raw_text": "LOT-1",
+                "normalized_text": "LOT-1",
+            },
+        }
+    ]
     assert result.summary.refuted_findings_count == 1
     assert result.summary.confirmed_errors_count == 0
 
@@ -1008,6 +1081,47 @@ def test_report_check_confirm_for_simple_c07_business_mismatch_stays_confirmed_e
     assert result.summary.final_audit_status == "failed"
 
 
+def test_report_check_uncertain_cannot_hide_deterministic_c07_conclusion_mismatch(
+    tmp_path: Path,
+) -> None:
+    finding = _report_finding(
+        check_id="C07",
+        metadata={
+            "item_no": "161",
+            "normalized_item_no": "161",
+            "effective_test_results": ["/"],
+            "actual_conclusion": "符合",
+            "deterministic_conclusion_mismatch": True,
+        },
+    ).model_copy(
+        update={
+            "code": "CONCLUSION_MISMATCH_001",
+            "severity": FindingSeverity.ERROR,
+            "expected": "/",
+            "actual": "符合",
+        }
+    )
+    task_service, status = _run_report_check(
+        tmp_path,
+        rule_runner=ConfigurableReportRuleRunner(check_id="C07", findings=[finding]),
+        codex_audit_service=FakeReportAuditService(verdict=CodexReviewVerdict.UNCERTAIN),
+        codex_audit_enabled=True,
+    )
+
+    result = task_service.get_result(status.task_id)
+    finding_result = result.check_results[0].findings[0]
+    assert status.status == TaskState.COMPLETED
+    assert finding_result.metadata["codex_verdict"] == "uncertain"
+    assert finding_result.metadata["final_status"] == "confirmed"
+    assert (
+        finding_result.metadata["finalization_reason"]
+        == "DETERMINISTIC_C07_CONCLUSION_MISMATCH_OVERRIDES_CODEX_UNCERTAIN"
+    )
+    assert result.summary.confirmed_errors_count == 1
+    assert result.summary.manual_review_required_count == 0
+    assert result.summary.final_audit_status == "failed"
+
+
 def test_report_check_uncertain_for_c07_extraction_uncertainty_stays_manual_review(
     tmp_path: Path,
 ) -> None:
@@ -1213,6 +1327,8 @@ def test_report_check_task_audit_options_override_default_target_selection(tmp_p
             "max_targets_per_batch": 1,
             "max_parallel_jobs": 1,
             "timeout_seconds": 900,
+            "model": "gpt-5.4",
+            "reasoning_effort": "high",
         },
     )
 
@@ -1220,15 +1336,31 @@ def test_report_check_task_audit_options_override_default_target_selection(tmp_p
     assert status.status == TaskState.COMPLETED
     assert [call["request"].targets[0].check_id for call in audit_service.calls] == ["C07"]
     assert audit_service.timeout_overrides == [900]
+    assert audit_service.model_overrides == ["gpt-5.4"]
+    assert audit_service.reasoning_effort_overrides == ["high"]
     assert result.metadata["audit_options_source"] == "user_override"
     assert result.metadata["audit_options"]["included_check_ids"] == ["C07"]
     assert result.metadata["audit_options"]["max_targets_per_batch"] == 1
     assert result.metadata["audit_options"]["max_parallel_jobs"] == 1
     assert result.metadata["audit_options"]["timeout_seconds"] == 900
+    assert result.metadata["audit_options"]["model"] == "gpt-5.4"
+    assert result.metadata["audit_options"]["reasoning_effort"] == "high"
     assert result.metadata["effective_audit_options"]["included_check_ids"] == ["C07"]
     assert result.metadata["effective_audit_options"]["max_targets_per_batch"] == 1
     assert result.metadata["effective_audit_options"]["max_parallel_jobs"] == 1
     assert result.metadata["effective_audit_options"]["timeout_seconds"] == 900
+    assert result.metadata["effective_audit_options"]["requested_model"] == "gpt-5.4"
+    assert result.metadata["effective_audit_options"]["effective_model"] == "gpt-5.4"
+    assert result.metadata["effective_audit_options"]["model_source"] == "task_override"
+    assert result.metadata["effective_audit_options"]["requested_reasoning_effort"] == "high"
+    assert result.metadata["effective_audit_options"]["effective_reasoning_effort"] == "high"
+    assert result.metadata["effective_audit_options"]["reasoning_effort_source"] == "task_override"
+    assert result.metadata["requested_model"] == "gpt-5.4"
+    assert result.metadata["effective_model"] == "gpt-5.4"
+    assert result.metadata["model_source"] == "task_override"
+    assert result.metadata["requested_reasoning_effort"] == "high"
+    assert result.metadata["effective_reasoning_effort"] == "high"
+    assert result.metadata["reasoning_effort_source"] == "task_override"
     assert result.metadata["codex_audit"]["audit_scope"] == "targeted"
     assert result.metadata["codex_audit"]["included_check_ids"] == ["C07"]
 

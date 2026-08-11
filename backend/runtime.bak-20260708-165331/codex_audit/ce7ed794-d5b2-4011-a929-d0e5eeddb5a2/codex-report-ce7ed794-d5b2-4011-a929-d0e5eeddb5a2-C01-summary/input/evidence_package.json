@@ -1,0 +1,70 @@
+{
+  "package_id": "codex-report-ce7ed794-d5b2-4011-a929-d0e5eeddb5a2-C01-summary",
+  "task_id": "ce7ed794-d5b2-4011-a929-d0e5eeddb5a2",
+  "task_type": "report_check",
+  "kind": "report_rule_review",
+  "schema_version": "evidence-package-v1",
+  "created_at": "2026-07-02T02:45:51.170349Z",
+  "targets": [
+    {
+      "target_id": "report-codex-check-summary-C01",
+      "target_type": "check_result",
+      "check_id": "C01",
+      "finding_id": null,
+      "finding_code": null,
+      "summary": "首页与第三页的委托方、样品名称、型号规格均严格一致",
+      "evidence_refs": [
+        "check_result:C01"
+      ],
+      "metadata": {
+        "source": "report_codex_evidence_builder",
+        "target_kind": "check_result_summary",
+        "summary_only": true
+      }
+    }
+  ],
+  "items": [
+    {
+      "ref_id": "check_result:C01",
+      "source_type": "rule_context",
+      "title": "C01 deterministic check summary",
+      "text": "报告自检规则初判汇总上下文。",
+      "structured": {
+        "check_id": "C01",
+        "check_name": "首页与第三页一致性",
+        "status": "pass",
+        "summary": "首页与第三页的委托方、样品名称、型号规格均严格一致",
+        "deterministic_finding_count": 0,
+        "finding_codes": [],
+        "rule_output_role": "candidate_summary_not_final_conclusion",
+        "audit_reason": "review deterministic report check summary and decide whether evidence is sufficient"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": "C01",
+      "location": null,
+      "metadata": {
+        "check_id": "C01",
+        "target_kind": "check_result_summary",
+        "summary_only": true
+      }
+    }
+  ],
+  "metadata": {
+    "source": "report_codex_evidence_builder",
+    "check_id": "C01",
+    "deterministic_finding_count": 0,
+    "target_count": 1,
+    "summary_target": true,
+    "summary_only": true,
+    "total_candidate_targets": 1,
+    "emitted_targets": 1,
+    "truncated": false,
+    "omitted_targets_count": 0,
+    "target_offset": 0,
+    "batch_index": 0,
+    "batch_size": 1,
+    "max_targets_per_task": 5,
+    "max_targets_per_batch": 5
+  }
+}

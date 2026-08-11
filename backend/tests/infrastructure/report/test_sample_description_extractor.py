@@ -93,3 +93,41 @@ def test_marks_page_8_cooperating_use_table_as_supporting_equipment() -> None:
     assert components[0].metadata["sample_role"] == "supporting_equipment"
     assert components[0].metadata["supporting_equipment"] is True
     assert components[0].metadata["source_context"] == "本次检验配合使用"
+
+
+def test_extracts_components_from_prose_sample_description_list() -> None:
+    parsed = _parsed_pdf(
+        PdfPage(
+            page_number=4,
+            text=(
+                "样品描述\n"
+                "被检样品心脏脉冲电场/射频双能量消融系统包含控制器、监视器、扩展坞、"
+                "脚踏开关、以太网线、控制台至灌注泵的电缆、网电源交流电源线、接口连接单元、"
+                "DE STSF 导管适配器、VARIPULSE 导管适配器、台车、双屏联动监视器、"
+                "双屏联动监视器供电电源线、双屏联动监视器 USB 光纤线、"
+                "双屏联动监视器 HDMI 光纤线、双屏联动监视器适配器电源线及 USB 通讯电缆。\n"
+                "以上详见照片页。"
+            ),
+        )
+    )
+
+    rows = SampleDescriptionExtractor().extract_rows(parsed)
+    components = SampleDescriptionExtractor().extract_components(parsed)
+
+    assert len(rows) == 17
+    assert [component.component_name for component in components[:5]] == [
+        "控制器",
+        "监视器",
+        "扩展坞",
+        "脚踏开关",
+        "以太网线",
+    ]
+    assert [component.component_name for component in components[-2:]] == [
+        "双屏联动监视器适配器电源线",
+        "USB 通讯电缆",
+    ]
+    assert all(component.metadata["source_format"] == "prose_component_list" for component in components)
+    assert all(component.metadata["sample_role"] == "main_sample" for component in components)
+    assert all(component.row_location and component.row_location.page_number == 4 for component in components)
+    assert all(component.evidence for component in components)
+    assert "/Users/" not in str([component.model_dump(mode="json") for component in components])

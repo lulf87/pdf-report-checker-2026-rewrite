@@ -1,0 +1,1064 @@
+{
+  "package_id": "codex-report-4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-C04-batch-33",
+  "task_id": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7",
+  "task_type": "report_check",
+  "kind": "report_rule_review",
+  "schema_version": "evidence-package-v1",
+  "created_at": "2026-06-26T12:11:49.324227Z",
+  "targets": [
+    {
+      "target_id": "report-codex-target-4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+      "target_type": "label_ocr",
+      "check_id": "C04",
+      "finding_id": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+      "finding_code": "SAMPLE_COMPONENT_LABEL_NOT_FOUND",
+      "summary": "未找到与样品描述部件匹配的中文标签 OCR",
+      "evidence_refs": [
+        "finding:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "rule_context:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "sample_description:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "label_caption:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "label_image:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "page_text:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing"
+      ],
+      "metadata": {
+        "source": "report_codex_evidence_builder",
+        "rule_id": "C04",
+        "severity": "warn",
+        "expected": null,
+        "actual": null,
+        "page_number": 4,
+        "finding_code": "SAMPLE_COMPONENT_LABEL_NOT_FOUND",
+        "evidence_incomplete": true,
+        "finding_metadata": {
+          "component_id": "sample-row-14",
+          "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/"
+        },
+        "label_caption_candidate": {
+          "caption_id": "caption-24",
+          "caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+          "subject_name": "触摸屏连接线缆（30m）（可选）",
+          "caption_type": "label",
+          "page_number": 117,
+          "matched_component_ids": [],
+          "metadata": {
+            "is_chinese_label": true
+          },
+          "component_id": "sample-row-14"
+        },
+        "matching_label_caption_candidates": [
+          {
+            "caption_id": "caption-24",
+            "caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+            "subject_name": "触摸屏连接线缆（30m）（可选）",
+            "caption_type": "label",
+            "page_number": 117,
+            "matched_component_ids": [],
+            "metadata": {
+              "is_chinese_label": true
+            },
+            "component_id": "sample-row-14"
+          },
+          {
+            "caption_id": "caption-10",
+            "caption_text": "№8 心脏脉冲电场消融仪-触摸屏 中文标签样张",
+            "subject_name": "心脏脉冲电场消融仪-触摸屏",
+            "caption_type": "label",
+            "page_number": 110,
+            "matched_component_ids": [],
+            "metadata": {
+              "is_chinese_label": true
+            },
+            "component_id": "sample-row-14"
+          }
+        ],
+        "matching_label_ocr_candidates": [],
+        "unmatched_label_ocr_candidates": [
+          {
+            "label_id": "label-14",
+            "caption_text": "№5 心脏脉冲电场消融仪-主机 中文标签样张",
+            "caption_id": "caption-7",
+            "page_number": 109,
+            "label_image_ref": null,
+            "label_page_image_ref": "report-page:109",
+            "label_crop_ref": null,
+            "has_image_crop": false,
+            "has_full_text": false,
+            "has_page_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          },
+          {
+            "label_id": "label-15",
+            "caption_text": "№8 心脏脉冲电场消融仪-触摸屏 中文标签样张",
+            "caption_id": "caption-10",
+            "page_number": 110,
+            "label_image_ref": null,
+            "label_page_image_ref": "report-page:110",
+            "label_crop_ref": null,
+            "has_image_crop": false,
+            "has_full_text": false,
+            "has_page_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          },
+          {
+            "label_id": "label-16",
+            "caption_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+            "caption_id": "caption-12",
+            "page_number": 111,
+            "label_image_ref": null,
+            "label_page_image_ref": "report-page:111",
+            "label_crop_ref": null,
+            "has_image_crop": false,
+            "has_full_text": false,
+            "has_page_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          },
+          {
+            "label_id": "label-17",
+            "caption_text": "№12 心脏脉冲电场消融仪-不可透射线 ECG 导联线（可选） 中文标签样张",
+            "caption_id": "caption-14",
+            "page_number": 112,
+            "label_image_ref": null,
+            "label_page_image_ref": "report-page:112",
+            "label_crop_ref": null,
+            "has_image_crop": false,
+            "has_full_text": false,
+            "has_page_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          },
+          {
+            "label_id": "label-18",
+            "caption_text": "№14 光纤（15m）（可选） 中文标签样张",
+            "caption_id": "caption-16",
+            "page_number": 113,
+            "label_image_ref": null,
+            "label_page_image_ref": "report-page:113",
+            "label_crop_ref": null,
+            "has_image_crop": false,
+            "has_full_text": false,
+            "has_page_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          },
+          {
+            "label_id": "label-19",
+            "caption_text": "№16 光接收器（可选） 中文标签样张",
+            "caption_id": "caption-18",
+            "page_number": 114,
+            "label_image_ref": null,
+            "label_page_image_ref": "report-page:114",
+            "label_crop_ref": null,
+            "has_image_crop": false,
+            "has_full_text": false,
+            "has_page_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          },
+          {
+            "label_id": "label-20",
+            "caption_text": "№18 电源电缆（可选） 中文标签样张",
+            "caption_id": "caption-20",
+            "page_number": 115,
+            "label_image_ref": null,
+            "label_page_image_ref": "report-page:115",
+            "label_crop_ref": null,
+            "has_image_crop": false,
+            "has_full_text": false,
+            "has_page_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          },
+          {
+            "label_id": "label-21",
+            "caption_text": "№20 等电位线缆 （3m）（可选） 中文标签样张",
+            "caption_id": "caption-22",
+            "page_number": 116,
+            "label_image_ref": null,
+            "label_page_image_ref": "report-page:116",
+            "label_crop_ref": null,
+            "has_image_crop": false,
+            "has_full_text": false,
+            "has_page_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          },
+          {
+            "label_id": "label-22",
+            "caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+            "caption_id": "caption-24",
+            "page_number": 117,
+            "label_image_ref": null,
+            "label_page_image_ref": "report-page:117",
+            "label_crop_ref": null,
+            "has_image_crop": false,
+            "has_full_text": false,
+            "has_page_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          },
+          {
+            "label_id": "label-23",
+            "caption_text": "№24 心脏脉冲电场消融仪-触摸屏电源适配器（可选） 中文标签样张",
+            "caption_id": "caption-26",
+            "page_number": 118,
+            "label_image_ref": null,
+            "label_page_image_ref": "report-page:118",
+            "label_crop_ref": null,
+            "has_image_crop": false,
+            "has_full_text": false,
+            "has_page_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          },
+          {
+            "label_id": "label-24",
+            "caption_text": "№26 脉冲导管连接电缆（可选） 中文标签样张",
+            "caption_id": "caption-28",
+            "page_number": 119,
+            "label_image_ref": null,
+            "label_page_image_ref": "report-page:119",
+            "label_crop_ref": null,
+            "has_image_crop": false,
+            "has_full_text": false,
+            "has_page_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          }
+        ],
+        "matched_label_id": null,
+        "matched_label_caption": {
+          "caption_id": "caption-24",
+          "caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+          "subject_name": "触摸屏连接线缆（30m）（可选）",
+          "caption_type": "label",
+          "page_number": 117,
+          "matched_component_ids": [],
+          "metadata": {
+            "is_chinese_label": true
+          }
+        },
+        "matched_label_caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+        "label_page_number": 117,
+        "label_image_ref": null,
+        "label_page_image_ref": "report-page:117",
+        "label_crop_ref": null,
+        "label_crop_unavailable_reason": "caption_bbox_missing",
+        "matched_label_page_text": null,
+        "matched_label_ocr_text": null,
+        "matched_label_text": null,
+        "matched_label_fields": {},
+        "matched_label_field_confidence": null,
+        "matched_label_ocr_source": "missing",
+        "label_field_comparison": {
+          "field_name": null,
+          "matched_label_key": null,
+          "sample_value": null,
+          "matched_label_value": null,
+          "comparison_hint": "no_matched_label_ocr"
+        },
+        "evidence_has_matching_label_caption": true,
+        "evidence_has_matched_label_image": true,
+        "evidence_has_matched_label_crop": false,
+        "evidence_has_matched_label_ocr": false,
+        "evidence_has_matched_label_image_crop": false,
+        "evidence_has_matched_full_label_text": false,
+        "evidence_has_matched_structured_label_fields": false,
+        "evidence_has_label_image_crop": false,
+        "evidence_has_full_label_text": false,
+        "evidence_has_structured_label_fields": false,
+        "evidence_can_verify_label_content": false,
+        "label_matching_diagnostics": [
+          {
+            "code": "MATCHING_LABEL_CAPTION_FOUND",
+            "caption_id": "caption-24"
+          },
+          {
+            "code": "NO_MATCHED_LABEL_OCR"
+          },
+          {
+            "code": "UNMATCHED_LABEL_OCR_CANDIDATES_PRESENT",
+            "label_ids": [
+              "label-14",
+              "label-15",
+              "label-16",
+              "label-17",
+              "label-18",
+              "label-19",
+              "label-20",
+              "label-21",
+              "label-22",
+              "label-23",
+              "label-24"
+            ]
+          },
+          {
+            "code": "MATCHED_LABEL_CROP_UNAVAILABLE",
+            "reason": "caption_bbox_missing"
+          }
+        ],
+        "expected_codex_when_label_content_missing": "uncertain",
+        "expected_codex_when_label_not_found_but_caption_exists": "refute",
+        "is_unused_component": false,
+        "unused_reason": null
+      }
+    }
+  ],
+  "items": [
+    {
+      "ref_id": "finding:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+      "source_type": "finding",
+      "title": "未找到与样品描述部件匹配的中文标签 OCR",
+      "text": null,
+      "structured": {
+        "id": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "task_id": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7",
+        "check_id": "C04",
+        "severity": "warn",
+        "code": "SAMPLE_COMPONENT_LABEL_NOT_FOUND",
+        "message": "未找到与样品描述部件匹配的中文标签 OCR",
+        "location": {
+          "source_id": "36628a34943d8df5",
+          "source_type": "report",
+          "page_number": 4,
+          "bbox": null,
+          "section": null,
+          "table_id": "p4-t2",
+          "row_index": 14,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": null,
+        "actual": null,
+        "evidence": [
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r14:c1:component_name",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": "部件名称",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）",
+            "normalized_text": "心脏脉冲电场消融仪-触摸屏连接线缆（30m）（可选）",
+            "value": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "component_name",
+              "column_index": 1
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r14:c2:model",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": "规格型号",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "PFA-GEN-\nCBL30",
+            "normalized_text": "PFA-GEN-CBL30",
+            "value": "PFA-GEN-\nCBL30",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "model",
+              "column_index": 2
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r14:c3:batch_or_serial",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": "序列号批号",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "/",
+            "normalized_text": "/",
+            "value": "/",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "batch_or_serial",
+              "column_index": 3
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r14:c4:production_date",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": "生产日期",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "/",
+            "normalized_text": "/",
+            "value": "/",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "production_date",
+              "column_index": 4
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r14:c5:remark",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": "备注",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "/",
+            "normalized_text": "/",
+            "value": "/",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "remark",
+              "column_index": 5
+            }
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选） 中文标签",
+            "reason": "ReportDocument.labels 中没有匹配该样品描述部件的中文标签",
+            "expected_source": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "component_id": "sample-row-14",
+          "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/"
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": null,
+      "location": {
+        "source_id": "36628a34943d8df5",
+        "source_type": "report",
+        "page_number": 4,
+        "bbox": null,
+        "section": null,
+        "table_id": "p4-t2",
+        "row_index": 14,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "check_id": "C04",
+        "finding_code": "SAMPLE_COMPONENT_LABEL_NOT_FOUND",
+        "severity": "warn"
+      }
+    },
+    {
+      "ref_id": "rule_context:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+      "source_type": "rule_context",
+      "title": "C04 deterministic rule context",
+      "text": "样品描述表格字段与中文标签 OCR 字段的规则初判上下文。",
+      "structured": {
+        "check_id": "C04",
+        "check_name": "样品描述表格与中文标签 OCR",
+        "finding_id": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "code": "SAMPLE_COMPONENT_LABEL_NOT_FOUND",
+        "severity": "warn",
+        "message": "未找到与样品描述部件匹配的中文标签 OCR",
+        "expected": null,
+        "actual": null,
+        "finding_metadata": {
+          "component_id": "sample-row-14",
+          "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/"
+        },
+        "result_metadata": {
+          "coverage": [
+            {
+              "component_id": "sample-row-1",
+              "label_id": "label-14",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-2",
+              "label_id": "label-24",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-3",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-4",
+              "label_id": "label-16",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-5",
+              "label_id": "label-17",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-6",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-7",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-8",
+              "label_id": "label-15",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-9",
+              "label_id": "label-20",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-10",
+              "label_id": "label-21",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-11",
+              "label_id": "label-19",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-12",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-13",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-14",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-15",
+              "label_id": null,
+              "matching_strategy": null
+            }
+          ]
+        },
+        "audit_reason": "review deterministic report self-check candidate finding against focused evidence",
+        "evidence_incomplete": false,
+        "label_content_verification": {
+          "label_caption_candidate": {
+            "caption_id": "caption-24",
+            "caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+            "subject_name": "触摸屏连接线缆（30m）（可选）",
+            "caption_type": "label",
+            "page_number": 117,
+            "matched_component_ids": [],
+            "metadata": {
+              "is_chinese_label": true
+            },
+            "component_id": "sample-row-14"
+          },
+          "matching_label_caption_candidates": [
+            {
+              "caption_id": "caption-24",
+              "caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+              "subject_name": "触摸屏连接线缆（30m）（可选）",
+              "caption_type": "label",
+              "page_number": 117,
+              "matched_component_ids": [],
+              "metadata": {
+                "is_chinese_label": true
+              },
+              "component_id": "sample-row-14"
+            },
+            {
+              "caption_id": "caption-10",
+              "caption_text": "№8 心脏脉冲电场消融仪-触摸屏 中文标签样张",
+              "subject_name": "心脏脉冲电场消融仪-触摸屏",
+              "caption_type": "label",
+              "page_number": 110,
+              "matched_component_ids": [],
+              "metadata": {
+                "is_chinese_label": true
+              },
+              "component_id": "sample-row-14"
+            }
+          ],
+          "matching_label_ocr_candidates": [],
+          "unmatched_label_ocr_candidates": [
+            {
+              "label_id": "label-14",
+              "caption_text": "№5 心脏脉冲电场消融仪-主机 中文标签样张",
+              "caption_id": "caption-7",
+              "page_number": 109,
+              "label_image_ref": null,
+              "label_page_image_ref": "report-page:109",
+              "label_crop_ref": null,
+              "has_image_crop": false,
+              "has_full_text": false,
+              "has_page_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            },
+            {
+              "label_id": "label-15",
+              "caption_text": "№8 心脏脉冲电场消融仪-触摸屏 中文标签样张",
+              "caption_id": "caption-10",
+              "page_number": 110,
+              "label_image_ref": null,
+              "label_page_image_ref": "report-page:110",
+              "label_crop_ref": null,
+              "has_image_crop": false,
+              "has_full_text": false,
+              "has_page_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            },
+            {
+              "label_id": "label-16",
+              "caption_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+              "caption_id": "caption-12",
+              "page_number": 111,
+              "label_image_ref": null,
+              "label_page_image_ref": "report-page:111",
+              "label_crop_ref": null,
+              "has_image_crop": false,
+              "has_full_text": false,
+              "has_page_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            },
+            {
+              "label_id": "label-17",
+              "caption_text": "№12 心脏脉冲电场消融仪-不可透射线 ECG 导联线（可选） 中文标签样张",
+              "caption_id": "caption-14",
+              "page_number": 112,
+              "label_image_ref": null,
+              "label_page_image_ref": "report-page:112",
+              "label_crop_ref": null,
+              "has_image_crop": false,
+              "has_full_text": false,
+              "has_page_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            },
+            {
+              "label_id": "label-18",
+              "caption_text": "№14 光纤（15m）（可选） 中文标签样张",
+              "caption_id": "caption-16",
+              "page_number": 113,
+              "label_image_ref": null,
+              "label_page_image_ref": "report-page:113",
+              "label_crop_ref": null,
+              "has_image_crop": false,
+              "has_full_text": false,
+              "has_page_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            },
+            {
+              "label_id": "label-19",
+              "caption_text": "№16 光接收器（可选） 中文标签样张",
+              "caption_id": "caption-18",
+              "page_number": 114,
+              "label_image_ref": null,
+              "label_page_image_ref": "report-page:114",
+              "label_crop_ref": null,
+              "has_image_crop": false,
+              "has_full_text": false,
+              "has_page_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            },
+            {
+              "label_id": "label-20",
+              "caption_text": "№18 电源电缆（可选） 中文标签样张",
+              "caption_id": "caption-20",
+              "page_number": 115,
+              "label_image_ref": null,
+              "label_page_image_ref": "report-page:115",
+              "label_crop_ref": null,
+              "has_image_crop": false,
+              "has_full_text": false,
+              "has_page_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            },
+            {
+              "label_id": "label-21",
+              "caption_text": "№20 等电位线缆 （3m）（可选） 中文标签样张",
+              "caption_id": "caption-22",
+              "page_number": 116,
+              "label_image_ref": null,
+              "label_page_image_ref": "report-page:116",
+              "label_crop_ref": null,
+              "has_image_crop": false,
+              "has_full_text": false,
+              "has_page_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            },
+            {
+              "label_id": "label-22",
+              "caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+              "caption_id": "caption-24",
+              "page_number": 117,
+              "label_image_ref": null,
+              "label_page_image_ref": "report-page:117",
+              "label_crop_ref": null,
+              "has_image_crop": false,
+              "has_full_text": false,
+              "has_page_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            },
+            {
+              "label_id": "label-23",
+              "caption_text": "№24 心脏脉冲电场消融仪-触摸屏电源适配器（可选） 中文标签样张",
+              "caption_id": "caption-26",
+              "page_number": 118,
+              "label_image_ref": null,
+              "label_page_image_ref": "report-page:118",
+              "label_crop_ref": null,
+              "has_image_crop": false,
+              "has_full_text": false,
+              "has_page_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            },
+            {
+              "label_id": "label-24",
+              "caption_text": "№26 脉冲导管连接电缆（可选） 中文标签样张",
+              "caption_id": "caption-28",
+              "page_number": 119,
+              "label_image_ref": null,
+              "label_page_image_ref": "report-page:119",
+              "label_crop_ref": null,
+              "has_image_crop": false,
+              "has_full_text": false,
+              "has_page_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            }
+          ],
+          "matched_label_id": null,
+          "matched_label_caption": {
+            "caption_id": "caption-24",
+            "caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+            "subject_name": "触摸屏连接线缆（30m）（可选）",
+            "caption_type": "label",
+            "page_number": 117,
+            "matched_component_ids": [],
+            "metadata": {
+              "is_chinese_label": true
+            }
+          },
+          "matched_label_caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+          "label_page_number": 117,
+          "label_image_ref": null,
+          "label_page_image_ref": "report-page:117",
+          "label_crop_ref": null,
+          "label_crop_unavailable_reason": "caption_bbox_missing",
+          "matched_label_page_text": null,
+          "matched_label_ocr_text": null,
+          "matched_label_text": null,
+          "matched_label_fields": {},
+          "matched_label_field_confidence": null,
+          "matched_label_ocr_source": "missing",
+          "label_field_comparison": {
+            "field_name": null,
+            "matched_label_key": null,
+            "sample_value": null,
+            "matched_label_value": null,
+            "comparison_hint": "no_matched_label_ocr"
+          },
+          "evidence_has_matching_label_caption": true,
+          "evidence_has_matched_label_image": true,
+          "evidence_has_matched_label_crop": false,
+          "evidence_has_matched_label_ocr": false,
+          "evidence_has_matched_label_image_crop": false,
+          "evidence_has_matched_full_label_text": false,
+          "evidence_has_matched_structured_label_fields": false,
+          "evidence_has_label_image_crop": false,
+          "evidence_has_full_label_text": false,
+          "evidence_has_structured_label_fields": false,
+          "evidence_can_verify_label_content": false,
+          "evidence_incomplete": true,
+          "label_matching_diagnostics": [
+            {
+              "code": "MATCHING_LABEL_CAPTION_FOUND",
+              "caption_id": "caption-24"
+            },
+            {
+              "code": "NO_MATCHED_LABEL_OCR"
+            },
+            {
+              "code": "UNMATCHED_LABEL_OCR_CANDIDATES_PRESENT",
+              "label_ids": [
+                "label-14",
+                "label-15",
+                "label-16",
+                "label-17",
+                "label-18",
+                "label-19",
+                "label-20",
+                "label-21",
+                "label-22",
+                "label-23",
+                "label-24"
+              ]
+            },
+            {
+              "code": "MATCHED_LABEL_CROP_UNAVAILABLE",
+              "reason": "caption_bbox_missing"
+            }
+          ],
+          "expected_codex_when_label_content_missing": "uncertain",
+          "expected_codex_when_label_not_found_but_caption_exists": "refute"
+        },
+        "component_usage": {
+          "is_unused_component": false,
+          "unused_reason": null
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "C04",
+      "location": null,
+      "metadata": {
+        "finding_id": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "check_id": "C04",
+        "finding_code": "SAMPLE_COMPONENT_LABEL_NOT_FOUND"
+      }
+    },
+    {
+      "ref_id": "sample_description:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+      "source_type": "table",
+      "title": "C04 样品描述 evidence",
+      "text": null,
+      "structured": {
+        "component_id": "sample-row-14",
+        "component_name": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）",
+        "model": "PFA-GEN-\nCBL30",
+        "batch_or_serial": "/",
+        "production_date": "/",
+        "expiration_date": null,
+        "remark": "/",
+        "identity_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/",
+        "is_unused_component": false,
+        "unused_reason": null,
+        "expected": null,
+        "actual": null,
+        "finding_metadata": {
+          "component_id": "sample-row-14",
+          "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/"
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "sample_description",
+      "location": {
+        "source_id": "36628a34943d8df5",
+        "source_type": "report",
+        "page_number": 4,
+        "bbox": null,
+        "section": null,
+        "table_id": "p4-t2",
+        "row_index": 14,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "check_id": "C04",
+        "component_id": "sample-row-14"
+      }
+    },
+    {
+      "ref_id": "label_caption:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+      "source_type": "image_caption",
+      "title": "C04 matching label caption evidence",
+      "text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张\n№8 心脏脉冲电场消融仪-触摸屏 中文标签样张",
+      "structured": {
+        "matching_label_caption_candidates": [
+          {
+            "caption_id": "caption-24",
+            "caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+            "subject_name": "触摸屏连接线缆（30m）（可选）",
+            "caption_type": "label",
+            "page_number": 117,
+            "matched_component_ids": [],
+            "metadata": {
+              "is_chinese_label": true
+            },
+            "component_id": "sample-row-14"
+          },
+          {
+            "caption_id": "caption-10",
+            "caption_text": "№8 心脏脉冲电场消融仪-触摸屏 中文标签样张",
+            "subject_name": "心脏脉冲电场消融仪-触摸屏",
+            "caption_type": "label",
+            "page_number": 110,
+            "matched_component_ids": [],
+            "metadata": {
+              "is_chinese_label": true
+            },
+            "component_id": "sample-row-14"
+          }
+        ],
+        "finding_metadata": {
+          "component_id": "sample-row-14",
+          "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/"
+        }
+      },
+      "file_path": null,
+      "page_number": 117,
+      "section": "label_caption",
+      "location": null,
+      "metadata": {
+        "finding_id": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "check_id": "C04",
+        "caption_id": "caption-24"
+      }
+    },
+    {
+      "ref_id": "label_image:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+      "source_type": "label_ocr",
+      "title": "C04 matched label crop/page evidence",
+      "text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+      "structured": {
+        "label_id": null,
+        "caption_id": "caption-24",
+        "caption_text": "№22 触摸屏连接线缆（30m）（可选）  中文标签样张",
+        "page_number": 117,
+        "label_page_number": 117,
+        "image_ref": null,
+        "label_image_ref": null,
+        "label_page_image_ref": "report-page:117",
+        "label_crop_ref": null,
+        "crop_unavailable_reason": "caption_bbox_missing",
+        "has_image_crop": false,
+        "has_page_reference": true,
+        "caption_bbox": null,
+        "finding_metadata": {
+          "component_id": "sample-row-14",
+          "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/"
+        }
+      },
+      "file_path": null,
+      "page_number": 117,
+      "section": "label_image",
+      "location": null,
+      "metadata": {
+        "finding_id": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "check_id": "C04",
+        "label_id": null,
+        "caption_id": "caption-24"
+      }
+    },
+    {
+      "ref_id": "page_text:4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+      "source_type": "page_text",
+      "title": "C04 page text snippet",
+      "text": "上\n海\n市\n医\n疗\n器\n械\n检\n验\n研\n究\n院 \n检 验 报 告 \n报告编号：国医检（设）字 QW2025 第 2795 号     样品编号：QW2025-2795       共 118 页 第 2 页 \n \n样品描述 \n被检样品主要部件包括： \n序\n号 \n部件名称 \n规格型号 \n序列号/批号 \n生产日期 \n备注 \n1 \n心脏脉冲电场消融仪-主\n机 \nPFA-GEN-01 \n20539798 \n2025-04-19 \n/ \n2 \n脉冲导管连接电缆（可\n选） \nA-UNI-PF-CBL \n850778817 \n2025-04-10 \n/ \n3 \n心脏脉冲电场消融仪-推\n车 \nPFA-GEN-CART \n10627717 \n2024-11-26 \n/ \n4 \n心脏脉冲电场消融仪- \nECG 主线缆 \nPFA-ECG-CBL \n2024070069 \n2024-07-13 \n/ \n5 \n心脏脉冲电场消融仪-不\n可透射线 ECG 导联线（可\n选） \nPFA-ECG-RNAM \n2024070063 \n2024-10-11 \n/ \n6 \n心脏脉冲电场消融仪-可\n透射线 ECG 导联线（可\n选） \nPFA-ECG-LNAM \n/ \n/ \n本次检测未\n使用 \n7 \n心脏脉冲电场消融仪-记\n录系统连接线缆 \nGEN-3RD-REC \n/ \n/ \n本次检测未\n使用 \n8 \n心脏脉冲电场消融仪-触\n摸屏 \nPFA-GEN-TS \nC24H006740 \n2024-10-14 \n/ \n9 \n电源电缆（可选） \nGEN-PWR-CH \n10822757 \n2017-10-15 \n/ \n10 \n等电位线缆（3m）（可\n选） \nS100003 \n/ \n/ \n/ \n11 \n光接收器（可选） \nS100018 \n/ \n/ \n/ \n12 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（10m）\n（可选） \nPFA-GEN-\nCBL10 \n/ \n/ \n本次检测未\n使用 \n13 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（15m）\n（可选） \nPFA-GEN-\nCBL15 \n/ \n/ \n本次检测未\n使用 \n14 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选） \nPFA-GEN-\nCBL30 \n/ \n/ \n/ \n15 \n光纤（10m）（可选） \nH700179 \n/ \n/ \n本次检测未\n使用 \n",
+      "structured": {
+        "page_number": 4,
+        "text": "上\n海\n市\n医\n疗\n器\n械\n检\n验\n研\n究\n院 \n检 验 报 告 \n报告编号：国医检（设）字 QW2025 第 2795 号     样品编号：QW2025-2795       共 118 页 第 2 页 \n \n样品描述 \n被检样品主要部件包括： \n序\n号 \n部件名称 \n规格型号 \n序列号/批号 \n生产日期 \n备注 \n1 \n心脏脉冲电场消融仪-主\n机 \nPFA-GEN-01 \n20539798 \n2025-04-19 \n/ \n2 \n脉冲导管连接电缆（可\n选） \nA-UNI-PF-CBL \n850778817 \n2025-04-10 \n/ \n3 \n心脏脉冲电场消融仪-推\n车 \nPFA-GEN-CART \n10627717 \n2024-11-26 \n/ \n4 \n心脏脉冲电场消融仪- \nECG 主线缆 \nPFA-ECG-CBL \n2024070069 \n2024-07-13 \n/ \n5 \n心脏脉冲电场消融仪-不\n可透射线 ECG 导联线（可\n选） \nPFA-ECG-RNAM \n2024070063 \n2024-10-11 \n/ \n6 \n心脏脉冲电场消融仪-可\n透射线 ECG 导联线（可\n选） \nPFA-ECG-LNAM \n/ \n/ \n本次检测未\n使用 \n7 \n心脏脉冲电场消融仪-记\n录系统连接线缆 \nGEN-3RD-REC \n/ \n/ \n本次检测未\n使用 \n8 \n心脏脉冲电场消融仪-触\n摸屏 \nPFA-GEN-TS \nC24H006740 \n2024-10-14 \n/ \n9 \n电源电缆（可选） \nGEN-PWR-CH \n10822757 \n2017-10-15 \n/ \n10 \n等电位线缆（3m）（可\n选） \nS100003 \n/ \n/ \n/ \n11 \n光接收器（可选） \nS100018 \n/ \n/ \n/ \n12 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（10m）\n（可选） \nPFA-GEN-\nCBL10 \n/ \n/ \n本次检测未\n使用 \n13 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（15m）\n（可选） \nPFA-GEN-\nCBL15 \n/ \n/ \n本次检测未\n使用 \n14 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选） \nPFA-GEN-\nCBL30 \n/ \n/ \n/ \n15 \n光纤（10m）（可选） \nH700179 \n/ \n/ \n本次检测未\n使用 \n"
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "page_text",
+      "location": null,
+      "metadata": {
+        "finding_id": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7-c04-sample-row-14-label-missing",
+        "check_id": "C04",
+        "file_id": "36628a34943d8df5"
+      }
+    }
+  ],
+  "metadata": {
+    "source": "report_codex_evidence_builder",
+    "check_id": "C04",
+    "deterministic_finding_count": 35,
+    "target_count": 1,
+    "total_candidate_targets": 35,
+    "emitted_targets": 1,
+    "truncated": true,
+    "omitted_targets_count": 1,
+    "target_offset": 33,
+    "batch_index": 33,
+    "batch_size": 1,
+    "max_targets_per_task": 5,
+    "max_targets_per_batch": 1
+  }
+}

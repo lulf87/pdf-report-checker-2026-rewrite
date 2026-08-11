@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes_health import router as health_router
 from app.api.routes_ptr_compare import router as ptr_compare_router
 from app.api.routes_report_check import router as report_check_router
+from app.api.routes_runtime_config import router as runtime_config_router
 from app.api.routes_tasks import router as tasks_router
 from app.core.config import Settings, get_settings
 from app.core.logging import setup_logging
@@ -39,6 +40,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(report_check_router)
     app.include_router(ptr_compare_router)
+    app.include_router(runtime_config_router)
     app.include_router(tasks_router)
     return app
 

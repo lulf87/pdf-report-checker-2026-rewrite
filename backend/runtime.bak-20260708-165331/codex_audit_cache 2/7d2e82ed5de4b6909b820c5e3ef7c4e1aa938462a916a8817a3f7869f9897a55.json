@@ -1,0 +1,710 @@
+{
+  "cache_key": "7d2e82ed5de4b6909b820c5e3ef7c4e1aa938462a916a8817a3f7869f9897a55",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-0-ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.2.2:table-6:missing",
+      "request_id": "codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-0",
+      "task_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e",
+      "target": {
+        "target_id": "ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.2.2:table-6:missing",
+        "target_type": "ptr_table",
+        "check_id": "PTR_TABLE",
+        "finding_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.2.2:table-6:missing",
+        "finding_code": "PTR_TABLE_MISSING",
+        "title": "PTR 条款 2.2.2 引用的表 6 未找到。",
+        "summary": "规则初判 PTR_TABLE_MISSING；check_id=PTR_TABLE；clause=2.2.2；table=6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.2.2:table-6:missing",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.2.2:table-6:missing",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_TABLE_MISSING",
+          "severity": "error",
+          "clause_number": "2.2.2",
+          "table_number": "6",
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "ptr_clause:ptr-2.2.2 的正文已包含表6波形参数及表头/行内容，和规则初判的表6未找到相冲突；finding/rule_context仅说明解析候选。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.2.2:table-6:missing",
+        "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.2.2:table-6:missing",
+        "ptr_clause:ptr-2.2.2"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-05T09:21:14.701110Z",
+      "completed_at": "2026-07-05T09:21:14.701110Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 218.114467,
+        "exit_code": 0,
+        "stdout_size_bytes": 4486,
+        "stderr_size_bytes": 98086,
+        "output_size_bytes": 4485,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-batch-0",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.007506,
+          "evidence_package_size_bytes": 84876,
+          "externalized_text_count": 0,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "materialized_image_count": 0,
+          "image_materialization_seconds": 4e-06,
+          "materialized_image_bytes": 0,
+          "image_path_collection_seconds": 2e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.003157,
+          "prompt_size_bytes": 29876,
+          "schema_prepare_seconds": 0.000571,
+          "codex_exec_seconds": 218.114467,
+          "result_validation_seconds": 9e-06
+        },
+        "cache_key": "7d2e82ed5de4b6909b820c5e3ef7c4e1aa938462a916a8817a3f7869f9897a55"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-0-ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.6:table-6:missing",
+      "request_id": "codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-0",
+      "task_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e",
+      "target": {
+        "target_id": "ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.6:table-6:missing",
+        "target_type": "ptr_table",
+        "check_id": "PTR_TABLE",
+        "finding_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.6:table-6:missing",
+        "finding_code": "PTR_TABLE_MISSING",
+        "title": "PTR 条款 2.6 引用的表 6 未找到。",
+        "summary": "规则初判 PTR_TABLE_MISSING；check_id=PTR_TABLE；clause=2.6；table=6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.6:table-6:missing",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.6:table-6:missing",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_TABLE_MISSING",
+          "severity": "error",
+          "clause_number": "2.6",
+          "table_number": "6",
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "ptr_clause:ptr-2.6 的正文已包含表6软件功能、组件和功能条目，直接反驳表6未找到的规则初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.6:table-6:missing",
+        "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_TABLE:2.6:table-6:missing",
+        "ptr_clause:ptr-2.6"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-05T09:21:14.701110Z",
+      "completed_at": "2026-07-05T09:21:14.701110Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 218.114467,
+        "exit_code": 0,
+        "stdout_size_bytes": 4486,
+        "stderr_size_bytes": 98086,
+        "output_size_bytes": 4485,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-batch-0",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.007506,
+          "evidence_package_size_bytes": 84876,
+          "externalized_text_count": 0,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "materialized_image_count": 0,
+          "image_materialization_seconds": 4e-06,
+          "materialized_image_bytes": 0,
+          "image_path_collection_seconds": 2e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.003157,
+          "prompt_size_bytes": 29876,
+          "schema_prepare_seconds": 0.000571,
+          "codex_exec_seconds": 218.114467,
+          "result_validation_seconds": 9e-06
+        },
+        "cache_key": "7d2e82ed5de4b6909b820c5e3ef7c4e1aa938462a916a8817a3f7869f9897a55"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-0-ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pulse3:unbound",
+      "request_id": "codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-0",
+      "task_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e",
+      "target": {
+        "target_id": "ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pulse3:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pulse3:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.3 的参数 脉冲上升时间 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告结果未能稳定抽取，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.3",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pulse3:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pulse3:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.3",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.3",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "ptr_clause:ptr-2.2.3 要求脉冲上升时间不超过700 ns；report_inspection_group:157 的2.2.3行可读为430 ns、PULSE3预设，已能绑定该结果，反驳unbound初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pulse3:unbound",
+        "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pulse3:unbound",
+        "ptr_clause:ptr-2.2.3",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-05T09:21:14.701110Z",
+      "completed_at": "2026-07-05T09:21:14.701110Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 218.114467,
+        "exit_code": 0,
+        "stdout_size_bytes": 4486,
+        "stderr_size_bytes": 98086,
+        "output_size_bytes": 4485,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-batch-0",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.007506,
+          "evidence_package_size_bytes": 84876,
+          "externalized_text_count": 0,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "materialized_image_count": 0,
+          "image_materialization_seconds": 4e-06,
+          "materialized_image_bytes": 0,
+          "image_path_collection_seconds": 2e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.003157,
+          "prompt_size_bytes": 29876,
+          "schema_prepare_seconds": 0.000571,
+          "codex_exec_seconds": 218.114467,
+          "result_validation_seconds": 9e-06
+        },
+        "cache_key": "7d2e82ed5de4b6909b820c5e3ef7c4e1aa938462a916a8817a3f7869f9897a55"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-0-ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pf_reversible:unbound",
+      "request_id": "codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-0",
+      "task_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e",
+      "target": {
+        "target_id": "ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pf_reversible:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pf_reversible:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.3 的参数 脉冲上升时间 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告结果未能稳定抽取，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.3",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pf_reversible:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pf_reversible:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.3",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.3",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "confirm",
+      "confidence": "medium",
+      "reasoning_summary": "report_inspection_group:157 中PF Reversible对应的report_atomic_result actual为null、candidate_actuals为空，2.2.3可见行只稳定显示430 ns PULSE3预设，无法绑定PF Reversible结果，支持unbound警告。",
+      "suggested_severity": "warn",
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pf_reversible:unbound",
+        "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.3:2.2.3:rise_time:pf_reversible:unbound",
+        "ptr_clause:ptr-2.2.3",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-05T09:21:14.701110Z",
+      "completed_at": "2026-07-05T09:21:14.701110Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 218.114467,
+        "exit_code": 0,
+        "stdout_size_bytes": 4486,
+        "stderr_size_bytes": 98086,
+        "output_size_bytes": 4485,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-batch-0",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.007506,
+          "evidence_package_size_bytes": 84876,
+          "externalized_text_count": 0,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "materialized_image_count": 0,
+          "image_materialization_seconds": 4e-06,
+          "materialized_image_bytes": 0,
+          "image_path_collection_seconds": 2e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.003157,
+          "prompt_size_bytes": 29876,
+          "schema_prepare_seconds": 0.000571,
+          "codex_exec_seconds": 218.114467,
+          "result_validation_seconds": 9e-06
+        },
+        "cache_key": "7d2e82ed5de4b6909b820c5e3ef7c4e1aa938462a916a8817a3f7869f9897a55"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-0-ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.4:2.2.4:fall_time:unbound",
+      "request_id": "codex-request-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-ptr-batch-0",
+      "task_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e",
+      "target": {
+        "target_id": "ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.4:2.2.4:fall_time:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.4:2.2.4:fall_time:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.4 的参数 脉冲下降时间 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告结果未能稳定抽取，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.4",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.4:2.2.4:fall_time:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.4:2.2.4:fall_time:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.4",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.4",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "confirm",
+      "confidence": "medium",
+      "reasoning_summary": "ptr_clause:ptr-2.2.4 给出脉冲下降时间≤700 ns，但report_inspection_group:157的完整rows和report_atomic_results未提供2.2.4下降时间的稳定结果，支持unbound警告。",
+      "suggested_severity": "warn",
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.4:2.2.4:fall_time:unbound",
+        "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.4:2.2.4:fall_time:unbound",
+        "ptr_clause:ptr-2.2.4",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-05T09:21:14.701110Z",
+      "completed_at": "2026-07-05T09:21:14.701110Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 218.114467,
+        "exit_code": 0,
+        "stdout_size_bytes": 4486,
+        "stderr_size_bytes": 98086,
+        "output_size_bytes": 4485,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-batch-0",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.007506,
+          "evidence_package_size_bytes": 84876,
+          "externalized_text_count": 0,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "materialized_image_count": 0,
+          "image_materialization_seconds": 4e-06,
+          "materialized_image_bytes": 0,
+          "image_path_collection_seconds": 2e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.003157,
+          "prompt_size_bytes": 29876,
+          "schema_prepare_seconds": 0.000571,
+          "codex_exec_seconds": 218.114467,
+          "result_validation_seconds": 9e-06
+        },
+        "cache_key": "7d2e82ed5de4b6909b820c5e3ef7c4e1aa938462a916a8817a3f7869f9897a55"
+      }
+    }
+  ]
+}

@@ -14,11 +14,12 @@ from app.domain.task import TaskState
 from app.infrastructure.export.excel_exporter import export_check_results_to_xlsx
 from app.infrastructure.export.json_exporter import export_check_results_to_json
 from app.infrastructure.export.pdf_exporter import export_check_results_to_pdf
+from app.infrastructure.storage.file_task_repository import FileTaskRepository
 
 
 router = APIRouter(prefix="/api/tasks", tags=["Tasks"])
 
-_TASK_SERVICE = TaskService()
+_TASK_SERVICE = TaskService(repository=FileTaskRepository(get_settings().task_repository_dir))
 
 
 def get_task_service() -> TaskService:
@@ -62,11 +63,15 @@ def get_task_result(
 def export_task_result(
     task_id: str,
     format: str = Query(default="json"),
+    view: str = Query(default="audit"),
     task_service: TaskService = Depends(get_task_service),
 ) -> Response:
     export_format = (format or "json").lower()
     if export_format not in {"json", "pdf", "xlsx"}:
         raise HTTPException(status_code=400, detail="Unsupported export format")
+    export_view = (view or "audit").lower()
+    if export_view not in {"audit", "final"}:
+        raise HTTPException(status_code=400, detail="Unsupported export view")
 
     try:
         task = task_service.get_task(task_id)
@@ -87,6 +92,7 @@ def export_task_result(
             input_files=input_files,
             diagnostics=result.diagnostics,
             metadata=result.metadata,
+            view=export_view,
         )
         return Response(
             content=content,
@@ -102,6 +108,7 @@ def export_task_result(
             input_files=input_files,
             diagnostics=result.diagnostics,
             metadata=result.metadata,
+            view=export_view,
         )
         return Response(
             content=content,
@@ -116,6 +123,7 @@ def export_task_result(
         input_files=input_files,
         diagnostics=result.diagnostics,
         metadata=result.metadata,
+        view=export_view,
     )
     return Response(
         content=content,

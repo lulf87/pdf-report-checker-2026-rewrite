@@ -1,10 +1,16 @@
 import type { CodexReviewResult } from "../codexReview/types";
-import { normalizeCodexReviews } from "../codexReview/types";
+import {
+  findingCodexFinalStatus,
+  groupCodexReviewsByFinding,
+  normalizeCodexReviews,
+} from "../codexReview/types";
 import type { DiffFragment, Finding, FindingSeverity } from "../finding/types";
+import { findingUserFacingStatus } from "../finding/types";
 import type {
   CheckResult,
   PTRComparisonItem,
   PTRExcludedComparisonItem,
+  PTRClauseSequenceOffsetGroup,
   PTRScopeConsistency,
   TaskResult,
   TaskStatus,
@@ -21,9 +27,9 @@ export interface PTRClauseViewModel {
   summary?: string | null;
   findings: Finding[];
   diffs: DiffFragment[];
-  codexReviews: CodexReviewResult[];
   ptrItem?: PTRComparisonItem | null;
   scopeConsistency?: PTRScopeConsistency | null;
+  sequenceOffsetGroup?: PTRClauseSequenceOffsetGroup | null;
 }
 
 export interface PTRCompareResultView {
@@ -33,7 +39,9 @@ export interface PTRCompareResultView {
 }
 
 export function toPTRClauseViewModel(result: CheckResult, index: number): PTRClauseViewModel {
-  const primaryFinding = result.findings[0];
+  const reviews = normalizeCodexReviews(result.codex_reviews);
+  const findings = finalVisibleFindings(result.findings, reviews);
+  const primaryFinding = findings[0];
   return {
     id: `${result.check_id}-${index}`,
     checkId: result.check_id,
@@ -41,9 +49,8 @@ export function toPTRClauseViewModel(result: CheckResult, index: number): PTRCla
     status: result.status,
     severity: result.severity ?? primaryFinding?.severity ?? null,
     summary: result.summary,
-    findings: result.findings,
-    diffs: result.findings.flatMap((finding) => finding.diff_fragments),
-    codexReviews: normalizeCodexReviews(result.codex_reviews),
+    findings,
+    diffs: findings.flatMap((finding) => finding.diff_fragments),
     ptrItem: null,
     scopeConsistency: null,
   };
@@ -52,9 +59,14 @@ export function toPTRClauseViewModel(result: CheckResult, index: number): PTRCla
 export function toPTRClauseViewModels(result: TaskResult): PTRClauseViewModel[] {
   const details = result.metadata.ptr_comparison_details;
   if (details?.items?.length) {
+    const sequenceOffsetGroups = details.clause_sequence_offset_groups ?? [];
     const codexReviews = result.check_results.flatMap((item) => normalizeCodexReviews(item.codex_reviews));
     const included = details.items.map((item, index) => {
-      const findings = result.findings.filter((finding) => findingMatchesPtrItem(finding, item));
+      const sequenceOffsetGroup = sequenceOffsetGroups.find((group) =>
+        group.affected_clauses.some((entry) => entry.ptr === item.ptr_clause_id),
+      );
+      const itemFindings = result.findings.filter((finding) => findingMatchesPtrItem(finding, item));
+      const findings = finalVisibleFindings(itemFindings, codexReviews);
       return {
         id: `PTR-${item.ptr_clause_id}-${index}`,
         checkId: item.ptr_clause_id,
@@ -64,12 +76,9 @@ export function toPTRClauseViewModels(result: TaskResult): PTRClauseViewModel[] 
         summary: item.reason,
         findings,
         diffs: findings.flatMap((finding) => finding.diff_fragments),
-        codexReviews: codexReviews.filter((review) => {
-          const findingIds = new Set(findings.map((finding) => finding.id));
-          return review.target.finding_id ? findingIds.has(review.target.finding_id) : review.target.check_id?.startsWith("PTR");
-        }),
         ptrItem: item,
         scopeConsistency: details.scope_consistency ?? null,
+        sequenceOffsetGroup: sequenceOffsetGroup ?? null,
       };
     });
     const excluded = (details.excluded_items ?? []).map((item, index) => ({
@@ -81,17 +90,30 @@ export function toPTRClauseViewModels(result: TaskResult): PTRClauseViewModel[] 
       summary: item.reason,
       findings: [],
       diffs: [],
-      codexReviews: [],
       ptrItem: excludedToPtrItem(item),
       scopeConsistency: details.scope_consistency ?? null,
+      sequenceOffsetGroup: null,
     }));
     return [...included, ...excluded];
   }
   return result.check_results.map((item, index) => toPTRClauseViewModel(item, index));
 }
 
+function finalVisibleFindings(findings: Finding[], reviews: CodexReviewResult[]): Finding[] {
+  const groupedReviews = groupCodexReviewsByFinding(findings, reviews);
+  return findings.filter((finding) => {
+    const finalStatus = findingCodexFinalStatus(
+      finding,
+      groupedReviews.byFindingId[finding.id] ?? [],
+    );
+    const userStatus = findingUserFacingStatus(finding, finalStatus);
+    return userStatus !== "refuted" && userStatus !== "passed";
+  });
+}
+
 export function isPTRIssue(clause: PTRClauseViewModel): boolean {
   if (clause.ptrItem) {
+    if (clause.sequenceOffsetGroup && clause.ptrItem.coverage_status === "confirmed_document_issue") return false;
     return !["covered_passed", "refuted", "excluded_by_scope"].includes(clause.ptrItem.coverage_status ?? clause.ptrItem.user_facing_status);
   }
   return clause.status === "fail" || clause.status === "review" || clause.status === "system_error";
@@ -108,12 +130,14 @@ function ptrItemCheckStatus(item: PTRComparisonItem): CheckResult["status"] {
   if (status === "covered_passed" || status === "refuted") return "pass";
   if (status === "excluded_by_scope") return "skip";
   if (status === "confirmed_error" || status === "audit_incomplete") return "fail";
+  if (status === "confirmed_document_issue") return "review";
   return "review";
 }
 
 function ptrItemSeverity(item: PTRComparisonItem): FindingSeverity | null {
   const status = item.coverage_status ?? item.user_facing_status;
   if (status === "confirmed_error" || status === "audit_incomplete") return "error";
+  if (status === "confirmed_document_issue") return "warn";
   if (status === "covered_passed" || status === "refuted" || status === "excluded_by_scope") return "info";
   return "warn";
 }

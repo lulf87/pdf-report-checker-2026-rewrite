@@ -1,0 +1,725 @@
+{
+  "cache_key": "62bf4bec01077506b7da18bc7780db55fe4ee7b36db400830773c90fbccdcc82",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-fc52ca84-34f3-496c-95c6-b2fe77b422c5-ptr-batch-3-ptr_review:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pf_reversible:unbound",
+      "request_id": "codex-request-fc52ca84-34f3-496c-95c6-b2fe77b422c5-ptr-batch-3",
+      "task_id": "fc52ca84-34f3-496c-95c6-b2fe77b422c5",
+      "target": {
+        "target_id": "ptr_review:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pf_reversible:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pf_reversible:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 正峰值/负峰值 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pf_reversible:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pf_reversible:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "rule_context 期望 PF Reversible 正峰值/负峰值为 1±0.1；report_inspection_group:157 的 2.2.2 续页列出 PFReversible 预设下“正峰值/负峰值 1±0.1 +0.02 /”，可见报告结果并非未绑定。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pf_reversible:unbound",
+        "ptr_clause:ptr-2.2.2",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T07:40:10.680186Z",
+      "completed_at": "2026-07-06T07:40:10.680186Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex_review_output-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 269.798017,
+        "exit_code": 0,
+        "stdout_size_bytes": 4572,
+        "stderr_size_bytes": 169300,
+        "output_size_bytes": 4571,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-fc52ca84-34f3-496c-95c6-b2fe77b422c5-batch-3",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.006361,
+          "evidence_package_size_bytes": 245184,
+          "materialized_image_count": 0,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "image_materialization_seconds": 3e-06,
+          "externalized_text_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 5e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.003001,
+          "prompt_size_bytes": 31139,
+          "schema_prepare_seconds": 0.000407,
+          "codex_exec_seconds": 269.798017,
+          "result_validation_seconds": 1.5e-05
+        },
+        "cache_key": "62bf4bec01077506b7da18bc7780db55fe4ee7b36db400830773c90fbccdcc82"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-fc52ca84-34f3-496c-95c6-b2fe77b422c5-ptr-batch-3-ptr_review:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pulse3:unbound",
+      "request_id": "codex-request-fc52ca84-34f3-496c-95c6-b2fe77b422c5-ptr-batch-3",
+      "task_id": "fc52ca84-34f3-496c-95c6-b2fe77b422c5",
+      "target": {
+        "target_id": "ptr_review:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pulse3:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pulse3:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 电流水平 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pulse3:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pulse3:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "rule_context 期望 PULSE3 电流水平为 1-100%；report_inspection_group:157 的 2.2.2 表格中 PULSE3 预设下有“电流水平 1-100% 符合要求 /”，可见该参数结果已在报告证据中出现。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pulse3:unbound",
+        "ptr_clause:ptr-2.2.2",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T07:40:10.680186Z",
+      "completed_at": "2026-07-06T07:40:10.680186Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex_review_output-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 269.798017,
+        "exit_code": 0,
+        "stdout_size_bytes": 4572,
+        "stderr_size_bytes": 169300,
+        "output_size_bytes": 4571,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-fc52ca84-34f3-496c-95c6-b2fe77b422c5-batch-3",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.006361,
+          "evidence_package_size_bytes": 245184,
+          "materialized_image_count": 0,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "image_materialization_seconds": 3e-06,
+          "externalized_text_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 5e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.003001,
+          "prompt_size_bytes": 31139,
+          "schema_prepare_seconds": 0.000407,
+          "codex_exec_seconds": 269.798017,
+          "result_validation_seconds": 1.5e-05
+        },
+        "cache_key": "62bf4bec01077506b7da18bc7780db55fe4ee7b36db400830773c90fbccdcc82"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-fc52ca84-34f3-496c-95c6-b2fe77b422c5-ptr-batch-3-ptr_review:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pf_reversible:unbound",
+      "request_id": "codex-request-fc52ca84-34f3-496c-95c6-b2fe77b422c5-ptr-batch-3",
+      "task_id": "fc52ca84-34f3-496c-95c6-b2fe77b422c5",
+      "target": {
+        "target_id": "ptr_review:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pf_reversible:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pf_reversible:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 电流水平 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pf_reversible:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pf_reversible:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "rule_context 期望 PF Reversible 电流水平为 1-100%；report_inspection_group:157 的 PFReversible 预设部分列出“电流水平 1-100% 符合要求 /”，因此不支持未绑定初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.2.2:2.2.2:current_level:pf_reversible:unbound",
+        "ptr_clause:ptr-2.2.2",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T07:40:10.680186Z",
+      "completed_at": "2026-07-06T07:40:10.680186Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex_review_output-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 269.798017,
+        "exit_code": 0,
+        "stdout_size_bytes": 4572,
+        "stderr_size_bytes": 169300,
+        "output_size_bytes": 4571,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-fc52ca84-34f3-496c-95c6-b2fe77b422c5-batch-3",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.006361,
+          "evidence_package_size_bytes": 245184,
+          "materialized_image_count": 0,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "image_materialization_seconds": 3e-06,
+          "externalized_text_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 5e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.003001,
+          "prompt_size_bytes": 31139,
+          "schema_prepare_seconds": 0.000407,
+          "codex_exec_seconds": 269.798017,
+          "result_validation_seconds": 1.5e-05
+        },
+        "cache_key": "62bf4bec01077506b7da18bc7780db55fe4ee7b36db400830773c90fbccdcc82"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-fc52ca84-34f3-496c-95c6-b2fe77b422c5-ptr-batch-3-ptr_review:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---功率监测:unbound",
+      "request_id": "codex-request-fc52ca84-34f3-496c-95c6-b2fe77b422c5-ptr-batch-3",
+      "task_id": "fc52ca84-34f3-496c-95c6-b2fe77b422c5",
+      "target": {
+        "target_id": "ptr_review:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---功率监测:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---功率监测:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.6 的参数 射频消融仪 - 功率监测 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 159 未稳定展开表格功能明细需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---功率监测:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---功率监测:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:159",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.6",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "medium",
+      "reasoning_summary": "ptr_clause:ptr-2.6 要求射频消融仪具备功率监测；report_inspection_group:159 在软件功能表中列出“射频消融仪 功率监测 ——”，且该项目总行显示“表 6 软件功能 符合 /”。证据显示目标功能行存在，不足以确认未绑定。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---功率监测:unbound",
+        "ptr_clause:ptr-2.6",
+        "report_inspection_group:159"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T07:40:10.680186Z",
+      "completed_at": "2026-07-06T07:40:10.680186Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex_review_output-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 269.798017,
+        "exit_code": 0,
+        "stdout_size_bytes": 4572,
+        "stderr_size_bytes": 169300,
+        "output_size_bytes": 4571,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-fc52ca84-34f3-496c-95c6-b2fe77b422c5-batch-3",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.006361,
+          "evidence_package_size_bytes": 245184,
+          "materialized_image_count": 0,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "image_materialization_seconds": 3e-06,
+          "externalized_text_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 5e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.003001,
+          "prompt_size_bytes": 31139,
+          "schema_prepare_seconds": 0.000407,
+          "codex_exec_seconds": 269.798017,
+          "result_validation_seconds": 1.5e-05
+        },
+        "cache_key": "62bf4bec01077506b7da18bc7780db55fe4ee7b36db400830773c90fbccdcc82"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-fc52ca84-34f3-496c-95c6-b2fe77b422c5-ptr-batch-3-ptr_review:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---控制应用启动和停止:unbound",
+      "request_id": "codex-request-fc52ca84-34f3-496c-95c6-b2fe77b422c5-ptr-batch-3",
+      "task_id": "fc52ca84-34f3-496c-95c6-b2fe77b422c5",
+      "target": {
+        "target_id": "ptr_review:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---控制应用启动和停止:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---控制应用启动和停止:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.6 的参数 射频消融仪 - 控制应用启动和停止 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 159 未稳定展开表格功能明细需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---控制应用启动和停止:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---控制应用启动和停止:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:159",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.6",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "ptr_clause:ptr-2.6 列出“控制射频消融或脉冲电场消融应用的启动和停止”；report_inspection_group:159 续页有同名功能行，并显示“—— 符合 /”。该完整行证据反驳未绑定初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:fc52ca84-34f3-496c-95c6-b2fe77b422c5:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---控制应用启动和停止:unbound",
+        "ptr_clause:ptr-2.6",
+        "report_inspection_group:159"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T07:40:10.680186Z",
+      "completed_at": "2026-07-06T07:40:10.680186Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex_review_output-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 269.798017,
+        "exit_code": 0,
+        "stdout_size_bytes": 4572,
+        "stderr_size_bytes": 169300,
+        "output_size_bytes": 4571,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-fc52ca84-34f3-496c-95c6-b2fe77b422c5-batch-3",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.006361,
+          "evidence_package_size_bytes": 245184,
+          "materialized_image_count": 0,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "image_materialization_seconds": 3e-06,
+          "externalized_text_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 5e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.003001,
+          "prompt_size_bytes": 31139,
+          "schema_prepare_seconds": 0.000407,
+          "codex_exec_seconds": 269.798017,
+          "result_validation_seconds": 1.5e-05
+        },
+        "cache_key": "62bf4bec01077506b7da18bc7780db55fe4ee7b36db400830773c90fbccdcc82"
+      }
+    }
+  ]
+}

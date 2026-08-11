@@ -1,0 +1,21 @@
+{
+  "source_file": "11417700-a536-4ae0-81ec-a4e74c22c19e.result.json",
+  "manual_review_required_count": 34,
+  "by_check_id": {
+    "C04": 29,
+    "C07": 5
+  },
+  "by_code": {
+    "SAMPLE_FIELD_MISSING_IN_LABEL": 28,
+    "SAMPLE_COMPONENT_LABEL_NOT_FOUND": 1,
+    "CONCLUSION_MISMATCH_001": 3,
+    "CONCLUSION_MISMATCH_002": 2
+  },
+  "by_page": {
+    "4": 29,
+    "100": 2,
+    "16": 1,
+    "42": 1,
+    "98": 1
+  }
+}

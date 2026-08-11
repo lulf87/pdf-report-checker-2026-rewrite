@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"high","evidence_refs":["check_result:C03"],"metadata":{},"reasoning_summary":"仅有 C03 规则摘要，未提供第三页生产日期字段、样品描述栏指向或中文标签生产日期证据，无法独立确认或反驳跳过结论。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C03","verdict":"uncertain"}],"schema_version":"1.0"}

@@ -8,7 +8,7 @@ from typing import Any
 from app.domain.common import Confidence, Evidence, EvidenceMethod, SourceType
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.inspection_group import InspectionItemGroup
-from app.domain.report import ReportDocument
+from app.domain.report import InspectionItem, ReportDocument
 from app.domain.result import CheckResult
 from app.infrastructure.report.inspection_item_group_builder import build_inspection_item_groups
 from app.rules.report.common import PLACEHOLDER_MARKERS, compact, make_result
@@ -34,6 +34,12 @@ class ConclusionDecision:
     result_values: list[str]
 
 
+@dataclass(frozen=True)
+class ConclusionMismatchCell:
+    row: InspectionItem | None
+    actual: str
+
+
 def check_c07_item_conclusion(
     document: ReportDocument,
     context: CheckContext | None = None,
@@ -45,15 +51,21 @@ def check_c07_item_conclusion(
 
     for group in build_result.groups:
         decision = infer_expected_conclusion(group.effective_test_results)
-        actual = _normalize_conclusion(group.effective_single_conclusion)
-        metadata = _group_metadata(group, decision, actual)
+        group_actual = _normalize_conclusion(group.effective_single_conclusion)
+        mismatch_cells = _conclusion_mismatch_cells(group, decision.expected, group_actual)
+        metadata = _group_metadata(group, decision, group_actual)
+        metadata["mismatched_conclusion_cells"] = [
+            _conclusion_cell_metadata(cell) for cell in mismatch_cells
+        ]
         group_metadata.append(metadata)
 
-        if actual != decision.expected:
+        if mismatch_cells:
             complex_matrix_reason = _complex_matrix_reason(group)
             if complex_matrix_reason is not None:
+                actual = mismatch_cells[0].actual
                 complex_metadata = {
                     **metadata,
+                    "actual_conclusion": actual,
                     "complex_matrix_table": True,
                     "complex_matrix_reason": complex_matrix_reason,
                     "needs_codex_review": True,
@@ -80,6 +92,7 @@ def check_c07_item_conclusion(
                 continue
 
             if _should_review_extraction_uncertainty(group, decision):
+                actual = mismatch_cells[0].actual
                 findings.append(
                     Finding(
                         id=f"{context.task_id}-c07-{group.item_no}-result-token-recovery-uncertain",
@@ -101,22 +114,49 @@ def check_c07_item_conclusion(
                 )
                 continue
 
-            findings.append(
-                Finding(
-                    id=f"{context.task_id}-c07-{group.item_no}-conclusion-mismatch",
-                    task_id=context.task_id,
-                    check_id=CHECK_ID,
-                    severity=FindingSeverity.ERROR,
-                    code=_mismatch_code(decision.expected, actual),
-                    message=_mismatch_message(group.item_no, decision.expected, actual, decision.reason),
-                    location=group.rows[0].row_location if group.rows else None,
-                    expected=decision.expected,
-                    actual=actual,
-                    evidence=_group_evidence(group, decision, actual),
-                    confidence=Confidence.HIGH,
-                    metadata=metadata,
+            for mismatch_index, mismatch_cell in enumerate(mismatch_cells):
+                actual = mismatch_cell.actual
+                cell_metadata = {
+                    **metadata,
+                    **_conclusion_cell_metadata(mismatch_cell),
+                    "actual_conclusion": actual,
+                    "deterministic_conclusion_mismatch": _is_deterministic_conclusion_mismatch(
+                        decision,
+                        actual,
+                    ),
+                    "conclusion_mismatch_index": mismatch_index,
+                    "conclusion_mismatch_count": len(mismatch_cells),
+                }
+                findings.append(
+                    Finding(
+                        id=_conclusion_finding_id(
+                            context.task_id,
+                            group,
+                            mismatch_cell,
+                            mismatch_count=len(mismatch_cells),
+                        ),
+                        task_id=context.task_id,
+                        check_id=CHECK_ID,
+                        severity=FindingSeverity.ERROR,
+                        code=_mismatch_code(decision.expected, actual),
+                        message=_mismatch_message(
+                            _display_sequence_for_cell(group, mismatch_cell),
+                            decision.expected,
+                            actual,
+                            decision.reason,
+                        ),
+                        location=(
+                            mismatch_cell.row.row_location
+                            if mismatch_cell.row is not None
+                            else group.rows[0].row_location if group.rows else None
+                        ),
+                        expected=decision.expected,
+                        actual=actual,
+                        evidence=_group_evidence(group, decision, actual),
+                        confidence=Confidence.HIGH,
+                        metadata=cell_metadata,
+                    )
                 )
-            )
 
     return make_result(
         context=context,
@@ -246,6 +286,7 @@ def _group_metadata(group: InspectionItemGroup, decision: ConclusionDecision, ac
         "result_values": decision.result_values,
         "group_row_count": len(group.rows),
         "pages": list(group.pages),
+        "report_page_numbers": _report_page_numbers(group),
         "continuation_markers": [marker.model_dump(mode="json") for marker in group.continuation_markers],
         "source_rows": source_rows,
         "result_summary": _result_summary(decision.result_values),
@@ -263,6 +304,7 @@ def _source_rows(group: InspectionItemGroup) -> list[dict[str, Any]]:
             {
                 "source_index": _source_index(group, index),
                 "page_number": item.source_page,
+                "report_page_number": item.metadata.get("report_page_number"),
                 "row_index": item.row_index_in_page,
                 "sequence_raw": item.sequence_raw,
                 "sequence": item.sequence,
@@ -273,9 +315,113 @@ def _source_rows(group: InspectionItemGroup) -> list[dict[str, Any]]:
                 "remark": item.remark,
                 "item_name": item.item_name,
                 "standard_clause": item.standard_clause,
+                "source_row_alignment": item.metadata.get("source_row_alignment"),
             }
         )
     return rows
+
+
+def _conclusion_mismatch_cells(
+    group: InspectionItemGroup,
+    expected: str,
+    group_actual: str,
+) -> list[ConclusionMismatchCell]:
+    mismatches: list[ConclusionMismatchCell] = []
+    explicit_cell_count = 0
+    for row in group.rows:
+        raw_value = compact(row.conclusion)
+        if not raw_value:
+            continue
+        if row.field_provenance.get("conclusion") == "merge_inferred":
+            continue
+        explicit_cell_count += 1
+        actual = _normalize_conclusion(row.conclusion)
+        if actual != expected:
+            mismatches.append(ConclusionMismatchCell(row=row, actual=actual))
+
+    if mismatches or explicit_cell_count > 0 or group_actual == expected:
+        return mismatches
+    return [
+        ConclusionMismatchCell(
+            row=group.rows[0] if group.rows else None,
+            actual=group_actual,
+        )
+    ]
+
+
+def _conclusion_cell_metadata(cell: ConclusionMismatchCell) -> dict[str, Any]:
+    row = cell.row
+    if row is None:
+        return {
+            "actual_conclusion": cell.actual,
+            "conclusion_source_page": None,
+            "conclusion_report_page_number": None,
+            "conclusion_source_row_index": None,
+            "conclusion_sequence_raw": None,
+        }
+    return {
+        "actual_conclusion": cell.actual,
+        "conclusion_source_page": row.source_page,
+        "conclusion_report_page_number": row.metadata.get("report_page_number"),
+        "conclusion_source_row_index": row.row_index_in_page,
+        "conclusion_sequence_raw": row.sequence_raw,
+        "conclusion_field_provenance": row.field_provenance.get("conclusion") or "native",
+        "source_row_alignment": row.metadata.get("source_row_alignment"),
+    }
+
+
+def _conclusion_finding_id(
+    task_id: str,
+    group: InspectionItemGroup,
+    cell: ConclusionMismatchCell,
+    *,
+    mismatch_count: int,
+) -> str:
+    base = f"{task_id}-c07-{group.item_no}-conclusion-mismatch"
+    if mismatch_count <= 1 or cell.row is None:
+        return base
+    page = cell.row.source_page or 0
+    row_index = cell.row.row_index_in_page if cell.row.row_index_in_page is not None else 0
+    return f"{base}-p{page}-r{row_index}"
+
+
+def _display_sequence_for_cell(group: InspectionItemGroup, cell: ConclusionMismatchCell) -> str:
+    sequence = (
+        compact(cell.row.sequence_raw)
+        if cell.row is not None and compact(cell.row.sequence_raw)
+        else str(group.display_item_no or group.item_no)
+    )
+    report_page = cell.row.metadata.get("report_page_number") if cell.row is not None else None
+    if isinstance(report_page, int) and report_page > 0:
+        return f"{sequence}（报告第 {report_page} 页）"
+    return sequence
+
+
+def _is_deterministic_conclusion_mismatch(
+    decision: ConclusionDecision,
+    actual: str,
+) -> bool:
+    if actual == decision.expected:
+        return False
+    tokens = [_normalize_result_token(value) for value in decision.result_values]
+    if decision.expected == "/":
+        return bool(tokens) and all(token in {"", "/"} for token in tokens)
+    if decision.expected == "不符合":
+        return any(_is_nonconforming_result(token) for token in tokens)
+    if decision.expected == "符合":
+        return any(not _is_placeholder_result(token) for token in tokens) and not any(
+            _is_nonconforming_result(token) for token in tokens
+        )
+    return False
+
+
+def _report_page_numbers(group: InspectionItemGroup) -> list[int]:
+    numbers: list[int] = []
+    for row in group.rows:
+        value = row.metadata.get("report_page_number")
+        if isinstance(value, int) and value > 0 and value not in numbers:
+            numbers.append(value)
+    return numbers
 
 
 def _should_review_extraction_uncertainty(group: InspectionItemGroup, decision: ConclusionDecision) -> bool:

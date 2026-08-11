@@ -12,6 +12,7 @@ from app.rules.report.c05_photo_coverage import extract_photo_caption_subject, m
 from app.rules.report.common import (
     component_field_value,
     component_is_supporting_equipment,
+    component_name_aliases,
     component_not_used,
     evidence_for_component,
     evidence_for_label,
@@ -36,8 +37,18 @@ CHECK_NAME = "中文标签覆盖"
 
 _KEY_FIELDS = ("部件名称", "规格型号", "序列号批号", "生产日期", "失效日期")
 _IDENTITY_FIELDS = ("规格型号", "序列号批号", "生产日期", "失效日期")
-_LABEL_KEYWORDS = ("中文标签样张", "中文标签", "标签样张", "标签")
-_LABEL_SUBJECT_WORDS = ("中文标签样张", "中文标签", "标签样张", "包装标签", "标签", "铭牌", "标牌")
+_LABEL_KEYWORDS = ("中文标签样张", "中文标签", "标签样张", "标签", "中文铭牌", "铭牌", "中文标牌", "标牌")
+_LABEL_SUBJECT_WORDS = (
+    "中文标签样张",
+    "中文标签",
+    "标签样张",
+    "包装标签",
+    "中文铭牌",
+    "中文标牌",
+    "标签",
+    "铭牌",
+    "标牌",
+)
 _DIRECTION_WORDS = (
     "前侧",
     "后侧",
@@ -135,7 +146,13 @@ def check_c06_label_coverage(
     used_candidate_ids: set[str] = set()
     for component in active_components:
         require_identity = name_counts.get(component.component_name or "", 0) > 1
-        match = _find_label(component, candidates, used_candidate_ids, require_identity=require_identity)
+        match = _find_label(
+            component,
+            candidates,
+            used_candidate_ids,
+            require_identity=require_identity,
+            name_aliases=component_name_aliases(document, component),
+        )
         if match is None:
             detail_rows.append(
                 comparison_row(
@@ -272,12 +289,18 @@ def _find_label(
     used_candidate_ids: set[str],
     *,
     require_identity: bool,
+    name_aliases: tuple[str, ...] = (),
 ) -> _LabelMatch | None:
     scored_matches: list[tuple[tuple[int, int, int, int], _LabelCandidate, str]] = []
     for candidate in candidates:
         if candidate.label_id in used_candidate_ids:
             continue
-        score, strategy = _score_label(component, candidate, require_identity=require_identity)
+        score, strategy = _score_label(
+            component,
+            candidate,
+            require_identity=require_identity,
+            name_aliases=name_aliases,
+        )
         if score is None:
             continue
         scored_matches.append((score, candidate, strategy))
@@ -294,6 +317,7 @@ def _score_label(
     candidate: _LabelCandidate,
     *,
     require_identity: bool,
+    name_aliases: tuple[str, ...] = (),
 ) -> tuple[tuple[int, int, int, int] | None, str]:
     label_key = _label_key(candidate)
     identity_matches = 0
@@ -316,8 +340,14 @@ def _score_label(
     if identity_mismatches:
         return None, "identity_mismatch"
 
-    caption_match = match_photo_subject(component.component_name, candidate.subject_name)
-    label_name_match = match_photo_subject(component.component_name, label_key.get("部件名称"))
+    names = name_aliases or ((component.component_name or ""),)
+    caption_matches = [match_photo_subject(name, candidate.subject_name) for name in names]
+    label_name_matches = [match_photo_subject(name, label_key.get("部件名称")) for name in names]
+    caption_match = "exact" if "exact" in caption_matches else next((value for value in caption_matches if value), None)
+    label_name_match = "exact" if "exact" in label_name_matches else next(
+        (value for value in label_name_matches if value),
+        None,
+    )
     if label_name_match == "exact" or caption_match == "exact":
         name_score = 2
     elif label_name_match or caption_match:
@@ -580,10 +610,11 @@ def _strip_label_prefix(text: str) -> str:
 
 
 def _strip_suffix_words(text: str, words: tuple[str, ...]) -> str:
+    ordered_words = sorted(words, key=len, reverse=True)
     changed = True
     while changed:
         changed = False
-        for word in words:
+        for word in ordered_words:
             if text.endswith(word) and len(text) > len(word):
                 text = text[: -len(word)]
                 changed = True

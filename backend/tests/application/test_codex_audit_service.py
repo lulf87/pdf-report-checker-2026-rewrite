@@ -79,9 +79,20 @@ class EmptyRunner:
 
 
 class CountingRunner:
-    def __init__(self, *, verdict: CodexReviewVerdict = CodexReviewVerdict.REFUTE) -> None:
+    def __init__(
+        self,
+        *,
+        verdict: CodexReviewVerdict = CodexReviewVerdict.REFUTE,
+        model: str | None = None,
+        reasoning_effort: str = "medium",
+    ) -> None:
         self.calls = 0
         self.verdict = verdict
+        self.cache_identity = {
+            "model": model,
+            "reasoning_effort": reasoning_effort,
+            "runtime_config_version": "codex-runtime-v2",
+        }
 
     def run_review(
         self,
@@ -610,6 +621,38 @@ def test_review_cache_miss_when_prompt_version_changes(tmp_path) -> None:
     service.review(_request().model_copy(update={"prompt_version": "prompt-v2"}), package)
 
     assert runner.calls == 2
+
+
+def test_review_cache_does_not_cross_effective_models(tmp_path) -> None:
+    first_runner = CountingRunner(model="gpt-5.4")
+    second_runner = CountingRunner(model="gpt-5.3-codex")
+    first_service = _service_with_cache(tmp_path, first_runner)
+    second_service = _service_with_cache(tmp_path, second_runner)
+    request = _request()
+    package = _package()
+
+    first = first_service.review(request, package)
+    second = second_service.review(request, package)
+
+    assert first_runner.calls == 1
+    assert second_runner.calls == 1
+    assert first[0].metadata["cache_key"] != second[0].metadata["cache_key"]
+
+
+def test_review_cache_does_not_cross_reasoning_efforts(tmp_path) -> None:
+    medium_runner = CountingRunner(model="gpt-5.6-terra", reasoning_effort="medium")
+    high_runner = CountingRunner(model="gpt-5.6-terra", reasoning_effort="high")
+    medium_service = _service_with_cache(tmp_path, medium_runner)
+    high_service = _service_with_cache(tmp_path, high_runner)
+    request = _request()
+    package = _package()
+
+    medium = medium_service.review(request, package)
+    high = high_service.review(request, package)
+
+    assert medium_runner.calls == 1
+    assert high_runner.calls == 1
+    assert medium[0].metadata["cache_key"] != high[0].metadata["cache_key"]
 
 
 def test_review_cache_does_not_reuse_uncertain_reviews(tmp_path) -> None:

@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"high","evidence_refs":["check_result:C03"],"metadata":{},"reasoning_summary":"仅有 C03 规则初判摘要，未提供第三页字段、中文标签生产日期或页面/OCR 证据，无法稳定确认或反驳“跳过”结论。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C03","verdict":"uncertain"}],"schema_version":"codex-audit-review-v1"}

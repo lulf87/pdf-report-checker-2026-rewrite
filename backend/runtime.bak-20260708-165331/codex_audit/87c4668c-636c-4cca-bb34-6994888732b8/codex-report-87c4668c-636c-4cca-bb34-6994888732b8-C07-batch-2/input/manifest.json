@@ -1,0 +1,33 @@
+{
+  "package_id": "codex-report-87c4668c-636c-4cca-bb34-6994888732b8-C07-batch-2",
+  "task_id": "87c4668c-636c-4cca-bb34-6994888732b8",
+  "root_dir": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/87c4668c-636c-4cca-bb34-6994888732b8/codex-report-87c4668c-636c-4cca-bb34-6994888732b8-C07-batch-2/input",
+  "package_json_path": "evidence_package.json",
+  "item_file_paths": [
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-149-result-token-recovery-uncertain-c07-page-p100.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-149-result-token-recovery-uncertain-c07-table-p100.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-149-result-token-recovery-uncertain-c07-item-group-p100.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-149-result-token-recovery-uncertain-c07-result-p100.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-149-result-token-recovery-uncertain-c07-conclusion-p100.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-149-result-token-recovery-uncertain-c07-remark-p100.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-151-result-token-recovery-uncertain-c07-page-p100.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-151-result-token-recovery-uncertain-c07-table-p100.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-151-result-token-recovery-uncertain-c07-page-p101.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-151-result-token-recovery-uncertain-c07-table-p101.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-151-result-token-recovery-uncertain-c07-item-group-p101.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-151-result-token-recovery-uncertain-c07-result-p101.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-151-result-token-recovery-uncertain-c07-conclusion-p101.png",
+    "items/87c4668c-636c-4cca-bb34-6994888732b8-c07-151-result-token-recovery-uncertain-c07-remark-p101.png"
+  ],
+  "created_at": "2026-07-03T01:57:33.242409Z",
+  "metadata": {
+    "schema_version": "evidence-package-v1",
+    "kind": "report_rule_review",
+    "image_materialization_seconds": 0.275779,
+    "image_items_count": 14,
+    "materialized_image_count": 14,
+    "materialized_image_bytes": 2817973,
+    "externalized_text_count": 0,
+    "externalized_text_bytes": 0
+  }
+}

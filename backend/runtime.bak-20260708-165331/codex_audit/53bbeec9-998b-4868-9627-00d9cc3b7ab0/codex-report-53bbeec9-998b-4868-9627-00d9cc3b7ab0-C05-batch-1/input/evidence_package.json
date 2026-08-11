@@ -1,0 +1,1338 @@
+{
+  "package_id": "codex-report-53bbeec9-998b-4868-9627-00d9cc3b7ab0-C05-batch-1",
+  "task_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0",
+  "task_type": "report_check",
+  "kind": "report_rule_review",
+  "schema_version": "evidence-package-v1",
+  "created_at": "2026-06-25T14:17:19.384688Z",
+  "targets": [
+    {
+      "target_id": "report-codex-target-53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+      "target_type": "photo_caption",
+      "check_id": "C05",
+      "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+      "finding_code": "PHOTO_COVERAGE_MISSING",
+      "summary": "样品描述部件「心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）」缺少对应照片",
+      "evidence_refs": [
+        "finding:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+        "rule_context:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+        "component:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+        "photo_caption:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+        "page_text:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing"
+      ],
+      "metadata": {
+        "source": "report_codex_evidence_builder",
+        "rule_id": "C05",
+        "severity": "error",
+        "expected": "至少一张照片",
+        "actual": "未匹配到照片",
+        "page_number": 4,
+        "finding_code": "PHOTO_COVERAGE_MISSING",
+        "evidence_incomplete": false,
+        "finding_metadata": {
+          "component_name": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）",
+          "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/",
+          "matched_captions": [],
+          "matching_strategy": null,
+          "is_unused_component": false,
+          "candidate_captions": [
+            {
+              "caption_id": "caption-1",
+              "caption_text": "图 201.101 用于以地为基准的患者电路的符号",
+              "caption_subject": ".101用于以地为基准的患者电路的符号",
+              "page_number": 86,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-2",
+              "caption_text": "图 201.102 用于高频绝缘的患者电路的符号",
+              "caption_subject": ".102用于高频绝缘的患者电路的符号",
+              "page_number": 86,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-3",
+              "caption_text": "№1 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 正面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车",
+              "page_number": 107,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-4",
+              "caption_text": "№2 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 背面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车",
+              "page_number": 107,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-5",
+              "caption_text": "№3 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 左面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车左面",
+              "page_number": 108,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-6",
+              "caption_text": "№4 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 右面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车右面",
+              "page_number": 108,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-9",
+              "caption_text": "№7 心脏脉冲电场消融仪-触摸屏",
+              "caption_subject": "心脏脉冲电场消融仪-触摸屏",
+              "page_number": 110,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-11",
+              "caption_text": "№9 心脏脉冲电场消融仪-ECG 主线缆",
+              "caption_subject": "心脏脉冲电场消融仪-ECG主线缆",
+              "page_number": 111,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-13",
+              "caption_text": "№11 心脏脉冲电场消融仪-不可透射线 ECG 导联线（可选）",
+              "caption_subject": "心脏脉冲电场消融仪-不可透射线ECG导联线（可选）",
+              "page_number": 112,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-15",
+              "caption_text": "№13 光纤（15m）（可选）",
+              "caption_subject": "光纤（15m）（可选）",
+              "page_number": 113,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-17",
+              "caption_text": "№15 光接收器",
+              "caption_subject": "光接收器",
+              "page_number": 114,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-19",
+              "caption_text": "№17 电源电缆（可选）",
+              "caption_subject": "电源电缆（可选）",
+              "page_number": 115,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-21",
+              "caption_text": "№19 等电位线缆 （3m）（可选）",
+              "caption_subject": "等电位线缆（3m）（可选）",
+              "page_number": 116,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-23",
+              "caption_text": "№21 触摸屏连接线缆（30m）（可选）",
+              "caption_subject": "触摸屏连接线缆（30m）（可选）",
+              "page_number": 117,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-25",
+              "caption_text": "№23 心脏脉冲电场消融仪-触摸屏电源适配器（可选）",
+              "caption_subject": "心脏脉冲电场消融仪-触摸屏电源适配器（可选）",
+              "page_number": 118,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-27",
+              "caption_text": "№25 脉冲导管连接电缆（可选）",
+              "caption_subject": "脉冲导管连接电缆（可选）",
+              "page_number": 119,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-29",
+              "caption_text": "№27 软件版本",
+              "caption_subject": "软件版本",
+              "page_number": 120,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            }
+          ]
+        },
+        "is_unused_component": false,
+        "unused_reason": null
+      }
+    }
+  ],
+  "items": [
+    {
+      "ref_id": "finding:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+      "source_type": "finding",
+      "title": "样品描述部件「心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）」缺少对应照片",
+      "text": null,
+      "structured": {
+        "id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+        "task_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0",
+        "check_id": "C05",
+        "severity": "error",
+        "code": "PHOTO_COVERAGE_MISSING",
+        "message": "样品描述部件「心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）」缺少对应照片",
+        "location": {
+          "source_id": "36628a34943d8df5",
+          "source_type": "report",
+          "page_number": 4,
+          "bbox": null,
+          "section": null,
+          "table_id": "p4-t2",
+          "row_index": 14,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "至少一张照片",
+        "actual": "未匹配到照片",
+        "evidence": [
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r14:c1:component_name",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": "部件名称",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）",
+            "normalized_text": "心脏脉冲电场消融仪-触摸屏连接线缆（30m）（可选）",
+            "value": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "component_name",
+              "column_index": 1
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r14:c2:model",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": "规格型号",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "PFA-GEN-\nCBL30",
+            "normalized_text": "PFA-GEN-CBL30",
+            "value": "PFA-GEN-\nCBL30",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "model",
+              "column_index": 2
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r14:c3:batch_or_serial",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": "序列号批号",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "/",
+            "normalized_text": "/",
+            "value": "/",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "batch_or_serial",
+              "column_index": 3
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r14:c4:production_date",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": "生产日期",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "/",
+            "normalized_text": "/",
+            "value": "/",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "production_date",
+              "column_index": 4
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r14:c5:remark",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": "备注",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "/",
+            "normalized_text": "/",
+            "value": "/",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "remark",
+              "column_index": 5
+            }
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选） 照片",
+            "reason": "未找到非中文标签类型的照片题注匹配该部件",
+            "expected_source": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 14,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "high",
+        "metadata": {
+          "component_name": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）",
+          "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/",
+          "matched_captions": [],
+          "matching_strategy": null,
+          "is_unused_component": false,
+          "candidate_captions": [
+            {
+              "caption_id": "caption-1",
+              "caption_text": "图 201.101 用于以地为基准的患者电路的符号",
+              "caption_subject": ".101用于以地为基准的患者电路的符号",
+              "page_number": 86,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-2",
+              "caption_text": "图 201.102 用于高频绝缘的患者电路的符号",
+              "caption_subject": ".102用于高频绝缘的患者电路的符号",
+              "page_number": 86,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-3",
+              "caption_text": "№1 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 正面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车",
+              "page_number": 107,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-4",
+              "caption_text": "№2 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 背面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车",
+              "page_number": 107,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-5",
+              "caption_text": "№3 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 左面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车左面",
+              "page_number": 108,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-6",
+              "caption_text": "№4 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 右面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车右面",
+              "page_number": 108,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-9",
+              "caption_text": "№7 心脏脉冲电场消融仪-触摸屏",
+              "caption_subject": "心脏脉冲电场消融仪-触摸屏",
+              "page_number": 110,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-11",
+              "caption_text": "№9 心脏脉冲电场消融仪-ECG 主线缆",
+              "caption_subject": "心脏脉冲电场消融仪-ECG主线缆",
+              "page_number": 111,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-13",
+              "caption_text": "№11 心脏脉冲电场消融仪-不可透射线 ECG 导联线（可选）",
+              "caption_subject": "心脏脉冲电场消融仪-不可透射线ECG导联线（可选）",
+              "page_number": 112,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-15",
+              "caption_text": "№13 光纤（15m）（可选）",
+              "caption_subject": "光纤（15m）（可选）",
+              "page_number": 113,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-17",
+              "caption_text": "№15 光接收器",
+              "caption_subject": "光接收器",
+              "page_number": 114,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-19",
+              "caption_text": "№17 电源电缆（可选）",
+              "caption_subject": "电源电缆（可选）",
+              "page_number": 115,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-21",
+              "caption_text": "№19 等电位线缆 （3m）（可选）",
+              "caption_subject": "等电位线缆（3m）（可选）",
+              "page_number": 116,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-23",
+              "caption_text": "№21 触摸屏连接线缆（30m）（可选）",
+              "caption_subject": "触摸屏连接线缆（30m）（可选）",
+              "page_number": 117,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-25",
+              "caption_text": "№23 心脏脉冲电场消融仪-触摸屏电源适配器（可选）",
+              "caption_subject": "心脏脉冲电场消融仪-触摸屏电源适配器（可选）",
+              "page_number": 118,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-27",
+              "caption_text": "№25 脉冲导管连接电缆（可选）",
+              "caption_subject": "脉冲导管连接电缆（可选）",
+              "page_number": 119,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-29",
+              "caption_text": "№27 软件版本",
+              "caption_subject": "软件版本",
+              "page_number": 120,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            }
+          ]
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": null,
+      "location": {
+        "source_id": "36628a34943d8df5",
+        "source_type": "report",
+        "page_number": 4,
+        "bbox": null,
+        "section": null,
+        "table_id": "p4-t2",
+        "row_index": 14,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+        "check_id": "C05",
+        "finding_code": "PHOTO_COVERAGE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+      "source_type": "rule_context",
+      "title": "C05 deterministic rule context",
+      "text": "样品描述部件与照片 caption 覆盖关系的规则初判上下文。",
+      "structured": {
+        "check_id": "C05",
+        "check_name": "照片覆盖",
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+        "code": "PHOTO_COVERAGE_MISSING",
+        "severity": "error",
+        "message": "样品描述部件「心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）」缺少对应照片",
+        "expected": "至少一张照片",
+        "actual": "未匹配到照片",
+        "finding_metadata": {
+          "component_name": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）",
+          "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/",
+          "matched_captions": [],
+          "matching_strategy": null,
+          "is_unused_component": false,
+          "candidate_captions": [
+            {
+              "caption_id": "caption-1",
+              "caption_text": "图 201.101 用于以地为基准的患者电路的符号",
+              "caption_subject": ".101用于以地为基准的患者电路的符号",
+              "page_number": 86,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-2",
+              "caption_text": "图 201.102 用于高频绝缘的患者电路的符号",
+              "caption_subject": ".102用于高频绝缘的患者电路的符号",
+              "page_number": 86,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-3",
+              "caption_text": "№1 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 正面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车",
+              "page_number": 107,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-4",
+              "caption_text": "№2 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 背面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车",
+              "page_number": 107,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-5",
+              "caption_text": "№3 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 左面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车左面",
+              "page_number": 108,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-6",
+              "caption_text": "№4 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 右面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车右面",
+              "page_number": 108,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-9",
+              "caption_text": "№7 心脏脉冲电场消融仪-触摸屏",
+              "caption_subject": "心脏脉冲电场消融仪-触摸屏",
+              "page_number": 110,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-11",
+              "caption_text": "№9 心脏脉冲电场消融仪-ECG 主线缆",
+              "caption_subject": "心脏脉冲电场消融仪-ECG主线缆",
+              "page_number": 111,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-13",
+              "caption_text": "№11 心脏脉冲电场消融仪-不可透射线 ECG 导联线（可选）",
+              "caption_subject": "心脏脉冲电场消融仪-不可透射线ECG导联线（可选）",
+              "page_number": 112,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-15",
+              "caption_text": "№13 光纤（15m）（可选）",
+              "caption_subject": "光纤（15m）（可选）",
+              "page_number": 113,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-17",
+              "caption_text": "№15 光接收器",
+              "caption_subject": "光接收器",
+              "page_number": 114,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-19",
+              "caption_text": "№17 电源电缆（可选）",
+              "caption_subject": "电源电缆（可选）",
+              "page_number": 115,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-21",
+              "caption_text": "№19 等电位线缆 （3m）（可选）",
+              "caption_subject": "等电位线缆（3m）（可选）",
+              "page_number": 116,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-23",
+              "caption_text": "№21 触摸屏连接线缆（30m）（可选）",
+              "caption_subject": "触摸屏连接线缆（30m）（可选）",
+              "page_number": 117,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-25",
+              "caption_text": "№23 心脏脉冲电场消融仪-触摸屏电源适配器（可选）",
+              "caption_subject": "心脏脉冲电场消融仪-触摸屏电源适配器（可选）",
+              "page_number": 118,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-27",
+              "caption_text": "№25 脉冲导管连接电缆（可选）",
+              "caption_subject": "脉冲导管连接电缆（可选）",
+              "page_number": 119,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-29",
+              "caption_text": "№27 软件版本",
+              "caption_subject": "软件版本",
+              "page_number": 120,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            }
+          ]
+        },
+        "result_metadata": {
+          "coverage": [
+            {
+              "component_name": "心脏脉冲电场消融仪-可\n透射线 ECG 导联线（可\n选）",
+              "component_key": "心脏脉冲电场消融仪-可\n透射线 ECG 导联线（可\n选）|PFA-ECG-LNAM|/|/",
+              "component_id": "sample-row-6",
+              "caption_id": null,
+              "matched_captions": [],
+              "matching_strategy": "unused_component_skipped",
+              "is_unused_component": true
+            },
+            {
+              "component_name": "心脏脉冲电场消融仪-记\n录系统连接线缆",
+              "component_key": "心脏脉冲电场消融仪-记\n录系统连接线缆|GEN-3RD-REC|/|/",
+              "component_id": "sample-row-7",
+              "caption_id": null,
+              "matched_captions": [],
+              "matching_strategy": "unused_component_skipped",
+              "is_unused_component": true
+            },
+            {
+              "component_name": "心脏脉冲电场消融仪-触\n摸屏连接线缆（10m）\n（可选）",
+              "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（10m）\n（可选）|PFA-GEN-\nCBL10|/|/",
+              "component_id": "sample-row-12",
+              "caption_id": null,
+              "matched_captions": [],
+              "matching_strategy": "unused_component_skipped",
+              "is_unused_component": true
+            },
+            {
+              "component_name": "心脏脉冲电场消融仪-触\n摸屏连接线缆（15m）\n（可选）",
+              "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（15m）\n（可选）|PFA-GEN-\nCBL15|/|/",
+              "component_id": "sample-row-13",
+              "caption_id": null,
+              "matched_captions": [],
+              "matching_strategy": "unused_component_skipped",
+              "is_unused_component": true
+            },
+            {
+              "component_name": "光纤（10m）（可选）",
+              "component_key": "光纤（10m）（可选）|H700179|/|/",
+              "component_id": "sample-row-15",
+              "caption_id": null,
+              "matched_captions": [],
+              "matching_strategy": "unused_component_skipped",
+              "is_unused_component": true
+            },
+            {
+              "component_name": "心脏脉冲电场消融仪-主\n机",
+              "component_key": "心脏脉冲电场消融仪-主\n机|PFA-GEN-01|20539798|2025-04-19",
+              "component_id": "sample-row-1",
+              "caption_id": "caption-3",
+              "matched_captions": [
+                "№1 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 正面"
+              ],
+              "matching_strategy": "component_in_subject_allowed_connector",
+              "is_unused_component": false
+            },
+            {
+              "component_name": "脉冲导管连接电缆（可\n选）",
+              "component_key": "脉冲导管连接电缆（可\n选）|A-UNI-PF-CBL|850778817|2025-04-10",
+              "component_id": "sample-row-2",
+              "caption_id": "caption-27",
+              "matched_captions": [
+                "№25 脉冲导管连接电缆（可选）"
+              ],
+              "matching_strategy": "exact",
+              "is_unused_component": false
+            },
+            {
+              "component_name": "心脏脉冲电场消融仪-推\n车",
+              "component_key": "心脏脉冲电场消融仪-推\n车|PFA-GEN-CART|10627717|2024-11-26",
+              "component_id": "sample-row-3",
+              "caption_id": null,
+              "matched_captions": [],
+              "matching_strategy": null,
+              "is_unused_component": false
+            },
+            {
+              "component_name": "心脏脉冲电场消融仪- \nECG 主线缆",
+              "component_key": "心脏脉冲电场消融仪- \nECG 主线缆|PFA-ECG-CBL|2024070069|2024-07-13",
+              "component_id": "sample-row-4",
+              "caption_id": "caption-11",
+              "matched_captions": [
+                "№9 心脏脉冲电场消融仪-ECG 主线缆"
+              ],
+              "matching_strategy": "exact",
+              "is_unused_component": false
+            },
+            {
+              "component_name": "心脏脉冲电场消融仪-不\n可透射线 ECG 导联线（可\n选）",
+              "component_key": "心脏脉冲电场消融仪-不\n可透射线 ECG 导联线（可\n选）|PFA-ECG-RNAM|2024070063|2024-10-11",
+              "component_id": "sample-row-5",
+              "caption_id": "caption-13",
+              "matched_captions": [
+                "№11 心脏脉冲电场消融仪-不可透射线 ECG 导联线（可选）"
+              ],
+              "matching_strategy": "exact",
+              "is_unused_component": false
+            },
+            {
+              "component_name": "心脏脉冲电场消融仪-触\n摸屏",
+              "component_key": "心脏脉冲电场消融仪-触\n摸屏|PFA-GEN-TS|C24H006740|2024-10-14",
+              "component_id": "sample-row-8",
+              "caption_id": "caption-9",
+              "matched_captions": [
+                "№7 心脏脉冲电场消融仪-触摸屏"
+              ],
+              "matching_strategy": "exact",
+              "is_unused_component": false
+            },
+            {
+              "component_name": "电源电缆（可选）",
+              "component_key": "电源电缆（可选）|GEN-PWR-CH|10822757|2017-10-15",
+              "component_id": "sample-row-9",
+              "caption_id": "caption-19",
+              "matched_captions": [
+                "№17 电源电缆（可选）"
+              ],
+              "matching_strategy": "exact",
+              "is_unused_component": false
+            },
+            {
+              "component_name": "等电位线缆（3m）（可\n选）",
+              "component_key": "等电位线缆（3m）（可\n选）|S100003|/|/",
+              "component_id": "sample-row-10",
+              "caption_id": "caption-21",
+              "matched_captions": [
+                "№19 等电位线缆 （3m）（可选）"
+              ],
+              "matching_strategy": "exact",
+              "is_unused_component": false
+            },
+            {
+              "component_name": "光接收器（可选）",
+              "component_key": "光接收器（可选）|S100018|/|/",
+              "component_id": "sample-row-11",
+              "caption_id": "caption-17",
+              "matched_captions": [
+                "№15 光接收器"
+              ],
+              "matching_strategy": "subject_in_component_allowed_connector",
+              "is_unused_component": false
+            },
+            {
+              "component_name": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）",
+              "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/",
+              "component_id": "sample-row-14",
+              "caption_id": null,
+              "matched_captions": [],
+              "matching_strategy": null,
+              "is_unused_component": false
+            }
+          ]
+        },
+        "audit_reason": "review deterministic report self-check candidate finding against focused evidence",
+        "evidence_incomplete": false,
+        "component_usage": {
+          "is_unused_component": false,
+          "unused_reason": null
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "C05",
+      "location": null,
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+        "check_id": "C05",
+        "finding_code": "PHOTO_COVERAGE_MISSING"
+      }
+    },
+    {
+      "ref_id": "component:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+      "source_type": "report_field",
+      "title": "C05 样品部件 evidence",
+      "text": null,
+      "structured": {
+        "component_id": "sample-row-1",
+        "component_name": "心脏脉冲电场消融仪-主\n机",
+        "model": "PFA-GEN-01",
+        "batch_or_serial": "20539798",
+        "production_date": "2025-04-19",
+        "expiration_date": null,
+        "remark": "/",
+        "identity_key": "心脏脉冲电场消融仪-主\n机|PFA-GEN-01|20539798|2025-04-19",
+        "is_unused_component": false,
+        "unused_reason": null,
+        "expected": "至少一张照片",
+        "actual": "未匹配到照片",
+        "finding_metadata": {
+          "component_name": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）",
+          "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/",
+          "matched_captions": [],
+          "matching_strategy": null,
+          "is_unused_component": false,
+          "candidate_captions": [
+            {
+              "caption_id": "caption-1",
+              "caption_text": "图 201.101 用于以地为基准的患者电路的符号",
+              "caption_subject": ".101用于以地为基准的患者电路的符号",
+              "page_number": 86,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-2",
+              "caption_text": "图 201.102 用于高频绝缘的患者电路的符号",
+              "caption_subject": ".102用于高频绝缘的患者电路的符号",
+              "page_number": 86,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-3",
+              "caption_text": "№1 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 正面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车",
+              "page_number": 107,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-4",
+              "caption_text": "№2 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 背面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车",
+              "page_number": 107,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-5",
+              "caption_text": "№3 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 左面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车左面",
+              "page_number": 108,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-6",
+              "caption_text": "№4 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 右面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车右面",
+              "page_number": 108,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-9",
+              "caption_text": "№7 心脏脉冲电场消融仪-触摸屏",
+              "caption_subject": "心脏脉冲电场消融仪-触摸屏",
+              "page_number": 110,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-11",
+              "caption_text": "№9 心脏脉冲电场消融仪-ECG 主线缆",
+              "caption_subject": "心脏脉冲电场消融仪-ECG主线缆",
+              "page_number": 111,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-13",
+              "caption_text": "№11 心脏脉冲电场消融仪-不可透射线 ECG 导联线（可选）",
+              "caption_subject": "心脏脉冲电场消融仪-不可透射线ECG导联线（可选）",
+              "page_number": 112,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-15",
+              "caption_text": "№13 光纤（15m）（可选）",
+              "caption_subject": "光纤（15m）（可选）",
+              "page_number": 113,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-17",
+              "caption_text": "№15 光接收器",
+              "caption_subject": "光接收器",
+              "page_number": 114,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-19",
+              "caption_text": "№17 电源电缆（可选）",
+              "caption_subject": "电源电缆（可选）",
+              "page_number": 115,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-21",
+              "caption_text": "№19 等电位线缆 （3m）（可选）",
+              "caption_subject": "等电位线缆（3m）（可选）",
+              "page_number": 116,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-23",
+              "caption_text": "№21 触摸屏连接线缆（30m）（可选）",
+              "caption_subject": "触摸屏连接线缆（30m）（可选）",
+              "page_number": 117,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-25",
+              "caption_text": "№23 心脏脉冲电场消融仪-触摸屏电源适配器（可选）",
+              "caption_subject": "心脏脉冲电场消融仪-触摸屏电源适配器（可选）",
+              "page_number": 118,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-27",
+              "caption_text": "№25 脉冲导管连接电缆（可选）",
+              "caption_subject": "脉冲导管连接电缆（可选）",
+              "page_number": 119,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-29",
+              "caption_text": "№27 软件版本",
+              "caption_subject": "软件版本",
+              "page_number": 120,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            }
+          ]
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "sample_component",
+      "location": {
+        "source_id": "36628a34943d8df5",
+        "source_type": "report",
+        "page_number": 4,
+        "bbox": null,
+        "section": null,
+        "table_id": "p4-t2",
+        "row_index": 1,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+        "check_id": "C05",
+        "component_id": "sample-row-1"
+      }
+    },
+    {
+      "ref_id": "photo_caption:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+      "source_type": "image_caption",
+      "title": "C05 photo caption evidence",
+      "text": "图 201.101 用于以地为基准的患者电路的符号",
+      "structured": {
+        "caption_id": "caption-1",
+        "caption_text": "图 201.101 用于以地为基准的患者电路的符号",
+        "subject_name": ".101 用于以地为基准的患者电路的符号",
+        "caption_type": "photo",
+        "page_number": 86,
+        "matched_component_ids": [],
+        "metadata": {
+          "is_chinese_label": false
+        },
+        "finding_metadata": {
+          "component_name": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）",
+          "component_key": "心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选）|PFA-GEN-\nCBL30|/|/",
+          "matched_captions": [],
+          "matching_strategy": null,
+          "is_unused_component": false,
+          "candidate_captions": [
+            {
+              "caption_id": "caption-1",
+              "caption_text": "图 201.101 用于以地为基准的患者电路的符号",
+              "caption_subject": ".101用于以地为基准的患者电路的符号",
+              "page_number": 86,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-2",
+              "caption_text": "图 201.102 用于高频绝缘的患者电路的符号",
+              "caption_subject": ".102用于高频绝缘的患者电路的符号",
+              "page_number": 86,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-3",
+              "caption_text": "№1 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 正面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车",
+              "page_number": 107,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-4",
+              "caption_text": "№2 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 背面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车",
+              "page_number": 107,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-5",
+              "caption_text": "№3 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 左面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车左面",
+              "page_number": 108,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-6",
+              "caption_text": "№4 心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车 右面",
+              "caption_subject": "心脏脉冲电场消融仪-主机及心脏脉冲电场消融仪-推车右面",
+              "page_number": 108,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-9",
+              "caption_text": "№7 心脏脉冲电场消融仪-触摸屏",
+              "caption_subject": "心脏脉冲电场消融仪-触摸屏",
+              "page_number": 110,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-11",
+              "caption_text": "№9 心脏脉冲电场消融仪-ECG 主线缆",
+              "caption_subject": "心脏脉冲电场消融仪-ECG主线缆",
+              "page_number": 111,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-13",
+              "caption_text": "№11 心脏脉冲电场消融仪-不可透射线 ECG 导联线（可选）",
+              "caption_subject": "心脏脉冲电场消融仪-不可透射线ECG导联线（可选）",
+              "page_number": 112,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-15",
+              "caption_text": "№13 光纤（15m）（可选）",
+              "caption_subject": "光纤（15m）（可选）",
+              "page_number": 113,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-17",
+              "caption_text": "№15 光接收器",
+              "caption_subject": "光接收器",
+              "page_number": 114,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-19",
+              "caption_text": "№17 电源电缆（可选）",
+              "caption_subject": "电源电缆（可选）",
+              "page_number": 115,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-21",
+              "caption_text": "№19 等电位线缆 （3m）（可选）",
+              "caption_subject": "等电位线缆（3m）（可选）",
+              "page_number": 116,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-23",
+              "caption_text": "№21 触摸屏连接线缆（30m）（可选）",
+              "caption_subject": "触摸屏连接线缆（30m）（可选）",
+              "page_number": 117,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-25",
+              "caption_text": "№23 心脏脉冲电场消融仪-触摸屏电源适配器（可选）",
+              "caption_subject": "心脏脉冲电场消融仪-触摸屏电源适配器（可选）",
+              "page_number": 118,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-27",
+              "caption_text": "№25 脉冲导管连接电缆（可选）",
+              "caption_subject": "脉冲导管连接电缆（可选）",
+              "page_number": 119,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            },
+            {
+              "caption_id": "caption-29",
+              "caption_text": "№27 软件版本",
+              "caption_subject": "软件版本",
+              "page_number": 120,
+              "ocr_confidence": null,
+              "is_uncertain": false,
+              "uncertainty_reason": null
+            }
+          ]
+        }
+      },
+      "file_path": null,
+      "page_number": 86,
+      "section": "photo_caption",
+      "location": null,
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+        "check_id": "C05",
+        "caption_id": "caption-1"
+      }
+    },
+    {
+      "ref_id": "page_text:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+      "source_type": "page_text",
+      "title": "C05 page text snippet",
+      "text": "上\n海\n市\n医\n疗\n器\n械\n检\n验\n研\n究\n院 \n检 验 报 告 \n报告编号：国医检（设）字 QW2025 第 2795 号     样品编号：QW2025-2795       共 118 页 第 2 页 \n \n样品描述 \n被检样品主要部件包括： \n序\n号 \n部件名称 \n规格型号 \n序列号/批号 \n生产日期 \n备注 \n1 \n心脏脉冲电场消融仪-主\n机 \nPFA-GEN-01 \n20539798 \n2025-04-19 \n/ \n2 \n脉冲导管连接电缆（可\n选） \nA-UNI-PF-CBL \n850778817 \n2025-04-10 \n/ \n3 \n心脏脉冲电场消融仪-推\n车 \nPFA-GEN-CART \n10627717 \n2024-11-26 \n/ \n4 \n心脏脉冲电场消融仪- \nECG 主线缆 \nPFA-ECG-CBL \n2024070069 \n2024-07-13 \n/ \n5 \n心脏脉冲电场消融仪-不\n可透射线 ECG 导联线（可\n选） \nPFA-ECG-RNAM \n2024070063 \n2024-10-11 \n/ \n6 \n心脏脉冲电场消融仪-可\n透射线 ECG 导联线（可\n选） \nPFA-ECG-LNAM \n/ \n/ \n本次检测未\n使用 \n7 \n心脏脉冲电场消融仪-记\n录系统连接线缆 \nGEN-3RD-REC \n/ \n/ \n本次检测未\n使用 \n8 \n心脏脉冲电场消融仪-触\n摸屏 \nPFA-GEN-TS \nC24H006740 \n2024-10-14 \n/ \n9 \n电源电缆（可选） \nGEN-PWR-CH \n10822757 \n2017-10-15 \n/ \n10 \n等电位线缆（3m）（可\n选） \nS100003 \n/ \n/ \n/ \n11 \n光接收器（可选） \nS100018 \n/ \n/ \n/ \n12 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（10m）\n（可选） \nPFA-GEN-\nCBL10 \n/ \n/ \n本次检测未\n使用 \n13 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（15m）\n（可选） \nPFA-GEN-\nCBL15 \n/ \n/ \n本次检测未\n使用 \n14 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选） \nPFA-GEN-\nCBL30 \n/ \n/ \n/ \n15 \n光纤（10m）（可选） \nH700179 \n/ \n/ \n本次检测未\n使用 \n",
+      "structured": {
+        "page_number": 4,
+        "text": "上\n海\n市\n医\n疗\n器\n械\n检\n验\n研\n究\n院 \n检 验 报 告 \n报告编号：国医检（设）字 QW2025 第 2795 号     样品编号：QW2025-2795       共 118 页 第 2 页 \n \n样品描述 \n被检样品主要部件包括： \n序\n号 \n部件名称 \n规格型号 \n序列号/批号 \n生产日期 \n备注 \n1 \n心脏脉冲电场消融仪-主\n机 \nPFA-GEN-01 \n20539798 \n2025-04-19 \n/ \n2 \n脉冲导管连接电缆（可\n选） \nA-UNI-PF-CBL \n850778817 \n2025-04-10 \n/ \n3 \n心脏脉冲电场消融仪-推\n车 \nPFA-GEN-CART \n10627717 \n2024-11-26 \n/ \n4 \n心脏脉冲电场消融仪- \nECG 主线缆 \nPFA-ECG-CBL \n2024070069 \n2024-07-13 \n/ \n5 \n心脏脉冲电场消融仪-不\n可透射线 ECG 导联线（可\n选） \nPFA-ECG-RNAM \n2024070063 \n2024-10-11 \n/ \n6 \n心脏脉冲电场消融仪-可\n透射线 ECG 导联线（可\n选） \nPFA-ECG-LNAM \n/ \n/ \n本次检测未\n使用 \n7 \n心脏脉冲电场消融仪-记\n录系统连接线缆 \nGEN-3RD-REC \n/ \n/ \n本次检测未\n使用 \n8 \n心脏脉冲电场消融仪-触\n摸屏 \nPFA-GEN-TS \nC24H006740 \n2024-10-14 \n/ \n9 \n电源电缆（可选） \nGEN-PWR-CH \n10822757 \n2017-10-15 \n/ \n10 \n等电位线缆（3m）（可\n选） \nS100003 \n/ \n/ \n/ \n11 \n光接收器（可选） \nS100018 \n/ \n/ \n/ \n12 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（10m）\n（可选） \nPFA-GEN-\nCBL10 \n/ \n/ \n本次检测未\n使用 \n13 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（15m）\n（可选） \nPFA-GEN-\nCBL15 \n/ \n/ \n本次检测未\n使用 \n14 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选） \nPFA-GEN-\nCBL30 \n/ \n/ \n/ \n15 \n光纤（10m）（可选） \nH700179 \n/ \n/ \n本次检测未\n使用 \n"
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "page_text",
+      "location": null,
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c05-sample-row-14-photo-missing",
+        "check_id": "C05",
+        "file_id": "36628a34943d8df5"
+      }
+    }
+  ],
+  "metadata": {
+    "source": "report_codex_evidence_builder",
+    "check_id": "C05",
+    "deterministic_finding_count": 2,
+    "target_count": 1,
+    "total_candidate_targets": 2,
+    "emitted_targets": 1,
+    "truncated": false,
+    "omitted_targets_count": 0,
+    "target_offset": 1,
+    "batch_index": 1,
+    "batch_size": 1,
+    "max_targets_per_task": 5,
+    "max_targets_per_batch": 1
+  }
+}

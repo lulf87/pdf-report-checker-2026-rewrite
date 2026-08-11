@@ -1,0 +1,12 @@
+{
+  "package_id": "codex-report-bc21161f-31b6-4843-bfa1-91523857c357-C05",
+  "task_id": "bc21161f-31b6-4843-bfa1-91523857c357",
+  "root_dir": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/bc21161f-31b6-4843-bfa1-91523857c357/codex-report-bc21161f-31b6-4843-bfa1-91523857c357-C05/input",
+  "package_json_path": "evidence_package.json",
+  "item_file_paths": [],
+  "created_at": "2026-06-18T07:07:24.630388Z",
+  "metadata": {
+    "schema_version": "evidence-package-v1",
+    "kind": "report_rule_review"
+  }
+}

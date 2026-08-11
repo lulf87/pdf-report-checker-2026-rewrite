@@ -256,8 +256,12 @@ class FakePtrCodexAuditService:
         suggested_finding: CodexSuggestedFinding | None = None,
         error: CodexReviewError | None = None,
         timeout_seconds: int = 900,
+        model: str | None = None,
+        reasoning_effort: str | None = None,
         calls: list[tuple] | None = None,
         timeout_overrides: list[int] | None = None,
+        model_overrides: list[str] | None = None,
+        reasoning_effort_overrides: list[str] | None = None,
     ) -> None:
         self.verdict = verdict
         self.status = status
@@ -265,7 +269,17 @@ class FakePtrCodexAuditService:
         self.error = error
         self.calls: list[tuple] = calls if calls is not None else []
         self.timeout_overrides = timeout_overrides if timeout_overrides is not None else []
-        self.runner = SimpleNamespace(config=SimpleNamespace(timeout_seconds=timeout_seconds))
+        self.model_overrides = model_overrides if model_overrides is not None else []
+        self.reasoning_effort_overrides = (
+            reasoning_effort_overrides if reasoning_effort_overrides is not None else []
+        )
+        self.runner = SimpleNamespace(
+            config=SimpleNamespace(
+                timeout_seconds=timeout_seconds,
+                model=model,
+                reasoning_effort=reasoning_effort,
+            )
+        )
 
     def with_timeout_seconds(self, timeout_seconds: int) -> "FakePtrCodexAuditService":
         self.timeout_overrides.append(timeout_seconds)
@@ -275,8 +289,44 @@ class FakePtrCodexAuditService:
             suggested_finding=self.suggested_finding,
             error=self.error,
             timeout_seconds=timeout_seconds,
+            model=self.runner.config.model,
+            reasoning_effort=self.runner.config.reasoning_effort,
             calls=self.calls,
             timeout_overrides=self.timeout_overrides,
+            model_overrides=self.model_overrides,
+            reasoning_effort_overrides=self.reasoning_effort_overrides,
+        )
+
+    def with_model(self, model: str) -> "FakePtrCodexAuditService":
+        self.model_overrides.append(model)
+        return FakePtrCodexAuditService(
+            verdict=self.verdict,
+            status=self.status,
+            suggested_finding=self.suggested_finding,
+            error=self.error,
+            timeout_seconds=self.runner.config.timeout_seconds,
+            model=model,
+            reasoning_effort=self.runner.config.reasoning_effort,
+            calls=self.calls,
+            timeout_overrides=self.timeout_overrides,
+            model_overrides=self.model_overrides,
+            reasoning_effort_overrides=self.reasoning_effort_overrides,
+        )
+
+    def with_reasoning_effort(self, reasoning_effort: str) -> "FakePtrCodexAuditService":
+        self.reasoning_effort_overrides.append(reasoning_effort)
+        return FakePtrCodexAuditService(
+            verdict=self.verdict,
+            status=self.status,
+            suggested_finding=self.suggested_finding,
+            error=self.error,
+            timeout_seconds=self.runner.config.timeout_seconds,
+            model=self.runner.config.model,
+            reasoning_effort=reasoning_effort,
+            calls=self.calls,
+            timeout_overrides=self.timeout_overrides,
+            model_overrides=self.model_overrides,
+            reasoning_effort_overrides=self.reasoning_effort_overrides,
         )
 
     def review(self, request, evidence_package: EvidencePackage) -> list[CodexReviewResult]:
@@ -893,7 +943,9 @@ def test_ptr_compare_pm3562_scope_table_and_pvc_only_semantics(tmp_path: Path) -
     coverage_rows = [row for item in items.values() for row in item["coverage_comparison_rows"]]
     assert len(coverage_rows) >= 17
     assert items["2.2.2"]["coverage_comparison_rows"][0]["report_item_no"] == "50"
-    assert items["2.2.2"]["coverage_comparison_rows"][0]["status"] == "covered_passed"
+    assert items["2.2.2"]["coverage_comparison_rows"][0]["status"] == "needs_review"
+    assert items["2.2.2"]["requirement_alignment"]["status"] == "equivalent"
+    assert items["2.2.2"]["result_compliance"]["status"] == "needs_review"
     assert items["2.3"]["coverage_comparison_rows"][0]["report_item_no"] == "51"
     assert "PVC" in items["2.3"]["coverage_comparison_rows"][0]["reason"]
     assert items["2.8.2"]["coverage_comparison_rows"][0]["report_item_no"] == "54"
@@ -909,6 +961,9 @@ def test_ptr_compare_pm3562_scope_table_and_pvc_only_semantics(tmp_path: Path) -
     assert items["2.8.2"]["report_matches"][0]["item_no"] == "54"
     assert "0.884" in items["2.8.2"]["report_matches"][0]["test_result"]
     assert "0.993" in items["2.8.2"]["report_matches"][0]["test_result"]
+    assert items["2.3"]["final_status"] == "passed"
+    assert items["2.8.2"]["requirement_alignment"]["status"] == "needs_review"
+    assert items["2.8.2"]["result_compliance"]["status"] == "match"
 
     assert [coverage["standard"] for coverage in items["2.6"]["external_standard_coverages"]] == [
         "GB 16174.1-2024"
@@ -922,9 +977,10 @@ def test_ptr_compare_pm3562_scope_table_and_pvc_only_semantics(tmp_path: Path) -
     assert items["2.7"]["external_standard_coverages"][0]["end_item_no"] == "37"
 
     assert details["confirmed_errors_count"] == 0
-    assert details["manual_review_required_count"] == 0
+    assert details["manual_review_required_count"] == 9
     assert result.summary.confirmed_errors_count == 0
-    assert result.summary.manual_review_required_count == 0
+    assert result.summary.manual_review_required_count == details["manual_review_required_count"]
+    assert result.summary.final_audit_status == "needs_manual_review"
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
 
@@ -958,7 +1014,9 @@ def test_ptr_compare_pm3562_ptr_scope_uses_structured_scope_when_source_text_is_
     assert "VIP" in items["2.3"]["ptr_requirement_text"]
     assert "MR Conditional" in items["2.3"]["ptr_requirement_text"]
     assert details["confirmed_errors_count"] == 0
-    assert details["manual_review_required_count"] == 0
+    assert details["manual_review_required_count"] == 9
+    assert result.summary.manual_review_required_count == details["manual_review_required_count"]
+    assert result.summary.final_audit_status == "needs_manual_review"
 
 
 def test_ptr_compare_pm3562_table_2_1_missing_is_resolved_by_report_item_coverage(tmp_path: Path) -> None:
@@ -977,13 +1035,18 @@ def test_ptr_compare_pm3562_table_2_1_missing_is_resolved_by_report_item_coverag
 
     details = result.metadata["ptr_comparison_details"]
     items = {item["ptr_clause_id"]: item for item in details["items"]}
+    expected_trace_reviews = {"2.1.1", "2.1.2", "2.1.3", "2.1.8", "2.1.10", "2.1.11", "2.1.12"}
     for index in range(1, 13):
         item = items[f"2.1.{index}"]
-        assert item["coverage_status"] == "covered_passed"
         assert item["report_matches"][0]["item_no"] == str(index + 37)
         assert item["report_matches"][0]["single_conclusion"] == "符合"
+        if item["ptr_clause_id"] in expected_trace_reviews:
+            assert item["coverage_status"] == "needs_review"
+            assert item["requirement_alignment"]["status"] == "needs_review"
+        else:
+            assert item["coverage_status"] == "covered_passed"
     assert details["confirmed_errors_count"] == 0
-    assert details["manual_review_required_count"] == 0
+    assert details["manual_review_required_count"] >= len(expected_trace_reviews)
 
 
 def test_ptr_compare_scope_aware_1539_like_report_passes_and_explains_scope(tmp_path: Path) -> None:
@@ -1219,7 +1282,9 @@ def test_ptr_compare_scope_aware_1539_binds_atomic_results_when_value_precedes_p
     assert fall_rows["2.2.4:fall_time:pf_reversible"]["status"] == "match"
     assert "205 PF Reversible" in fall_rows["2.2.4:fall_time:pf_reversible"]["source_text"]
     assert items["2.2.3"]["coverage_status"] == "covered_passed"
-    assert items["2.2.4"]["coverage_status"] == "covered_passed"
+    assert items["2.2.4"]["coverage_status"] == "needs_review"
+    assert items["2.2.4"]["requirement_alignment"]["status"] == "needs_review"
+    assert items["2.2.4"]["result_compliance"]["status"] == "match"
 
 
 def test_ptr_compare_scope_aware_1539_binds_split_values_from_group_clause_windows() -> None:
@@ -1405,8 +1470,10 @@ def test_ptr_compare_scope_aware_1539_table_atomic_rows_override_refuted_missing
     software_item = items["2.6"]
     software_rows = {row["atomic_id"]: row for row in software_item["atomic_comparison_rows"]}
     assert software_rows
-    assert software_item["coverage_status"] == "covered_passed"
-    assert software_item["final_status"] == "passed"
+    assert software_item["coverage_status"] == "needs_review"
+    assert software_item["final_status"] == "manual_review_required"
+    assert software_item["requirement_alignment"]["status"] == "needs_review"
+    assert software_item["result_compliance"]["status"] == "match"
     assert software_item["normalized_comparison"]["actual"]
     assert software_item["coverage_status"] != "refuted"
     assert "候选问题已排除" not in software_item["reason"]
@@ -1442,7 +1509,9 @@ def test_ptr_compare_scope_aware_1539_table_atomic_rows_override_refuted_missing
     ]
     assert {finding.metadata["clause_number"] for finding in refuted_missing} == {"2.2.2", "2.6"}
     assert details["confirmed_errors_count"] == 0
-    assert details["manual_review_required_count"] == 0
+    assert details["manual_review_required_count"] > 0
+    assert result.summary.manual_review_required_count == details["manual_review_required_count"]
+    assert result.summary.final_audit_status == "needs_manual_review"
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
 
@@ -1512,12 +1581,16 @@ def test_ptr_compare_scope_aware_1539_binds_real_report_waveform_and_software_ta
     assert energy_row["status"] == "match"
 
     assert items["2.2.2"]["coverage_status"] == "covered_passed"
-    assert items["2.6"]["coverage_status"] == "covered_passed"
+    assert items["2.2.2"]["requirement_alignment"]["status"] == "equivalent"
+    assert items["2.2.2"]["result_compliance"]["status"] == "match"
+    assert items["2.6"]["coverage_status"] == "needs_review"
+    assert items["2.6"]["requirement_alignment"]["status"] == "needs_review"
+    assert items["2.6"]["result_compliance"]["status"] == "match"
     assert details["confirmed_errors_count"] == 0
-    assert details["manual_review_required_count"] == 0
-    assert details["overall_status"] == "passed"
-    assert result.metadata["codex_audit"]["final_audit_status"] == "passed"
-    assert result.summary.final_audit_status == "passed"
+    assert details["manual_review_required_count"] > 0
+    assert details["overall_status"] == "needs_review"
+    assert result.metadata["codex_audit"]["final_audit_status"] == "needs_manual_review"
+    assert result.summary.final_audit_status == "needs_manual_review"
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
 
@@ -1557,8 +1630,10 @@ def test_ptr_compare_scope_aware_1539_b55_like_split_rows_resolve_without_codex_
     assert software_rows[rf_communication_id]["actual"] == "——"
     assert software_rows[rf_communication_id]["status"] == "not_applicable"
     assert all(row["status"] in {"match", "not_applicable"} for row in software_rows.values())
-    assert items["2.6"]["coverage_status"] == "covered_passed"
-    assert items["2.6"]["final_status"] == "passed"
+    assert items["2.6"]["coverage_status"] == "needs_review"
+    assert items["2.6"]["final_status"] == "manual_review_required"
+    assert items["2.6"]["requirement_alignment"]["status"] == "needs_review"
+    assert items["2.6"]["result_compliance"]["status"] == "match"
 
     ptr_table_result = _check_result(result, "PTR_TABLE")
     assert not any(
@@ -1566,10 +1641,10 @@ def test_ptr_compare_scope_aware_1539_b55_like_split_rows_resolve_without_codex_
         for finding in ptr_table_result.findings
     )
     assert details["confirmed_errors_count"] == 0
-    assert details["manual_review_required_count"] == 0
+    assert details["manual_review_required_count"] > 0
     assert result.summary.confirmed_errors_count == 0
-    assert result.summary.manual_review_required_count == 0
-    assert result.summary.final_audit_status == "passed"
+    assert result.summary.manual_review_required_count == details["manual_review_required_count"]
+    assert result.summary.final_audit_status == "needs_manual_review"
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
 
@@ -1606,13 +1681,15 @@ def test_ptr_compare_scope_aware_1539_software_rf_dash_rows_are_not_applicable_f
     assert communication_row["status"] == "not_applicable"
     assert "不适用" in communication_row["reason"]
 
-    assert items["2.6"]["coverage_status"] == "covered_passed"
-    assert items["2.6"]["final_status"] == "passed"
+    assert items["2.6"]["coverage_status"] == "needs_review"
+    assert items["2.6"]["final_status"] == "manual_review_required"
+    assert items["2.6"]["requirement_alignment"]["status"] == "needs_review"
+    assert items["2.6"]["result_compliance"]["status"] == "match"
     assert details["confirmed_errors_count"] == 0
-    assert details["manual_review_required_count"] == 0
+    assert details["manual_review_required_count"] > 0
     assert result.summary.confirmed_errors_count == 0
-    assert result.summary.manual_review_required_count == 0
-    assert result.summary.final_audit_status == "passed"
+    assert result.summary.manual_review_required_count == details["manual_review_required_count"]
+    assert result.summary.final_audit_status == "needs_manual_review"
 
 
 def test_ptr_compare_codex_field_comparisons_backfill_refuted_atomic_rows(tmp_path: Path) -> None:
@@ -1679,8 +1756,10 @@ def test_ptr_compare_codex_refuted_reasoning_backfills_waveform_rows_without_fie
     assert waveform_rows["2.2.2:current_level:pf_reversible"]["actual"] == "符合要求"
     assert waveform_rows["2.2.2:current_level:pf_reversible"]["status"] == "refuted_candidate_resolved"
     assert not any(row["status"] == "needs_review" for row in waveform_rows.values())
-    assert waveform_item["coverage_status"] == "covered_passed"
-    assert waveform_item["final_status"] == "passed"
+    assert waveform_item["coverage_status"] == "needs_review"
+    assert waveform_item["final_status"] == "manual_review_required"
+    assert waveform_item["requirement_alignment"]["status"] in {"equivalent", "needs_review"}
+    assert waveform_item["result_compliance"]["status"] == "match"
     assert details["confirmed_errors_count"] == 0
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
@@ -1716,9 +1795,9 @@ def test_ptr_compare_codex_field_backfill_keeps_only_one_uncertain_software_row_
     assert "仅剩 1 项需人工复核" in software_item["reason"]
 
     assert details["confirmed_errors_count"] == 0
-    assert details["manual_review_required_count"] == 1
+    assert details["manual_review_required_count"] >= 1
     assert result.summary.confirmed_errors_count == 0
-    assert result.summary.manual_review_required_count == 1
+    assert result.summary.manual_review_required_count == details["manual_review_required_count"]
     assert result.summary.final_audit_status == "needs_manual_review"
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
@@ -1756,9 +1835,9 @@ def test_ptr_compare_codex_refuted_reasoning_keeps_only_one_software_row_in_revi
     assert "仅剩 1 项需人工复核" in software_item["reason"]
     assert "射频消融仪 - 与心脏脉冲电场消融仪" in software_item["reason"]
     assert details["confirmed_errors_count"] == 0
-    assert details["manual_review_required_count"] == 1
+    assert details["manual_review_required_count"] >= 1
     assert result.summary.confirmed_errors_count == 0
-    assert result.summary.manual_review_required_count == 1
+    assert result.summary.manual_review_required_count == details["manual_review_required_count"]
     assert result.summary.final_audit_status == "needs_manual_review"
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
 
@@ -1862,6 +1941,9 @@ def test_ptr_compare_atomic_unbound_confirm_stays_manual_review_not_confirmed_er
     assert atomic_finding.metadata["user_facing_status"] == "needs_review"
     assert result.summary.confirmed_errors_count == 0
     assert details["confirmed_errors_count"] == 0
+    assert details["confirmed_findings_count"] == 2
+    assert result.summary.confirmed_findings_count == details["confirmed_findings_count"]
+    assert result.summary.manual_review_required_count == details["manual_review_required_count"]
     assert result.summary.final_audit_status == "needs_manual_review"
 
 
@@ -2483,23 +2565,41 @@ def test_ptr_compare_task_audit_options_override_default_target_selection(tmp_pa
             "max_targets_per_batch": 1,
             "max_parallel_jobs": 2,
             "timeout_seconds": 900,
+            "model": "gpt-5.4",
+            "reasoning_effort": "high",
         },
     )
 
     assert len(audit_service.calls) == 1
     assert audit_service.calls[0][0].targets[0].check_id == "PTR_TABLE"
     assert audit_service.timeout_overrides == [900]
+    assert audit_service.model_overrides == ["gpt-5.4"]
+    assert audit_service.reasoning_effort_overrides == ["high"]
     assert result.metadata["audit_options_source"] == "user_override"
     assert result.metadata["audit_options"]["included_check_ids"] == ["PTR_TABLE"]
     assert result.metadata["audit_options"]["included_finding_codes"] == ["PTR_TABLE_VALUE_MISMATCH"]
     assert result.metadata["audit_options"]["max_targets_per_batch"] == 1
     assert result.metadata["audit_options"]["max_parallel_jobs"] == 2
     assert result.metadata["audit_options"]["timeout_seconds"] == 900
+    assert result.metadata["audit_options"]["model"] == "gpt-5.4"
+    assert result.metadata["audit_options"]["reasoning_effort"] == "high"
     assert result.metadata["effective_audit_options"]["included_check_ids"] == ["PTR_TABLE"]
     assert result.metadata["effective_audit_options"]["included_finding_codes"] == ["PTR_TABLE_VALUE_MISMATCH"]
     assert result.metadata["effective_audit_options"]["max_targets_per_batch"] == 1
     assert result.metadata["effective_audit_options"]["max_parallel_jobs"] == 2
     assert result.metadata["effective_audit_options"]["timeout_seconds"] == 900
+    assert result.metadata["effective_audit_options"]["requested_model"] == "gpt-5.4"
+    assert result.metadata["effective_audit_options"]["effective_model"] == "gpt-5.4"
+    assert result.metadata["effective_audit_options"]["model_source"] == "task_override"
+    assert result.metadata["effective_audit_options"]["requested_reasoning_effort"] == "high"
+    assert result.metadata["effective_audit_options"]["effective_reasoning_effort"] == "high"
+    assert result.metadata["effective_audit_options"]["reasoning_effort_source"] == "task_override"
+    assert result.metadata["requested_model"] == "gpt-5.4"
+    assert result.metadata["effective_model"] == "gpt-5.4"
+    assert result.metadata["model_source"] == "task_override"
+    assert result.metadata["requested_reasoning_effort"] == "high"
+    assert result.metadata["effective_reasoning_effort"] == "high"
+    assert result.metadata["reasoning_effort_source"] == "task_override"
     assert result.metadata["codex_audit"]["audit_scope"] == "targeted"
 
 
@@ -2724,6 +2824,166 @@ def test_ptr_compare_usecase_exposes_model_context_and_parent_table_projection_r
     assert other["status"] == "not_applicable"
     assert item["coverage_status"] == "covered_passed"
     assert "/Users/" not in json.dumps(details, ensure_ascii=False)
+
+
+def test_ptr_compare_clause_identity_blocks_same_number_sibling_and_flags_shifted_semantic_match(
+    tmp_path: Path,
+) -> None:
+    ptr_doc = PTRDocument(
+        clauses=[
+            PTRClause(
+                clause_id="ptr-2.1.8",
+                number=PTRClauseNumber.from_string("2.1.8"),
+                title="输入阻抗",
+                body_text="心脏起搏器的输入阻抗的数值应符合表3的要求。",
+                table_refs=["3"],
+            ),
+            PTRClause(
+                clause_id="ptr-2.1.9",
+                number=PTRClauseNumber.from_string("2.1.9"),
+                title="房室间期",
+                body_text="心脏起搏器的房室间期应符合表3的要求，允许误差：-10/+15ms。",
+                table_refs=["3"],
+            ),
+        ]
+    )
+    report_pdf = ParsedPdf(
+        file_id="report-clause-identity",
+        file_name="report.pdf",
+        page_count=30,
+        pages=[
+            PdfPage(
+                page_number=30,
+                text=(
+                    "2.1.8 房室间期（只适用于双腔起搏器）\n"
+                    "心脏起搏器的房室间期应符合表3的要求\n"
+                    "允许误差：-10/+15ms\n"
+                    "起搏\n-1～+0\n感知\n+2～+10"
+                ),
+            )
+        ],
+    )
+    report_items = [
+        InspectionItem(
+            sequence_raw="38",
+            sequence=38,
+            standard_clause="2.1",
+            item_name="基本电性能指标",
+            standard_requirement="基本电性能指标",
+            test_result="符合",
+            conclusion="符合",
+            source_page=30,
+            row_index_in_page=0,
+        ),
+        InspectionItem(
+            sequence_raw="2.1.8 房室间期（只适用于双腔起搏器）",
+            item_name="",
+            source_page=30,
+            row_index_in_page=8,
+        ),
+        InspectionItem(
+            sequence_raw="起搏 允许误差：-10/+15ms",
+            item_name="-1～+0",
+            conclusion="符合",
+            source_page=30,
+            row_index_in_page=9,
+        ),
+        InspectionItem(
+            sequence_raw="感知",
+            item_name="+2～+10",
+            conclusion="符合",
+            source_page=30,
+            row_index_in_page=10,
+        ),
+    ]
+    task_service = TaskService()
+    usecase = PTRCompareUseCase(
+        task_service=task_service,
+        file_store=LocalFileStore(tmp_path),
+        pdf_parser=FakePdfParser({"report.pdf": report_pdf}),
+        ptr_extractor=FakePTRExtractor(ptr_doc),
+        report_extractor=FakeReportFieldExtractor(),
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(report_items),
+        scope_filter=IncludeAllScopeFilter(),
+        clause_text_compare=NoopClauseCompare(),
+        table_reference_compare=TrackingTableCompare(),
+        codex_audit_service=FakePtrCodexAuditService(verdict=CodexReviewVerdict.UNCERTAIN),
+    )
+
+    status = usecase.run(
+        ptr_file_name="ptr.pdf",
+        ptr_content=b"%PDF-1.4 ptr",
+        report_file_name="report.pdf",
+        report_content=b"%PDF-1.4 report",
+        content_type="application/pdf",
+    )
+
+    assert status.status == TaskState.COMPLETED, status.error_message
+    result = task_service.get_result(status.task_id)
+    items = {
+        item["ptr_clause_id"]: item
+        for item in result.metadata["ptr_comparison_details"]["items"]
+    }
+    identity_findings = {
+        (finding.metadata.get("clause_number"), finding.code)
+        for finding in result.findings
+        if finding.code.startswith("PTR_CLAUSE_IDENTITY")
+        or finding.code == "PTR_REPORT_CLAUSE_NUMBER_MISMATCH"
+    }
+
+    input_impedance = items["2.1.8"]
+    assert input_impedance["clause_identity_alignment"]["status"] == "identity_mismatch"
+    assert input_impedance["report_requirement_matches"] == []
+    assert input_impedance["result_comparisons"] == []
+    assert input_impedance["coverage_status"] != "covered_passed"
+    assert not any(row.get("actual") in {"-1～+0", "+2～+10"} for row in input_impedance["atomic_comparison_rows"])
+
+    av_interval = items["2.1.9"]
+    assert av_interval["clause_identity_alignment"]["status"] == "semantic_match_number_mismatch"
+    assert av_interval["clause_identity_alignment"]["selected_report_clause_number"] == "2.1.8"
+    assert av_interval["coverage_status"] == "needs_review"
+    assert ("2.1.8", "PTR_CLAUSE_IDENTITY_MISMATCH") in identity_findings
+    assert ("2.1.9", "PTR_REPORT_CLAUSE_NUMBER_MISMATCH") in identity_findings
+    assert result.summary.confirmed_errors_count == 0
+    assert result.summary.manual_review_required_count >= 2
+
+    confirmed_task_service = TaskService()
+    confirmed_usecase = PTRCompareUseCase(
+        task_service=confirmed_task_service,
+        file_store=LocalFileStore(tmp_path / "confirmed"),
+        pdf_parser=FakePdfParser({"report.pdf": report_pdf}),
+        ptr_extractor=FakePTRExtractor(ptr_doc),
+        report_extractor=FakeReportFieldExtractor(),
+        inspection_table_extractor=ScopeAwareInspectionTableExtractor(report_items),
+        scope_filter=IncludeAllScopeFilter(),
+        clause_text_compare=NoopClauseCompare(),
+        table_reference_compare=TrackingTableCompare(),
+        codex_audit_service=FakePtrCodexAuditService(verdict=CodexReviewVerdict.CONFIRM),
+    )
+    confirmed_status = confirmed_usecase.run(
+        ptr_file_name="ptr.pdf",
+        ptr_content=b"%PDF-1.4 ptr",
+        report_file_name="report.pdf",
+        report_content=b"%PDF-1.4 report",
+        content_type="application/pdf",
+    )
+
+    assert confirmed_status.status == TaskState.COMPLETED, confirmed_status.error_message
+    confirmed_result = confirmed_task_service.get_result(confirmed_status.task_id)
+    confirmed_details = confirmed_result.metadata["ptr_comparison_details"]
+    confirmed_items = {item["ptr_clause_id"]: item for item in confirmed_details["items"]}
+    assert confirmed_items["2.1.8"]["coverage_status"] == "confirmed_error"
+    assert confirmed_items["2.1.8"]["final_status"] == "confirmed_error"
+    assert confirmed_items["2.1.9"]["coverage_status"] == "confirmed_document_issue"
+    assert confirmed_items["2.1.9"]["final_status"] == "confirmed_document_issue"
+    assert confirmed_details["confirmed_findings_count"] == 2
+    assert confirmed_details["confirmed_errors_count"] == 1
+    assert confirmed_details["confirmed_document_issue_count"] == 1
+    assert confirmed_details["manual_review_required_count"] == 0
+    assert confirmed_details["overall_status"] == "failed"
+    assert confirmed_result.summary.confirmed_findings_count == 2
+    assert confirmed_result.summary.manual_review_required_count == 0
+    assert confirmed_result.summary.final_audit_status == "failed"
 
 
 def _run_scope_aware_usecase(
@@ -3354,6 +3614,14 @@ def _scope_aware_report_items() -> list[InspectionItem]:
             conclusion="符合",
             source_page=100,
             row_index_in_page=2,
+            metadata={
+                "row_text": (
+                    "2.2.4 脉冲下降时间\n"
+                    "PULSE3 预设 检验结果 260 ns\n"
+                    "PF Reversible 预设 检验结果 205 ns\n"
+                    "单项结论 符合"
+                )
+            },
         ),
         InspectionItem(
             sequence_raw="续\n157",

@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"high","evidence_refs":["check_result:C10"],"metadata":{},"reasoning_summary":"仅提供 C10 规则初判汇总，未提供续表标记的页面位置、跨页表格、rows 或 source pages，无法独立确认或反驳“续表标记位置正确”。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C10","verdict":"uncertain"}],"schema_version":"1.0"}

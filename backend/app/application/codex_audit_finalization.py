@@ -53,6 +53,11 @@ def annotate_candidate_findings_with_codex_status(
         finding.metadata["codex_verdict"] = verdict
         _copy_visual_review_metadata(finding, review)
         final_status = final_status_for_verdict(verdict)
+        if verdict == "uncertain" and _is_deterministic_c07_conclusion_mismatch(finding):
+            final_status = FINAL_STATUS_CONFIRMED
+            finding.metadata["finalization_reason"] = (
+                "DETERMINISTIC_C07_CONCLUSION_MISMATCH_OVERRIDES_CODEX_UNCERTAIN"
+            )
         if finding.code in EXTRACTION_BINDING_REVIEW_CODES and verdict == "confirm":
             final_status = FINAL_STATUS_MANUAL_REVIEW_REQUIRED
             finding.metadata["finalization_reason"] = "CODEX_CONFIRMED_EXTRACTION_BINDING_UNRESOLVED"
@@ -111,9 +116,11 @@ def finalize_codex_audit(
         "candidate_findings_count": summary.candidate_findings_count,
         "candidate_errors_count": summary.candidate_errors_count,
         "confirmed_findings_count": summary.confirmed_findings_count,
+        "confirmed_document_issue_count": summary.confirmed_document_issue_count,
         "confirmed_errors_count": summary.confirmed_errors_count,
         "refuted_findings_count": summary.refuted_findings_count,
         "manual_review_required_count": summary.manual_review_required_count,
+        "policy_review_required_count": summary.policy_review_required_count,
         "suggested_additional_findings_count": summary.suggested_additional_findings_count,
         "out_of_scope_findings_count": summary.out_of_scope_findings_count,
         "summary_only_findings_count": summary.summary_only_findings_count,
@@ -140,6 +147,10 @@ def final_audit_status_for_summary(summary: CheckSummary) -> str:
         return "failed"
     if summary.manual_review_required_count > 0:
         return "needs_manual_review"
+    if summary.policy_review_required_count > 0:
+        return "needs_manual_review"
+    if summary.confirmed_document_issue_count > 0:
+        return "needs_manual_review"
     return "passed"
 
 
@@ -150,9 +161,11 @@ def codex_audit_summary_for_results(results: list[CheckResult]) -> dict[str, Any
         "candidate_findings_count": summary.candidate_findings_count,
         "candidate_errors_count": summary.candidate_errors_count,
         "confirmed_findings_count": summary.confirmed_findings_count,
+        "confirmed_document_issue_count": summary.confirmed_document_issue_count,
         "confirmed_errors_count": summary.confirmed_errors_count,
         "refuted_findings_count": summary.refuted_findings_count,
         "manual_review_required_count": summary.manual_review_required_count,
+        "policy_review_required_count": summary.policy_review_required_count,
         "suggested_additional_findings_count": summary.suggested_additional_findings_count,
         "out_of_scope_findings_count": summary.out_of_scope_findings_count,
         "summary_only_findings_count": summary.summary_only_findings_count,
@@ -246,6 +259,15 @@ def _review_type_for_finding(finding: Finding) -> str | None:
     ):
         return "complex_matrix"
     return None
+
+
+def _is_deterministic_c07_conclusion_mismatch(finding: Finding) -> bool:
+    return (
+        finding.check_id == "C07"
+        and finding.code.startswith("CONCLUSION_MISMATCH_")
+        and _metadata_bool(finding.metadata, key="deterministic_conclusion_mismatch")
+        and not _metadata_bool(finding.metadata, key="complex_matrix_table")
+    )
 
 
 def _metadata_bool(*sources: dict[str, Any], key: str) -> bool:

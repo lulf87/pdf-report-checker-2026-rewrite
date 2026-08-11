@@ -2,6 +2,7 @@ import io
 from xml.etree import ElementTree
 from zipfile import ZipFile
 
+from app.domain.result import CheckResult, CheckStatus
 from app.infrastructure.export.excel_exporter import export_check_results_to_xlsx
 from tests.fixtures.export_result_builder import sample_check_results
 
@@ -83,6 +84,62 @@ def test_excel_exporter_handles_empty_results() -> None:
         "ptr_comparison_summary",
         "ptr_comparison_details",
     ]
+
+
+def test_excel_final_view_omits_audit_candidate_and_refuted_metrics() -> None:
+    xlsx_bytes = export_check_results_to_xlsx(
+        sample_check_results(task_id="task-final-xlsx"),
+        task_id="task-final-xlsx",
+        view="final",
+    )
+
+    summary_text = _worksheet_text(xlsx_bytes, "xl/worksheets/sheet1.xml")
+    check_results_text = _worksheet_text(xlsx_bytes, "xl/worksheets/sheet2.xml")
+    assert "confirmed_errors_count" in summary_text
+    assert "manual_review_required_count" in summary_text
+    assert "candidate_errors_count" not in summary_text
+    assert "refuted_findings_count" not in summary_text
+    assert "deterministic_status" not in check_results_text
+    assert "codex_reviews" not in check_results_text.lower()
+
+
+def test_excel_final_view_includes_final_comparison_details() -> None:
+    result = CheckResult(
+        task_id="task-final-detail-xlsx",
+        check_id="C03",
+        check_name="生产日期格式一致性",
+        status=CheckStatus.PASS,
+        metadata={
+            "final_comparison_details": {
+                "title": "生产日期格式一致性",
+                "overall_status": "passed",
+                "overall_reason": "报告首页与中文标签图像一致。",
+                "fields": [
+                    {
+                        "field_key": "production_date",
+                        "field_label": "生产日期",
+                        "status": "match",
+                        "reason": "两处日期一致。",
+                        "left": {"label": "报告首页摘录", "raw_text": "2026-01-08"},
+                        "right": {"label": "中文标签图像摘录", "raw_text": "2026-01-08"},
+                    }
+                ],
+            }
+        },
+    )
+
+    xlsx_bytes = export_check_results_to_xlsx(
+        [result],
+        task_id="task-final-detail-xlsx",
+        view="final",
+    )
+
+    details_text = _worksheet_text(xlsx_bytes, "xl/worksheets/sheet5.xml")
+    assert "生产日期" in details_text
+    assert "报告首页摘录" in details_text
+    assert "中文标签图像摘录" in details_text
+    assert "2026-01-08" in details_text
+    assert "两处日期一致" in details_text
 
 
 def test_excel_exporter_includes_ptr_comparison_summary_and_details_sheets() -> None:

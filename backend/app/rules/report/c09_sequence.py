@@ -47,11 +47,18 @@ def check_c09_sequence(
     rows = [_parse_row(item, index) for index, item in enumerate(document.inspection_items)]
     ordinary_rows = [row for row in rows if row.parsed.number is not None and not row.parsed.is_continuation]
     continuation_rows = [row for row in rows if row.parsed.number is not None and row.parsed.is_continuation]
-    blank_rows = [row for row in rows if row.parsed.number is None]
+    ignored_sequence_subrows = [
+        row for row in rows if row.parsed.number is None and _is_physical_subrow(row)
+    ]
+    blank_rows = [
+        row
+        for row in rows
+        if row.parsed.number is None and not _is_physical_subrow(row)
+    ]
 
     actual_sequence = [row.parsed.number for row in ordinary_rows if row.parsed.number is not None]
     continuation_numbers = [row.parsed.number for row in continuation_rows if row.parsed.number is not None]
-    raw_sequence_values = [row.parsed.raw for row in rows]
+    raw_sequence_values = [row.parsed.raw for row in rows if row.parsed.number is not None]
     findings: list[Finding] = []
 
     if ordinary_rows and actual_sequence[0] != 1:
@@ -73,6 +80,7 @@ def check_c09_sequence(
                     "actual_sequence": actual_sequence,
                     "raw_sequence_values": raw_sequence_values,
                 },
+                related_items=[first.item],
             )
         )
 
@@ -99,6 +107,7 @@ def check_c09_sequence(
                     "actual_sequence": actual_sequence,
                     "raw_sequence_values": raw_sequence_values,
                 },
+                related_items=[location_row.item] if location_row else [],
             )
         )
 
@@ -122,6 +131,9 @@ def check_c09_sequence(
                     "actual_sequence": actual_sequence,
                     "raw_sequence_values": raw_sequence_values,
                 },
+                related_items=[
+                    row.item for row in ordinary_rows if row.parsed.number in duplicated_numbers
+                ],
             )
         )
 
@@ -146,6 +158,7 @@ def check_c09_sequence(
                     "actual_sequence": actual_sequence,
                     "raw_sequence_values": raw_sequence_values,
                 },
+                related_items=[row.item for row in blank_rows[:25]],
             )
         )
 
@@ -158,12 +171,22 @@ def check_c09_sequence(
             "actual_sequence": actual_sequence,
             "continuation_numbers": continuation_numbers,
             "raw_sequence_values": raw_sequence_values,
+            "ignored_sequence_subrow_count": len(ignored_sequence_subrows),
+            "ignored_sequence_subrow_samples": [
+                {
+                    "page_number": row.item.source_page,
+                    "row_index": row.item.row_index_in_page,
+                    "text_excerpt": (row.parsed.raw or "")[:120],
+                }
+                for row in ignored_sequence_subrows[:25]
+            ],
             "explanation_details": _build_explanation_details(
                 rows=rows,
                 actual_sequence=actual_sequence,
                 continuation_numbers=continuation_numbers,
                 raw_sequence_values=raw_sequence_values,
                 findings=findings,
+                ignored_sequence_subrows=ignored_sequence_subrows,
             ),
         },
         pass_summary="检验项目序号从 1 开始连续递增，且无重复或空白",
@@ -200,6 +223,31 @@ def _parse_row(item: InspectionItem, index: int) -> _ParsedRow:
     if item.is_continuation and parsed.number is not None:
         parsed = ParsedItemNo(raw=parsed.raw, number=parsed.number, is_continuation=True)
     return _ParsedRow(item=item, row_position=index + 1, parsed=parsed)
+
+
+def _is_physical_subrow(row: _ParsedRow) -> bool:
+    item = row.item
+    if item.is_continuation or item.metadata.get("logical_continuation") is True:
+        return True
+    if row.parsed.number is not None:
+        return False
+    return not _looks_like_logical_item(item)
+
+
+def _looks_like_logical_item(item: InspectionItem) -> bool:
+    if (item.conclusion or "").strip() or (item.remark or "").strip():
+        return True
+    clause = re.sub(r"\s+", "", item.standard_clause or "")
+    numeric_clause = re.fullmatch(r"(?P<root>\d+)(?:\.\d+)+(?:[a-z])?", clause, re.IGNORECASE)
+    clause_like = bool(
+        (numeric_clause and int(numeric_clause.group("root")) > 0)
+        or re.fullmatch(r"(?:GB|YY|ISO|IEC|EN|ASTM|WS|T/)[A-Z0-9./-]*\d[A-Z0-9./-]*", clause, re.IGNORECASE)
+    )
+    return clause_like and bool(
+        (item.item_name or "").strip()
+        or (item.standard_requirement or "").strip()
+        or (item.test_result or "").strip()
+    )
 
 
 def _missing_numbers(actual_sequence: list[int]) -> list[int]:
@@ -267,6 +315,7 @@ def _sequence_finding(
     location: Location | None = None,
     expected: object | None = None,
     actual: object | None = None,
+    related_items: list[InspectionItem] | None = None,
 ) -> Finding:
     return Finding(
         id=f"{context.task_id}-c09-{code.lower()}-{len(metadata.get('raw_sequence_values', []))}",
@@ -278,14 +327,19 @@ def _sequence_finding(
         location=location,
         expected=expected,
         actual=actual,
-        evidence=_sequence_evidence(items),
+        evidence=_sequence_evidence(items, related_items=related_items),
         confidence=Confidence.HIGH,
         metadata=metadata,
     )
 
 
-def _sequence_evidence(items: list[InspectionItem]) -> list[Evidence]:
-    raw_values = [_item_no(item) for item in items]
+def _sequence_evidence(
+    items: list[InspectionItem],
+    *,
+    related_items: list[InspectionItem] | None = None,
+) -> list[Evidence]:
+    logical_items = [item for item in items if parse_item_no(_item_no(item)).number is not None]
+    raw_values = [_item_no(item) for item in logical_items]
     evidence_items = [
         Evidence(
             id="c09-sequence-column",
@@ -296,13 +350,18 @@ def _sequence_evidence(items: list[InspectionItem]) -> list[Evidence]:
             confidence=Confidence.HIGH,
             metadata={
                 "sequence_values": raw_values,
-                "row_indices": [item.row_index_in_page for item in items],
-                "page_numbers": [item.source_page for item in items],
+                "row_indices": [item.row_index_in_page for item in logical_items],
+                "page_numbers": [item.source_page for item in logical_items],
             },
         )
     ]
-    for item in items:
-        evidence_items.extend(item.evidence)
+    seen_ids = {item.id for item in evidence_items}
+    for item in related_items or []:
+        for evidence in item.evidence:
+            if evidence.id in seen_ids:
+                continue
+            evidence_items.append(evidence)
+            seen_ids.add(evidence.id)
     return evidence_items
 
 
@@ -322,6 +381,7 @@ def _build_explanation_details(
     continuation_numbers: list[int],
     raw_sequence_values: list[str],
     findings: list[Finding],
+    ignored_sequence_subrows: list[_ParsedRow],
 ) -> dict[str, object]:
     missing_numbers = sorted({number for finding in findings for number in finding.metadata.get("missing_numbers", [])})
     duplicated_numbers = sorted({number for finding in findings for number in finding.metadata.get("duplicated_numbers", [])})
@@ -391,6 +451,15 @@ def _build_explanation_details(
                 status="match" if not duplicated_numbers and not blank_rows else "mismatch",
                 reason="空白或无法解析序号可能是真实序号问题，也可能是表格抽取污染。",
             ),
+            comparison_row(
+                field="物理子行过滤",
+                left_label="已识别表格子行数",
+                left_value=len(ignored_sequence_subrows),
+                right_label="处理方式",
+                right_value="不作为独立检验项目序号",
+                status="match",
+                reason="标准要求续行或拆分结果行属于上一逻辑检验项目，不参与序号连续性统计。",
+            ),
         ],
         evidence_groups=[
             evidence_group(
@@ -402,7 +471,11 @@ def _build_explanation_details(
                         evidence_type="sequence_cell",
                         status="continuation" if row.parsed.is_continuation else "ordinary",
                     )
-                    for row in rows[:80]
+                    for row in [
+                        candidate
+                        for candidate in rows
+                        if candidate.parsed.number is not None or not _is_physical_subrow(candidate)
+                    ][:80]
                 ],
             )
         ],

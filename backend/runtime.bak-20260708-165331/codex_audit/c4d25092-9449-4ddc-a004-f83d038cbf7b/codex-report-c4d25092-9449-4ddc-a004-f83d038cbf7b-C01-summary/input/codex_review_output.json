@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"high","evidence_refs":["check_result:C01"],"metadata":{},"reasoning_summary":"check_result:C01 仅提供规则初判汇总，未提供首页与第三页的委托方、样品名称、型号规格原始字段值或页面证据，无法独立确认或反驳一致性结论。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C01","verdict":"uncertain"}],"schema_version":"1.0"}

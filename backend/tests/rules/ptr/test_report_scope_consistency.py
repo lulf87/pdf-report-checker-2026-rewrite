@@ -101,6 +101,32 @@ def test_report_scope_consistency_marks_excluded_placeholder_without_finding() -
     ]
 
 
+def test_report_scope_consistency_accepts_external_report_reference_placeholder_with_passing_conclusion() -> None:
+    result = check_report_scope_consistency(
+        _scope_5780(),
+        [
+            InspectionItem(
+                sequence_raw="164",
+                sequence=164,
+                standard_clause="2.6",
+                standard_requirement="电磁兼容性",
+                test_result="/",
+                conclusion="符合",
+                remark="/",
+                source_page=66,
+            ),
+        ],
+        task_id="task-excluded-external-reference",
+    )
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    scope_consistency = result.metadata["scope_consistency"]
+    assert scope_consistency["actual_report_scope"] == []
+    assert scope_consistency["excluded_placeholders"][0]["single_conclusion"] == "符合"
+    assert "外部报告引用占位行" in scope_consistency["excluded_placeholders"][0]["reason"]
+
+
 def test_report_scope_consistency_reports_excluded_topic_when_placeholder_has_result() -> None:
     result = check_report_scope_consistency(
         _scope_5780(),
@@ -124,6 +150,29 @@ def test_report_scope_consistency_reports_excluded_topic_when_placeholder_has_re
     assert result.findings[0].metadata["excluded_topic"] == "电磁兼容性"
     assert result.findings[0].metadata["test_result"] == "符合要求"
     assert result.findings[0].metadata["single_conclusion"] == "符合"
+
+
+def test_report_scope_consistency_does_not_treat_passing_conclusion_as_placeholder_without_external_reference() -> None:
+    result = check_report_scope_consistency(
+        _scope(),
+        [
+            *_items(),
+            InspectionItem(
+                sequence_raw="160",
+                sequence=160,
+                standard_clause="2.5.2.2",
+                standard_requirement="电磁兼容性",
+                test_result="/",
+                conclusion="符合",
+                remark="/",
+                source_page=100,
+            ),
+        ],
+        task_id="task-excluded-no-external-reference",
+    )
+
+    assert result.status == CheckStatus.FAIL
+    assert [finding.code for finding in result.findings] == ["PTR_SCOPE_EXCLUDED_TOPIC_PRESENT"]
 
 
 def test_report_scope_consistency_reports_external_standard_range_mismatch() -> None:

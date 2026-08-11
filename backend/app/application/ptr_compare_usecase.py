@@ -23,6 +23,7 @@ from app.domain.evidence_package import EvidencePackage
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.pdf import ParsedPdf
 from app.domain.ptr import PTRClause, PTRDocument
+from app.domain.ptr_comparison import ClauseIdentityAlignment
 from app.domain.report import InspectionItem, InspectionTable, ReportDocument
 from app.domain.report_scope import ReportInspectionScope
 from app.domain.result import CheckResult, CheckStatus
@@ -36,7 +37,16 @@ from app.infrastructure.report.inspection_table_extractor import InspectionTable
 from app.infrastructure.report.parameter_table_extractor import ReportParameterTableExtractor
 from app.infrastructure.storage.local_file_store import LocalFileStore
 from app.rules.ptr.clause_text_compare import compare_clause_texts
+from app.rules.ptr.atomic_compare import build_atomic_requirements
 from app.rules.ptr.atomic_result_check import check_atomic_result_bindings
+from app.rules.ptr.clause_identity import (
+    align_clause_identity,
+    build_clause_sequence_offset_aggregation,
+    build_clause_identity_findings,
+    build_ptr_clause_identity,
+    build_report_subclause_index,
+    mark_sequence_offset_children,
+)
 from app.rules.ptr.parameter_compare import compare_parameter_tables
 from app.rules.ptr.report_item_grouping import (
     build_ptr_report_item_groups,
@@ -51,6 +61,7 @@ from app.rules.ptr.table_candidate_selector import TableCandidateSelection, sele
 from app.rules.ptr.model_context import build_report_model_context
 from app.rules.ptr.table_registry import build_ptr_table_registry
 from app.rules.ptr.table_reference_compare import check_table_references
+from app.rules.ptr.clause_role import assign_clause_roles
 
 
 CLAUSE_NUMBER_RE = re.compile(r"\d+(?:\.\d+)+")
@@ -238,7 +249,11 @@ class PTRCompareUseCase:
         options = CodexAuditOptions.from_raw(audit_options)
         task = self.task_service.create_task(
             TaskType.PTR_COMPARE,
-            metadata={"audit_options": options.to_metadata(), "audit_options_source": "user_override" if options.has_user_override else "default"},
+            metadata={
+                "audit_options": options.to_metadata(),
+                "audit_options_source": "user_override" if options.has_user_override else "default",
+                **_codex_model_metadata(options, self.codex_audit_service),
+            },
         )
         try:
             ptr_stored = self.file_store.save_upload(
@@ -317,10 +332,61 @@ class PTRCompareUseCase:
             scope_texts,
             report_clause_numbers=report_clause_numbers,
         )
+        section_container_clause_ids = assign_clause_roles(ptr_doc.clauses)
+        ptr_doc.metadata["section_container_clause_ids"] = section_container_clause_ids
         included_clauses = self._included_main_requirement_clauses(ptr_doc, scope_result)
         direct_compare_clauses = [
             clause for clause in included_clauses if not _clause_covered_by_external_standard(clause, report_scope)
         ]
+        direct_clause_ids = {clause.clause_id for clause in direct_compare_clauses}
+        report_groups = build_ptr_report_item_groups(report_doc.inspection_items)
+        report_subclause_index = build_report_subclause_index(
+            self._report_groups_for_clause_identity(report_groups, report_scope),
+            page_text_by_page=page_text_by_page,
+        )
+        clause_identity_alignments: dict[str, ClauseIdentityAlignment] = {}
+        clause_identity_findings: list[Finding] = []
+        for clause in included_clauses:
+            ptr_identity = build_ptr_clause_identity(
+                clause,
+                build_atomic_requirements(clause, ptr_doc),
+            )
+            if clause.clause_id not in direct_clause_ids:
+                alignment = ClauseIdentityAlignment(
+                    status="not_applicable",
+                    ptr_clause_number=str(clause.number),
+                    ptr_title=clause.title,
+                    confidence="high",
+                    reason="该条款由报告声明的外部标准序号范围覆盖，不执行直接报告子条款身份绑定。",
+                )
+            elif self._canonical_table_identity_applies(clause, report_doc):
+                alignment = ClauseIdentityAlignment(
+                    status="not_applicable",
+                    ptr_clause_number=str(clause.number),
+                    ptr_title=clause.title,
+                    confidence="high",
+                    reason="该顶层表格条款由同表号 canonical table 参数比对验证，不使用报告检验大组替代条款身份。",
+                )
+            else:
+                alignment = align_clause_identity(ptr_identity, report_subclause_index)
+                clause_identity_findings.extend(
+                    build_clause_identity_findings(clause, alignment, task_id=task_id)
+                )
+            clause_identity_alignments[str(clause.number)] = alignment
+        ptr_doc.metadata["clause_identity_alignments"] = {
+            clause_number: alignment.model_dump(mode="json")
+            for clause_number, alignment in clause_identity_alignments.items()
+        }
+        sequence_offset_finding, sequence_offset_groups = build_clause_sequence_offset_aggregation(
+            included_clauses,
+            clause_identity_alignments,
+            task_id=task_id,
+        )
+        mark_sequence_offset_children(clause_identity_findings, sequence_offset_groups)
+        if sequence_offset_finding is not None:
+            clause_identity_findings.append(sequence_offset_finding)
+        ptr_doc.metadata["clause_sequence_offset_groups"] = sequence_offset_groups
+        report_doc.metadata["report_subclause_index"] = report_subclause_index.model_dump(mode="json")
 
         self.task_service.update_progress(task_id, progress=70, current_step="running ptr comparison rules")
         clause_findings = self.clause_text_compare(
@@ -328,6 +394,7 @@ class PTRCompareUseCase:
             report_doc.inspection_items,
             task_id=task_id,
         )
+        clause_findings.extend(clause_identity_findings)
         table_findings = self.table_reference_compare(
             ptr_doc,
             clauses=direct_compare_clauses,
@@ -396,6 +463,10 @@ class PTRCompareUseCase:
             included_clauses=included_clauses,
             check_results=check_results,
         ).model_dump(mode="json")
+        codex_audit_metadata = _reconcile_ptr_trace_audit_metadata(
+            codex_audit_metadata,
+            ptr_comparison_details,
+        )
         _attach_ptr_comparison_details(check_results, ptr_comparison_details)
         return self.task_service.complete_task(
             task_id,
@@ -411,7 +482,13 @@ class PTRCompareUseCase:
                 "scope_consistency": report_scope_check_result.metadata.get("scope_consistency"),
                 "audit_options_source": "user_override" if options.has_user_override else "default",
                 "audit_options": options.to_metadata(),
-                "effective_audit_options": _effective_audit_options_metadata(builder, scheduler, codex_audit_service),
+                "effective_audit_options": _effective_audit_options_metadata(
+                    builder,
+                    scheduler,
+                    codex_audit_service,
+                    options,
+                ),
+                **_codex_model_metadata(options, codex_audit_service),
                 "codex_audit": codex_audit_metadata,
                 "ptr_comparison_details": ptr_comparison_details,
             },
@@ -587,7 +664,7 @@ class PTRCompareUseCase:
         return [
             clause
             for clause in ptr_doc.clauses
-            if clause.clause_id in included and clause.is_main_requirement
+            if clause.clause_id in included and clause.is_main_requirement and not clause.is_section_container
         ]
 
     def _parameter_table_findings(
@@ -673,6 +750,39 @@ class PTRCompareUseCase:
         for key in ("canonical_tables", "parameter_tables", "ptr_compare_tables"):
             tables.extend(_coerce_canonical_tables(report_doc.metadata.get(key)))
         return tables
+
+    def _report_groups_for_clause_identity(
+        self,
+        report_groups: list,
+        report_scope: ReportInspectionScope,
+    ) -> list:
+        boundary_text = str(report_scope.ptr_direct_content_starts_after or "").strip()
+        if not boundary_text.isdigit():
+            return report_groups
+        boundary = int(boundary_text)
+        return [
+            group
+            for group in report_groups
+            if (
+                str(group.display_item_no or group.item_no or "").strip().isdigit()
+                and int(str(group.display_item_no or group.item_no).strip()) > boundary
+            )
+        ]
+
+    def _canonical_table_identity_applies(
+        self,
+        clause: PTRClause,
+        report_doc: ReportDocument,
+    ) -> bool:
+        if clause.number.level != 2 or not clause.has_table_references():
+            return False
+        referenced_numbers = {str(number).strip() for number in self._table_reference_numbers(clause)}
+        report_numbers = {
+            str(table.table_number or "").strip()
+            for table in self._report_canonical_tables(report_doc)
+            if table.table_number is not None
+        }
+        return bool(referenced_numbers & report_numbers)
 
     def _scope_check_result(
         self,
@@ -786,12 +896,22 @@ class PTRCompareUseCase:
         return CodexAuditScheduler(max_parallel_jobs=options.max_parallel_jobs)
 
     def _codex_audit_service_for_audit_options(self, options: CodexAuditOptions) -> CodexAuditServiceProtocol | None:
-        if self.codex_audit_service is None or options.timeout_seconds is None:
-            return self.codex_audit_service
-        with_timeout = getattr(self.codex_audit_service, "with_timeout_seconds", None)
-        if not callable(with_timeout):
-            return self.codex_audit_service
-        return with_timeout(options.timeout_seconds)
+        service = self.codex_audit_service
+        if service is None:
+            return None
+        if options.timeout_seconds is not None:
+            with_timeout = getattr(service, "with_timeout_seconds", None)
+            if callable(with_timeout):
+                service = with_timeout(options.timeout_seconds)
+        if options.model is not None:
+            with_model = getattr(service, "with_model", None)
+            if callable(with_model):
+                service = with_model(options.model)
+        if options.reasoning_effort is not None:
+            with_reasoning_effort = getattr(service, "with_reasoning_effort", None)
+            if callable(with_reasoning_effort):
+                service = with_reasoning_effort(options.reasoning_effort)
+        return service
 
 
 def _status_for_findings(findings: list[Finding]) -> CheckStatus:
@@ -942,6 +1062,38 @@ def _attach_ptr_comparison_details(check_results: list[CheckResult], details: di
             result.metadata["ptr_comparison_details"] = details
 
 
+def _reconcile_ptr_trace_audit_metadata(
+    audit_metadata: dict[str, Any],
+    details: dict[str, Any],
+) -> dict[str, Any]:
+    result = dict(audit_metadata)
+    trace_manual_count = int(details.get("manual_review_required_count") or 0)
+    trace_confirmed_count = int(details.get("confirmed_errors_count") or 0)
+    trace_confirmed_findings_count = int(details.get("confirmed_findings_count") or 0)
+    trace_document_issue_count = int(details.get("confirmed_document_issue_count") or 0)
+    trace_policy_count = int(details.get("policy_review_required_count") or 0)
+    result["trace_manual_review_required_count"] = trace_manual_count
+    result["trace_confirmed_errors_count"] = trace_confirmed_count
+    result["trace_confirmed_findings_count"] = trace_confirmed_findings_count
+    result["trace_confirmed_document_issue_count"] = trace_document_issue_count
+    result["trace_policy_review_required_count"] = trace_policy_count
+    result["manual_review_required_count"] = trace_manual_count
+    result["confirmed_errors_count"] = trace_confirmed_count
+    result["confirmed_findings_count"] = trace_confirmed_findings_count
+    result["confirmed_document_issue_count"] = trace_document_issue_count
+    result["policy_review_required_count"] = trace_policy_count
+    current_status = str(result.get("final_audit_status") or "passed")
+    if current_status == "audit_failed":
+        return result
+    if result["confirmed_errors_count"] > 0:
+        result["final_audit_status"] = "failed"
+    elif result["manual_review_required_count"] > 0 or result["policy_review_required_count"] > 0 or trace_document_issue_count > 0:
+        result["final_audit_status"] = "needs_manual_review"
+    else:
+        result["final_audit_status"] = "passed"
+    return result
+
+
 def _clause_covered_by_external_standard(clause: PTRClause, report_scope: ReportInspectionScope) -> bool:
     if not report_scope.external_standard_ranges:
         return False
@@ -972,8 +1124,13 @@ def _effective_audit_options_metadata(
     evidence_builder: PtrCodexEvidenceBuilder,
     scheduler: CodexAuditScheduler,
     codex_audit_service: CodexAuditServiceProtocol | None = None,
+    options: CodexAuditOptions | None = None,
 ) -> dict[str, Any]:
     selection = evidence_builder.target_selection
+    requested_model = options.model if options is not None else None
+    requested_reasoning_effort = options.reasoning_effort if options is not None else None
+    effective_model = _codex_model(codex_audit_service)
+    effective_reasoning_effort = _codex_reasoning_effort(codex_audit_service)
     return {
         "included_check_ids": sorted(selection.included_check_ids),
         "included_finding_codes": sorted(selection.included_finding_codes),
@@ -983,6 +1140,13 @@ def _effective_audit_options_metadata(
         "priority_check_ids": list(selection.priority_check_ids),
         "max_parallel_jobs": scheduler.max_parallel_jobs,
         "timeout_seconds": _codex_timeout_seconds(codex_audit_service),
+        "requested_profile": options.profile if options is not None else None,
+        "requested_model": requested_model,
+        "effective_model": effective_model,
+        "model_source": "task_override" if requested_model else "server_default" if effective_model else "cli_default",
+        "requested_reasoning_effort": requested_reasoning_effort,
+        "effective_reasoning_effort": effective_reasoning_effort,
+        "reasoning_effort_source": "task_override" if requested_reasoning_effort else "server_default",
     }
 
 
@@ -993,6 +1157,37 @@ def _codex_timeout_seconds(service: CodexAuditServiceProtocol | None) -> int | N
     if isinstance(value, int) and value > 0:
         return value
     return None
+
+
+def _codex_model(service: CodexAuditServiceProtocol | None) -> str | None:
+    runner = getattr(service, "runner", None)
+    config = getattr(runner, "config", None)
+    value = getattr(config, "model", None)
+    return value if isinstance(value, str) and value else None
+
+
+def _codex_reasoning_effort(service: CodexAuditServiceProtocol | None) -> str | None:
+    runner = getattr(service, "runner", None)
+    config = getattr(runner, "config", None)
+    value = getattr(config, "reasoning_effort", None)
+    return value if isinstance(value, str) and value else None
+
+
+def _codex_model_metadata(
+    options: CodexAuditOptions,
+    service: CodexAuditServiceProtocol | None,
+) -> dict[str, str | None]:
+    effective_model = options.model or _codex_model(service)
+    effective_reasoning_effort = options.reasoning_effort or _codex_reasoning_effort(service)
+    return {
+        "requested_profile": options.profile,
+        "requested_model": options.model,
+        "effective_model": effective_model,
+        "model_source": "task_override" if options.model else "server_default" if effective_model else "cli_default",
+        "requested_reasoning_effort": options.reasoning_effort,
+        "effective_reasoning_effort": effective_reasoning_effort,
+        "reasoning_effort_source": "task_override" if options.reasoning_effort else "server_default",
+    }
 
 
 def _final_status_for_verdict(verdict: str | None) -> str:

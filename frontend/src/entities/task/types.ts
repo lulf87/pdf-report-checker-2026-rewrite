@@ -27,6 +27,7 @@ export type TaskCheckProgressStatus =
   | "needs_policy_review"
   | "error";
 export type CodexAuditProgressStatus = "pending" | "running" | "retrying" | "completed" | "failed";
+export type CodexReasoningEffort = "low" | "medium" | "high" | "xhigh" | "max";
 
 export interface InputFileRef {
   file_id: string;
@@ -35,12 +36,35 @@ export interface InputFileRef {
 }
 
 export interface AuditOptions {
+  profile?: string;
   included_check_ids?: string;
   included_finding_codes?: string;
   excluded_check_ids?: string;
   max_targets_per_batch?: number;
   max_parallel_jobs?: number;
   timeout_seconds?: number;
+  model?: string;
+  reasoning_effort?: CodexReasoningEffort;
+}
+
+export interface CodexRuntimeProfile {
+  profile_id: string;
+  label: string;
+  model: string | null;
+  reasoning_effort: CodexReasoningEffort | null;
+  timeout_seconds: number | null;
+  max_targets_per_batch: number | null;
+  max_parallel_jobs: number | null;
+}
+
+export interface CodexRuntimeConfig {
+  default_model: string | null;
+  model_options: string[];
+  default_reasoning_effort: CodexReasoningEffort;
+  reasoning_effort_options: CodexReasoningEffort[];
+  default_profile: string;
+  profiles: CodexRuntimeProfile[];
+  runtime_config_version: string;
 }
 
 export interface TaskCheckProgress {
@@ -114,8 +138,10 @@ export interface CheckSummary {
   candidate_errors_count: number;
   confirmed_findings_count: number;
   confirmed_errors_count: number;
+  confirmed_document_issue_count: number;
   refuted_findings_count: number;
   manual_review_required_count: number;
+  policy_review_required_count: number;
   suggested_additional_findings_count: number;
   out_of_scope_findings_count: number;
   summary_only_findings_count: number;
@@ -225,11 +251,17 @@ export type PTRComparisonUserFacingStatus =
   | "candidate_issue"
   | "refuted"
   | "confirmed_error"
+  | "confirmed_document_issue"
+  | "confirmed_issue"
+  | "needs_policy_review"
   | "audit_incomplete"
   | string;
 export type PTRComparisonFinalStatus =
   | "passed"
   | "confirmed_error"
+  | "confirmed_document_issue"
+  | "confirmed_issue"
+  | "needs_policy_review"
   | "manual_review_required"
   | "refuted"
   | "candidate_issue"
@@ -245,6 +277,8 @@ export interface PTRReportAtomicResult {
   preset?: string | null;
   report_item_no?: string | null;
   report_page?: number | null;
+  report_clause_number?: string | null;
+  report_source_row?: number | null;
   source_text?: string | null;
   confidence?: string | null;
   diagnostics?: Record<string, unknown>[];
@@ -279,6 +313,7 @@ export interface PTRAtomicRequirement {
   atomic_id: string;
   clause_id: string;
   label: string;
+  condition?: string | null;
   expected_text?: string | null;
   expected_value?: number | null;
   operator?: string | null;
@@ -314,12 +349,166 @@ export interface PTRAtomicComparisonRow {
   reason?: string | null;
   report_page?: number | null;
   report_item_no?: string | null;
+  report_clause_number?: string | null;
+  report_source_row?: number | null;
   confidence?: string | null;
   source: "ptr_text" | "ptr_table" | string;
   source_text?: string | null;
   table_number?: string | null;
   table_title?: string | null;
   table_key?: string | null;
+  diagnostics?: Record<string, unknown>[];
+}
+
+export interface PTRClauseStatement {
+  clause_id: string;
+  title?: string | null;
+  local_text: string;
+  page?: number | null;
+}
+
+export interface PTRReportClauseIdentity {
+  identity_id: string;
+  item_no?: string | null;
+  group_id: string;
+  clause_number?: string | null;
+  title?: string | null;
+  normalized_title?: string | null;
+  standard_requirement_text?: string;
+  row_label?: string | null;
+  parent_clause?: string | null;
+  referenced_tables?: string[];
+  parameter_terms?: string[];
+  units?: string[];
+  test_result?: string | null;
+  conclusion?: string | null;
+  source_page?: number | null;
+  source_row?: number | null;
+  evidence_refs?: string[];
+}
+
+export interface PTRClauseIdentityCandidate {
+  report_identity_id: string;
+  ptr_clause_number: string;
+  report_clause_number?: string | null;
+  report_item_no?: string | null;
+  report_title?: string | null;
+  report_page?: number | null;
+  report_source_row?: number | null;
+  number_relation: "exact" | "different" | "parent_only" | "missing" | string;
+  title_relation: "exact" | "alias" | "similar" | "conflict" | "missing" | string;
+  table_row_relation: "exact" | "alias" | "similar" | "conflict" | "missing" | string;
+  parameter_relation: "exact" | "alias" | "similar" | "conflict" | "missing" | string;
+  parent_relation: "same" | "different" | string;
+  score: number;
+  positive_signals?: string[];
+  negative_signals?: string[];
+  rejected_reason?: string | null;
+}
+
+export interface PTRClauseIdentityAlignment {
+  status: "exact_match" | "semantic_match_number_mismatch" | "identity_mismatch" | "ambiguous" | "missing" | "not_applicable" | string;
+  ptr_clause_number: string;
+  ptr_title?: string | null;
+  selected_report_clause_number?: string | null;
+  selected_report_title?: string | null;
+  selected_report_item_no?: string | null;
+  selected_report_page?: number | null;
+  selected_report_source_row?: number | null;
+  selected_report_identity?: PTRReportClauseIdentity | null;
+  number_matches: boolean;
+  title_matches: boolean;
+  parameter_matches: boolean;
+  table_row_matches: boolean;
+  confidence: "high" | "medium" | "low" | string;
+  reason: string;
+  candidate_count: number;
+  candidates?: PTRClauseIdentityCandidate[];
+}
+
+export interface PTRClauseSequenceOffsetEntry {
+  ptr: string;
+  report: string;
+  title?: string | null;
+  report_title?: string | null;
+  report_item_no?: string | null;
+  report_page?: number | null;
+}
+
+export interface PTRClauseSequenceOffsetGroup {
+  aggregate_id?: string | null;
+  parent_clause?: string | null;
+  offset: number;
+  confidence?: string | null;
+  affected_clauses: PTRClauseSequenceOffsetEntry[];
+}
+
+export interface PTREffectiveRequirement {
+  requirement_id: string;
+  label: string;
+  source_type: string;
+  requirement_type?: string | null;
+  parent_clause?: string | null;
+  table_number?: string | null;
+  table_title?: string | null;
+  table_row_label?: string | null;
+  model?: string | null;
+  preset?: string | null;
+  load?: string | null;
+  condition?: string | null;
+  selected_column?: string | null;
+  expected?: string | null;
+  operator?: string | null;
+  expected_value?: number | null;
+  unit?: string | null;
+  source_page?: number | null;
+  evidence_ref?: string | null;
+}
+
+export interface PTRReportRequirementMatch {
+  report_item_no?: string | null;
+  report_clause?: string | null;
+  row_label?: string | null;
+  condition?: string | null;
+  model?: string | null;
+  load?: string | null;
+  preset?: string | null;
+  standard_requirement_text: string;
+  page?: number | null;
+  source_row?: number | null;
+  evidence_ref?: string | null;
+}
+
+export interface PTRTraceResultComparison {
+  comparison_id: string;
+  label: string;
+  condition?: string | null;
+  model?: string | null;
+  load?: string | null;
+  preset?: string | null;
+  expected?: string | null;
+  actual?: string | null;
+  unit?: string | null;
+  status: string;
+  reason: string;
+  verification_basis: string;
+  page?: number | null;
+  item_no?: string | null;
+}
+
+export interface PTRTraceDecision {
+  status: string;
+  reason: string;
+  ptr_evidence_refs?: string[];
+  report_evidence_refs?: string[];
+}
+
+export interface PTRTechnicalEvidence {
+  ptr_full_text?: string | null;
+  ptr_tables?: Record<string, unknown>[];
+  report_groups?: Record<string, unknown>[];
+  raw_finding_ids?: string[];
+  evidence_refs?: string[];
 }
 
 export interface PTRCoverageComparisonRow {
@@ -414,6 +603,14 @@ export interface PTRComparisonItem {
   atomic_requirements?: PTRAtomicRequirement[];
   atomic_comparison_rows?: PTRAtomicComparisonRow[];
   coverage_comparison_rows?: PTRCoverageComparisonRow[];
+  ptr_clause_statement?: PTRClauseStatement | null;
+  clause_identity_alignment?: PTRClauseIdentityAlignment | null;
+  effective_requirements?: PTREffectiveRequirement[];
+  report_requirement_matches?: PTRReportRequirementMatch[];
+  result_comparisons?: PTRTraceResultComparison[];
+  requirement_alignment?: PTRTraceDecision | null;
+  result_compliance?: PTRTraceDecision | null;
+  technical_evidence?: PTRTechnicalEvidence | null;
   normalized_comparison: PTRNormalizedComparison;
   rule_status: PTRComparisonUserFacingStatus;
   coverage_status?: PTRComparisonUserFacingStatus;
@@ -452,14 +649,20 @@ export interface PTRComparisonDetails {
   mismatch_count: number;
   needs_review_count: number;
   confirmed_errors_count: number;
+  confirmed_findings_count: number;
+  confirmed_document_issue_count: number;
   manual_review_required_count: number;
+  policy_review_required_count: number;
   refuted_findings_count: number;
+  clause_sequence_offset_groups?: PTRClauseSequenceOffsetGroup[];
+  section_container_clause_ids?: string[];
   items: PTRComparisonItem[];
   excluded_items?: PTRExcludedComparisonItem[];
 }
 
 export interface CheckResultMetadata extends Record<string, unknown> {
   comparison_details?: ComparisonDetails;
+  final_comparison_details?: ComparisonDetails;
   explanation_details?: ExplanationDetails;
   ptr_comparison_details?: PTRComparisonDetails;
 }

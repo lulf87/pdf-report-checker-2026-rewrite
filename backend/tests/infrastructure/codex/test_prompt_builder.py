@@ -245,6 +245,10 @@ def test_c07_prompt_contains_visual_evidence_instructions() -> None:
     assert "跨页续表行" in prompt
     assert "result token 是否被结构化抽取遗漏" in prompt
     assert "图片能清楚反驳 all-placeholder 判断，应 refute" in prompt
+    assert "实质检验结果，而单项结论为“/”，应 confirm" in prompt
+    assert "检验结果单元格明确为“/”且单项结论为“符合”" in prompt
+    assert "报告范围排除或另见外部报告不能把 C07" in prompt
+    assert "续表页如果再次填写了单项结论，应逐个核对" in prompt
     assert "复杂矩阵表无法稳定判读，应 uncertain" in prompt
     assert "complex_matrix_table=true" in prompt
     assert "/Users/" not in prompt
@@ -478,6 +482,29 @@ def test_prompt_renders_ptr_table_ptr_clause_and_report_rule_targets(
     assert target_type.value in prompt
     assert kind.value in prompt
     assert package_target_type in prompt
+
+
+def test_prompt_includes_clause_identity_review_rules_for_identity_target() -> None:
+    from app.infrastructure.codex.prompt_builder import PromptBuilder
+
+    target = _review_target(target_type=CodexReviewTargetType.PTR_CLAUSE).model_copy(
+        update={
+            "check_id": "PTR_CLAUSE",
+            "finding_code": "PTR_CLAUSE_IDENTITY_MISMATCH",
+        }
+    )
+    prompt = PromptBuilder().build_review_prompt(
+        _request([target]),
+        _package(
+            kind=EvidencePackageKind.PTR_CLAUSE_REVIEW,
+            target_type="ptr_clause",
+        ),
+    )
+
+    assert "条款编号相同但名称、参数不同，不得认为覆盖" in prompt
+    assert "条款编号不同但名称、表格行和要求一致" in prompt
+    assert "parent group 整体结论“符合”" in prompt
+    assert "不得使用其他子条款的结果" in prompt
 
 
 def test_prompt_builder_does_not_call_subprocess_or_codex_cli_runner(monkeypatch) -> None:

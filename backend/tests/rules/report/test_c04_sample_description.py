@@ -5,7 +5,34 @@ from app.domain.result import CheckStatus
 from app.rules.report.context import CheckContext
 from app.rules.report.c04_sample_description import check_c04_sample_description
 
-from .helpers import base_document, component, label, label_field
+from .helpers import base_document, component, field, label, label_field
+
+
+def test_c04_uses_report_sample_name_for_generic_main_unit_label_matching() -> None:
+    main_label = label(
+        "label-main",
+        caption_text="№5 射频皮肤治疗仪 中文铭牌",
+        fields=[],
+        page=102,
+    )
+    document = base_document(labels=[main_label])
+    document.first_page.sample_name = field("样品名称", "射频皮肤治疗仪", page=1)
+    document.sample_components = [
+        component(
+            "main-unit",
+            "主机",
+            model=None,
+            batch=None,
+            production_date=None,
+            expiration_date=None,
+        )
+    ]
+
+    result = check_c04_sample_description(document, CheckContext(task_id="task-c04-main"))
+
+    assert [finding.code for finding in result.findings] == ["OCR_EVIDENCE_INSUFFICIENT"]
+    assert result.findings[0].metadata["label_id"] == "label-main"
+    assert result.metadata["coverage"][0]["matching_strategy"] == "name"
 
 
 def _component_label(
@@ -329,6 +356,34 @@ def test_c04_label_caption_with_empty_ocr_fields_needs_visual_review_not_error()
     assert any(row["field"] == "规格型号" and row["status"] == "needs_review" for row in details["comparison_rows"])
     assert any(group["title"] == "匹配到的中文标签样张" for group in details["evidence_groups"])
     assert "/Users/" not in str(details)
+
+
+def test_c04_matches_controller_console_alias_before_requesting_visual_review() -> None:
+    document = base_document(
+        labels=[
+            label(
+                "label-controller",
+                caption_text="控制台 中文标签样张",
+                fields=[],
+            )
+        ]
+    )
+    document.sample_components = [
+        component(
+            "c1",
+            "控制器",
+            model=None,
+            batch=None,
+            production_date=None,
+            expiration_date=None,
+        )
+    ]
+
+    result = _run(document)
+
+    assert result.status == CheckStatus.REVIEW
+    assert [finding.code for finding in result.findings] == ["OCR_EVIDENCE_INSUFFICIENT"]
+    assert result.metadata["coverage"][0]["label_id"] == "label-controller"
 
 
 def test_c04_handles_flattened_merged_sample_description_rows() -> None:

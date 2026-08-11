@@ -245,6 +245,7 @@ def _excluded_placeholder_items(report_scope: ReportInspectionScope, report_item
             if key in seen:
                 continue
             seen.add(key)
+            external_reference = _has_external_report_reference(report_scope, topic)
             placeholders.append(
                 {
                     "item_no": _item_no(item),
@@ -254,7 +255,11 @@ def _excluded_placeholder_items(report_scope: ReportInspectionScope, report_item
                     "test_result": item.test_result,
                     "single_conclusion": item.conclusion,
                     "remark": item.remark,
-                    "reason": f"报告首页已排除{topic}，实际检验表仅保留空白占位行。",
+                    "reason": (
+                        f"报告首页已排除{topic}，实际检验表仅保留外部报告引用占位行，未在本报告给出实测结果。"
+                        if external_reference and _is_passing_conclusion(item.conclusion)
+                        else f"报告首页已排除{topic}，实际检验表仅保留空白占位行。"
+                    ),
                 }
             )
     return placeholders
@@ -271,13 +276,54 @@ def _is_excluded_placeholder_item(report_scope: ReportInspectionScope, item: Ins
     item_text = _compact(" ".join([item.standard_clause or "", item.item_name or "", item.standard_requirement or ""]))
     if not _contains_topic(item_text, topic):
         return False
-    if not any(value is not None and _is_placeholder_text(value) for value in (item.test_result, item.conclusion, item.remark, *item.result_values)):
+    external_reference = _has_external_report_reference(report_scope, topic)
+    if not any(
+        _is_explicit_placeholder_text(value)
+        for value in (item.test_result, item.conclusion, item.remark, *item.result_values)
+    ) and not external_reference:
         return False
-    if not (_is_placeholder_text(item.test_result) and _is_placeholder_text(item.conclusion) and _is_placeholder_text(item.remark)):
+    if not _is_placeholder_text(item.test_result) or not _is_placeholder_text(item.remark):
         return False
     if item.result_values and any(not _is_placeholder_text(value) for value in item.result_values):
         return False
-    return True
+    if _is_placeholder_text(item.conclusion):
+        return True
+    if not _is_passing_conclusion(item.conclusion):
+        return False
+    return external_reference
+
+
+def _has_external_report_reference(report_scope: ReportInspectionScope, topic: str) -> bool:
+    source_values = [str(report_scope.source_text or "")]
+    source_values.extend(item.source_text for item in report_scope.external_standard_ranges)
+    source_values.extend(
+        str(item.get("source_text") or "")
+        for item in report_scope.clause_exclusions
+        if isinstance(item, dict)
+    )
+    text = _compact(" ".join(source_values))
+    compact_topic = _compact(topic)
+    topic_index = text.find(compact_topic)
+    if topic_index < 0:
+        reduced_topic = compact_topic.rstrip("性")
+        topic_index = text.find(reduced_topic) if reduced_topic else -1
+    if topic_index < 0:
+        return False
+    context = text[topic_index : topic_index + 180]
+    return bool(
+        re.search(r"(?:检验)?(?:另)?见", context)
+        and re.search(r"(?:报告|字|第[A-Za-z0-9\u4e00-\u9fff()（）-]*号|QW\d+)", context, flags=re.IGNORECASE)
+    )
+
+
+def _is_passing_conclusion(value: str | None) -> bool:
+    text = _compact(str(value or ""))
+    return "符合" in text and "不符合" not in text
+
+
+def _is_explicit_placeholder_text(value: str | None) -> bool:
+    text = _compact(str(value or ""))
+    return text in {"/", "／", "-", "—", "——", "不适用", "NA", "N/A"}
 
 
 def _direct_report_items(report_scope: ReportInspectionScope, report_items: list[InspectionItem]) -> list[InspectionItem]:

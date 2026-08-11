@@ -134,6 +134,10 @@ def test_c03_reviews_missing_label_date_because_ocr_evidence_is_unconfirmed() ->
     assert finding.code == "DATE_FIELD_MISSING"
     assert finding.severity == FindingSeverity.WARN
     assert finding.metadata["missing_source"] == "label_ocr"
+    assert finding.metadata["label_id"] == "label-date"
+    assert finding.metadata["label_page_number"] == 8
+    assert finding.metadata["field_name"] == "production_date"
+    assert any(item.location and item.location.page_number == 8 for item in finding.evidence)
 
 
 def test_c03_reports_unparseable_date_string_as_format_error() -> None:

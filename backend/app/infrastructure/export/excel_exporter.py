@@ -7,7 +7,7 @@ from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from app.domain.result import CheckResult
-from app.infrastructure.export.common import build_export_payload
+from app.infrastructure.export.common import ExportView, build_export_payload
 
 
 def export_check_results_to_xlsx(
@@ -18,6 +18,7 @@ def export_check_results_to_xlsx(
     input_files: Sequence[str] | None = None,
     diagnostics: Sequence[str] | None = None,
     metadata: dict[str, Any] | None = None,
+    view: ExportView = "audit",
 ) -> bytes:
     payload = build_export_payload(
         results,
@@ -26,6 +27,7 @@ def export_check_results_to_xlsx(
         input_files=input_files,
         diagnostics=diagnostics,
         metadata=metadata,
+        view=view,
     )
     sheets = [
         ("Summary", _summary_rows(payload)),
@@ -52,29 +54,48 @@ def export_check_results_to_xlsx(
 def _summary_rows(payload: dict[str, Any]) -> list[list[Any]]:
     task = payload["task"]
     summary = payload["summary"]
-    return [
+    rows = [
         ["Field", "Value"],
         ["task_id", task.get("task_id") or ""],
         ["task_type", task.get("task_type") or ""],
         ["input_files", ", ".join(task.get("input_files") or [])],
+        ["final_audit_status", summary.get("final_audit_status") or ""],
         ["total_checks", summary["total_checks"]],
         ["pass_count", summary["pass_count"]],
         ["review_count", summary["review_count"]],
         ["skip_count", summary["skip_count"]],
         ["system_error_count", summary["system_error_count"]],
-        ["candidate_errors_count", summary["candidate_errors_count"]],
         ["confirmed_errors_count", summary["confirmed_errors_count"]],
         ["manual_review_required_count", summary["manual_review_required_count"]],
-        ["refuted_findings_count", summary["refuted_findings_count"]],
-        ["legacy_fail_count", summary["fail_count"]],
-        ["legacy_error_count", summary["error_count"]],
-        ["legacy_warn_count", summary["warn_count"]],
-        ["info_count", summary["info_count"]],
         ["diagnostics", " | ".join(payload["diagnostics"])],
     ]
+    if payload.get("view") != "final":
+        rows[10:10] = [
+            ["candidate_errors_count", summary["candidate_errors_count"]],
+            ["refuted_findings_count", summary["refuted_findings_count"]],
+            ["legacy_fail_count", summary["fail_count"]],
+            ["legacy_error_count", summary["error_count"]],
+            ["legacy_warn_count", summary["warn_count"]],
+            ["info_count", summary["info_count"]],
+        ]
+    return rows
 
 
 def _check_result_rows(payload: dict[str, Any]) -> list[list[Any]]:
+    if payload.get("view") == "final":
+        rows = [["check_id", "check_name", "status", "severity", "summary", "finding_count"]]
+        for result in payload["check_results"]:
+            rows.append(
+                [
+                    result["check_id"],
+                    result["check_name"],
+                    result.get("final_status") or result["status"],
+                    result.get("severity") or "",
+                    result.get("final_summary") or result.get("summary") or "",
+                    len(result.get("findings") or []),
+                ]
+            )
+        return rows
     rows = [["check_id", "check_name", "user_facing_status", "deterministic_status", "severity", "summary", "finding_count"]]
     for result in payload["check_results"]:
         metadata = result.get("metadata") or {}

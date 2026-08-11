@@ -10,9 +10,11 @@ from app.domain.report import PhotoCaption, ReportDocument, SampleComponent
 from app.domain.result import CheckResult, CheckStatus
 from app.rules.report.common import (
     component_is_supporting_equipment,
+    component_name_aliases,
     component_not_used,
     evidence_for_component,
     make_result,
+    normalize_name,
 )
 from app.rules.report.context import CheckContext
 from app.rules.report.explanation_details import (
@@ -90,12 +92,16 @@ def extract_photo_caption_subject(caption_text: str) -> str:
 
 
 def match_photo_subject(component_name: str | None, subject_name: str | None) -> str | None:
-    component = extract_photo_caption_subject(component_name or "")
-    subject = extract_photo_caption_subject(subject_name or "")
-    if not component or not subject:
+    raw_component = extract_photo_caption_subject(component_name or "")
+    raw_subject = extract_photo_caption_subject(subject_name or "")
+    if not raw_component or not raw_subject:
         return None
-    if component == subject:
+    if raw_component == raw_subject:
         return "exact"
+    component = normalize_name(raw_component)
+    subject = normalize_name(raw_subject)
+    if component == subject:
+        return "equivalent_equipment_name"
     if subject.startswith(component):
         next_char = _following_char(subject, component)
         if next_char in _COMPONENT_IN_SUBJECT_CONNECTORS:
@@ -104,6 +110,13 @@ def match_photo_subject(component_name: str | None, subject_name: str | None) ->
         next_char = _following_char(component, subject)
         if next_char in _SUBJECT_IN_COMPONENT_CONNECTORS:
             return "subject_in_component_allowed_connector"
+    compound_members = [
+        normalize_name(member)
+        for member in re.split(r"(?:以及|及|和|与|、)", raw_subject)
+        if member.strip()
+    ]
+    if component in compound_members:
+        return "compound_subject_member"
     return None
 
 
@@ -158,7 +171,11 @@ def check_c05_photo_coverage(
         active_components.append(component)
 
     for component in active_components:
-        match = _find_caption(component, photo_candidates)
+        match = _find_caption(
+            component,
+            photo_candidates,
+            name_aliases=component_name_aliases(document, component),
+        )
         if match is None:
             uncertain_candidates = [candidate for candidate in photo_candidates if candidate.is_uncertain]
             detail_rows.append(
@@ -277,11 +294,19 @@ def _is_photo_caption(caption: PhotoCaption) -> bool:
     return True
 
 
-def _find_caption(component: SampleComponent, captions: list[_CaptionCandidate]) -> tuple[_CaptionCandidate, str] | None:
+def _find_caption(
+    component: SampleComponent,
+    captions: list[_CaptionCandidate],
+    *,
+    name_aliases: tuple[str, ...] = (),
+) -> tuple[_CaptionCandidate, str] | None:
+    names = name_aliases or ((component.component_name or ""),)
     for candidate in captions:
-        match_type = match_photo_subject(component.component_name, candidate.subject_name)
-        if match_type:
-            return candidate, match_type
+        for name in names:
+            match_type = match_photo_subject(name, candidate.subject_name)
+            if match_type:
+                strategy = match_type if name == component.component_name else f"sample_name_alias:{match_type}"
+                return candidate, strategy
     return None
 
 

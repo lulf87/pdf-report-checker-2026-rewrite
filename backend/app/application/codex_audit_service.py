@@ -31,6 +31,13 @@ def _utc_now() -> datetime:
 ProgressCallback = Callable[[dict[str, Any]], None]
 
 
+def _runner_cache_identity(runner: CodexRunner) -> dict[str, Any]:
+    identity = getattr(runner, "cache_identity", None)
+    if callable(identity):
+        identity = identity()
+    return dict(identity) if isinstance(identity, dict) else {}
+
+
 class CodexAuditService:
     """Application service that orchestrates a controlled Codex audit run."""
 
@@ -69,6 +76,36 @@ class CodexAuditService:
             progress_callback=self.progress_callback,
         )
 
+    def with_model(self, model: str | None) -> "CodexAuditService":
+        clone_runner = getattr(self.runner, "with_model", None)
+        if not callable(clone_runner):
+            return self
+        return CodexAuditService(
+            evidence_writer=self.evidence_writer,
+            prompt_builder=self.prompt_builder,
+            runner=clone_runner(model),
+            output_schema_path=self.output_schema_path,
+            review_cache=self.review_cache,
+            missing_target_retry_batch_size=self.missing_target_retry_batch_size,
+            progress_callback=self.progress_callback,
+        )
+
+    def with_reasoning_effort(self, reasoning_effort: str | None) -> "CodexAuditService":
+        if reasoning_effort is None:
+            return self
+        clone_runner = getattr(self.runner, "with_reasoning_effort", None)
+        if not callable(clone_runner):
+            return self
+        return CodexAuditService(
+            evidence_writer=self.evidence_writer,
+            prompt_builder=self.prompt_builder,
+            runner=clone_runner(reasoning_effort),
+            output_schema_path=self.output_schema_path,
+            review_cache=self.review_cache,
+            missing_target_retry_batch_size=self.missing_target_retry_batch_size,
+            progress_callback=self.progress_callback,
+        )
+
     def review(
         self,
         request: CodexReviewRequest,
@@ -78,10 +115,14 @@ class CodexAuditService:
         if mismatch_error is not None:
             return self._failed_results(request, mismatch_error)
 
+        runtime_identity = _runner_cache_identity(self.runner)
         package_profile: dict[str, Any] = {
             "package_id": evidence_package.package_id,
             "check_id": request.metadata.get("check_id") or _first_check_id(request),
             "target_count": len(request.targets),
+            "effective_model": runtime_identity.get("model"),
+            "effective_reasoning_effort": runtime_identity.get("reasoning_effort"),
+            "runtime_config_version": runtime_identity.get("runtime_config_version"),
         }
 
         started = time.perf_counter()
@@ -151,6 +192,7 @@ class CodexAuditService:
                 prompt=prompt,
                 schema_text=schema_text,
                 image_paths=image_paths,
+                runtime_identity=runtime_identity,
             )
             cached_results = self.review_cache.read(cache_key, request)
             if cached_results is not None:

@@ -4,7 +4,34 @@ from app.domain.result import CheckStatus
 from app.rules.report.context import CheckContext
 from app.rules.report.c06_label_coverage import build_component_key, check_c06_label_coverage
 
-from .helpers import base_document, component, label, label_field, photo_caption
+from .helpers import base_document, component, field, label, label_field, photo_caption
+
+
+def test_c06_uses_report_sample_name_for_generic_main_unit_nameplate_matching() -> None:
+    main_label = label(
+        "label-main",
+        caption_text="№5 射频皮肤治疗仪 中文铭牌",
+        fields=[],
+        page=102,
+    )
+    document = base_document(labels=[main_label])
+    document.first_page.sample_name = field("样品名称", "射频皮肤治疗仪", page=1)
+    document.sample_components = [
+        component(
+            "main-unit",
+            "主机",
+            model=None,
+            batch=None,
+            production_date=None,
+            expiration_date=None,
+        )
+    ]
+
+    result = check_c06_label_coverage(document, CheckContext(task_id="task-c06-main"))
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["coverage"][0]["matched_label_key"] == "label-main"
 
 
 def _label(
@@ -91,6 +118,37 @@ def test_c06_passes_when_component_has_label_sample_caption() -> None:
 
     assert result.status == CheckStatus.PASS
     assert result.findings == []
+
+
+def test_c06_matches_generic_controller_and_console_name_variants() -> None:
+    document = base_document(
+        labels=[
+            _label(
+                "label-controller",
+                name="控制台",
+                model=None,
+                batch=None,
+                production_date=None,
+                caption="控制台 中文标签样张",
+            )
+        ]
+    )
+    document.sample_components = [
+        component(
+            "c1",
+            "控制器",
+            model=None,
+            batch=None,
+            production_date=None,
+            expiration_date=None,
+        )
+    ]
+
+    result = check_c06_label_coverage(document, CheckContext(task_id="task-c06"))
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["coverage"][0]["matching_strategy"] == "caption_subject"
 
 
 def test_c06_errors_for_missing_chinese_label() -> None:

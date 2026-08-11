@@ -129,18 +129,51 @@ def test_report_check_upload_passes_audit_options_to_usecase() -> None:
             "max_targets_per_batch": "1",
             "max_parallel_jobs": "2",
             "timeout_seconds": "900",
+            "codex_profile": "custom",
+            "codex_model": "gpt-5.4/custom:model_1",
+            "codex_reasoning_effort": "xhigh",
         },
     )
 
     assert response.status_code == 200
     assert fake_usecase.calls[0]["audit_options"] == {
+        "profile": "custom",
         "included_check_ids": ["C07"],
         "included_finding_codes": ["CONCLUSION_REVIEW_NEEDED_COMPLEX_MATRIX"],
         "excluded_check_ids": ["C04"],
         "max_targets_per_batch": 1,
         "max_parallel_jobs": 2,
         "timeout_seconds": 900,
+        "model": "gpt-5.4/custom:model_1",
+        "reasoning_effort": "xhigh",
     }
+
+
+def test_report_check_upload_rejects_unsafe_codex_model() -> None:
+    client, fake_usecase = _client_with_fake_usecase()
+
+    response = client.post(
+        "/api/tasks/report-check",
+        files={"report_file": ("report.pdf", b"%PDF-1.4 report", "application/pdf")},
+        data={"codex_model": "gpt 5.4"},
+    )
+
+    assert response.status_code == 422
+    assert "Codex model" in response.json()["detail"]
+
+
+def test_report_check_upload_rejects_unknown_reasoning_effort() -> None:
+    client, fake_usecase = _client_with_fake_usecase()
+
+    response = client.post(
+        "/api/tasks/report-check",
+        files={"report_file": ("report.pdf", b"%PDF-1.4 report", "application/pdf")},
+        data={"codex_reasoning_effort": "ultra"},
+    )
+
+    assert response.status_code == 422
+    assert "reasoning effort" in response.json()["detail"]
+    assert fake_usecase.calls == []
 
 
 def test_task_routes_return_404_for_unknown_task() -> None:

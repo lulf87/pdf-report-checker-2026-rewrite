@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"high","evidence_refs":["check_result:C01"],"metadata":{},"reasoning_summary":"仅有 check_result:C01 的规则初判汇总，未提供首页和第三页的实际字段值或页面证据，无法独立确认或反驳“严格一致”。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C01","verdict":"uncertain"}],"schema_version":"1.0"}

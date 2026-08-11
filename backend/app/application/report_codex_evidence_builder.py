@@ -37,6 +37,7 @@ from app.domain.result import CheckResult
 from app.infrastructure.report.inspection_item_group_builder import build_inspection_item_groups
 from app.rules.report.common import (
     compact,
+    component_name_aliases,
     component_matches_label,
     component_not_used,
     is_chinese_label,
@@ -222,7 +223,7 @@ class ReportCodexEvidenceBuilder:
             task_type=task_type,
             mode="verify",
             targets=review_targets,
-            prompt_version="report-review-v1",
+            prompt_version="report-review-v2",
             schema_version="codex-review-output-v1",
             created_at=_utc_now(),
             metadata={
@@ -318,7 +319,7 @@ class ReportCodexEvidenceBuilder:
             task_type=task_type,
             mode="verify",
             targets=[review_target],
-            prompt_version="report-review-v1",
+            prompt_version="report-review-v2",
             schema_version="codex-review-output-v1",
             created_at=_utc_now(),
             metadata={
@@ -405,7 +406,16 @@ class ReportCodexEvidenceBuilder:
 
         if finding.check_id in {"C02", "C03"}:
             self._add_optional_item(items_by_ref, self._report_field_item(finding, report), refs)
-            self._add_optional_item(items_by_ref, self._label_ocr_item(finding, report), refs)
+            self._add_optional_item(
+                items_by_ref,
+                self._label_ocr_item(finding, report, source_pdf_path=source_pdf_path),
+                refs,
+            )
+            self._add_optional_item(
+                items_by_ref,
+                self._label_image_item(finding, report, source_pdf_path=source_pdf_path),
+                refs,
+            )
         elif finding.check_id == "C04":
             self._add_optional_item(items_by_ref, self._sample_description_item(finding, report), refs)
             self._add_optional_item(items_by_ref, self._matching_label_caption_item(finding, report), refs)
@@ -582,7 +592,7 @@ class ReportCodexEvidenceBuilder:
             },
             "finding_metadata": finding.metadata,
         }
-        if finding.check_id in {"C04", "C06"}:
+        if finding.check_id in {"C02", "C03", "C04", "C06"}:
             verification = self._label_content_verification(finding, report, source_pdf_path=source_pdf_path)
             structured["label_content_verification"] = verification
             structured["matched_label_page_text"] = verification["matched_label_page_text"]
@@ -974,7 +984,7 @@ class ReportCodexEvidenceBuilder:
                 self._compact_c07_metadata(finding.metadata) if finding.check_id == "C07" else finding.metadata
             ),
         }
-        if finding.check_id in {"C04", "C06"}:
+        if finding.check_id in {"C02", "C03", "C04", "C06"}:
             metadata.update(self._label_content_verification(finding, report, source_pdf_path=source_pdf_path))
         if finding.check_id in {"C04", "C05", "C06"}:
             component = self._component_for_finding(finding, report)
@@ -1134,7 +1144,11 @@ class ReportCodexEvidenceBuilder:
                 continue
             if component is None:
                 continue
-            match = self._caption_match_for_component(caption, component)
+            match = self._caption_match_for_component(
+                caption,
+                component,
+                name_aliases=component_name_aliases(report, component),
+            )
             if match is not None:
                 matches.append(match)
         matches.sort(key=lambda item: item.score, reverse=True)
@@ -1158,7 +1172,12 @@ class ReportCodexEvidenceBuilder:
         return [
             label
             for label in report.labels
-            if is_chinese_label(label) and component_matches_label(component, label)
+            if is_chinese_label(label)
+            and component_matches_label(
+                component,
+                label,
+                name_aliases=component_name_aliases(report, component),
+            )
         ]
 
     def _explicit_label_for_finding(
@@ -1187,11 +1206,17 @@ class ReportCodexEvidenceBuilder:
     def _caption_matches_component(self, caption: PhotoCaption, component: SampleComponent) -> bool:
         return self._caption_match_for_component(caption, component) is not None
 
-    def _caption_match_for_component(self, caption: PhotoCaption, component: SampleComponent) -> _CaptionMatch | None:
+    def _caption_match_for_component(
+        self,
+        caption: PhotoCaption,
+        component: SampleComponent,
+        *,
+        name_aliases: tuple[str, ...] = (),
+    ) -> _CaptionMatch | None:
         if component.component_id in caption.matched_component_ids:
             return _CaptionMatch(caption=caption, score=1_000, diagnostics=("explicit_component_id",))
         text = caption.subject_name or caption.text
-        component_terms = self._component_caption_match_terms(component)
+        component_terms = self._component_caption_match_terms(component, name_aliases=name_aliases)
         caption_terms = [value for value in (text, caption.text, caption.subject_name) if value]
         diagnostics: list[str] = []
         score = 0
@@ -1234,9 +1259,14 @@ class ReportCodexEvidenceBuilder:
 
         return _CaptionMatch(caption=caption, score=score, diagnostics=tuple(diagnostics)) if score > 0 else None
 
-    def _component_caption_match_terms(self, component: SampleComponent) -> list[str]:
+    def _component_caption_match_terms(
+        self,
+        component: SampleComponent,
+        *,
+        name_aliases: tuple[str, ...] = (),
+    ) -> list[str]:
         terms: list[str] = []
-        for value in (component.component_name, component.model, component.batch_or_serial):
+        for value in (*name_aliases, component.component_name, component.model, component.batch_or_serial):
             if value and value not in terms:
                 terms.append(value)
         if component.component_name:
@@ -2116,8 +2146,19 @@ class ReportCodexEvidenceBuilder:
             "reasoning_basis",
             "decision_reason",
             "pages",
+            "report_page_numbers",
             "continuation_markers",
             "suppressed_physical_row_count",
+            "mismatched_conclusion_cells",
+            "conclusion_source_page",
+            "conclusion_report_page_number",
+            "conclusion_source_row_index",
+            "conclusion_sequence_raw",
+            "conclusion_field_provenance",
+            "source_row_alignment",
+            "deterministic_conclusion_mismatch",
+            "conclusion_mismatch_index",
+            "conclusion_mismatch_count",
             "needs_codex_review",
             "complex_matrix_table",
             "complex_matrix_reason",

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from app.domain.common import Confidence, SourceType
+from app.domain.common import Confidence, Location, SourceType
 from app.domain.finding import Finding, FindingSeverity, MissingEvidence
 from app.domain.report import LabelOCRResult, ReportDocument, ReportField
 from app.domain.result import CheckResult, CheckStatus
@@ -66,6 +66,7 @@ def check_c03_production_date(
             severity=FindingSeverity.ERROR,
             message="C03 第三页生产日期缺失，无法核对格式",
             evidence=[],
+            label=None,
         )
         return make_result(
             context=context,
@@ -100,7 +101,11 @@ def check_c03_production_date(
             source="label_ocr",
             severity=FindingSeverity.WARN,
             message="C03 未找到中文标签中的生产日期，需人工复核格式",
-            evidence=evidence_for_field(third_field, "c03-page-date"),
+            evidence=[
+                *evidence_for_field(third_field, "c03-page-date"),
+                *(evidence_for_label(label) if label else []),
+            ],
+            label=label,
         )
         return make_result(
             context=context,
@@ -266,7 +271,29 @@ def _missing_date_finding(
     severity: FindingSeverity,
     message: str,
     evidence: list,
+    label: LabelOCRResult | None,
 ) -> Finding:
+    label_location = None
+    if label is not None and label.page_number is not None:
+        label_location = Location(
+            source_type=SourceType.REPORT,
+            page_number=label.page_number,
+            section="中文标签",
+            description="生产日期",
+        )
+    metadata: dict[str, object] = {
+        "missing_source": source,
+        "compare_value_enabled": COMPARE_VALUE_ENABLED,
+        "field_name": "production_date",
+    }
+    if label is not None:
+        metadata.update(
+            {
+                "label_id": label.label_id,
+                "label_page_number": label.page_number,
+                "label_caption": label.caption_text,
+            }
+        )
     return Finding(
         id=f"{context.task_id}-c03-{source}-date-missing",
         task_id=context.task_id,
@@ -280,10 +307,11 @@ def _missing_date_finding(
                 label="生产日期",
                 reason="第三页生产日期字段缺失" if source == "third_page" else "中文标签 OCR 未提供生产日期字段",
                 expected_source=SourceType.REPORT,
+                location=label_location,
             )
         ],
         confidence=Confidence.MEDIUM,
-        metadata={"missing_source": source, "compare_value_enabled": COMPARE_VALUE_ENABLED},
+        metadata=metadata,
     )
 
 

@@ -86,6 +86,13 @@ class PTRClauseType(StrEnum):
     GROUP = "group"
 
 
+class PTRClauseRole(StrEnum):
+    SECTION_CONTAINER = "section_container"
+    TEST_REQUIREMENT = "test_requirement"
+    TABLE_REQUIREMENT = "table_requirement"
+    EXTERNAL_STANDARD_REQUIREMENT = "external_standard_requirement"
+
+
 class PTRSubItem(BaseModel):
     marker: str
     text: str
@@ -131,6 +138,7 @@ class PTRClause(BaseModel):
     scope_type: PTRScopeType = PTRScopeType.REQUIREMENT
     taxonomy: PTRClauseTaxonomy = PTRClauseTaxonomy.REQUIREMENT
     clause_type: PTRClauseType = PTRClauseType.MAIN_REQUIREMENT
+    clause_role: PTRClauseRole | None = None
     sub_items: list[PTRSubItem] = Field(default_factory=list)
     location: Location | None = None
     table_refs: list[str] = Field(default_factory=list)
@@ -190,6 +198,10 @@ class PTRClause(BaseModel):
             and self.taxonomy == PTRClauseTaxonomy.REQUIREMENT
             and self.number.chapter == 2
         )
+
+    @property
+    def is_section_container(self) -> bool:
+        return self.clause_role == PTRClauseRole.SECTION_CONTAINER or self.metadata.get("clause_role") == PTRClauseRole.SECTION_CONTAINER.value
 
     def has_table_references(self) -> bool:
         return bool(self.table_refs or self.table_references)
@@ -386,6 +398,7 @@ __all__ = [
     "PTRClauseNumber",
     "PTRClauseTaxonomy",
     "PTRClauseType",
+    "PTRClauseRole",
     "PTRDocument",
     "PTRScopeType",
     "PTRSubItem",

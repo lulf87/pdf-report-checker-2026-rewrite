@@ -19,12 +19,15 @@ export async function uploadReportCheckFile(
 
 function formFieldsFromAuditOptions(options?: AuditOptions): Record<string, string | number | undefined> {
   return {
+    codex_profile: options?.profile,
     included_check_ids: options?.included_check_ids,
     included_finding_codes: options?.included_finding_codes,
     excluded_check_ids: options?.excluded_check_ids,
     max_targets_per_batch: options?.max_targets_per_batch,
     max_parallel_jobs: options?.max_parallel_jobs,
     timeout_seconds: options?.timeout_seconds,
+    codex_model: options?.model,
+    codex_reasoning_effort: options?.reasoning_effort,
   };
 }
 

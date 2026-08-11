@@ -150,7 +150,18 @@ def test_ptr_compare_pm3562_real_sample_scope_and_direct_items(tmp_path: Path) -
     assert item_23["coverage_comparison_rows"][0]["report_item_no"] == "51"
     assert "PVC" in item_23["coverage_comparison_rows"][0]["reason"]
     assert item_23["report_matches"][0]["item_no"] == "51"
-    assert "PVC" in item_23["ptr_requirement_text"]
+    assert "PVC" not in item_23["ptr_clause_statement"]["local_text"]
+    assert item_23["effective_requirements"]
+    assert all(
+        "PVC" in row["label"] or "PVC" in str(row.get("expected") or "")
+        for row in item_23["effective_requirements"]
+    )
+    assert item_23["report_requirement_matches"]
+    assert all(
+        "PVC" in row["standard_requirement_text"]
+        for row in item_23["report_requirement_matches"]
+    )
+    assert "PVC" in item_23["technical_evidence"]["ptr_full_text"]
     assert "PVC" in item_23["report_matches"][0]["standard_requirement"]
     assert "仅检PVC反应" in _compact(item_23["report_matches"][0]["remark"])
     assert not _has_finding(result, "PTR_TABLE_MISSING", clause_number="2.3", table_number="2-2")

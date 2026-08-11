@@ -9,12 +9,15 @@ export async function uploadPTRCompareFiles(
   return apiClient.postForm<TaskStatus>("/api/tasks/ptr-compare", {
     ptr_file: ptrFile,
     report_file: reportFile,
+    codex_profile: auditOptions?.profile,
     included_check_ids: auditOptions?.included_check_ids,
     included_finding_codes: auditOptions?.included_finding_codes,
     excluded_check_ids: auditOptions?.excluded_check_ids,
     max_targets_per_batch: auditOptions?.max_targets_per_batch,
     max_parallel_jobs: auditOptions?.max_parallel_jobs,
     timeout_seconds: auditOptions?.timeout_seconds,
+    codex_model: auditOptions?.model,
+    codex_reasoning_effort: auditOptions?.reasoning_effort,
   });
 }
 

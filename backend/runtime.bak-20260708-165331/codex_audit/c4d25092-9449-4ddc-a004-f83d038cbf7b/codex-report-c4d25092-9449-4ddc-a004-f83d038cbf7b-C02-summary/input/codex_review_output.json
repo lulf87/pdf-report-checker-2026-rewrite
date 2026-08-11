@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"high","evidence_refs":["check_result:C02"],"metadata":{},"reasoning_summary":"仅有规则初判摘要 check_result:C02，未提供第三页字段、中文标签 OCR、页面证据或字段定位，无法独立确认或反驳 C02 通过结论。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C02","verdict":"uncertain"}],"schema_version":"1.0"}

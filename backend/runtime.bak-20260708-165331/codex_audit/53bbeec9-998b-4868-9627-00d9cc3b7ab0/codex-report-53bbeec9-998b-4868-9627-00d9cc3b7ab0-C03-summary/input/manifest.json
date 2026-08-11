@@ -1,0 +1,12 @@
+{
+  "package_id": "codex-report-53bbeec9-998b-4868-9627-00d9cc3b7ab0-C03-summary",
+  "task_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0",
+  "root_dir": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/53bbeec9-998b-4868-9627-00d9cc3b7ab0/codex-report-53bbeec9-998b-4868-9627-00d9cc3b7ab0-C03-summary/input",
+  "package_json_path": "evidence_package.json",
+  "item_file_paths": [],
+  "created_at": "2026-06-25T13:46:03.616590Z",
+  "metadata": {
+    "schema_version": "evidence-package-v1",
+    "kind": "report_rule_review"
+  }
+}

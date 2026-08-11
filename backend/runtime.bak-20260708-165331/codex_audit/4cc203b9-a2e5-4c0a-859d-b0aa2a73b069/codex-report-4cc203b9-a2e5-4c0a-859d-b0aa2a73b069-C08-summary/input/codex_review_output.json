@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"high","evidence_refs":["check_result:C08"],"metadata":{},"reasoning_summary":"仅提供了 C08 的规则初判汇总，显示 deterministic_finding_count=0、status=pass，但没有检验项目明细、必填字段内容或逐项 evidence，无法独立确认或反驳“均非空”。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C08","verdict":"uncertain"}],"schema_version":"1.0"}

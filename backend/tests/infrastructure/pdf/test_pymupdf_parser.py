@@ -13,6 +13,11 @@ class _FakeTableHeader:
         self.names = names
 
 
+class _FakePyMuPDFRow:
+    def __init__(self, cells: list[tuple[float, float, float, float]]) -> None:
+        self.cells = cells
+
+
 class _FakePyMuPDFTable:
     def __init__(
         self,
@@ -21,11 +26,15 @@ class _FakePyMuPDFTable:
         rows: list[list[str]],
         cells: list[tuple[float, float, float, float]],
         header_names: list[str],
+        geometry_rows: list[list[tuple[float, float, float, float]]] | None = None,
     ) -> None:
         self.bbox = bbox
         self.cells = cells
         self.header = _FakeTableHeader(header_names)
         self._rows = rows
+        self.col_count = len(header_names)
+        if geometry_rows is not None:
+            self.rows = [_FakePyMuPDFRow(row) for row in geometry_rows]
 
     def extract(self) -> list[list[str]]:
         return self._rows
@@ -136,6 +145,52 @@ def test_pymupdf_table_preserves_cell_bboxes() -> None:
     assert parsed is not None
     assert parsed.metadata["cell_bboxes"][1][1] == [40.0, 50.0, 120.0, 80.0]
     assert parsed.metadata["cell_bboxes"][1][2] == [120.0, 50.0, 170.0, 80.0]
+
+
+def test_pymupdf_table_aligns_compressed_merged_rows_by_cell_geometry() -> None:
+    parser = PyMuPDFParser()
+    header_cells = [
+        (10, 20, 40, 50),
+        (40, 20, 90, 50),
+        (90, 20, 140, 50),
+        (140, 20, 300, 50),
+        (300, 20, 360, 50),
+        (360, 20, 410, 50),
+        (410, 20, 460, 50),
+    ]
+    first_data_cells = [
+        (10, 50, 40, 140),
+        (40, 50, 90, 140),
+        (90, 50, 140, 140),
+        (140, 50, 300, 90),
+        (300, 50, 360, 90),
+        (360, 50, 410, 140),
+        (410, 50, 460, 140),
+    ]
+    compressed_cells = [
+        (140, 90, 300, 140),
+        (300, 90, 360, 140),
+    ]
+    table = _FakePyMuPDFTable(
+        bbox=(10, 20, 460, 140),
+        rows=[
+            ["序号", "检验项目", "标准条款", "标准要求", "检验结果", "单项结论", "备注"],
+            ["132", "电压限制", "201.8.4", "第一项要求", "——", "/", "/"],
+            ["电容应不超过 5nF", "2.35"],
+        ],
+        cells=[*header_cells, *first_data_cells, *compressed_cells],
+        header_names=["序号", "检验项目", "标准条款", "标准要求", "检验结果", "单项结论", "备注"],
+        geometry_rows=[header_cells, first_data_cells, compressed_cells],
+    )
+
+    parsed = parser._table_from_pymupdf(table, page_number=85, table_index=0)
+
+    assert parsed is not None
+    assert parsed.rows[2] == ["", "", "", "电容应不超过 5nF", "2.35", "", ""]
+    assert parsed.metadata["row_alignment_methods"][2] == "geometry_aligned"
+    assert parsed.metadata["geometry_aligned_row_count"] == 1
+    assert parsed.metadata["cell_bboxes"][2][3] == [140.0, 90.0, 300.0, 140.0]
+    assert parsed.metadata["cell_bboxes"][2][4] == [300.0, 90.0, 360.0, 140.0]
 
 
 def test_page_drawings_are_summarized_without_rule_judgement(tmp_path: Path) -> None:

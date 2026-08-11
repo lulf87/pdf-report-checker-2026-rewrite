@@ -33,8 +33,10 @@ class CheckSummary(BaseModel):
     candidate_errors_count: int = Field(default=0, ge=0)
     confirmed_findings_count: int = Field(default=0, ge=0)
     confirmed_errors_count: int = Field(default=0, ge=0)
+    confirmed_document_issue_count: int = Field(default=0, ge=0)
     refuted_findings_count: int = Field(default=0, ge=0)
     manual_review_required_count: int = Field(default=0, ge=0)
+    policy_review_required_count: int = Field(default=0, ge=0)
     suggested_additional_findings_count: int = Field(default=0, ge=0)
     out_of_scope_findings_count: int = Field(default=0, ge=0)
     summary_only_findings_count: int = Field(default=0, ge=0)
@@ -68,10 +70,21 @@ class CheckSummary(BaseModel):
                     summary.info_count += 1
 
                 final_status = finding.metadata.get("final_status")
-                if final_status == "confirmed":
+                aggregate_child = finding.metadata.get("aggregate_child") is True
+                policy_review_required = finding.metadata.get("policy_review_required") is True
+                if aggregate_child:
+                    continue
+                if policy_review_required:
+                    summary.policy_review_required_count += 1
+                if final_status == "confirmed" and not policy_review_required:
                     summary.confirmed_findings_count += 1
-                    if finding.severity == FindingSeverity.ERROR:
+                    if finding.severity == FindingSeverity.ERROR or (
+                        finding.code == "PTR_CLAUSE_IDENTITY_MISMATCH" and _is_identity_conflict(finding)
+                    ):
                         summary.confirmed_errors_count += 1
+                elif final_status == "confirmed_document_issue":
+                    summary.confirmed_findings_count += 1
+                    summary.confirmed_document_issue_count += 1
                 elif final_status == "refuted":
                     summary.refuted_findings_count += 1
                 elif final_status == "manual_review_required":
@@ -133,6 +146,8 @@ class CheckResult(BaseModel):
 
 
 USER_FACING_CONFIRMED_ERROR = "confirmed_error"
+USER_FACING_CONFIRMED_ISSUE = "confirmed_issue"
+USER_FACING_CONFIRMED_DOCUMENT_ISSUE = "confirmed_document_issue"
 USER_FACING_NEEDS_REVIEW = "needs_review"
 USER_FACING_NEEDS_POLICY_REVIEW = "needs_policy_review"
 USER_FACING_CANDIDATE_ISSUE = "candidate_issue"
@@ -145,7 +160,13 @@ def user_facing_status_for_finding(finding: Finding) -> str:
         return USER_FACING_NEEDS_POLICY_REVIEW
     final_status = finding.metadata.get("final_status")
     if final_status == "confirmed":
+        if finding.code == "PTR_CLAUSE_IDENTITY_MISMATCH" and _is_identity_conflict(finding):
+            return USER_FACING_CONFIRMED_ERROR
+        if finding.code == "PTR_REPORT_CLAUSE_NUMBER_MISMATCH":
+            return USER_FACING_CONFIRMED_DOCUMENT_ISSUE
         return USER_FACING_CONFIRMED_ERROR if finding.severity == FindingSeverity.ERROR else USER_FACING_NEEDS_REVIEW
+    if final_status == "confirmed_document_issue":
+        return USER_FACING_CONFIRMED_DOCUMENT_ISSUE
     if final_status == "refuted":
         return USER_FACING_REFUTED
     if final_status == "manual_review_required":
@@ -160,12 +181,22 @@ def user_facing_status_for_finding(finding: Finding) -> str:
     return USER_FACING_PASSED
 
 
+def _is_identity_conflict(finding: Finding) -> bool:
+    return (
+        finding.metadata.get("clause_identity_status") == "identity_mismatch"
+        and not finding.metadata.get("selected_report_clause_number")
+    )
+
+
 def user_facing_status_for_result(result: CheckResult) -> str:
     if not result.findings:
         return USER_FACING_PASSED
     statuses = [user_facing_status_for_finding(finding) for finding in result.findings]
     for status in (
         USER_FACING_CONFIRMED_ERROR,
+        USER_FACING_CONFIRMED_ISSUE,
+        USER_FACING_CONFIRMED_DOCUMENT_ISSUE,
+        USER_FACING_NEEDS_POLICY_REVIEW,
         USER_FACING_NEEDS_REVIEW,
         USER_FACING_CANDIDATE_ISSUE,
         USER_FACING_REFUTED,

@@ -56,6 +56,10 @@ def test_codex_audit_settings_default_to_mandatory_codex_cli(monkeypatch: Monkey
         "CODEX_AUDIT_BACKEND",
         "CODEX_AUDIT_ALLOW_REAL_EXECUTION",
         "CODEX_CLI_PATH",
+        "CODEX_AUDIT_MODEL",
+        "CODEX_AUDIT_MODEL_OPTIONS",
+        "CODEX_AUDIT_REASONING_EFFORT",
+        "CODEX_AUDIT_REASONING_EFFORT_OPTIONS",
         "CODEX_AUDIT_TIMEOUT_SECONDS",
         "CODEX_AUDIT_RUNTIME_DIR",
         "CODEX_AUDIT_MAX_TARGETS_PER_TASK",
@@ -71,10 +75,14 @@ def test_codex_audit_settings_default_to_mandatory_codex_cli(monkeypatch: Monkey
     settings = Settings(_env_file=None)
 
     assert settings.codex_cli_path == "codex"
-    assert settings.codex_audit_timeout_seconds == 900
+    assert settings.codex_audit_model == "gpt-5.6-terra"
+    assert settings.codex_audit_model_options == "gpt-5.6-terra,gpt-5.6-luna,gpt-5.6-sol"
+    assert settings.codex_audit_reasoning_effort == "medium"
+    assert settings.codex_audit_reasoning_effort_options == "low,medium,high,xhigh,max"
+    assert settings.codex_audit_timeout_seconds == 600
     assert settings.codex_audit_runtime_dir == "runtime/codex_audit"
-    assert settings.codex_audit_max_targets_per_batch == 5
-    assert settings.codex_audit_max_parallel_jobs == 1
+    assert settings.codex_audit_max_targets_per_batch == 3
+    assert settings.codex_audit_max_parallel_jobs == 2
     assert settings.codex_audit_sandbox == "read-only"
     assert settings.codex_audit_ephemeral is True
     assert settings.codex_audit_included_check_ids is None
@@ -85,13 +93,19 @@ def test_codex_audit_settings_default_to_mandatory_codex_cli(monkeypatch: Monkey
     assert service is not None
     assert isinstance(service.runner, CodexCliRunner)
     assert service.runner.config.executable == "codex"
-    assert service.runner.config.timeout_seconds == 900
+    assert service.runner.config.model == "gpt-5.6-terra"
+    assert service.runner.config.reasoning_effort == "medium"
+    assert service.runner.config.timeout_seconds == 600
     assert service.runner.config.sandbox == "read-only"
     assert service.runner.config.ephemeral is True
 
 
 def test_codex_audit_settings_read_environment(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setenv("CODEX_CLI_PATH", "/usr/local/bin/codex")
+    monkeypatch.setenv("CODEX_AUDIT_MODEL", "gpt-5.4")
+    monkeypatch.setenv("CODEX_AUDIT_MODEL_OPTIONS", "gpt-5.4,gpt-5.3-codex,gpt-5.4")
+    monkeypatch.setenv("CODEX_AUDIT_REASONING_EFFORT", "high")
+    monkeypatch.setenv("CODEX_AUDIT_REASONING_EFFORT_OPTIONS", "medium,high,xhigh")
     monkeypatch.setenv("CODEX_AUDIT_TIMEOUT_SECONDS", "77")
     monkeypatch.setenv("CODEX_AUDIT_RUNTIME_DIR", "runtime/custom-codex-audit")
     monkeypatch.setenv("CODEX_AUDIT_MAX_TARGETS_PER_BATCH", "1")
@@ -106,6 +120,10 @@ def test_codex_audit_settings_read_environment(monkeypatch: MonkeyPatch) -> None
     settings = Settings(_env_file=None)
 
     assert settings.codex_cli_path == "/usr/local/bin/codex"
+    assert settings.codex_audit_model == "gpt-5.4"
+    assert settings.codex_audit_model_options == "gpt-5.4,gpt-5.3-codex,gpt-5.4"
+    assert settings.codex_audit_reasoning_effort == "high"
+    assert settings.codex_audit_reasoning_effort_options == "medium,high,xhigh"
     assert settings.codex_audit_timeout_seconds == 77
     assert settings.codex_audit_runtime_dir == "runtime/custom-codex-audit"
     assert settings.codex_audit_max_targets_per_batch == 1
@@ -121,21 +139,25 @@ def test_codex_audit_settings_read_environment(monkeypatch: MonkeyPatch) -> None
 def test_factory_builds_mandatory_codex_cli_service_and_usecases(tmp_path: Path) -> None:
     settings = Settings(
         codex_audit_runtime_dir=str(tmp_path / "runtime" / "codex_audit"),
+        codex_audit_model="gpt-5.4",
+        codex_audit_reasoning_effort="high",
         _env_file=None,
     )
 
     service = build_codex_audit_service(settings)
     assert service is not None
     assert isinstance(service.runner, CodexCliRunner)
+    assert service.runner.config.model == "gpt-5.4"
+    assert service.runner.config.reasoning_effort == "high"
 
     ptr_usecase = build_ptr_compare_usecase(settings, task_service=TaskService())
     report_usecase = build_report_check_usecase(settings, task_service=TaskService())
     assert ptr_usecase.codex_audit_service is not None
     assert report_usecase.codex_audit_service is not None
-    assert ptr_usecase.ptr_codex_evidence_builder.target_selection.max_targets_per_batch == 5
-    assert report_usecase.report_codex_evidence_builder.target_selection.max_targets_per_batch == 5
-    assert report_usecase.codex_audit_scheduler.max_parallel_jobs == 1
-    assert ptr_usecase.codex_audit_scheduler.max_parallel_jobs == 1
+    assert ptr_usecase.ptr_codex_evidence_builder.target_selection.max_targets_per_batch == 3
+    assert report_usecase.report_codex_evidence_builder.target_selection.max_targets_per_batch == 3
+    assert report_usecase.codex_audit_scheduler.max_parallel_jobs == 2
+    assert ptr_usecase.codex_audit_scheduler.max_parallel_jobs == 2
 
 
 def test_factory_passes_target_selection_settings_to_usecase_builders(tmp_path: Path) -> None:
@@ -180,7 +202,10 @@ def test_mandatory_codex_cli_execution_can_be_monkeypatched(
         assert timeout == 33
         assert check is False
         assert command[0:2] == ["codex", "exec"]
+        assert "--ignore-user-config" in command
         assert command[command.index("--sandbox") + 1] == "read-only"
+        assert command[command.index("--model") + 1] == "gpt-5.6-terra"
+        assert command[command.index("-c") + 1] == 'model_reasoning_effort="medium"'
         output_path = Path(command[command.index("-o") + 1])
         output_path.write_text(
             json.dumps(

@@ -8,6 +8,11 @@ import subprocess
 import time
 from typing import Any
 
+from app.application.codex_model_config import (
+    CODEX_RUNTIME_CONFIG_VERSION,
+    normalize_codex_model,
+    normalize_codex_reasoning_effort,
+)
 from app.domain.codex_review import (
     CodexReviewError,
     CodexReviewRequest,
@@ -55,9 +60,11 @@ def _default_forbidden_parent_roots() -> tuple[Path, ...]:
 class CodexCliRunnerConfig:
     executable: str = "codex"
     sandbox: str = "read-only"
-    timeout_seconds: int = 900
+    timeout_seconds: int = 600
     enabled: bool = True
     ephemeral: bool = True
+    model: str | None = "gpt-5.6-terra"
+    reasoning_effort: str = "medium"
     extra_args: list[str] = field(default_factory=list)
     allow_real_execution: bool = True
     forbidden_exact_roots: tuple[Path, ...] = field(default_factory=_default_forbidden_exact_roots)
@@ -70,8 +77,38 @@ class CodexCliRunnerConfig:
             raise CodexRunnerConfigurationError("Codex CLI timeout must be greater than zero")
         if not self.executable:
             raise CodexRunnerConfigurationError("Codex CLI executable is required")
-        if any(arg in {"--sandbox", "danger-full-access", "workspace-write"} for arg in self.extra_args):
-            raise CodexRunnerConfigurationError("Codex CLI extra_args must not override sandbox safety")
+        protected_args = {
+            "--sandbox",
+            "-s",
+            "danger-full-access",
+            "workspace-write",
+            "--model",
+            "-m",
+            "--config",
+            "-c",
+            "--profile",
+            "-p",
+            "--cd",
+            "-C",
+            "--ignore-user-config",
+        }
+        if any(arg in protected_args for arg in self.extra_args):
+            raise CodexRunnerConfigurationError(
+                "Codex CLI extra_args must not override sandbox, model, reasoning, profile, or workspace configuration"
+            )
+
+        try:
+            normalized_model = normalize_codex_model(self.model)
+        except ValueError as exc:
+            raise CodexRunnerConfigurationError(str(exc)) from exc
+        object.__setattr__(self, "model", normalized_model)
+        try:
+            normalized_effort = normalize_codex_reasoning_effort(self.reasoning_effort)
+        except ValueError as exc:
+            raise CodexRunnerConfigurationError(str(exc)) from exc
+        if normalized_effort is None:
+            raise CodexRunnerConfigurationError("Codex reasoning effort is required")
+        object.__setattr__(self, "reasoning_effort", normalized_effort)
 
         object.__setattr__(
             self,
@@ -102,6 +139,27 @@ class CodexCliRunner:
             replace(self.config, timeout_seconds=timeout_seconds),
             output_parser=self.output_parser,
         )
+
+    def with_model(self, model: str | None) -> "CodexCliRunner":
+        return CodexCliRunner(
+            replace(self.config, model=model),
+            output_parser=self.output_parser,
+        )
+
+    def with_reasoning_effort(self, reasoning_effort: str) -> "CodexCliRunner":
+        return CodexCliRunner(
+            replace(self.config, reasoning_effort=reasoning_effort),
+            output_parser=self.output_parser,
+        )
+
+    @property
+    def cache_identity(self) -> dict[str, str | bool | None]:
+        return {
+            "model": self.config.model,
+            "reasoning_effort": self.config.reasoning_effort,
+            "ignore_user_config": True,
+            "runtime_config_version": CODEX_RUNTIME_CONFIG_VERSION,
+        }
 
     def run_review(
         self,
@@ -290,6 +348,9 @@ class CodexCliRunner:
             "stderr_size_bytes": len(stderr.encode("utf-8")),
             "output_size_bytes": output_path.stat().st_size if output_path.is_file() else 0,
             "image_count": image_count,
+            "effective_model": self.config.model,
+            "effective_reasoning_effort": self.config.reasoning_effort,
+            "runtime_config_version": CODEX_RUNTIME_CONFIG_VERSION,
         }
 
     def _with_runner_metadata(
@@ -362,6 +423,7 @@ class CodexCliRunner:
         command = [
             self.config.executable,
             "exec",
+            "--ignore-user-config",
             "--cd",
             str(workspace),
             "--sandbox",
@@ -369,6 +431,14 @@ class CodexCliRunner:
         ]
         if self.config.ephemeral:
             command.append("--ephemeral")
+        if self.config.model is not None:
+            command.extend(["--model", self.config.model])
+        command.extend(
+            [
+                "-c",
+                f'model_reasoning_effort="{self.config.reasoning_effort}"',
+            ]
+        )
         if output_schema_path is not None:
             command.extend(["--output-schema", str(output_schema_path)])
         for image_path in image_paths:

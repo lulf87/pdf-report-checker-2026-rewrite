@@ -1,0 +1,27 @@
+{
+  "source_file": "4ec18d39-7dab-4478-b6c0-d6bc464fd2e7.result.json",
+  "c04_findings_count": 35,
+  "by_code": {
+    "SAMPLE_FIELD_MISSING_IN_LABEL": 28,
+    "SAMPLE_COMPONENT_LABEL_NOT_FOUND": 7
+  },
+  "by_final_status": {
+    "manual_review_required": 28,
+    "refuted": 7
+  },
+  "by_codex_verdict": {
+    "uncertain": 28,
+    "refute": 7
+  },
+  "confirmed_count": 0,
+  "confirmed_errors_count": 0,
+  "manual_review_required_count": 28,
+  "refuted_count": 7,
+  "can_verify_label_content_count": 0,
+  "has_matching_label_caption_count": 35,
+  "has_matched_label_image_count": 31,
+  "has_matched_label_crop_count": 0,
+  "has_matched_label_ocr_count": 0,
+  "has_matched_structured_fields_count": 0,
+  "unused_component_count": 5
+}

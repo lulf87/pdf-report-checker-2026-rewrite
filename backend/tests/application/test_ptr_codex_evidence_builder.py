@@ -6,6 +6,12 @@ from app.domain.common import Evidence, EvidenceMethod, SourceType
 from app.domain.evidence_package import EvidencePackageKind, EvidenceSourceType
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.ptr import PTRClause, PTRClauseNumber, PTRDocument, PTRTable, TableReference
+from app.domain.ptr_comparison import (
+    ClauseIdentityAlignment,
+    ClauseIdentityCandidate,
+    ReportClauseIdentity,
+    ReportSubclauseIndex,
+)
 from app.domain.report import InspectionItem, ReportDocument
 from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope, ReportScopeRange
 from app.domain.result import CheckResult, CheckStatus
@@ -104,6 +110,149 @@ def test_clause_mismatch_finding_includes_grouped_report_item_evidence() -> None
     assert "3375" in group["test_result"]
     assert "59" in group["test_result"]
     assert group["single_conclusion"] == "符合"
+
+
+def test_clause_identity_target_includes_exact_conflict_and_selected_semantic_candidate() -> None:
+    exact_conflict = ReportClauseIdentity(
+        identity_id="report_subclause:38:2.1.8:房室间期",
+        item_no="38",
+        group_id="inspection-item-38",
+        clause_number="2.1.8",
+        title="房室间期",
+        normalized_title="房室间期",
+        standard_requirement_text="房室间期应符合表3的要求。",
+        row_label="房室间期",
+        parent_clause="2.1",
+        parameter_terms=["房室间期"],
+        units=["ms"],
+        test_result="-1～+0",
+        conclusion="符合",
+        source_page=30,
+        source_row=8,
+    )
+    selected = ReportClauseIdentity(
+        identity_id="report_subclause:38:2.1.7:输入阻抗",
+        item_no="38",
+        group_id="inspection-item-38",
+        clause_number="2.1.7",
+        title="输入阻抗",
+        normalized_title="输入阻抗",
+        standard_requirement_text="输入阻抗应不小于40kΩ。",
+        row_label="输入阻抗",
+        parent_clause="2.1",
+        parameter_terms=["输入阻抗"],
+        units=["kΩ"],
+        test_result="符合要求",
+        conclusion="符合",
+        source_page=30,
+        source_row=7,
+    )
+    alignment = ClauseIdentityAlignment(
+        status="semantic_match_number_mismatch",
+        ptr_clause_number="2.1.8",
+        ptr_title="输入阻抗",
+        selected_report_clause_number="2.1.7",
+        selected_report_title="输入阻抗",
+        selected_report_item_no="38",
+        selected_report_page=30,
+        selected_report_source_row=7,
+        selected_report_identity=selected,
+        title_matches=True,
+        parameter_matches=True,
+        confidence="high",
+        reason="同编号候选语义冲突，选择标题一致的报告条款。",
+        candidate_count=2,
+        candidates=[
+            ClauseIdentityCandidate(
+                report_identity_id=selected.identity_id,
+                ptr_clause_number="2.1.8",
+                report_clause_number="2.1.7",
+                report_item_no="38",
+                report_title="输入阻抗",
+                report_page=30,
+                report_source_row=7,
+                number_relation="different",
+                title_relation="exact",
+                table_row_relation="exact",
+                parameter_relation="exact",
+                parent_relation="same",
+                score=285,
+                positive_signals=["title_exact", "parameter_exact"],
+            ),
+            ClauseIdentityCandidate(
+                report_identity_id=exact_conflict.identity_id,
+                ptr_clause_number="2.1.8",
+                report_clause_number="2.1.8",
+                report_item_no="38",
+                report_title="房室间期",
+                report_page=30,
+                report_source_row=8,
+                number_relation="exact",
+                title_relation="conflict",
+                table_row_relation="conflict",
+                parameter_relation="conflict",
+                parent_relation="same",
+                score=-145,
+                negative_signals=["title_conflict", "parameter_conflict"],
+                rejected_reason="exact_number_semantic_conflict",
+            ),
+        ],
+    )
+    finding = _finding(
+        code="PTR_REPORT_CLAUSE_NUMBER_MISMATCH",
+        check_id="PTR_CLAUSE",
+        metadata={
+            "clause_number": "2.1.8",
+            "item_no": "38",
+            "clause_identity_alignment": alignment.model_dump(mode="json"),
+        },
+    )
+    ptr_doc = PTRDocument(
+        clauses=[
+            PTRClause(
+                clause_id="ptr-2.1.8",
+                number=PTRClauseNumber.from_string("2.1.8"),
+                title="输入阻抗",
+                body_text="心脏起搏器的输入阻抗应符合表3的要求。",
+                table_references=[TableReference(table_number="3", reference_text="表3")],
+            )
+        ]
+    )
+    report_doc = ReportDocument(
+        inspection_items=[
+            InspectionItem(
+                sequence_raw="38",
+                sequence=38,
+                standard_clause="2.1",
+                standard_requirement="2.1.7 输入阻抗；2.1.8 房室间期",
+                test_result="符合要求",
+                conclusion="符合",
+                source_page=30,
+            )
+        ],
+        metadata={
+            "report_subclause_index": ReportSubclauseIndex(
+                identities=[exact_conflict, selected]
+            ).model_dump(mode="json")
+        },
+    )
+
+    bundle = PtrCodexEvidenceBuilder().build(
+        task_id="task-1",
+        task_type=TaskType.PTR_COMPARE.value,
+        ptr_doc=ptr_doc,
+        report_doc=report_doc,
+        check_results=[_check_result("PTR_CLAUSE", [finding])],
+    )
+
+    assert bundle is not None
+    assert bundle.request.prompt_version == "ptr-review-v3"
+    target_refs = {ref.ref_id for ref in bundle.request.targets[0].evidence_refs}
+    assert "ptr_clause:ptr-2.1.8" in target_refs
+    assert "report_inspection_group:38" in target_refs
+    assert exact_conflict.identity_id in target_refs
+    assert selected.identity_id in target_refs
+    assert target_refs <= {item.ref_id for item in bundle.evidence_package.items}
 
 
 def test_table_value_mismatch_finding_builds_ptr_parameter_target() -> None:

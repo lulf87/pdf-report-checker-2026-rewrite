@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 
 import { formatCodexRuntimeError } from "../../../entities/codexReview/types";
 import type { AuditOptions, TaskResult, TaskStatus } from "../../../entities/task/types";
+import {
+  CodexModelSelector,
+  DEFAULT_CODEX_RUNTIME_SELECTION,
+} from "../../codex-review/components/CodexModelSelector";
 import { Button } from "../../../shared/ui/Button";
 import { FileUpload, type FileUploadFile } from "../../../shared/ui/FileUpload";
 import { GlassCard } from "../../../shared/ui/GlassCard";
@@ -17,12 +21,10 @@ export interface PTRUploadProps {
 export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
   const [files, setFiles] = useState<FileUploadFile[]>([]);
   const [auditOptions, setAuditOptions] = useState({
+    ...DEFAULT_CODEX_RUNTIME_SELECTION,
     included_check_ids: "",
     included_finding_codes: "",
     excluded_check_ids: "",
-    max_targets_per_batch: "",
-    max_parallel_jobs: "",
-    timeout_seconds: "",
   });
   const [task, setTask] = useState<TaskStatus | null>(null);
   const [message, setMessage] = useState<string>("上传并创建任务");
@@ -194,6 +196,13 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
           <details className="advanced-audit-settings">
             <summary>高级审核设置</summary>
             <div className="advanced-audit-grid">
+              <CodexModelSelector
+                disabled={busy}
+                onChange={(runtimeOptions) =>
+                  setAuditOptions((value) => ({ ...value, ...runtimeOptions }))
+                }
+                value={auditOptions}
+              />
               <label>
                 <span>包含规则</span>
                 <input
@@ -229,9 +238,13 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
                   disabled={busy}
                   min={1}
                   onChange={(event) =>
-                    setAuditOptions((value) => ({ ...value, max_targets_per_batch: event.target.value }))
+                    setAuditOptions((value) => ({
+                      ...value,
+                      profile: "custom",
+                      max_targets_per_batch: event.target.value,
+                    }))
                   }
-                  placeholder="5"
+                  placeholder="3"
                   type="number"
                   value={auditOptions.max_targets_per_batch}
                 />
@@ -241,8 +254,14 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
                 <input
                   disabled={busy}
                   min={1}
-                  onChange={(event) => setAuditOptions((value) => ({ ...value, max_parallel_jobs: event.target.value }))}
-                  placeholder="1"
+                  onChange={(event) =>
+                    setAuditOptions((value) => ({
+                      ...value,
+                      profile: "custom",
+                      max_parallel_jobs: event.target.value,
+                    }))
+                  }
+                  placeholder="2"
                   type="number"
                   value={auditOptions.max_parallel_jobs}
                 />
@@ -252,8 +271,14 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
                 <input
                   disabled={busy}
                   min={1}
-                  onChange={(event) => setAuditOptions((value) => ({ ...value, timeout_seconds: event.target.value }))}
-                  placeholder="900"
+                  onChange={(event) =>
+                    setAuditOptions((value) => ({
+                      ...value,
+                      profile: "custom",
+                      timeout_seconds: event.target.value,
+                    }))
+                  }
+                  placeholder="600"
                   type="number"
                   value={auditOptions.timeout_seconds}
                 />
@@ -291,14 +316,18 @@ export function PTRUpload({ onComplete, onBack }: PTRUploadProps) {
 }
 
 function compactAuditOptions(value: {
+  profile: string;
   included_check_ids: string;
   included_finding_codes: string;
   excluded_check_ids: string;
   max_targets_per_batch: string;
   max_parallel_jobs: string;
   timeout_seconds: string;
+  model: string;
+  reasoning_effort: string;
 }): AuditOptions | undefined {
   const options: AuditOptions = {};
+  if (value.profile.trim()) options.profile = value.profile.trim();
   if (value.included_check_ids.trim()) options.included_check_ids = value.included_check_ids.trim();
   if (value.included_finding_codes.trim()) options.included_finding_codes = value.included_finding_codes.trim();
   if (value.excluded_check_ids.trim()) options.excluded_check_ids = value.excluded_check_ids.trim();
@@ -308,10 +337,16 @@ function compactAuditOptions(value: {
   if (batch !== undefined) options.max_targets_per_batch = batch;
   if (parallel !== undefined) options.max_parallel_jobs = parallel;
   if (timeout !== undefined) options.timeout_seconds = timeout;
+  if (value.model.trim()) options.model = value.model.trim();
+  if (isReasoningEffort(value.reasoning_effort)) options.reasoning_effort = value.reasoning_effort;
   return Object.keys(options).length > 0 ? options : undefined;
 }
 
 function positiveNumber(value: string): number | undefined {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function isReasoningEffort(value: string): value is NonNullable<AuditOptions["reasoning_effort"]> {
+  return ["low", "medium", "high", "xhigh", "max"].includes(value);
 }

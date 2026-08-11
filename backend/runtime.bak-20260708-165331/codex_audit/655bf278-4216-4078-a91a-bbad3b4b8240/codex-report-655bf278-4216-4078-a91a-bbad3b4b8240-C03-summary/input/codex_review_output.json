@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"low","evidence_refs":["check_result:C03"],"metadata":{},"reasoning_summary":"check_result:C03 只提供 C03 规则初判摘要和 skip 状态，未提供第三页字段、中文标签生产日期或定位证据，无法独立确认或反驳跳过原因。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C03","verdict":"uncertain"}],"schema_version":"1.0"}

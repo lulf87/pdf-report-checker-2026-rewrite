@@ -246,18 +246,45 @@ class PyMuPDFParser:
         if extracted_rows is None:
             extracted_rows = []
 
-        rows = [
-            [str(cell) if cell is not None else "" for cell in row]
-            for row in extracted_rows
-            if isinstance(row, list) and any(str(cell or "").strip() for cell in row)
-        ]
-        if not rows:
-            return None
-
         header_names = getattr(getattr(table, "header", None), "names", None)
         if isinstance(header_names, list) and any(str(item or "").strip() for item in header_names):
             columns = [str(name) if name is not None else "" for name in header_names]
         else:
+            columns = []
+
+        declared_column_count = max(
+            int(getattr(table, "col_count", 0) or 0),
+            len(columns),
+            max(
+                (
+                    len(row)
+                    for row in extracted_rows
+                    if isinstance(row, (list, tuple))
+                ),
+                default=0,
+            ),
+        )
+        normalized_rows, normalized_bboxes, row_alignment_methods = self._normalize_pymupdf_rows(
+            table,
+            extracted_rows,
+            col_count=declared_column_count,
+        )
+
+        rows: list[list[str]] = []
+        cell_bboxes: list[list[list[float] | None]] = []
+        kept_alignment_methods: list[str] = []
+        for row_index, row in enumerate(normalized_rows):
+            if not any(str(cell or "").strip() for cell in row):
+                continue
+            rows.append(row)
+            if row_index < len(normalized_bboxes):
+                cell_bboxes.append(normalized_bboxes[row_index])
+            if row_index < len(row_alignment_methods):
+                kept_alignment_methods.append(row_alignment_methods[row_index])
+
+        if not rows:
+            return None
+        if not columns:
             columns = rows[0]
 
         column_count = max((len(row) for row in rows), default=0)
@@ -265,9 +292,15 @@ class PyMuPDFParser:
             "row_count": len(rows),
             "column_count": column_count,
         }
-        cell_bboxes = self._table_cell_bboxes(table, row_count=len(rows), col_count=column_count)
-        if cell_bboxes:
+        if not cell_bboxes or not any(any(cell is not None for cell in row) for row in cell_bboxes):
+            cell_bboxes = self._table_cell_bboxes(table, row_count=len(rows), col_count=column_count)
+        if cell_bboxes and any(any(cell is not None for cell in row) for row in cell_bboxes):
             metadata["cell_bboxes"] = cell_bboxes
+        if kept_alignment_methods:
+            metadata["row_alignment_methods"] = kept_alignment_methods
+            metadata["geometry_aligned_row_count"] = sum(
+                method == "geometry_aligned" for method in kept_alignment_methods
+            )
 
         return PdfTable(
             table_id=f"p{page_number}-t{table_index + 1}",
@@ -279,6 +312,107 @@ class PyMuPDFParser:
             confidence="medium",
             metadata=metadata,
         )
+
+    def _normalize_pymupdf_rows(
+        self,
+        table: Any,
+        extracted_rows: Any,
+        *,
+        col_count: int,
+    ) -> tuple[list[list[str]], list[list[list[float] | None]], list[str]]:
+        raw_rows = [
+            [str(cell) if cell is not None else "" for cell in row]
+            for row in extracted_rows
+            if isinstance(row, (list, tuple))
+        ]
+        if not raw_rows:
+            return [], [], []
+
+        geometry_rows = getattr(table, "rows", None)
+        if not isinstance(geometry_rows, list) or len(geometry_rows) < len(raw_rows) or col_count <= 0:
+            return raw_rows, [], ["native"] * len(raw_rows)
+
+        header_cells = self._pymupdf_row_cells(geometry_rows[0])
+        if len(header_cells) != col_count:
+            return raw_rows, [], ["native"] * len(raw_rows)
+
+        column_cells = sorted(header_cells, key=lambda cell: self._cell_coordinates(cell)[0])
+        normalized_rows: list[list[str]] = []
+        normalized_bboxes: list[list[list[float] | None]] = []
+        alignment_methods: list[str] = []
+
+        for row_index, raw_row in enumerate(raw_rows):
+            row_cells = self._pymupdf_row_cells(geometry_rows[row_index])
+            if len(row_cells) != len(raw_row):
+                normalized_rows.append(raw_row)
+                normalized_bboxes.append([None] * max(col_count, len(raw_row)))
+                alignment_methods.append("native")
+                continue
+
+            aligned = [""] * col_count
+            bboxes: list[list[float] | None] = [None] * col_count
+            logical_indexes: list[int] = []
+            alignment_failed = False
+            for value, cell in zip(raw_row, row_cells, strict=True):
+                logical_index = self._logical_column_index(cell, column_cells)
+                if logical_index is None or logical_index in logical_indexes:
+                    alignment_failed = True
+                    break
+                logical_indexes.append(logical_index)
+                aligned[logical_index] = value
+                bboxes[logical_index] = self._cell_bbox_list(cell)
+
+            if alignment_failed:
+                normalized_rows.append(raw_row)
+                normalized_bboxes.append([None] * max(col_count, len(raw_row)))
+                alignment_methods.append("native")
+                continue
+
+            normalized_rows.append(aligned)
+            normalized_bboxes.append(bboxes)
+            alignment_methods.append(
+                "geometry_aligned"
+                if len(raw_row) != col_count or logical_indexes != list(range(len(raw_row)))
+                else "native_geometry"
+            )
+
+        return normalized_rows, normalized_bboxes, alignment_methods
+
+    def _pymupdf_row_cells(self, row: Any) -> list[Any]:
+        cells = getattr(row, "cells", None)
+        if not isinstance(cells, list):
+            return []
+        return [cell for cell in cells if cell is not None]
+
+    def _logical_column_index(self, cell: Any, column_cells: list[Any]) -> int | None:
+        cell_x0, _, cell_x1, _ = self._cell_coordinates(cell)
+        exact = [
+            index
+            for index, column_cell in enumerate(column_cells)
+            if abs(cell_x0 - self._cell_coordinates(column_cell)[0]) <= 1.0
+        ]
+        if exact:
+            return exact[0]
+
+        overlaps: list[tuple[float, int]] = []
+        for index, column_cell in enumerate(column_cells):
+            column_x0, _, column_x1, _ = self._cell_coordinates(column_cell)
+            overlap = max(0.0, min(cell_x1, column_x1) - max(cell_x0, column_x0))
+            overlaps.append((overlap, index))
+        overlap, index = max(overlaps, default=(0.0, -1))
+        return index if overlap > 0 and index >= 0 else None
+
+    def _cell_coordinates(self, cell: Any) -> tuple[float, float, float, float]:
+        bbox = self._bbox_from_rect(cell)
+        if bbox is None:
+            return (0.0, 0.0, 0.0, 0.0)
+        return (bbox.x0, bbox.y0, bbox.x1, bbox.y1)
+
+    def _cell_bbox_list(self, cell: Any) -> list[float] | None:
+        bbox = self._bbox_from_rect(cell)
+        if bbox is None:
+            return None
+        return [bbox.x0, bbox.y0, bbox.x1, bbox.y1]
 
     def _table_cell_bboxes(
         self,

@@ -70,6 +70,29 @@ bash scripts/dev.sh
 BACKEND_PORT=8010 FRONTEND_PORT=5174 bash scripts/dev.sh
 ```
 
+Codex CLI 审核使用产品自己的显式运行配置，不继承个人
+`~/.codex/config.toml` 中的模型或推理强度。默认配置为：
+
+- 平衡：`gpt-5.6-terra` + `medium`，超时 600 秒，单批 3 项，并发 2。
+- 快速：`gpt-5.6-luna` + `low`，超时 360 秒，单批 5 项，并发 2。
+- 深度：`gpt-5.6-sol` + `high`，超时 900 秒，单批 2 项，并发 1。
+- 自定义：可手动选择模型与 `low/medium/high/xhigh/max`；`xhigh/max` 建议只用于少量疑难单项。
+
+服务端默认值和网页候选列表也可以通过环境变量调整：
+
+```bash
+CODEX_AUDIT_MODEL=gpt-5.6-terra \
+CODEX_AUDIT_MODEL_OPTIONS=gpt-5.6-terra,gpt-5.6-luna,gpt-5.6-sol \
+CODEX_AUDIT_REASONING_EFFORT=medium \
+CODEX_AUDIT_REASONING_EFFORT_OPTIONS=low,medium,high,xhigh,max \
+bash scripts/dev.sh
+```
+
+- 后端调用固定包含 `--ignore-user-config`、`--model` 和显式 `model_reasoning_effort`。
+- `CODEX_AUDIT_MODEL_OPTIONS` 是网页高级审核设置中的预置模型列表。
+- PTR 条款核对和报告自身核对都可以选择运行方案，任务级设置会覆盖服务端默认值。
+- 模型、推理强度和运行配置版本共同参与审核缓存键，不会跨配置复用旧结果。
+
 运行测试和前端构建：
 
 ```bash
@@ -89,6 +112,7 @@ bash scripts/build.sh
 当前后端提供：
 
 - `GET /api/health`
+- `GET /api/runtime-config/codex`
 - `POST /api/tasks/report-check`
 - `POST /api/tasks/ptr-compare`
 - `GET /api/tasks/{task_id}`

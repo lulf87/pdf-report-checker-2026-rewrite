@@ -89,6 +89,83 @@ def test_c09_errors_when_sequence_cell_is_blank() -> None:
     assert finding.location.row_index == 1
 
 
+def test_c09_ignores_blank_sequence_subrows_marked_as_logical_continuations() -> None:
+    continuation = item(None, raw="", row=1)
+    continuation.is_continuation = True
+    continuation.metadata["logical_continuation"] = True
+    continuation.standard_requirement = "同一检验项目下的标准要求续行"
+    document = ReportDocument(
+        inspection_items=[
+            item(1, row=0),
+            continuation,
+            item(2, row=2),
+        ]
+    )
+
+    result = _run(document)
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["actual_sequence"] == [1, 2]
+
+
+def test_c09_ignores_shifted_physical_subrow_text_in_sequence_column() -> None:
+    shifted = item(None, raw="4.2.3 风险评价要求续行", row=1)
+    shifted.item_name = "符合要求"
+    shifted.standard_clause = ""
+    shifted.standard_requirement = ""
+    shifted.test_result = ""
+    shifted.conclusion = ""
+    shifted.remark = ""
+    document = ReportDocument(
+        inspection_items=[
+            item(1, row=0),
+            shifted,
+            item(2, row=2),
+        ]
+    )
+
+    result = _run(document)
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["ignored_sequence_subrow_count"] == 1
+
+
+def test_c09_ignores_nested_matrix_rows_split_across_sequence_columns() -> None:
+    nested = item(None, raw="RS422（2 个）", row=1)
+    nested.item_name = "RS422"
+    nested.standard_clause = "与灌注泵之间的通讯"
+    nested.standard_requirement = "符合要求"
+    nested.test_result = "控制台"
+    nested.conclusion = ""
+    nested.remark = ""
+    document = ReportDocument(inspection_items=[item(1, row=0), nested, item(2, row=2)])
+
+    result = _run(document)
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["ignored_sequence_subrow_count"] == 1
+
+
+def test_c09_does_not_treat_shifted_decimal_result_as_clause_identity() -> None:
+    nested = item(None, raw="对地漏电流", row=1)
+    nested.item_name = "正常状态下<=5mA"
+    nested.standard_clause = "0.33"
+    nested.standard_requirement = ""
+    nested.test_result = ""
+    nested.conclusion = ""
+    nested.remark = ""
+    document = ReportDocument(inspection_items=[item(1, row=0), nested, item(2, row=2)])
+
+    result = _run(document)
+
+    assert result.status == CheckStatus.PASS
+    assert result.findings == []
+    assert result.metadata["ignored_sequence_subrow_count"] == 1
+
+
 def test_c09_does_not_count_continuation_as_duplicate() -> None:
     document = ReportDocument(
         inspection_items=[

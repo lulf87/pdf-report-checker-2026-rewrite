@@ -92,6 +92,7 @@ class InspectionTableExtractor:
         row_values, provenance = self._rows_with_merge_semantics(table)
         items: list[InspectionItem] = []
         last_item = previous_item
+        report_page_number = self._report_page_number(parsed_pdf, page_number)
 
         for row_index, row in enumerate(row_values):
             if header_row_index is not None and row_index == header_row_index:
@@ -116,6 +117,9 @@ class InspectionTableExtractor:
                 "source_table_id": table.table_id,
                 "field_columns": dict(header_map),
                 "row_text": " ".join(cell.strip() for cell in row if cell and cell.strip()),
+                "pdf_page_number": page_number,
+                "report_page_number": report_page_number,
+                "source_row_alignment": self._source_row_alignment(table, row_index),
             }
             visual_geometry = self._visual_geometry(table, row_index, header_map)
             if visual_geometry is not None:
@@ -161,6 +165,20 @@ class InspectionTableExtractor:
             last_item = item
 
         return items
+
+    def _report_page_number(self, parsed_pdf: ParsedPdf, pdf_page_number: int) -> int | None:
+        page = next((candidate for candidate in parsed_pdf.pages if candidate.page_number == pdf_page_number), None)
+        if page is None:
+            return None
+        match = re.search(r"共\s*\d+\s*页\s*第\s*(\d+)\s*页", page.text or "")
+        return int(match.group(1)) if match else None
+
+    def _source_row_alignment(self, table: PdfTable, row_index: int) -> str | None:
+        methods = table.metadata.get("row_alignment_methods")
+        if not isinstance(methods, list) or row_index >= len(methods):
+            return None
+        value = methods[row_index]
+        return str(value) if value else None
 
     def _header_map(self, table: PdfTable) -> tuple[dict[str, int], int | None]:
         candidates: list[tuple[list[str], int | None]] = []

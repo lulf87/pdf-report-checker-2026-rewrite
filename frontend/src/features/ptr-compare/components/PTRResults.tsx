@@ -1,10 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { PTRFilterMode } from "../../../entities/ptr/types";
-import { toPTRClauseViewModels } from "../../../entities/ptr/types";
+import { isPTRIssue, toPTRClauseViewModels } from "../../../entities/ptr/types";
 import type { PTRComparisonDetails, TaskResult, TaskStatus } from "../../../entities/task/types";
-import { normalizeCodexReviews } from "../../../entities/codexReview/types";
-import { CodexReviewOverview } from "../../codex-review/components/CodexReviewPanel";
 import { AnimatedCounter } from "../../../shared/ui/AnimatedCounter";
 import { Badge } from "../../../shared/ui/Badge";
 import { Button } from "../../../shared/ui/Button";
@@ -20,8 +18,6 @@ export interface PTRResultsProps {
 }
 
 export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps) {
-  const [filter, setFilter] = useState<PTRFilterMode>("issues");
-  const [exportError, setExportError] = useState<string | null>(null);
   const ptrDetails = result.metadata.ptr_comparison_details;
   const ptrOcrRequired = isPtrOcrRequired(ptrDetails);
   const resultBadge = finalResultBadge(result, ptrDetails);
@@ -29,11 +25,13 @@ export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps
     () => toPTRClauseViewModels(result),
     [result],
   );
-  const codexReviews = useMemo(
-    () => result.check_results.flatMap((item) => normalizeCodexReviews(item.codex_reviews)),
-    [result.check_results],
-  );
-  const issueCount = clauses.filter((item) => item.status !== "pass" && item.status !== "skip").length;
+  const issueCount = clauses.filter(isPTRIssue).length;
+  const [filter, setFilter] = useState<PTRFilterMode>(() => issueCount > 0 ? "issues" : "all");
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (issueCount === 0) setFilter("all");
+  }, [issueCount]);
 
   return (
     <section className="panel-stack">
@@ -63,27 +61,44 @@ export function PTRResults({ task, result, onBack, onReupload }: PTRResultsProps
           <Metric label="排除项" value={ptrDetails.excluded_items?.length ?? ptrDetails.scope_consistency?.excluded_topics?.length ?? 0} />
           <Metric label="未覆盖" value={ptrDetails.missing_count} tone={ptrDetails.missing_count > 0 ? "warn" : "info"} />
           <Metric label="结果不一致" value={ptrDetails.mismatch_count} tone={ptrDetails.mismatch_count > 0 ? "warn" : "info"} />
-          <Metric label="需复核" value={ptrDetails.needs_review_count} tone={ptrDetails.needs_review_count > 0 ? "warn" : "info"} />
-          <Metric label="确认问题" value={ptrDetails.confirmed_errors_count} tone={ptrDetails.confirmed_errors_count > 0 ? "danger" : "info"} />
-          <Metric label="候选已排除" value={ptrDetails.refuted_findings_count} />
+          <Metric
+            label="确认差异"
+            value={ptrDetails.confirmed_findings_count ?? ptrDetails.confirmed_errors_count}
+            tone={(ptrDetails.confirmed_findings_count ?? ptrDetails.confirmed_errors_count) > 0 ? "danger" : "info"}
+          />
+          <Metric
+            label="条款编号偏移"
+            value={ptrDetails.confirmed_document_issue_count ?? ptrDetails.clause_sequence_offset_groups?.length ?? 0}
+            tone={(ptrDetails.confirmed_document_issue_count ?? ptrDetails.clause_sequence_offset_groups?.length ?? 0) > 0 ? "warn" : "info"}
+          />
+          <Metric
+            label="人工复核"
+            value={ptrDetails.manual_review_required_count}
+            tone={ptrDetails.manual_review_required_count > 0 ? "warn" : "info"}
+          />
+          <Metric
+            label="标准版本政策"
+            value={ptrDetails.policy_review_required_count ?? 0}
+            tone={(ptrDetails.policy_review_required_count ?? 0) > 0 ? "warn" : "info"}
+          />
+          <Metric label="确认错误" value={ptrDetails.confirmed_errors_count} tone={ptrDetails.confirmed_errors_count > 0 ? "danger" : "info"} />
         </div>
       ) : (
         <div className="metric-grid">
-          <Metric label="候选错误" value={result.summary.candidate_errors_count} tone="warn" />
           <Metric label="确认错误" value={result.summary.confirmed_errors_count} tone="danger" />
           <Metric label="人工复核" value={result.summary.manual_review_required_count} tone="warn" />
-          <Metric label="已反驳候选" value={result.summary.refuted_findings_count} />
+          <Metric label="标准版本政策" value={result.summary.policy_review_required_count ?? 0} tone="warn" />
           {result.summary.out_of_scope_findings_count > 0 ? (
             <Metric label="本次未覆盖" value={result.summary.out_of_scope_findings_count} />
           ) : null}
         </div>
       )}
 
-      <CodexAuditScopeNotice metadata={result.metadata} />
+      <AuditScopeNotice metadata={result.metadata} />
 
       {ptrDetails && !ptrOcrRequired ? <ModelTableContextNotice details={ptrDetails} /> : null}
 
-      <CodexReviewOverview reviews={codexReviews} />
+      {ptrDetails && !ptrOcrRequired ? <ClauseSequenceOffsetNotice details={ptrDetails} /> : null}
 
       <GlassCard className="result-card">
         <div className="row-head">
@@ -206,6 +221,38 @@ function ModelTableContextNotice({ details }: { details: PTRComparisonDetails })
   );
 }
 
+function ClauseSequenceOffsetNotice({ details }: { details: PTRComparisonDetails }) {
+  const groups = details.clause_sequence_offset_groups ?? [];
+  if (groups.length === 0) return null;
+
+  return (
+    <GlassCard className="result-card issue-warn">
+      <div className="row-head">
+        <div>
+          <p className="row-title">条款编号整体偏移</p>
+          {groups.map((group, index) => (
+            <div className="sequence-offset-group" key={group.aggregate_id ?? `${group.parent_clause ?? "group"}-${group.offset}-${index}`}>
+              <p className="muted">
+                报告 {group.parent_clause || "相关章节"} 章节的条款编号相对 PTR {group.offset < 0 ? "前移" : "后移"} {Math.abs(group.offset)} 位，
+                置信度：{group.confidence || "未标注"}。
+              </p>
+              <div className="comparison-source-list">
+                {group.affected_clauses.map((entry) => (
+                  <span className="comparison-source" key={`${entry.ptr}-${entry.report}`}>
+                    PTR {entry.ptr} {entry.title ? `· ${entry.title}` : ""} → 报告 {entry.report}
+                    {entry.report_title ? ` · ${entry.report_title}` : ""}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <Badge variant="warn">文档结构问题</Badge>
+      </div>
+    </GlassCard>
+  );
+}
+
 function modelCandidateSourceLabel(source: string): string {
   if (source === "report_homepage") return "报告首页";
   if (source === "sample_description") return "样品描述";
@@ -244,31 +291,31 @@ function finalResultBadge(result: TaskResult, ptrDetails?: PTRComparisonDetails)
     return { label: "最终结论：不通过", variant: "danger" };
   }
   if (ptrDetails?.overall_status === "audit_incomplete") {
-    return { label: "最终结论：复审未完成", variant: "danger" };
+    return { label: "自动核对未完成", variant: "danger" };
   }
   if (result.summary.final_audit_status === "audit_failed") {
-    return { label: "Codex 审核未完成", variant: "danger" };
+    return { label: "自动核对未完成", variant: "danger" };
   }
   if (result.summary.final_audit_status === "failed") {
-    return { label: "Codex 审核完成", variant: "danger" };
+    return { label: "最终结论：不通过", variant: "danger" };
   }
   if (result.summary.final_audit_status === "needs_manual_review") {
-    return { label: "Codex 审核完成", variant: "warn" };
+    return { label: "最终结论：需复核", variant: "warn" };
   }
   if (result.summary.final_audit_status === "passed") {
-    return { label: "Codex 审核完成", variant: "success" };
+    return { label: "最终结论：通过", variant: "success" };
   }
   if (result.summary.codex_runtime_failure_count > 0 || result.summary.unreviewed_required_findings_count > 0) {
-    return { label: "Codex 审核未完成", variant: "danger" };
+    return { label: "自动核对未完成", variant: "danger" };
   }
   if (result.summary.confirmed_errors_count > 0) {
-    return { label: "Codex 确认错误", variant: "danger" };
+    return { label: "最终结论：不通过", variant: "danger" };
   }
   if (result.summary.manual_review_required_count > 0) {
     return { label: "需人工复核", variant: "warn" };
   }
   if (result.summary.codex_reviews_count === 0 && result.summary.candidate_errors_count > 0) {
-    return { label: "候选错误待审核", variant: "warn" };
+    return { label: "自动核对未完成", variant: "warn" };
   }
   return { label: "未见最终错误", variant: "success" };
 }
@@ -277,7 +324,7 @@ function isPtrOcrRequired(ptrDetails?: PTRComparisonDetails): boolean {
   return ptrDetails?.ptr_ocr_required === true || ptrDetails?.ptr_extraction_status === "ocr_required";
 }
 
-function CodexAuditScopeNotice({ metadata }: { metadata: Record<string, unknown> }) {
+function AuditScopeNotice({ metadata }: { metadata: Record<string, unknown> }) {
   const auditMetadata = metadataRecord(metadata, "codex_audit");
   const auditScope = metadataString(auditMetadata, "audit_scope");
   const includedCheckIds = metadataArray(auditMetadata, "included_check_ids");
@@ -288,9 +335,9 @@ function CodexAuditScopeNotice({ metadata }: { metadata: Record<string, unknown>
     <GlassCard className="result-card">
       <div className="row-head">
         <div>
-          <p className="row-title">Codex targeted validation</p>
+          <p className="row-title">限定范围核对</p>
           <p className="muted">
-            本次只覆盖 {includedCheckIds.length > 0 ? includedCheckIds.join(", ") : "配置筛选范围"}，未覆盖候选会标记为“本次未覆盖”。
+            本次只覆盖 {includedCheckIds.length > 0 ? includedCheckIds.join(", ") : "配置筛选范围"}，未纳入范围的条款不计入最终结论。
           </p>
         </div>
         <Badge variant="warn">非完整审核</Badge>

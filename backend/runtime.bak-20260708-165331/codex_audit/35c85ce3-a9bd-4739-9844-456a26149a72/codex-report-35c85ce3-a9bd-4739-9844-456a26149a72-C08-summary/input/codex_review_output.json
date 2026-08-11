@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"high","evidence_refs":["check_result:C08"],"metadata":{},"reasoning_summary":"仅有 C08 规则初判汇总 check_result:C08，未提供完整检验项目行、必填字段取值或来源页，无法独立确认“均非空”，也无证据反驳。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C08","verdict":"uncertain"}],"schema_version":"codex-review-v1"}

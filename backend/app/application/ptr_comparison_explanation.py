@@ -8,8 +8,10 @@ from app.application.report_page_texts import report_page_text_by_page
 from app.domain.finding import Finding, FindingSeverity
 from app.domain.ptr import PTRClause, PTRDocument
 from app.domain.ptr_comparison import (
+    ClauseIdentityAlignment,
     PTRAtomicComparisonRow,
     PTRComparisonDetails,
+    PTRComparisonTrace,
     PTRCoverageComparisonRow,
     PTRExcludedComparisonItem,
     PTRComparisonItem,
@@ -26,6 +28,8 @@ from app.domain.report_scope import ExternalStandardRange, ReportInspectionScope
 from app.domain.result import CheckResult
 from app.domain.table import CanonicalTable, ParameterRecord
 from app.rules.ptr.atomic_compare import build_atomic_comparison_rows, build_atomic_requirements, build_report_atomic_results
+from app.rules.ptr.comparison_trace import build_comparison_trace
+from app.rules.ptr.clause_identity import gate_atomic_rows_by_clause_identity
 from app.rules.ptr.report_item_grouping import (
     build_ptr_report_item_groups,
     ptr_group_for_clause,
@@ -96,6 +100,7 @@ def build_ptr_comparison_details(
             ptr_doc=ptr_doc,
             report_doc=report_doc,
             page_text_by_page=page_text_by_page,
+            scope_modifiers=(scope_consistency or {}).get("scope_modifiers", []),
         )
         for clause in included_clauses
     ]
@@ -106,6 +111,8 @@ def build_ptr_comparison_details(
         ptr_extraction_metadata=_ptr_extraction_metadata(ptr_doc),
         report_model_context=report_doc.metadata.get("report_model_context"),
         ptr_table_registry=ptr_doc.metadata.get("ptr_table_registry"),
+        clause_sequence_offset_groups=ptr_doc.metadata.get("clause_sequence_offset_groups"),
+        section_container_clause_ids=ptr_doc.metadata.get("section_container_clause_ids"),
     )
 
 
@@ -119,11 +126,15 @@ def _comparison_item(
     ptr_doc: PTRDocument,
     report_doc: ReportDocument,
     page_text_by_page: dict[int, str] | None = None,
+    scope_modifiers: Sequence[dict[str, Any]] = (),
 ) -> PTRComparisonItem:
     clause_number = str(clause.number)
+    clause_identity_alignment = _clause_identity_alignment(ptr_doc, clause_number)
     atomic_requirements = build_atomic_requirements(clause, ptr_doc)
     atomic_rows = build_atomic_comparison_rows(clause, ptr_doc, report_matches, page_text_by_page=page_text_by_page)
     atomic_rows = _atomic_rows_with_codex_field_comparison_backfills(atomic_rows, findings)
+    if clause_identity_alignment is not None:
+        atomic_rows = gate_atomic_rows_by_clause_identity(atomic_rows, clause_identity_alignment)
     selected_finding = _primary_finding(findings)
     display_finding = selected_finding
     rule_status = _rule_status(findings)
@@ -133,7 +144,11 @@ def _comparison_item(
         report_matches=report_matches,
         external_coverages=external_coverages,
     )
-    if atomic_status == PTRUserFacingStatus.COVERAGE_ONLY_NEEDS_REVIEW and _direct_report_match_passes_clause(clause, report_matches):
+    if (
+        atomic_status == PTRUserFacingStatus.COVERAGE_ONLY_NEEDS_REVIEW
+        and not _identity_blocks_binding(clause_identity_alignment)
+        and _direct_report_match_passes_clause(clause, report_matches)
+    ):
         atomic_status = PTRUserFacingStatus.COVERED_PASSED
     if _atomic_rows_override_refuted_missing_table(selected_finding, atomic_rows) and atomic_status is not None:
         display_finding = None
@@ -147,11 +162,26 @@ def _comparison_item(
         if atomic_status is not None:
             rule_status = atomic_status
             user_status = atomic_status
-    final_status = _display_final_status(user_status)
     search_keywords = _search_keywords(clause)
     external_coverage = external_coverages[0] if external_coverages else None
     candidate_items = [] if report_matches or external_coverage else [_report_match(item) for item in report_candidates[:5]]
     report_match_payloads = [_report_match(item, page_text_by_page=page_text_by_page) for item in report_matches]
+    trace = build_comparison_trace(
+        clause=clause,
+        ptr_doc=ptr_doc,
+        report_matches=report_matches,
+        atomic_requirements=atomic_requirements,
+        atomic_rows=atomic_rows,
+        findings=findings,
+        external_coverages=external_coverages,
+        scope_modifiers=scope_modifiers,
+        clause_identity_alignment=clause_identity_alignment,
+    )
+    trace_status = _status_with_trace(user_status, trace, has_report_group=bool(report_matches))
+    if selected_finding is None:
+        rule_status = trace_status
+    user_status = trace_status
+    final_status = _display_final_status(user_status)
     reason = _reason(
         clause=clause,
         finding=display_finding,
@@ -168,7 +198,7 @@ def _comparison_item(
         ptr_clause_id=clause_number,
         ptr_title=_safe_text(clause.title),
         ptr_page=clause.location.page_number if clause.location else None,
-        ptr_requirement_text=_safe_text(clause.body_text or clause.text_content or clause.full_text or ""),
+        ptr_requirement_text=_safe_text(trace.ptr_clause_statement.local_text) or "",
         report_matches=report_match_payloads,
         external_standard_coverage=_safe_payload(external_coverage),
         external_standard_coverages=_safe_payload(external_coverages),
@@ -176,13 +206,22 @@ def _comparison_item(
         atomic_comparison_rows=_safe_payload(atomic_rows),
         coverage_comparison_rows=_coverage_comparison_rows(
             clause=clause,
-            report_matches=report_match_payloads,
+            report_matches=[] if _identity_blocks_binding(clause_identity_alignment) else report_match_payloads,
             status=user_status,
             reason=reason,
+            ptr_requirement=trace.ptr_clause_statement.local_text,
         ),
+        ptr_clause_statement=_safe_payload(trace.ptr_clause_statement),
+        clause_identity_alignment=_safe_payload(trace.clause_identity_alignment),
+        effective_requirements=_safe_payload(trace.effective_requirements),
+        report_requirement_matches=_safe_payload(trace.report_requirement_matches),
+        result_comparisons=_safe_payload(trace.result_comparisons),
+        requirement_alignment=_safe_payload(trace.requirement_alignment),
+        result_compliance=_safe_payload(trace.result_compliance),
+        technical_evidence=_safe_payload(trace.technical_evidence),
         normalized_comparison=_normalized_comparison(
             clause=clause,
-            report_matches=report_matches,
+            report_matches=[] if _identity_blocks_binding(clause_identity_alignment) else report_matches,
             external_coverage=external_coverage,
             atomic_rows=atomic_rows,
             finding=display_finding,
@@ -207,10 +246,11 @@ def _coverage_comparison_rows(
     report_matches: Sequence[PTRReportMatch],
     status: PTRUserFacingStatus,
     reason: str,
+    ptr_requirement: str | None = None,
 ) -> list[PTRCoverageComparisonRow]:
     rows: list[PTRCoverageComparisonRow] = []
     clause_number = str(clause.number)
-    ptr_requirement = _safe_text(clause.body_text or clause.text_content or clause.full_text or "")
+    ptr_requirement = _safe_text(ptr_requirement) or _safe_text(clause.body_text or clause.text_content or clause.full_text or "")
     for match in report_matches:
         row_reason = _coverage_row_reason(clause, match, reason)
         rows.append(
@@ -256,16 +296,55 @@ def _details_from_items(
     ptr_extraction_metadata: dict[str, Any] | None = None,
     report_model_context: dict[str, Any] | None = None,
     ptr_table_registry: list[dict[str, Any]] | None = None,
+    clause_sequence_offset_groups: list[dict[str, Any]] | None = None,
+    section_container_clause_ids: list[str] | None = None,
 ) -> PTRComparisonDetails:
     excluded_items = excluded_items or []
     ptr_extraction_metadata = ptr_extraction_metadata or {}
+    clause_sequence_offset_groups = clause_sequence_offset_groups or []
+    section_container_clause_ids = section_container_clause_ids or []
     ptr_ocr_required = ptr_extraction_metadata.get("ptr_ocr_required") is True
     requirements_count = len(items)
     covered_count = sum(1 for item in items if item.user_facing_status in {PTRUserFacingStatus.COVERED_PASSED, PTRUserFacingStatus.REFUTED})
     missing_count = sum(1 for item in items if item.rule_status == PTRUserFacingStatus.MISSING_IN_REPORT and item.user_facing_status != PTRUserFacingStatus.REFUTED)
-    mismatch_count = sum(1 for item in items if item.rule_status == PTRUserFacingStatus.VALUE_MISMATCH and item.user_facing_status != PTRUserFacingStatus.REFUTED)
+    mismatch_count = sum(
+        1
+        for item in items
+        if item.rule_status == PTRUserFacingStatus.VALUE_MISMATCH
+        and item.user_facing_status
+        not in {
+            PTRUserFacingStatus.REFUTED,
+            PTRUserFacingStatus.NEEDS_POLICY_REVIEW,
+        }
+    )
     confirmed_errors_count = sum(1 for item in items if item.user_facing_status == PTRUserFacingStatus.CONFIRMED_ERROR)
+    confirmed_issue_item_count = sum(
+        1
+        for item in items
+        if item.user_facing_status
+        in {
+            PTRUserFacingStatus.CONFIRMED_ERROR,
+            PTRUserFacingStatus.CONFIRMED_ISSUE,
+        }
+    )
+    aggregated_document_issue_clause_ids = {
+        str(entry.get("ptr") or "")
+        for group in clause_sequence_offset_groups
+        for entry in group.get("affected_clauses") or []
+        if entry.get("ptr")
+    }
+    standalone_document_issue_count = sum(
+        1
+        for item in items
+        if item.user_facing_status == PTRUserFacingStatus.CONFIRMED_DOCUMENT_ISSUE
+        and item.ptr_clause_id not in aggregated_document_issue_clause_ids
+    )
+    confirmed_document_issue_count = len(clause_sequence_offset_groups) + standalone_document_issue_count
+    confirmed_findings_count = confirmed_issue_item_count + confirmed_document_issue_count
     manual_review_required_count = sum(1 for item in items if item.user_facing_status == PTRUserFacingStatus.NEEDS_REVIEW)
+    policy_review_required_count = sum(
+        1 for item in items if item.user_facing_status == PTRUserFacingStatus.NEEDS_POLICY_REVIEW
+    )
     refuted_findings_count = sum(1 for item in items if item.user_facing_status == PTRUserFacingStatus.REFUTED)
     needs_review_count = sum(
         1
@@ -286,7 +365,7 @@ def _details_from_items(
         overall_status = PTRComparisonOverallStatus.AUDIT_INCOMPLETE
     elif confirmed_errors_count > 0:
         overall_status = PTRComparisonOverallStatus.FAILED
-    elif needs_review_count > 0 or missing_count > 0 or mismatch_count > 0:
+    elif confirmed_document_issue_count > 0 or needs_review_count > 0 or policy_review_required_count > 0 or missing_count > 0 or mismatch_count > 0:
         overall_status = PTRComparisonOverallStatus.NEEDS_REVIEW
     else:
         overall_status = PTRComparisonOverallStatus.PASSED
@@ -294,10 +373,14 @@ def _details_from_items(
     if ptr_ocr_required:
         overall_summary = "PTR 文档无文本层，无法解析第 2 章。请启用 OCR/视觉抽取或上传可检索 PDF。"
     else:
-        overall_summary = (
-            f"本次共比对 {requirements_count} 条技术要求，其中 {covered_count} 条已覆盖，"
-            f"{needs_review_count} 条需复核，{missing_count} 条未覆盖。"
-        )
+        summary_parts = [
+            f"本次共比对 {requirements_count} 条技术要求，其中 {covered_count} 条已覆盖",
+            f"{confirmed_findings_count} 条复审确认差异",
+            f"{manual_review_required_count} 条需人工复核",
+            f"{policy_review_required_count} 条标准版本政策待确认",
+            f"{missing_count} 条未覆盖",
+        ]
+        overall_summary = "，".join(summary_parts) + "。"
 
     return PTRComparisonDetails(
         overall_status=overall_status,
@@ -315,8 +398,13 @@ def _details_from_items(
         mismatch_count=mismatch_count,
         needs_review_count=needs_review_count,
         confirmed_errors_count=confirmed_errors_count,
+        confirmed_findings_count=confirmed_findings_count,
+        confirmed_document_issue_count=confirmed_document_issue_count,
         manual_review_required_count=manual_review_required_count,
+        policy_review_required_count=policy_review_required_count,
         refuted_findings_count=refuted_findings_count,
+        clause_sequence_offset_groups=_safe_payload(clause_sequence_offset_groups),
+        section_container_clause_ids=_safe_payload(section_container_clause_ids),
         items=items,
         excluded_items=excluded_items,
     )
@@ -462,8 +550,11 @@ def _user_facing_status(findings: list[Finding]) -> PTRUserFacingStatus:
     statuses = [_status_for_finding(finding) for finding in findings]
     for status in (
         PTRUserFacingStatus.CONFIRMED_ERROR,
+        PTRUserFacingStatus.CONFIRMED_DOCUMENT_ISSUE,
+        PTRUserFacingStatus.CONFIRMED_ISSUE,
         PTRUserFacingStatus.AUDIT_INCOMPLETE,
         PTRUserFacingStatus.NEEDS_REVIEW,
+        PTRUserFacingStatus.NEEDS_POLICY_REVIEW,
         PTRUserFacingStatus.CANDIDATE_ISSUE,
         PTRUserFacingStatus.REFUTED,
     ):
@@ -473,9 +564,24 @@ def _user_facing_status(findings: list[Finding]) -> PTRUserFacingStatus:
 
 
 def _status_for_finding(finding: Finding) -> PTRUserFacingStatus:
+    if finding.metadata.get("policy_review_required") is True:
+        return PTRUserFacingStatus.NEEDS_POLICY_REVIEW
     final_status = finding.metadata.get("final_status")
+    if finding.metadata.get("aggregate_child") is True:
+        if final_status == "confirmed":
+            return PTRUserFacingStatus.CONFIRMED_DOCUMENT_ISSUE
+        if final_status == "refuted":
+            return PTRUserFacingStatus.REFUTED
+    if final_status == "confirmed_document_issue":
+        return PTRUserFacingStatus.CONFIRMED_DOCUMENT_ISSUE
     if final_status == "confirmed":
-        return PTRUserFacingStatus.CONFIRMED_ERROR if finding.severity == FindingSeverity.ERROR else PTRUserFacingStatus.NEEDS_REVIEW
+        if finding.code == "PTR_CLAUSE_IDENTITY_MISMATCH" and _is_confirmed_identity_conflict(finding):
+            return PTRUserFacingStatus.CONFIRMED_ERROR
+        if finding.code == "PTR_REPORT_CLAUSE_NUMBER_MISMATCH":
+            return PTRUserFacingStatus.CONFIRMED_DOCUMENT_ISSUE
+        if finding.severity == FindingSeverity.ERROR:
+            return PTRUserFacingStatus.CONFIRMED_ERROR
+        return PTRUserFacingStatus.NEEDS_REVIEW
     if final_status == "refuted":
         return PTRUserFacingStatus.REFUTED
     if final_status == "manual_review_required":
@@ -498,6 +604,12 @@ def _display_final_status(user_status: PTRUserFacingStatus) -> PTRDisplayFinalSt
         return PTRDisplayFinalStatus.PASSED
     if user_status == PTRUserFacingStatus.CONFIRMED_ERROR:
         return PTRDisplayFinalStatus.CONFIRMED_ERROR
+    if user_status == PTRUserFacingStatus.CONFIRMED_DOCUMENT_ISSUE:
+        return PTRDisplayFinalStatus.CONFIRMED_DOCUMENT_ISSUE
+    if user_status == PTRUserFacingStatus.CONFIRMED_ISSUE:
+        return PTRDisplayFinalStatus.CONFIRMED_ISSUE
+    if user_status == PTRUserFacingStatus.NEEDS_POLICY_REVIEW:
+        return PTRDisplayFinalStatus.NEEDS_POLICY_REVIEW
     if user_status == PTRUserFacingStatus.REFUTED:
         return PTRDisplayFinalStatus.REFUTED
     if user_status == PTRUserFacingStatus.AUDIT_INCOMPLETE:
@@ -505,6 +617,70 @@ def _display_final_status(user_status: PTRUserFacingStatus) -> PTRDisplayFinalSt
     if user_status == PTRUserFacingStatus.CANDIDATE_ISSUE:
         return PTRDisplayFinalStatus.CANDIDATE_ISSUE
     return PTRDisplayFinalStatus.MANUAL_REVIEW_REQUIRED
+
+
+def _status_with_trace(
+    current_status: PTRUserFacingStatus,
+    trace: PTRComparisonTrace,
+    *,
+    has_report_group: bool,
+) -> PTRUserFacingStatus:
+    if current_status in {
+        PTRUserFacingStatus.CONFIRMED_ERROR,
+        PTRUserFacingStatus.CONFIRMED_DOCUMENT_ISSUE,
+        PTRUserFacingStatus.CONFIRMED_ISSUE,
+        PTRUserFacingStatus.REFUTED,
+        PTRUserFacingStatus.AUDIT_INCOMPLETE,
+        PTRUserFacingStatus.NEEDS_REVIEW,
+        PTRUserFacingStatus.NEEDS_POLICY_REVIEW,
+    }:
+        return current_status
+    identity = trace.clause_identity_alignment
+    if identity is not None:
+        if identity.status in {"identity_mismatch", "ambiguous", "missing", "semantic_match_number_mismatch"}:
+            return PTRUserFacingStatus.NEEDS_REVIEW
+    alignment = trace.requirement_alignment.status
+    compliance = trace.result_compliance.status
+    if alignment == "needs_policy_review":
+        return PTRUserFacingStatus.NEEDS_POLICY_REVIEW
+    if alignment == "mismatch" or compliance == "mismatch":
+        return PTRUserFacingStatus.VALUE_MISMATCH
+    if alignment == "needs_review" or compliance == "needs_review":
+        if has_report_group and not trace.result_comparisons:
+            return PTRUserFacingStatus.COVERAGE_ONLY_NEEDS_REVIEW
+        return PTRUserFacingStatus.NEEDS_REVIEW
+    if alignment in {"equivalent", "not_applicable"} and compliance in {"match", "not_applicable"}:
+        if current_status in {
+            PTRUserFacingStatus.COVERED_PASSED,
+            PTRUserFacingStatus.COVERAGE_ONLY_NEEDS_REVIEW,
+        }:
+            return PTRUserFacingStatus.COVERED_PASSED
+    return current_status
+
+
+def _is_confirmed_identity_conflict(finding: Finding) -> bool:
+    alignment_status = finding.metadata.get("clause_identity_status")
+    selected_report_clause = finding.metadata.get("selected_report_clause_number")
+    return alignment_status == "identity_mismatch" and not selected_report_clause
+
+
+def _clause_identity_alignment(
+    ptr_doc: PTRDocument,
+    clause_number: str,
+) -> ClauseIdentityAlignment | None:
+    raw_alignments = ptr_doc.metadata.get("clause_identity_alignments")
+    if not isinstance(raw_alignments, dict):
+        return None
+    raw_alignment = raw_alignments.get(clause_number)
+    if isinstance(raw_alignment, ClauseIdentityAlignment):
+        return raw_alignment
+    if not isinstance(raw_alignment, dict):
+        return None
+    return ClauseIdentityAlignment.model_validate(raw_alignment)
+
+
+def _identity_blocks_binding(alignment: ClauseIdentityAlignment | None) -> bool:
+    return alignment is not None and alignment.status in {"identity_mismatch", "ambiguous", "missing"}
 
 
 def _status_from_atomic_rows(
@@ -879,7 +1055,19 @@ def _reason(
     if user_status == PTRUserFacingStatus.REFUTED:
         return _safe_text(f"Codex 复审认为规则初筛候选不成立，候选问题已排除。规则初筛：{finding.message}")
     if user_status == PTRUserFacingStatus.CONFIRMED_ERROR:
+        if finding.code == "PTR_CLAUSE_IDENTITY_MISMATCH":
+            return _safe_text("PTR条款与报告同编号条款名称和参数不一致，不能作为同一检验项目。")
         return _safe_text(f"Codex 复审确认规则初筛问题。{_rule_reason(rule_status, finding, search_keywords, candidate_items)}")
+    if user_status == PTRUserFacingStatus.CONFIRMED_DOCUMENT_ISSUE:
+        if finding.code == "PTR_REPORT_CLAUSE_NUMBER_MISMATCH":
+            return _safe_text(f"报告条款内容与 PTR 对应，但编号存在整体偏移。{finding.message}")
+        return _safe_text(finding.message)
+    if user_status == PTRUserFacingStatus.CONFIRMED_ISSUE:
+        reasoning = _codex_reasoning_summary(finding)
+        detail = reasoning or _rule_reason(rule_status, finding, search_keywords, candidate_items)
+        return _safe_text(f"Codex 复审已确认该条款差异。{detail}")
+    if user_status == PTRUserFacingStatus.NEEDS_POLICY_REVIEW:
+        return _safe_text("PTR 与报告引用同一标准体系的不同年份版本，需按标准替代政策确认适用性。")
     if user_status == PTRUserFacingStatus.NEEDS_REVIEW:
         return _safe_text(f"Codex 复审未能确认或排除，需要人工复核。{_rule_reason(rule_status, finding, search_keywords, candidate_items)}")
     if user_status == PTRUserFacingStatus.AUDIT_INCOMPLETE:

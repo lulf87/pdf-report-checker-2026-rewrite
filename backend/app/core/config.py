@@ -3,8 +3,15 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.application.codex_model_config import (
+    normalize_codex_model,
+    normalize_codex_reasoning_effort,
+    parse_codex_model_options,
+    parse_codex_reasoning_effort_options,
+)
 
 
 class Settings(BaseSettings):
@@ -72,6 +79,22 @@ class Settings(BaseSettings):
         default="codex",
         description="Codex CLI executable used by mandatory local runtime audit.",
     )
+    codex_audit_model: str | None = Field(
+        default="gpt-5.6-terra",
+        description="Default model passed explicitly to Codex CLI audit with --model.",
+    )
+    codex_audit_model_options: str | None = Field(
+        default="gpt-5.6-terra,gpt-5.6-luna,gpt-5.6-sol",
+        description="Optional comma-separated Codex model identifiers exposed as frontend presets.",
+    )
+    codex_audit_reasoning_effort: str = Field(
+        default="medium",
+        description="Default reasoning effort passed explicitly to Codex CLI audit.",
+    )
+    codex_audit_reasoning_effort_options: str = Field(
+        default="low,medium,high,xhigh,max",
+        description="Comma-separated reasoning effort values exposed to the frontend.",
+    )
     codex_audit_enabled: bool = Field(
         default=True,
         description="Deprecated compatibility field; product runtime always requires Codex CLI audit.",
@@ -85,7 +108,7 @@ class Settings(BaseSettings):
         description="Deprecated compatibility field; product runtime requires real local Codex CLI execution.",
     )
     codex_audit_timeout_seconds: int = Field(
-        default=900,
+        default=600,
         ge=1,
         description="Timeout in seconds for real Codex CLI audit execution.",
     )
@@ -94,11 +117,11 @@ class Settings(BaseSettings):
         description="Maximum Codex audit targets emitted for one business task; <=0 disables audit target emission.",
     )
     codex_audit_max_targets_per_batch: int = Field(
-        default=5,
+        default=3,
         description="Maximum Codex audit targets emitted for the current batch; <=0 disables audit target emission.",
     )
     codex_audit_max_parallel_jobs: int = Field(
-        default=1,
+        default=2,
         ge=1,
         description="Maximum number of independent Codex audit packages reviewed concurrently.",
     )
@@ -131,6 +154,10 @@ class Settings(BaseSettings):
         default="runtime/codex_audit_cache",
         description="Runtime root for schema-valid succeeded Codex audit review cache entries.",
     )
+    task_repository_dir: str = Field(
+        default="runtime/tasks",
+        description="Runtime directory for restart-safe task state and result storage.",
+    )
     codex_audit_sandbox: Literal["read-only"] = Field(
         default="read-only",
         description="Codex CLI sandbox mode. Product runtime only supports read-only.",
@@ -139,6 +166,28 @@ class Settings(BaseSettings):
         default=True,
         description="Whether Codex CLI audit runs with --ephemeral.",
     )
+
+    @field_validator("codex_audit_model", mode="before")
+    @classmethod
+    def validate_codex_audit_model(cls, value: object) -> str | None:
+        return normalize_codex_model(value)
+
+    @field_validator("codex_audit_model_options", mode="before")
+    @classmethod
+    def validate_codex_audit_model_options(cls, value: object) -> object:
+        parse_codex_model_options(value)
+        return value
+
+    @field_validator("codex_audit_reasoning_effort", mode="before")
+    @classmethod
+    def validate_codex_audit_reasoning_effort(cls, value: object) -> str:
+        return normalize_codex_reasoning_effort(value) or "medium"
+
+    @field_validator("codex_audit_reasoning_effort_options", mode="before")
+    @classmethod
+    def validate_codex_audit_reasoning_effort_options(cls, value: object) -> object:
+        parse_codex_reasoning_effort_options(value)
+        return value
 
     model_config = SettingsConfigDict(
         env_file=".env",

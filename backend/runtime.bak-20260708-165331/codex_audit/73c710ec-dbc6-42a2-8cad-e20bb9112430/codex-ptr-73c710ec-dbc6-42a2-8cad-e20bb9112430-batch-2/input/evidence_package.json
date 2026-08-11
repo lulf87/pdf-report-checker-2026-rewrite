@@ -1,0 +1,370 @@
+{
+  "package_id": "codex-ptr-73c710ec-dbc6-42a2-8cad-e20bb9112430-batch-2",
+  "task_id": "73c710ec-dbc6-42a2-8cad-e20bb9112430",
+  "task_type": "ptr_compare",
+  "kind": "ptr_table_review",
+  "schema_version": "evidence-package-v1",
+  "created_at": "2026-07-05T02:35:30.960883Z",
+  "targets": [
+    {
+      "target_id": "ptr_review:73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_CLAUSE:2.2.1:missing",
+      "target_type": "ptr_clause",
+      "check_id": "PTR_CLAUSE",
+      "finding_id": "73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_CLAUSE:2.2.1:missing",
+      "finding_code": "PTR_CLAUSE_MISSING",
+      "summary": "报告标准要求中未找到 PTR 条款 2.2.1。",
+      "evidence_refs": [
+        "finding:73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_CLAUSE:2.2.1:missing",
+        "rule_context:73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_CLAUSE:2.2.1:missing",
+        "ptr_clause:ptr-2.2.1"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "clause_number": "2.2.1",
+        "table_number": null,
+        "parameter_name": null
+      }
+    },
+    {
+      "target_id": "ptr_review:73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_TABLE:2.1.7:table-4:missing",
+      "target_type": "ptr_table",
+      "check_id": "PTR_TABLE",
+      "finding_id": "73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_TABLE:2.1.7:table-4:missing",
+      "finding_code": "PTR_TABLE_MISSING",
+      "summary": "PTR 条款 2.1.7 引用的表 4 未找到。",
+      "evidence_refs": [
+        "finding:73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_TABLE:2.1.7:table-4:missing",
+        "rule_context:73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_TABLE:2.1.7:table-4:missing",
+        "ptr_clause:ptr-2.1.7"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_TABLE_MISSING",
+        "clause_number": "2.1.7",
+        "table_number": "4",
+        "parameter_name": null
+      }
+    }
+  ],
+  "items": [
+    {
+      "ref_id": "finding:73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_CLAUSE:2.2.1:missing",
+      "source_type": "finding",
+      "title": "报告标准要求中未找到 PTR 条款 2.2.1。",
+      "text": null,
+      "structured": {
+        "id": "73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_CLAUSE:2.2.1:missing",
+        "task_id": "73c710ec-dbc6-42a2-8cad-e20bb9112430",
+        "check_id": "PTR_CLAUSE",
+        "severity": "error",
+        "code": "PTR_CLAUSE_MISSING",
+        "message": "报告标准要求中未找到 PTR 条款 2.2.1。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 3,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "心脏脉冲电场消融仪输出心脏脉冲电场消融仪应至少能够提供: 电压:3333V(峰值)电流:57A(峰值)",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-clause-2.2.1",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 3,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "心脏脉冲电场消融仪输出\n心脏脉冲电场消融仪应至少能够提供：\n电压：3333V（峰值）\n电流：57A（峰值）",
+            "normalized_text": "心脏脉冲电场消融仪输出心脏脉冲电场消融仪应至少能够提供: 电压:3333V(峰值)电流:57A(峰值)",
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "报告标准要求",
+            "reason": "未找到标准条款 2.2.1 对应的报告条款正文。",
+            "expected_source": "report",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.2.1"
+        }
+      },
+      "file_path": null,
+      "page_number": 3,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 3,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_CLAUSE:2.2.1:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_CLAUSE:2.2.1:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_CLAUSE:2.2.1:missing",
+        "check_id": "PTR_CLAUSE",
+        "code": "PTR_CLAUSE_MISSING",
+        "severity": "error",
+        "message": "报告标准要求中未找到 PTR 条款 2.2.1。",
+        "expected": "心脏脉冲电场消融仪输出心脏脉冲电场消融仪应至少能够提供: 电压:3333V(峰值)电流:57A(峰值)",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.2.1"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_CLAUSE:2.2.1:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.2.1",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.2.1",
+      "text": "心脏脉冲电场消融仪输出\n心脏脉冲电场消融仪应至少能够提供：\n电压：3333V（峰值）\n电流：57A（峰值）",
+      "structured": {
+        "clause_id": "ptr-2.2.1",
+        "number": "2.2.1",
+        "title": "心脏脉冲电场消融仪输出",
+        "body_text": "心脏脉冲电场消融仪输出\n心脏脉冲电场消融仪应至少能够提供：\n电压：3333V（峰值）\n电流：57A（峰值）",
+        "table_numbers": [],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 3,
+      "section": "2.2.1",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 3,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.2.1",
+        "clause_number": "2.2.1"
+      }
+    },
+    {
+      "ref_id": "finding:73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_TABLE:2.1.7:table-4:missing",
+      "source_type": "finding",
+      "title": "PTR 条款 2.1.7 引用的表 4 未找到。",
+      "text": null,
+      "structured": {
+        "id": "73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_TABLE:2.1.7:table-4:missing",
+        "task_id": "73c710ec-dbc6-42a2-8cad-e20bb9112430",
+        "check_id": "PTR_TABLE",
+        "severity": "error",
+        "code": "PTR_TABLE_MISSING",
+        "message": "PTR 条款 2.1.7 引用的表 4 未找到。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 2,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "表4",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-2.1.7:table-reference",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 2,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "控制参数\n射频消融仪短持续时间控制参数应符合表 4 的要求：\n表 4 短持续时间控制参数",
+            "normalized_text": null,
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "表4",
+            "reason": "PTR 文档中未找到对应表格。",
+            "expected_source": "ptr",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.1.7",
+          "table_number": "4"
+        }
+      },
+      "file_path": null,
+      "page_number": 2,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 2,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_TABLE:2.1.7:table-4:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_TABLE:2.1.7:table-4:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_TABLE:2.1.7:table-4:missing",
+        "check_id": "PTR_TABLE",
+        "code": "PTR_TABLE_MISSING",
+        "severity": "error",
+        "message": "PTR 条款 2.1.7 引用的表 4 未找到。",
+        "expected": "表4",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.1.7",
+          "table_number": "4"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "73c710ec-dbc6-42a2-8cad-e20bb9112430:PTR_TABLE:2.1.7:table-4:missing",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_TABLE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.1.7",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.1.7",
+      "text": "控制参数\n射频消融仪短持续时间控制参数应符合表 4 的要求：\n表 4 短持续时间控制参数",
+      "structured": {
+        "clause_id": "ptr-2.1.7",
+        "number": "2.1.7",
+        "title": "控制参数",
+        "body_text": "控制参数\n射频消融仪短持续时间控制参数应符合表 4 的要求：\n表 4 短持续时间控制参数",
+        "table_numbers": [
+          "4"
+        ],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 2,
+      "section": "2.1.7",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 2,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.1.7",
+        "clause_number": "2.1.7"
+      }
+    }
+  ],
+  "metadata": {
+    "source": "ptr_compare_usecase",
+    "deterministic_finding_count": 12,
+    "target_count": 2,
+    "total_candidate_targets": 12,
+    "emitted_targets": 2,
+    "truncated": false,
+    "omitted_targets_count": 0,
+    "target_offset": 10,
+    "batch_index": 2,
+    "batch_size": 2,
+    "max_targets_per_task": 5,
+    "max_targets_per_batch": 5
+  }
+}

@@ -1,0 +1,625 @@
+{
+  "cache_key": "9ca4913bd36c5ca58277400b7fb3c3e6c4127a912eb1f9deaf84cee7fb956074",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-99ff98c8-af45-4302-b934-7327bc6529c0-ptr-batch-4-ptr_review:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+      "request_id": "codex-request-99ff98c8-af45-4302-b934-7327bc6529c0-ptr-batch-4",
+      "task_id": "99ff98c8-af45-4302-b934-7327bc6529c0",
+      "target": {
+        "target_id": "ptr_review:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.6 的参数 射频消融仪 - 与心脏脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器、三维导航通信 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 159 未稳定展开表格功能明细需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:159",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.6",
+          "table_number": null,
+          "parameter_name": null,
+          "atomic_id": "2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信"
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "medium",
+      "reasoning_summary": "ptr_clause:ptr-2.6 要求该射频消融仪通信功能；report_inspection_group:159 的2.6续表列出同一功能项并给出行内“——”及同组符合结论，反驳 rule_context 中 actual=null 的未绑定初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+        "rule_context:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+        "ptr_clause:ptr-2.6",
+        "report_inspection_group:159"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T10:28:02.081468Z",
+      "completed_at": "2026-07-06T10:28:02.081468Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "report_inspection_group:159",
+            "expected_value": "射频消融仪 - 与心脏脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器和电生理三维导航系统通信",
+            "field_name": "PTR功能项绑定",
+            "observed_value": "报告序号159的2.6续表列出同一功能项，行内检验结果为“——”，同组软件功能项目有“符合”结论。",
+            "reasoning": "报告完整group和2.6窗口中可定位到该功能项，不支持“未完成报告结果结构化绑定”的初判；但“——”本身不在此处扩展判定为新的符合/不符合问题。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-output-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 272.853496,
+        "exit_code": 0,
+        "stdout_size_bytes": 6278,
+        "stderr_size_bytes": 192097,
+        "output_size_bytes": 6277,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-99ff98c8-af45-4302-b934-7327bc6529c0-batch-4",
+          "check_id": "PTR_TABLE",
+          "target_count": 4,
+          "evidence_write_seconds": 0.001731,
+          "evidence_package_size_bytes": 135510,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "externalized_text_count": 0,
+          "image_materialization_seconds": 1e-06,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 1e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001301,
+          "prompt_size_bytes": 33984,
+          "schema_prepare_seconds": 0.000373,
+          "codex_exec_seconds": 272.853496,
+          "result_validation_seconds": 2.2e-05
+        },
+        "cache_key": "9ca4913bd36c5ca58277400b7fb3c3e6c4127a912eb1f9deaf84cee7fb956074"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-99ff98c8-af45-4302-b934-7327bc6529c0-ptr-batch-4-ptr_review:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---阻抗监测:unbound",
+      "request_id": "codex-request-99ff98c8-af45-4302-b934-7327bc6529c0-ptr-batch-4",
+      "task_id": "99ff98c8-af45-4302-b934-7327bc6529c0",
+      "target": {
+        "target_id": "ptr_review:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---阻抗监测:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---阻抗监测:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.6 的参数 心脏脉冲电场消融仪 - 阻抗监测 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 159 未稳定展开表格功能明细需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---阻抗监测:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---阻抗监测:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:159",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.6",
+          "table_number": null,
+          "parameter_name": null,
+          "atomic_id": "2.6:table6:心脏脉冲电场消融仪---阻抗监测"
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "ptr_clause:ptr-2.6 列明心脏脉冲电场消融仪需具备阻抗监测；report_inspection_group:159 明确出现“阻抗监测 符合要求”，反驳未绑定初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---阻抗监测:unbound",
+        "rule_context:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---阻抗监测:unbound",
+        "ptr_clause:ptr-2.6",
+        "report_inspection_group:159"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T10:28:02.081468Z",
+      "completed_at": "2026-07-06T10:28:02.081468Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "report_inspection_group:159",
+            "expected_value": "心脏脉冲电场消融仪 - 阻抗监测",
+            "field_name": "PTR功能项绑定",
+            "observed_value": "报告序号159的2.6续表列出“心脏脉冲电场消融仪 阻抗监测 符合要求”。",
+            "reasoning": "报告完整group明确给出该功能项及“符合要求”结果，与未绑定 actual=null 初判冲突。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-output-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 272.853496,
+        "exit_code": 0,
+        "stdout_size_bytes": 6278,
+        "stderr_size_bytes": 192097,
+        "output_size_bytes": 6277,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-99ff98c8-af45-4302-b934-7327bc6529c0-batch-4",
+          "check_id": "PTR_TABLE",
+          "target_count": 4,
+          "evidence_write_seconds": 0.001731,
+          "evidence_package_size_bytes": 135510,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "externalized_text_count": 0,
+          "image_materialization_seconds": 1e-06,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 1e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001301,
+          "prompt_size_bytes": 33984,
+          "schema_prepare_seconds": 0.000373,
+          "codex_exec_seconds": 272.853496,
+          "result_validation_seconds": 2.2e-05
+        },
+        "cache_key": "9ca4913bd36c5ca58277400b7fb3c3e6c4127a912eb1f9deaf84cee7fb956074"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-99ff98c8-af45-4302-b934-7327bc6529c0-ptr-batch-4-ptr_review:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---温度监测:unbound",
+      "request_id": "codex-request-99ff98c8-af45-4302-b934-7327bc6529c0-ptr-batch-4",
+      "task_id": "99ff98c8-af45-4302-b934-7327bc6529c0",
+      "target": {
+        "target_id": "ptr_review:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---温度监测:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---温度监测:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.6 的参数 心脏脉冲电场消融仪 - 温度监测 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 159 未稳定展开表格功能明细需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---温度监测:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---温度监测:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:159",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.6",
+          "table_number": null,
+          "parameter_name": null,
+          "atomic_id": "2.6:table6:心脏脉冲电场消融仪---温度监测"
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "ptr_clause:ptr-2.6 列明心脏脉冲电场消融仪需具备温度监测；report_inspection_group:159 明确出现“温度监测 符合要求”，反驳未绑定初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---温度监测:unbound",
+        "rule_context:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---温度监测:unbound",
+        "ptr_clause:ptr-2.6",
+        "report_inspection_group:159"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T10:28:02.081468Z",
+      "completed_at": "2026-07-06T10:28:02.081468Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "report_inspection_group:159",
+            "expected_value": "心脏脉冲电场消融仪 - 温度监测",
+            "field_name": "PTR功能项绑定",
+            "observed_value": "报告序号159的2.6续表列出“温度监测 符合要求”。",
+            "reasoning": "报告完整group明确给出该功能项及“符合要求”结果，与未绑定 actual=null 初判冲突。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-output-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 272.853496,
+        "exit_code": 0,
+        "stdout_size_bytes": 6278,
+        "stderr_size_bytes": 192097,
+        "output_size_bytes": 6277,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-99ff98c8-af45-4302-b934-7327bc6529c0-batch-4",
+          "check_id": "PTR_TABLE",
+          "target_count": 4,
+          "evidence_write_seconds": 0.001731,
+          "evidence_package_size_bytes": 135510,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "externalized_text_count": 0,
+          "image_materialization_seconds": 1e-06,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 1e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001301,
+          "prompt_size_bytes": 33984,
+          "schema_prepare_seconds": 0.000373,
+          "codex_exec_seconds": 272.853496,
+          "result_validation_seconds": 2.2e-05
+        },
+        "cache_key": "9ca4913bd36c5ca58277400b7fb3c3e6c4127a912eb1f9deaf84cee7fb956074"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-99ff98c8-af45-4302-b934-7327bc6529c0-ptr-batch-4-ptr_review:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---与射频消融仪-导管接口单元CIU通信:unbound",
+      "request_id": "codex-request-99ff98c8-af45-4302-b934-7327bc6529c0-ptr-batch-4",
+      "task_id": "99ff98c8-af45-4302-b934-7327bc6529c0",
+      "target": {
+        "target_id": "ptr_review:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---与射频消融仪-导管接口单元CIU通信:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---与射频消融仪-导管接口单元CIU通信:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.6 的参数 心脏脉冲电场消融仪 - 与射频消融仪、导管接口单元CIU通信 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 159 未稳定展开表格功能明细需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---与射频消融仪-导管接口单元CIU通信:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---与射频消融仪-导管接口单元CIU通信:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:159",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.6",
+          "table_number": null,
+          "parameter_name": null,
+          "atomic_id": "2.6:table6:心脏脉冲电场消融仪---与射频消融仪-导管接口单元CIU通信"
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "ptr_clause:ptr-2.6 列明心脏脉冲电场消融仪需与射频消融仪、导管接口单元CIU通信；report_inspection_group:159 明确出现该项“符合要求”，反驳未绑定初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---与射频消融仪-导管接口单元CIU通信:unbound",
+        "rule_context:99ff98c8-af45-4302-b934-7327bc6529c0:PTR_ATOMIC:2.6:2.6:table6:心脏脉冲电场消融仪---与射频消融仪-导管接口单元CIU通信:unbound",
+        "ptr_clause:ptr-2.6",
+        "report_inspection_group:159"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T10:28:02.081468Z",
+      "completed_at": "2026-07-06T10:28:02.081468Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "report_inspection_group:159",
+            "expected_value": "心脏脉冲电场消融仪 - 与射频消融仪、导管接口单元CIU通信",
+            "field_name": "PTR功能项绑定",
+            "observed_value": "报告序号159的2.6续表列出“与射频消融仪、导管接口单元 CIU通信 符合要求”。",
+            "reasoning": "报告完整group明确给出该功能项及“符合要求”结果，与未绑定 actual=null 初判冲突。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-output-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 272.853496,
+        "exit_code": 0,
+        "stdout_size_bytes": 6278,
+        "stderr_size_bytes": 192097,
+        "output_size_bytes": 6277,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-99ff98c8-af45-4302-b934-7327bc6529c0-batch-4",
+          "check_id": "PTR_TABLE",
+          "target_count": 4,
+          "evidence_write_seconds": 0.001731,
+          "evidence_package_size_bytes": 135510,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "externalized_text_count": 0,
+          "image_materialization_seconds": 1e-06,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 1e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001301,
+          "prompt_size_bytes": 33984,
+          "schema_prepare_seconds": 0.000373,
+          "codex_exec_seconds": 272.853496,
+          "result_validation_seconds": 2.2e-05
+        },
+        "cache_key": "9ca4913bd36c5ca58277400b7fb3c3e6c4127a912eb1f9deaf84cee7fb956074"
+      }
+    }
+  ]
+}

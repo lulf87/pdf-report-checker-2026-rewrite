@@ -122,6 +122,27 @@ def test_inspection_items_without_cell_bboxes_keep_existing_behavior() -> None:
     assert extracted[0].conclusion == "符合"
 
 
+def test_inspection_items_preserve_pdf_and_printed_report_page_numbers() -> None:
+    table = _table(
+        84,
+        [HEADERS, ["132", "电压限制", "201.8.4", "应符合要求", "——", "/", "/"]],
+        metadata={"row_alignment_methods": ["native_geometry", "native_geometry"]},
+    )
+    parsed = _parsed_pdf(
+        PdfPage(
+            page_number=84,
+            text="报告编号：QW2026 第145号 共 102 页 第 82 页",
+            tables=[table],
+        )
+    )
+
+    extracted = InspectionTableExtractor().extract_items(parsed)
+
+    assert extracted[0].metadata["pdf_page_number"] == 84
+    assert extracted[0].metadata["report_page_number"] == 82
+    assert extracted[0].metadata["source_row_alignment"] == "native_geometry"
+
+
 def test_keeps_blank_sequence_rows_as_logical_continuations() -> None:
     parsed = _parsed_pdf(
         PdfPage(

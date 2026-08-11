@@ -33,12 +33,31 @@ async def create_ptr_compare_task(
     max_targets_per_batch: int | None = Form(default=None),
     max_parallel_jobs: int | None = Form(default=None),
     timeout_seconds: int | None = Form(default=None),
+    codex_profile: str | None = Form(default=None),
+    codex_model: str | None = Form(default=None),
+    codex_reasoning_effort: str | None = Form(default=None),
     usecase: PTRCompareUseCase = Depends(get_ptr_compare_usecase),
 ):
     _validate_pdf_upload(ptr_file)
     _validate_pdf_upload(report_file)
     ptr_content = await ptr_file.read()
     report_content = await report_file.read()
+    try:
+        audit_options = compact_audit_options_dict(
+            {
+                "profile": codex_profile,
+                "included_check_ids": included_check_ids,
+                "included_finding_codes": included_finding_codes,
+                "excluded_check_ids": excluded_check_ids,
+                "max_targets_per_batch": max_targets_per_batch,
+                "max_parallel_jobs": max_parallel_jobs,
+                "timeout_seconds": timeout_seconds,
+                "model": codex_model,
+                "reasoning_effort": codex_reasoning_effort,
+            }
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     task = usecase.submit(
         ptr_file_name=ptr_file.filename or "ptr.pdf",
         ptr_content=ptr_content,
@@ -46,16 +65,7 @@ async def create_ptr_compare_task(
         report_file_name=report_file.filename or "report.pdf",
         report_content=report_content,
         report_content_type=report_file.content_type or "application/pdf",
-        audit_options=compact_audit_options_dict(
-            {
-                "included_check_ids": included_check_ids,
-                "included_finding_codes": included_finding_codes,
-                "excluded_check_ids": excluded_check_ids,
-                "max_targets_per_batch": max_targets_per_batch,
-                "max_parallel_jobs": max_parallel_jobs,
-                "timeout_seconds": timeout_seconds,
-            }
-        ),
+        audit_options=audit_options,
     )
     if task.status == TaskState.PROCESSING:
         background_tasks.add_task(usecase.process_task, task.task_id)

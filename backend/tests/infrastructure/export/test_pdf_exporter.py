@@ -1,5 +1,6 @@
 import fitz
 
+from app.domain.result import CheckResult, CheckStatus
 from app.infrastructure.export.pdf_exporter import export_check_results_to_pdf
 from tests.fixtures.export_result_builder import sample_check_results
 
@@ -48,6 +49,61 @@ def test_pdf_exporter_handles_empty_findings_without_crashing() -> None:
 
     assert pdf_bytes[:4] == b"%PDF"
     assert "空结果导出" in _extract_pdf_text(pdf_bytes)
+
+
+def test_pdf_final_view_omits_audit_candidate_and_refuted_metrics() -> None:
+    pdf_bytes = export_check_results_to_pdf(
+        sample_check_results(task_id="task-final-pdf"),
+        task_id="task-final-pdf",
+        view="final",
+    )
+
+    text = _extract_pdf_text(pdf_bytes)
+    assert "confirmed_errors_count" in text
+    assert "manual_review_required_count" in text
+    assert "candidate_errors_count" not in text
+    assert "refuted_findings_count" not in text
+    assert "deterministic_status" not in text
+    assert "Codex" not in text
+
+
+def test_pdf_final_view_includes_final_comparison_details() -> None:
+    result = CheckResult(
+        task_id="task-final-detail-pdf",
+        check_id="C03",
+        check_name="生产日期格式一致性",
+        status=CheckStatus.PASS,
+        metadata={
+            "final_comparison_details": {
+                "title": "生产日期格式一致性",
+                "overall_status": "passed",
+                "overall_reason": "报告首页与中文标签图像一致。",
+                "fields": [
+                    {
+                        "field_key": "production_date",
+                        "field_label": "生产日期",
+                        "status": "match",
+                        "reason": "两处日期一致。",
+                        "left": {"label": "报告首页摘录", "raw_text": "2026-01-08"},
+                        "right": {"label": "中文标签图像摘录", "raw_text": "2026-01-08"},
+                    }
+                ],
+            }
+        },
+    )
+
+    pdf_bytes = export_check_results_to_pdf(
+        [result],
+        task_id="task-final-detail-pdf",
+        view="final",
+    )
+
+    text = _extract_pdf_text(pdf_bytes)
+    compact_text = text.replace(" ", "")
+    assert "生产日期格式一致性" in text
+    assert "报告首页与中文标签图像一致" in text
+    assert "2026-01-08" in compact_text
+    assert "两处日期一致" in text
 
 
 def test_pdf_exporter_includes_ptr_comparison_summary_and_clause_details() -> None:

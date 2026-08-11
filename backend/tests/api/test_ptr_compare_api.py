@@ -133,18 +133,57 @@ def test_ptr_compare_upload_passes_audit_options_to_usecase() -> None:
             "max_targets_per_batch": "1",
             "max_parallel_jobs": "2",
             "timeout_seconds": "900",
+            "codex_profile": "custom",
+            "codex_model": "gpt-5.4/custom:model_1",
+            "codex_reasoning_effort": "xhigh",
         },
     )
 
     assert response.status_code == 200
     assert fake_usecase.calls[0]["audit_options"] == {
+        "profile": "custom",
         "included_check_ids": ["PTR_TABLE"],
         "included_finding_codes": ["PTR_TABLE_VALUE_MISMATCH"],
         "excluded_check_ids": ["PTR_SCOPE"],
         "max_targets_per_batch": 1,
         "max_parallel_jobs": 2,
         "timeout_seconds": 900,
+        "model": "gpt-5.4/custom:model_1",
+        "reasoning_effort": "xhigh",
     }
+
+
+def test_ptr_compare_upload_rejects_unsafe_codex_model() -> None:
+    client, fake_usecase = _client_with_fake_usecase()
+
+    response = client.post(
+        "/api/tasks/ptr-compare",
+        files={
+            "ptr_file": ("ptr.pdf", b"%PDF-1.4 ptr", "application/pdf"),
+            "report_file": ("report.pdf", b"%PDF-1.4 report", "application/pdf"),
+        },
+        data={"codex_model": "--sandbox"},
+    )
+
+    assert response.status_code == 422
+    assert "Codex model" in response.json()["detail"]
+
+
+def test_ptr_compare_upload_rejects_unknown_reasoning_effort() -> None:
+    client, fake_usecase = _client_with_fake_usecase()
+
+    response = client.post(
+        "/api/tasks/ptr-compare",
+        files={
+            "ptr_file": ("ptr.pdf", b"%PDF-1.4 ptr", "application/pdf"),
+            "report_file": ("report.pdf", b"%PDF-1.4 report", "application/pdf"),
+        },
+        data={"codex_reasoning_effort": "ultra"},
+    )
+
+    assert response.status_code == 422
+    assert "reasoning effort" in response.json()["detail"]
+    assert fake_usecase.calls == []
 
 
 def test_ptr_compare_upload_rejects_non_pdf_before_usecase() -> None:

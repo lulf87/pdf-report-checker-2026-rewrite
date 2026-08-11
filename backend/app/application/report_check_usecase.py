@@ -130,7 +130,11 @@ class ReportCheckUseCase:
         options = CodexAuditOptions.from_raw(audit_options)
         task = self.task_service.create_task(
             TaskType.REPORT_CHECK,
-            metadata={"audit_options": options.to_metadata(), "audit_options_source": "user_override" if options.has_user_override else "default"},
+            metadata={
+                "audit_options": options.to_metadata(),
+                "audit_options_source": "user_override" if options.has_user_override else "default",
+                **_codex_model_metadata(options, self.codex_audit_service),
+            },
         )
         try:
             stored = self.file_store.save_upload(
@@ -249,7 +253,9 @@ class ReportCheckUseCase:
                     evidence_builder,
                     scheduler,
                     codex_audit_service,
+                    audit_options,
                 ),
+                **_codex_model_metadata(audit_options, codex_audit_service),
                 "progress_details": progress_payload,
                 "performance_profile": profile_payload,
                 "codex_audit": codex_payload,
@@ -390,12 +396,22 @@ class ReportCheckUseCase:
         return CodexAuditScheduler(max_parallel_jobs=options.max_parallel_jobs)
 
     def _codex_audit_service_for_audit_options(self, options: CodexAuditOptions) -> CodexAuditServiceProtocol | None:
-        if self.codex_audit_service is None or options.timeout_seconds is None:
-            return self.codex_audit_service
-        with_timeout = getattr(self.codex_audit_service, "with_timeout_seconds", None)
-        if not callable(with_timeout):
-            return self.codex_audit_service
-        return with_timeout(options.timeout_seconds)
+        service = self.codex_audit_service
+        if service is None:
+            return None
+        if options.timeout_seconds is not None:
+            with_timeout = getattr(service, "with_timeout_seconds", None)
+            if callable(with_timeout):
+                service = with_timeout(options.timeout_seconds)
+        if options.model is not None:
+            with_model = getattr(service, "with_model", None)
+            if callable(with_model):
+                service = with_model(options.model)
+        if options.reasoning_effort is not None:
+            with_reasoning_effort = getattr(service, "with_reasoning_effort", None)
+            if callable(with_reasoning_effort):
+                service = with_reasoning_effort(options.reasoning_effort)
+        return service
 
 
 def _raise_for_required_codex_audit_failure(reviews: list[CodexReviewResult]) -> None:
@@ -431,8 +447,13 @@ def _effective_audit_options_metadata(
     evidence_builder: ReportCodexEvidenceBuilder,
     scheduler: CodexAuditScheduler,
     codex_audit_service: CodexAuditServiceProtocol | None = None,
+    options: CodexAuditOptions | None = None,
 ) -> dict[str, Any]:
     selection = evidence_builder.target_selection
+    requested_model = options.model if options is not None else None
+    requested_reasoning_effort = options.reasoning_effort if options is not None else None
+    effective_model = _codex_model(codex_audit_service)
+    effective_reasoning_effort = _codex_reasoning_effort(codex_audit_service)
     return {
         "included_check_ids": sorted(selection.included_check_ids),
         "included_finding_codes": sorted(selection.included_finding_codes),
@@ -442,6 +463,13 @@ def _effective_audit_options_metadata(
         "priority_check_ids": list(selection.priority_check_ids),
         "max_parallel_jobs": scheduler.max_parallel_jobs,
         "timeout_seconds": _codex_timeout_seconds(codex_audit_service),
+        "requested_profile": options.profile if options is not None else None,
+        "requested_model": requested_model,
+        "effective_model": effective_model,
+        "model_source": "task_override" if requested_model else "server_default" if effective_model else "cli_default",
+        "requested_reasoning_effort": requested_reasoning_effort,
+        "effective_reasoning_effort": effective_reasoning_effort,
+        "reasoning_effort_source": "task_override" if requested_reasoning_effort else "server_default",
     }
 
 
@@ -479,6 +507,37 @@ def _codex_timeout_seconds(service: CodexAuditServiceProtocol | None) -> int | N
     if isinstance(value, int) and value > 0:
         return value
     return None
+
+
+def _codex_model(service: CodexAuditServiceProtocol | None) -> str | None:
+    runner = getattr(service, "runner", None)
+    config = getattr(runner, "config", None)
+    value = getattr(config, "model", None)
+    return value if isinstance(value, str) and value else None
+
+
+def _codex_reasoning_effort(service: CodexAuditServiceProtocol | None) -> str | None:
+    runner = getattr(service, "runner", None)
+    config = getattr(runner, "config", None)
+    value = getattr(config, "reasoning_effort", None)
+    return value if isinstance(value, str) and value else None
+
+
+def _codex_model_metadata(
+    options: CodexAuditOptions,
+    service: CodexAuditServiceProtocol | None,
+) -> dict[str, str | None]:
+    effective_model = options.model or _codex_model(service)
+    effective_reasoning_effort = options.reasoning_effort or _codex_reasoning_effort(service)
+    return {
+        "requested_profile": options.profile,
+        "requested_model": options.model,
+        "effective_model": effective_model,
+        "model_source": "task_override" if options.model else "server_default" if effective_model else "cli_default",
+        "requested_reasoning_effort": options.reasoning_effort,
+        "effective_reasoning_effort": effective_reasoning_effort,
+        "reasoning_effort_source": "task_override" if options.reasoning_effort else "server_default",
+    }
 
 
 def _error_progress_details_from_task(task: TaskStatus, error_message: str) -> TaskProgressDetails:

@@ -157,6 +157,22 @@ def test_c07_reports_error_when_expected_slash_but_actual_is_conforming() -> Non
     assert finding.metadata["result_values"] == ["——", "/"]
 
 
+def test_c07_marks_direct_slash_result_with_conforming_conclusion_as_deterministic_error() -> None:
+    report_item = item(161, result="/", conclusion="符合", page=99, row=6).model_copy(
+        update={"metadata": {"report_page_number": 97, "source_row_alignment": "native_geometry"}}
+    )
+
+    finding = _one_finding(ReportDocument(inspection_items=[report_item]))
+
+    assert finding.code == "CONCLUSION_MISMATCH_001"
+    assert finding.expected == "/"
+    assert finding.actual == "符合"
+    assert finding.metadata["deterministic_conclusion_mismatch"] is True
+    assert finding.metadata["conclusion_source_page"] == 99
+    assert finding.metadata["conclusion_report_page_number"] == 97
+    assert "报告第 97 页" in finding.message
+
+
 def test_c07_reports_error_when_expected_conforming_but_actual_is_slash() -> None:
     finding = _one_finding(ReportDocument(inspection_items=[item(8, result="100", conclusion="/")]))
 
@@ -191,6 +207,63 @@ def test_c07_reports_one_group_level_finding_for_conforming_rows_with_slash_conc
     assert finding.metadata["suppressed_physical_row_count"] == 2
     assert finding.metadata["result_summary"]["conforming_or_non_empty_count"] == 3
     assert finding.metadata["reasoning_basis"] == "has_conforming_or_non_empty_result"
+
+
+def test_c07_reports_each_explicit_wrong_conclusion_cell_for_cross_page_continuation() -> None:
+    first_page = item(132, raw="132", result="——", conclusion="/", page=84, row=1).model_copy(
+        update={"metadata": {"report_page_number": 82, "source_row_alignment": "native_geometry"}}
+    )
+    continuation = item(
+        132,
+        raw="续\n132",
+        result="——",
+        conclusion="/",
+        page=85,
+        row=1,
+        continued=True,
+    ).model_copy(
+        update={"metadata": {"report_page_number": 83, "source_row_alignment": "native_geometry"}}
+    )
+    numeric_result = item(
+        None,
+        raw="",
+        result="2.35",
+        conclusion="",
+        page=85,
+        row=3,
+    ).model_copy(
+        update={"metadata": {"report_page_number": 83, "source_row_alignment": "geometry_aligned"}}
+    )
+    resistance_result = item(
+        None,
+        raw="",
+        result="＞20",
+        conclusion="",
+        page=85,
+        row=5,
+    ).model_copy(
+        update={"metadata": {"report_page_number": 83, "source_row_alignment": "geometry_aligned"}}
+    )
+
+    result = _run(
+        ReportDocument(
+            inspection_items=[first_page, continuation, numeric_result, resistance_result]
+        )
+    )
+
+    assert result.status == CheckStatus.FAIL
+    assert len(result.findings) == 2
+    assert [finding.code for finding in result.findings] == [
+        "CONCLUSION_MISMATCH_002",
+        "CONCLUSION_MISMATCH_002",
+    ]
+    assert [finding.location.page_number for finding in result.findings] == [84, 85]
+    assert [finding.metadata["conclusion_report_page_number"] for finding in result.findings] == [82, 83]
+    assert all(finding.metadata["deterministic_conclusion_mismatch"] for finding in result.findings)
+    assert "序号 132（报告第 82 页）" in result.findings[0].message
+    assert "序号 续132（报告第 83 页）" in result.findings[1].message
+    assert result.metadata["groups"][0]["effective_test_results"] == ["——", "——", "2.35", "＞20"]
+    assert result.metadata["groups"][0]["report_page_numbers"] == [82, 83]
 
 
 def test_c07_reports_error_when_expected_nonconforming_but_actual_is_conforming() -> None:

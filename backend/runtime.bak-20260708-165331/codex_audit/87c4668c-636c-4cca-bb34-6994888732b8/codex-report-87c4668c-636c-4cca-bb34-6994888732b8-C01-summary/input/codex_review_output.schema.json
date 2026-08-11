@@ -1,0 +1,266 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "reviews": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "type": "string"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "metadata": {
+            "additionalProperties": false,
+            "properties": {
+              "field_comparisons": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "evidence_ref": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "expected_value": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "field_name": {
+                      "type": "string"
+                    },
+                    "observed_value": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "reasoning": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "match",
+                        "missing",
+                        "conflict",
+                        "unreadable",
+                        "not_applicable",
+                        "unknown"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "field_name",
+                    "expected_value",
+                    "observed_value",
+                    "status",
+                    "evidence_ref",
+                    "reasoning"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "observed_label_fields": {
+                "additionalProperties": false,
+                "properties": {
+                  "batch_or_serial": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "component_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "expiration_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "model": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "production_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "component_name",
+                  "model",
+                  "serial_number",
+                  "batch_or_serial",
+                  "production_date",
+                  "expiration_date"
+                ],
+                "type": "object"
+              },
+              "visual_evidence_quality": {
+                "enum": [
+                  "clear",
+                  "partial",
+                  "unreadable",
+                  "wrong_crop",
+                  "not_applicable",
+                  "unknown",
+                  null
+                ],
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "observed_label_fields",
+              "field_comparisons",
+              "visual_evidence_quality"
+            ],
+            "type": "object"
+          },
+          "reasoning_summary": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "succeeded"
+            ],
+            "type": "string"
+          },
+          "suggested_finding": {
+            "additionalProperties": false,
+            "properties": {
+              "actual": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "check_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "evidence_refs": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "expected": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "metadata": {
+                "additionalProperties": false,
+                "properties": {},
+                "required": [],
+                "type": "object"
+              },
+              "severity": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "check_id",
+              "severity",
+              "code",
+              "message",
+              "expected",
+              "actual",
+              "evidence_refs",
+              "metadata"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "suggested_severity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "confirm",
+              "refute",
+              "uncertain",
+              "add_finding"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_id",
+          "status",
+          "verdict",
+          "confidence",
+          "reasoning_summary",
+          "evidence_refs",
+          "suggested_severity",
+          "suggested_finding",
+          "metadata"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "reviews"
+  ],
+  "type": "object"
+}

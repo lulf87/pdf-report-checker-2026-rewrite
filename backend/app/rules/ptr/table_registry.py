@@ -83,6 +83,181 @@ def model_aware_table_requirements(
     return requirements
 
 
+def generic_table_requirements(
+    clause: PTRClause,
+    ptr_doc: PTRDocument,
+) -> list[PTRAtomicRequirement]:
+    context = coerce_report_model_context(ptr_doc.metadata.get("report_model_context"))
+    requirements: list[PTRAtomicRequirement] = []
+    for table in _tables_for_clause(clause, ptr_doc):
+        if classify_table_axis(_table_value_labels(table), context).axis_type == "model":
+            continue
+        raw_rows = _normalized_raw_rows(table)
+        if len(raw_rows) < 2:
+            continue
+        requirements.extend(_requirements_from_generic_rows(clause, table, ptr_doc, raw_rows))
+    return requirements
+
+
+def _requirements_from_generic_rows(
+    clause: PTRClause,
+    table: PTRTable,
+    ptr_doc: PTRDocument,
+    rows: list[list[str]],
+) -> list[PTRAtomicRequirement]:
+    header = rows[0]
+    if len(header) < 2:
+        return []
+    table_number = str(table.table_number or "")
+    table_title = _table_title(table)
+    table_key = _table_key(table, ptr_doc)
+    parent_clause = _parent_clause_for_table(table, ptr_doc) or _ancestor_clause_number(str(clause.number))
+    requirements: list[PTRAtomicRequirement] = []
+
+    for row_index, row in enumerate(rows[1:], start=1):
+        if _looks_like_continuation_header(row):
+            header = row
+            continue
+        value_column = _single_value_column(header, clause)
+        padded = [*row, *([""] * max(0, len(header) - len(row)))]
+        if value_column is not None:
+            expected = padded[value_column].strip()
+            dimensions = [padded[index].strip() for index in range(value_column) if padded[index].strip()]
+            if not expected or _not_applicable_cell(expected):
+                continue
+            label = " / ".join(dimensions) or str(clause.title or table_title or "参数")
+            requirements.append(
+                _generic_table_requirement(
+                    clause=clause,
+                    table_number=table_number,
+                    table_title=table_title,
+                    table_key=table_key,
+                    parent_clause=parent_clause,
+                    label=label,
+                    condition=label,
+                    row_label=dimensions[0] if dimensions else label,
+                    expected=expected,
+                    suffix=f"row{row_index}",
+                )
+            )
+            continue
+
+        row_label = padded[0].strip()
+        if not row_label:
+            continue
+        for column_index in range(1, len(header)):
+            expected = padded[column_index].strip()
+            if not expected or _not_applicable_cell(expected):
+                continue
+            condition = header[column_index].strip() or f"条件{column_index}"
+            requirements.append(
+                _generic_table_requirement(
+                    clause=clause,
+                    table_number=table_number,
+                    table_title=table_title,
+                    table_key=table_key,
+                    parent_clause=parent_clause,
+                    label=row_label,
+                    condition=condition,
+                    row_label=row_label,
+                    expected=expected,
+                    suffix=f"row{row_index}:column{column_index}",
+                )
+            )
+    return requirements
+
+
+def _generic_table_requirement(
+    *,
+    clause: PTRClause,
+    table_number: str,
+    table_title: str,
+    table_key: str,
+    parent_clause: str | None,
+    label: str,
+    condition: str,
+    row_label: str,
+    expected: str,
+    suffix: str,
+) -> PTRAtomicRequirement:
+    operator = "deviation_within_tolerance" if _contains_tolerance(expected) else _operator_for_projected_value(expected, row_label=row_label)
+    return PTRAtomicRequirement(
+        atomic_id=f"{clause.number}:table{table_number}:{suffix}:{_slug(label)}:{_slug(condition)}",
+        clause_id=str(clause.number),
+        label=label,
+        condition=condition,
+        expected_text=expected,
+        operator=operator,
+        source="ptr_table",
+        table_number=table_number,
+        table_title=table_title,
+        table_key=table_key,
+        metadata={
+            "axis_type": "condition",
+            "condition": condition,
+            "table_row_label": row_label,
+            "parent_clause": parent_clause,
+            "match_keywords": _unique([row_label, condition, clause.title or ""]),
+        },
+    )
+
+
+def _normalized_raw_rows(table: PTRTable) -> list[list[str]]:
+    raw_rows = table.metadata.get("raw_rows")
+    if not isinstance(raw_rows, list):
+        return []
+    rows: list[list[str]] = []
+    for raw_row in raw_rows:
+        if not isinstance(raw_row, list):
+            continue
+        row = [_clean_label(value) for value in raw_row]
+        if any(row):
+            rows.append(row)
+    return rows
+
+
+def _single_value_column(header: list[str], clause: PTRClause) -> int | None:
+    clause_key = _compact(clause.title or "")
+    for index in range(1, len(header)):
+        header_key = _compact(header[index])
+        if clause_key and header_key and (clause_key in header_key or header_key in clause_key):
+            return index
+    if (
+        len(header) >= 3
+        and _compact(header[1]) in {"事件", "参数", "项目"}
+        and _compact(header[-1]) in {"心房", "心室", "正常状态", "单一故障状态"}
+    ):
+        return len(header) - 1
+    return None
+
+
+def _looks_like_continuation_header(row: list[str]) -> bool:
+    compact = [_compact(value) for value in row]
+    if len(compact) < 2:
+        return False
+    return compact[0] in {"模式", "事件", "参数", "项目"} and any(
+        value in {"事件", "参数", "项目", "心房", "心室", "正常状态", "单一故障状态"}
+        for value in compact[1:]
+    )
+
+
+def _contains_tolerance(value: str) -> bool:
+    return "±" in str(value) or bool(re.search(r"-\s*\d+(?:\.\d+)?\s*/\s*\+?\d", str(value)))
+
+
+def _not_applicable_cell(value: str) -> bool:
+    return re.fullmatch(r"[-—–－/]+", re.sub(r"\s+", "", str(value or ""))) is not None
+
+
+def _tolerance_text(value: str) -> str | None:
+    text = str(value or "").replace("+/-", "±")
+    match = re.search(r"±\s*\d+(?:\.\d+)?", text)
+    if match is not None:
+        return re.sub(r"\s+", "", match.group(0))
+    match = re.search(r"-\s*\d+(?:\.\d+)?\s*/\s*\+?\s*\d+(?:\.\d+)?", text)
+    return re.sub(r"\s+", "", match.group(0)) if match is not None else None
+
+
 def _requirements_from_model_axis_table(
     clause: PTRClause,
     table: PTRTable,
@@ -118,6 +293,9 @@ def _requirements_from_model_axis_table(
                 "parent_clause": parent_clause or _ancestor_clause_number(str(clause.number)),
                 "match_keywords": _match_keywords(clause, row_label),
             }
+            tolerance_text = _tolerance_text(row_label)
+            if tolerance_text:
+                metadata["tolerance_text"] = tolerance_text
             if not is_selected and not model_unknown:
                 metadata["not_applicable_by_model"] = True
             if model_unknown:
@@ -128,7 +306,11 @@ def _requirements_from_model_axis_table(
                     clause_id=str(clause.number),
                     label=row_label,
                     expected_text=str(expected or ""),
-                    operator=_operator_for_projected_value(str(expected or ""), row_label=row_label),
+                    operator=(
+                        "deviation_within_tolerance"
+                        if tolerance_text
+                        else _operator_for_projected_value(str(expected or ""), row_label=row_label)
+                    ),
                     source="ptr_table",
                     table_number=table_number,
                     table_title=table_title,
@@ -182,10 +364,18 @@ def _clause_body_without_attached_table(clause: PTRClause) -> str:
 def _record_matches_clause(record: ParameterRecord, title: str, body: str) -> bool:
     row_label = str(record.parameter_name or record.raw_name or record.parameter_id or "")
     compact_row = _compact(row_label)
-    compact_clause = _compact(" ".join([title, body]))
+    compact_clause = _semantic_label(" ".join([title, body]))
     if not compact_row or not compact_clause:
         return False
-    return compact_row in compact_clause or _compact(title) in compact_row
+    semantic_row = _semantic_label(row_label)
+    semantic_title = _semantic_label(title)
+    return semantic_row in compact_clause or semantic_title in semantic_row or semantic_row in semantic_title
+
+
+def _semantic_label(value: str) -> str:
+    text = re.sub(r"[（(][^）)]*(?:只适用|适用于)[^）)]*[）)]", "", str(value or ""))
+    text = re.sub(r"(?:心脏)?起搏器的", "", text)
+    return re.sub(r"[^0-9A-Za-z\u4e00-\u9fff]+", "", text).lower()
 
 
 def _table_value_labels(table: PTRTable) -> list[str]:
@@ -240,6 +430,10 @@ def _parent_clause_for_table(table: PTRTable, ptr_doc: PTRDocument) -> str | Non
     for clause_id in table.referenced_by_clause_ids:
         clause = next((item for item in ptr_doc.clauses if item.clause_id == clause_id), None)
         if clause is not None:
+            section_parts = str(clause.number).split(".")[:2]
+            section = ptr_doc.get_clause_by_string(".".join(section_parts)) if len(section_parts) == 2 else None
+            if section is not None and section.children_ids:
+                return str(section.number)
             return str(clause.number)
         match = re.search(r"ptr-(\d+(?:\.\d+)*)", clause_id)
         if match:
@@ -387,5 +581,6 @@ __all__ = [
     "TableAxis",
     "build_ptr_table_registry",
     "classify_table_axis",
+    "generic_table_requirements",
     "model_aware_table_requirements",
 ]

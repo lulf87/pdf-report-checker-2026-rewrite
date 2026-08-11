@@ -41,6 +41,7 @@ output/
 **/output/
 *.log
 .playwright-cli/
+.superdesign/tmp/
 
 # Controlled test fixtures are source assets.
 !fixtures/

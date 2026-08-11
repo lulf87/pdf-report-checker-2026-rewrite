@@ -1,0 +1,769 @@
+{
+  "package_id": "codex-report-53bbeec9-998b-4868-9627-00d9cc3b7ab0-C04-batch-9",
+  "task_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0",
+  "task_type": "report_check",
+  "kind": "report_rule_review",
+  "schema_version": "evidence-package-v1",
+  "created_at": "2026-06-25T14:01:47.553892Z",
+  "targets": [
+    {
+      "target_id": "report-codex-target-53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+      "target_type": "label_ocr",
+      "check_id": "C04",
+      "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+      "finding_code": "SAMPLE_FIELD_MISSING_IN_LABEL",
+      "summary": "样品描述部件“心脏脉冲电场消融仪- \nECG 主线缆”部件名称为“心脏脉冲电场消融仪- \nECG 主线缆”，但中文标签 OCR 未识别到对应字段",
+      "evidence_refs": [
+        "finding:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "rule_context:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "sample_description:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "label_caption:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "label_ocr:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "label_image:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "page_text:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称"
+      ],
+      "metadata": {
+        "source": "report_codex_evidence_builder",
+        "rule_id": "C04",
+        "severity": "error",
+        "expected": null,
+        "actual": "心脏脉冲电场消融仪- \nECG 主线缆",
+        "page_number": 4,
+        "finding_code": "SAMPLE_FIELD_MISSING_IN_LABEL",
+        "evidence_incomplete": false,
+        "finding_metadata": {
+          "component_id": "sample-row-4",
+          "component_key": "心脏脉冲电场消融仪- \nECG 主线缆|PFA-ECG-CBL|2024070069|2024-07-13",
+          "label_id": "label-16",
+          "label_key": "label-16",
+          "field_name": "部件名称",
+          "matched_label_key": null,
+          "ocr_confidence": "medium",
+          "matching_strategy": "name",
+          "is_unused_component": false
+        },
+        "matching_label_caption_candidates": [
+          {
+            "caption_id": "caption-12",
+            "caption_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+            "subject_name": "心脏脉冲电场消融仪-ECG 主线缆",
+            "caption_type": "label",
+            "page_number": 111,
+            "matched_component_ids": [],
+            "metadata": {
+              "is_chinese_label": true
+            },
+            "component_id": "sample-row-4"
+          }
+        ],
+        "matching_label_ocr_candidates": [
+          {
+            "label_id": "label-16",
+            "caption_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+            "caption_id": "caption-12",
+            "page_number": 111,
+            "has_image_crop": false,
+            "has_full_text": true,
+            "has_structured_fields": false,
+            "field_names": []
+          }
+        ],
+        "matched_label_id": "label-16",
+        "matched_label_caption": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+        "matched_label_text": "上\n海\n市\n医\n疗\n器\n械\n检\n验\n研\n究\n院 \n检 验 报 告 照 片 页 \n报告编号：国医检（设）字 QW2025 第 2795 号      样品编号：QW2025-2795       共 118 页 第 109 页 \n照片和说明 \n№9 心脏脉冲电场消融仪-ECG 主线缆 \n№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张 ",
+        "matched_label_fields": {},
+        "label_field_comparison": {
+          "field_name": "部件名称",
+          "matched_label_key": null,
+          "sample_value": "心脏脉冲电场消融仪- \nECG 主线缆",
+          "matched_label_value": null,
+          "comparison_hint": "field_missing_in_matched_label"
+        },
+        "evidence_has_matching_label_caption": true,
+        "evidence_has_matched_label_ocr": true,
+        "evidence_has_matched_label_image_crop": false,
+        "evidence_has_matched_full_label_text": true,
+        "evidence_has_matched_structured_label_fields": false,
+        "evidence_has_label_image_crop": false,
+        "evidence_has_full_label_text": true,
+        "evidence_has_structured_label_fields": false,
+        "evidence_can_verify_label_content": true,
+        "expected_codex_when_label_content_missing": null,
+        "expected_codex_when_label_not_found_but_caption_exists": null,
+        "is_unused_component": false,
+        "unused_reason": null
+      }
+    }
+  ],
+  "items": [
+    {
+      "ref_id": "finding:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+      "source_type": "finding",
+      "title": "样品描述部件“心脏脉冲电场消融仪- \nECG 主线缆”部件名称为“心脏脉冲电场消融仪- \nECG 主线缆”，但中文标签 OCR 未识别到对应字段",
+      "text": null,
+      "structured": {
+        "id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "task_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0",
+        "check_id": "C04",
+        "severity": "error",
+        "code": "SAMPLE_FIELD_MISSING_IN_LABEL",
+        "message": "样品描述部件“心脏脉冲电场消融仪- \nECG 主线缆”部件名称为“心脏脉冲电场消融仪- \nECG 主线缆”，但中文标签 OCR 未识别到对应字段",
+        "location": {
+          "source_id": "36628a34943d8df5",
+          "source_type": "report",
+          "page_number": 4,
+          "bbox": null,
+          "section": null,
+          "table_id": "p4-t2",
+          "row_index": 4,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": null,
+        "actual": "心脏脉冲电场消融仪- \nECG 主线缆",
+        "evidence": [
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r4:c1:component_name",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 4,
+              "column_name": "部件名称",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "心脏脉冲电场消融仪- \nECG 主线缆",
+            "normalized_text": "心脏脉冲电场消融仪-ECG主线缆",
+            "value": "心脏脉冲电场消融仪- \nECG 主线缆",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "component_name",
+              "column_index": 1
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r4:c2:model",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 4,
+              "column_name": "规格型号",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "PFA-ECG-CBL",
+            "normalized_text": "PFA-ECG-CBL",
+            "value": "PFA-ECG-CBL",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "model",
+              "column_index": 2
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r4:c3:batch_or_serial",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 4,
+              "column_name": "序列号批号",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "2024070069",
+            "normalized_text": "2024070069",
+            "value": "2024070069",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "batch_or_serial",
+              "column_index": 3
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r4:c4:production_date",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 4,
+              "column_name": "生产日期",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "2024-07-13",
+            "normalized_text": "2024-07-13",
+            "value": "2024-07-13",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "production_date",
+              "column_index": 4
+            }
+          },
+          {
+            "id": "36628a34943d8df5:p4-t2:sample:r4:c5:remark",
+            "source_type": "report",
+            "location": {
+              "source_id": "36628a34943d8df5",
+              "source_type": "report",
+              "page_number": 4,
+              "bbox": null,
+              "section": null,
+              "table_id": "p4-t2",
+              "row_index": 4,
+              "column_name": "备注",
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "/",
+            "normalized_text": "/",
+            "value": "/",
+            "method": "pdf_text",
+            "confidence": "high",
+            "image_ref": null,
+            "metadata": {
+              "field_name": "remark",
+              "column_index": 5
+            }
+          },
+          {
+            "id": "ev-label-label-16",
+            "source_type": "report",
+            "location": {
+              "source_id": null,
+              "source_type": "report",
+              "page_number": 111,
+              "bbox": null,
+              "section": null,
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+            "normalized_text": null,
+            "value": null,
+            "method": "ocr",
+            "confidence": "medium",
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [],
+        "diff_fragments": [],
+        "confidence": "high",
+        "metadata": {
+          "component_id": "sample-row-4",
+          "component_key": "心脏脉冲电场消融仪- \nECG 主线缆|PFA-ECG-CBL|2024070069|2024-07-13",
+          "label_id": "label-16",
+          "label_key": "label-16",
+          "field_name": "部件名称",
+          "matched_label_key": null,
+          "ocr_confidence": "medium",
+          "matching_strategy": "name",
+          "is_unused_component": false
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": null,
+      "location": {
+        "source_id": "36628a34943d8df5",
+        "source_type": "report",
+        "page_number": 4,
+        "bbox": null,
+        "section": null,
+        "table_id": "p4-t2",
+        "row_index": 4,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "check_id": "C04",
+        "finding_code": "SAMPLE_FIELD_MISSING_IN_LABEL",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+      "source_type": "rule_context",
+      "title": "C04 deterministic rule context",
+      "text": "样品描述表格字段与中文标签 OCR 字段的规则初判上下文。",
+      "structured": {
+        "check_id": "C04",
+        "check_name": "样品描述表格与中文标签 OCR",
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "code": "SAMPLE_FIELD_MISSING_IN_LABEL",
+        "severity": "error",
+        "message": "样品描述部件“心脏脉冲电场消融仪- \nECG 主线缆”部件名称为“心脏脉冲电场消融仪- \nECG 主线缆”，但中文标签 OCR 未识别到对应字段",
+        "expected": null,
+        "actual": "心脏脉冲电场消融仪- \nECG 主线缆",
+        "finding_metadata": {
+          "component_id": "sample-row-4",
+          "component_key": "心脏脉冲电场消融仪- \nECG 主线缆|PFA-ECG-CBL|2024070069|2024-07-13",
+          "label_id": "label-16",
+          "label_key": "label-16",
+          "field_name": "部件名称",
+          "matched_label_key": null,
+          "ocr_confidence": "medium",
+          "matching_strategy": "name",
+          "is_unused_component": false
+        },
+        "result_metadata": {
+          "coverage": [
+            {
+              "component_id": "sample-row-1",
+              "label_id": "label-14",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-2",
+              "label_id": "label-24",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-3",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-4",
+              "label_id": "label-16",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-5",
+              "label_id": "label-17",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-6",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-7",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-8",
+              "label_id": "label-15",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-9",
+              "label_id": "label-20",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-10",
+              "label_id": "label-21",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-11",
+              "label_id": "label-19",
+              "matching_strategy": "name"
+            },
+            {
+              "component_id": "sample-row-12",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-13",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-14",
+              "label_id": null,
+              "matching_strategy": null
+            },
+            {
+              "component_id": "sample-row-15",
+              "label_id": null,
+              "matching_strategy": null
+            }
+          ]
+        },
+        "audit_reason": "review deterministic report self-check candidate finding against focused evidence",
+        "evidence_incomplete": false,
+        "label_content_verification": {
+          "matching_label_caption_candidates": [
+            {
+              "caption_id": "caption-12",
+              "caption_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+              "subject_name": "心脏脉冲电场消融仪-ECG 主线缆",
+              "caption_type": "label",
+              "page_number": 111,
+              "matched_component_ids": [],
+              "metadata": {
+                "is_chinese_label": true
+              },
+              "component_id": "sample-row-4"
+            }
+          ],
+          "matching_label_ocr_candidates": [
+            {
+              "label_id": "label-16",
+              "caption_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+              "caption_id": "caption-12",
+              "page_number": 111,
+              "has_image_crop": false,
+              "has_full_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            }
+          ],
+          "matched_label_id": "label-16",
+          "matched_label_caption": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+          "matched_label_text": "上\n海\n市\n医\n疗\n器\n械\n检\n验\n研\n究\n院 \n检 验 报 告 照 片 页 \n报告编号：国医检（设）字 QW2025 第 2795 号      样品编号：QW2025-2795       共 118 页 第 109 页 \n照片和说明 \n№9 心脏脉冲电场消融仪-ECG 主线缆 \n№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张 ",
+          "matched_label_fields": {},
+          "label_field_comparison": {
+            "field_name": "部件名称",
+            "matched_label_key": null,
+            "sample_value": "心脏脉冲电场消融仪- \nECG 主线缆",
+            "matched_label_value": null,
+            "comparison_hint": "field_missing_in_matched_label"
+          },
+          "evidence_has_matching_label_caption": true,
+          "evidence_has_matched_label_ocr": true,
+          "evidence_has_matched_label_image_crop": false,
+          "evidence_has_matched_full_label_text": true,
+          "evidence_has_matched_structured_label_fields": false,
+          "evidence_has_label_image_crop": false,
+          "evidence_has_full_label_text": true,
+          "evidence_has_structured_label_fields": false,
+          "evidence_can_verify_label_content": true,
+          "evidence_incomplete": false,
+          "expected_codex_when_label_content_missing": null,
+          "expected_codex_when_label_not_found_but_caption_exists": null
+        },
+        "component_usage": {
+          "is_unused_component": false,
+          "unused_reason": null
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "C04",
+      "location": null,
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "check_id": "C04",
+        "finding_code": "SAMPLE_FIELD_MISSING_IN_LABEL"
+      }
+    },
+    {
+      "ref_id": "sample_description:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+      "source_type": "table",
+      "title": "C04 样品描述 evidence",
+      "text": null,
+      "structured": {
+        "component_id": "sample-row-4",
+        "component_name": "心脏脉冲电场消融仪- \nECG 主线缆",
+        "model": "PFA-ECG-CBL",
+        "batch_or_serial": "2024070069",
+        "production_date": "2024-07-13",
+        "expiration_date": null,
+        "remark": "/",
+        "identity_key": "心脏脉冲电场消融仪- \nECG 主线缆|PFA-ECG-CBL|2024070069|2024-07-13",
+        "is_unused_component": false,
+        "unused_reason": null,
+        "expected": null,
+        "actual": "心脏脉冲电场消融仪- \nECG 主线缆",
+        "finding_metadata": {
+          "component_id": "sample-row-4",
+          "component_key": "心脏脉冲电场消融仪- \nECG 主线缆|PFA-ECG-CBL|2024070069|2024-07-13",
+          "label_id": "label-16",
+          "label_key": "label-16",
+          "field_name": "部件名称",
+          "matched_label_key": null,
+          "ocr_confidence": "medium",
+          "matching_strategy": "name",
+          "is_unused_component": false
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "sample_description",
+      "location": {
+        "source_id": "36628a34943d8df5",
+        "source_type": "report",
+        "page_number": 4,
+        "bbox": null,
+        "section": null,
+        "table_id": "p4-t2",
+        "row_index": 4,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "check_id": "C04",
+        "component_id": "sample-row-4"
+      }
+    },
+    {
+      "ref_id": "label_caption:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+      "source_type": "image_caption",
+      "title": "C04 matching label caption evidence",
+      "text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+      "structured": {
+        "matching_label_caption_candidates": [
+          {
+            "caption_id": "caption-12",
+            "caption_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+            "subject_name": "心脏脉冲电场消融仪-ECG 主线缆",
+            "caption_type": "label",
+            "page_number": 111,
+            "matched_component_ids": [],
+            "metadata": {
+              "is_chinese_label": true
+            },
+            "component_id": "sample-row-4"
+          }
+        ],
+        "finding_metadata": {
+          "component_id": "sample-row-4",
+          "component_key": "心脏脉冲电场消融仪- \nECG 主线缆|PFA-ECG-CBL|2024070069|2024-07-13",
+          "label_id": "label-16",
+          "label_key": "label-16",
+          "field_name": "部件名称",
+          "matched_label_key": null,
+          "ocr_confidence": "medium",
+          "matching_strategy": "name",
+          "is_unused_component": false
+        }
+      },
+      "file_path": null,
+      "page_number": 111,
+      "section": "label_caption",
+      "location": null,
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "check_id": "C04",
+        "caption_id": "caption-12"
+      }
+    },
+    {
+      "ref_id": "label_ocr:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+      "source_type": "label_ocr",
+      "title": "C04 中文标签 OCR evidence",
+      "text": "上\n海\n市\n医\n疗\n器\n械\n检\n验\n研\n究\n院 \n检 验 报 告 照 片 页 \n报告编号：国医检（设）字 QW2025 第 2795 号      样品编号：QW2025-2795       共 118 页 第 109 页 \n照片和说明 \n№9 心脏脉冲电场消融仪-ECG 主线缆 \n№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张 ",
+      "structured": {
+        "label_id": "label-16",
+        "page_number": 111,
+        "caption_id": "caption-12",
+        "caption_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+        "language": "zh",
+        "ocr_engine": "pdf_text",
+        "confidence": "medium",
+        "raw_blocks": [
+          "上",
+          "海",
+          "市",
+          "医",
+          "疗",
+          "器",
+          "械",
+          "检",
+          "验",
+          "研",
+          "究",
+          "院 ",
+          "检 验 报 告 照 片 页 ",
+          "报告编号：国医检（设）字 QW2025 第 2795 号      样品编号：QW2025-2795       共 118 页 第 109 页 ",
+          "照片和说明 ",
+          "№9 心脏脉冲电场消融仪-ECG 主线缆 ",
+          "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张 "
+        ],
+        "label_fields": {},
+        "finding_metadata": {
+          "component_id": "sample-row-4",
+          "component_key": "心脏脉冲电场消融仪- \nECG 主线缆|PFA-ECG-CBL|2024070069|2024-07-13",
+          "label_id": "label-16",
+          "label_key": "label-16",
+          "field_name": "部件名称",
+          "matched_label_key": null,
+          "ocr_confidence": "medium",
+          "matching_strategy": "name",
+          "is_unused_component": false
+        },
+        "label_content_verification": {
+          "matching_label_caption_candidates": [
+            {
+              "caption_id": "caption-12",
+              "caption_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+              "subject_name": "心脏脉冲电场消融仪-ECG 主线缆",
+              "caption_type": "label",
+              "page_number": 111,
+              "matched_component_ids": [],
+              "metadata": {
+                "is_chinese_label": true
+              },
+              "component_id": "sample-row-4"
+            }
+          ],
+          "matching_label_ocr_candidates": [
+            {
+              "label_id": "label-16",
+              "caption_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+              "caption_id": "caption-12",
+              "page_number": 111,
+              "has_image_crop": false,
+              "has_full_text": true,
+              "has_structured_fields": false,
+              "field_names": []
+            }
+          ],
+          "matched_label_id": "label-16",
+          "matched_label_caption": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+          "matched_label_text": "上\n海\n市\n医\n疗\n器\n械\n检\n验\n研\n究\n院 \n检 验 报 告 照 片 页 \n报告编号：国医检（设）字 QW2025 第 2795 号      样品编号：QW2025-2795       共 118 页 第 109 页 \n照片和说明 \n№9 心脏脉冲电场消融仪-ECG 主线缆 \n№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张 ",
+          "matched_label_fields": {},
+          "label_field_comparison": {
+            "field_name": "部件名称",
+            "matched_label_key": null,
+            "sample_value": "心脏脉冲电场消融仪- \nECG 主线缆",
+            "matched_label_value": null,
+            "comparison_hint": "field_missing_in_matched_label"
+          },
+          "evidence_has_matching_label_caption": true,
+          "evidence_has_matched_label_ocr": true,
+          "evidence_has_matched_label_image_crop": false,
+          "evidence_has_matched_full_label_text": true,
+          "evidence_has_matched_structured_label_fields": false,
+          "evidence_has_label_image_crop": false,
+          "evidence_has_full_label_text": true,
+          "evidence_has_structured_label_fields": false,
+          "evidence_can_verify_label_content": true,
+          "evidence_incomplete": false,
+          "expected_codex_when_label_content_missing": null,
+          "expected_codex_when_label_not_found_but_caption_exists": null
+        },
+        "matched_label_text": "上\n海\n市\n医\n疗\n器\n械\n检\n验\n研\n究\n院 \n检 验 报 告 照 片 页 \n报告编号：国医检（设）字 QW2025 第 2795 号      样品编号：QW2025-2795       共 118 页 第 109 页 \n照片和说明 \n№9 心脏脉冲电场消融仪-ECG 主线缆 \n№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张 ",
+        "matched_label_fields": {},
+        "label_field_comparison": {
+          "field_name": "部件名称",
+          "matched_label_key": null,
+          "sample_value": "心脏脉冲电场消融仪- \nECG 主线缆",
+          "matched_label_value": null,
+          "comparison_hint": "field_missing_in_matched_label"
+        }
+      },
+      "file_path": null,
+      "page_number": 111,
+      "section": "label_ocr",
+      "location": null,
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "check_id": "C04",
+        "label_id": "label-16"
+      }
+    },
+    {
+      "ref_id": "label_image:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+      "source_type": "label_ocr",
+      "title": "C04 matched label crop/page evidence",
+      "text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+      "structured": {
+        "label_id": "label-16",
+        "caption_id": "caption-12",
+        "caption_text": "№10 心脏脉冲电场消融仪-ECG 主线缆  中文标签样张",
+        "page_number": 111,
+        "image_ref": null,
+        "has_image_crop": false,
+        "has_page_reference": true,
+        "caption_bbox": null,
+        "finding_metadata": {
+          "component_id": "sample-row-4",
+          "component_key": "心脏脉冲电场消融仪- \nECG 主线缆|PFA-ECG-CBL|2024070069|2024-07-13",
+          "label_id": "label-16",
+          "label_key": "label-16",
+          "field_name": "部件名称",
+          "matched_label_key": null,
+          "ocr_confidence": "medium",
+          "matching_strategy": "name",
+          "is_unused_component": false
+        }
+      },
+      "file_path": null,
+      "page_number": 111,
+      "section": "label_image",
+      "location": null,
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "check_id": "C04",
+        "label_id": "label-16",
+        "caption_id": "caption-12"
+      }
+    },
+    {
+      "ref_id": "page_text:53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+      "source_type": "page_text",
+      "title": "C04 page text snippet",
+      "text": "上\n海\n市\n医\n疗\n器\n械\n检\n验\n研\n究\n院 \n检 验 报 告 \n报告编号：国医检（设）字 QW2025 第 2795 号     样品编号：QW2025-2795       共 118 页 第 2 页 \n \n样品描述 \n被检样品主要部件包括： \n序\n号 \n部件名称 \n规格型号 \n序列号/批号 \n生产日期 \n备注 \n1 \n心脏脉冲电场消融仪-主\n机 \nPFA-GEN-01 \n20539798 \n2025-04-19 \n/ \n2 \n脉冲导管连接电缆（可\n选） \nA-UNI-PF-CBL \n850778817 \n2025-04-10 \n/ \n3 \n心脏脉冲电场消融仪-推\n车 \nPFA-GEN-CART \n10627717 \n2024-11-26 \n/ \n4 \n心脏脉冲电场消融仪- \nECG 主线缆 \nPFA-ECG-CBL \n2024070069 \n2024-07-13 \n/ \n5 \n心脏脉冲电场消融仪-不\n可透射线 ECG 导联线（可\n选） \nPFA-ECG-RNAM \n2024070063 \n2024-10-11 \n/ \n6 \n心脏脉冲电场消融仪-可\n透射线 ECG 导联线（可\n选） \nPFA-ECG-LNAM \n/ \n/ \n本次检测未\n使用 \n7 \n心脏脉冲电场消融仪-记\n录系统连接线缆 \nGEN-3RD-REC \n/ \n/ \n本次检测未\n使用 \n8 \n心脏脉冲电场消融仪-触\n摸屏 \nPFA-GEN-TS \nC24H006740 \n2024-10-14 \n/ \n9 \n电源电缆（可选） \nGEN-PWR-CH \n10822757 \n2017-10-15 \n/ \n10 \n等电位线缆（3m）（可\n选） \nS100003 \n/ \n/ \n/ \n11 \n光接收器（可选） \nS100018 \n/ \n/ \n/ \n12 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（10m）\n（可选） \nPFA-GEN-\nCBL10 \n/ \n/ \n本次检测未\n使用 \n13 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（15m）\n（可选） \nPFA-GEN-\nCBL15 \n/ \n/ \n本次检测未\n使用 \n14 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选） \nPFA-GEN-\nCBL30 \n/ \n/ \n/ \n15 \n光纤（10m）（可选） \nH700179 \n/ \n/ \n本次检测未\n使用 \n",
+      "structured": {
+        "page_number": 4,
+        "text": "上\n海\n市\n医\n疗\n器\n械\n检\n验\n研\n究\n院 \n检 验 报 告 \n报告编号：国医检（设）字 QW2025 第 2795 号     样品编号：QW2025-2795       共 118 页 第 2 页 \n \n样品描述 \n被检样品主要部件包括： \n序\n号 \n部件名称 \n规格型号 \n序列号/批号 \n生产日期 \n备注 \n1 \n心脏脉冲电场消融仪-主\n机 \nPFA-GEN-01 \n20539798 \n2025-04-19 \n/ \n2 \n脉冲导管连接电缆（可\n选） \nA-UNI-PF-CBL \n850778817 \n2025-04-10 \n/ \n3 \n心脏脉冲电场消融仪-推\n车 \nPFA-GEN-CART \n10627717 \n2024-11-26 \n/ \n4 \n心脏脉冲电场消融仪- \nECG 主线缆 \nPFA-ECG-CBL \n2024070069 \n2024-07-13 \n/ \n5 \n心脏脉冲电场消融仪-不\n可透射线 ECG 导联线（可\n选） \nPFA-ECG-RNAM \n2024070063 \n2024-10-11 \n/ \n6 \n心脏脉冲电场消融仪-可\n透射线 ECG 导联线（可\n选） \nPFA-ECG-LNAM \n/ \n/ \n本次检测未\n使用 \n7 \n心脏脉冲电场消融仪-记\n录系统连接线缆 \nGEN-3RD-REC \n/ \n/ \n本次检测未\n使用 \n8 \n心脏脉冲电场消融仪-触\n摸屏 \nPFA-GEN-TS \nC24H006740 \n2024-10-14 \n/ \n9 \n电源电缆（可选） \nGEN-PWR-CH \n10822757 \n2017-10-15 \n/ \n10 \n等电位线缆（3m）（可\n选） \nS100003 \n/ \n/ \n/ \n11 \n光接收器（可选） \nS100018 \n/ \n/ \n/ \n12 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（10m）\n（可选） \nPFA-GEN-\nCBL10 \n/ \n/ \n本次检测未\n使用 \n13 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（15m）\n（可选） \nPFA-GEN-\nCBL15 \n/ \n/ \n本次检测未\n使用 \n14 \n心脏脉冲电场消融仪-触\n摸屏连接线缆（30m）\n（可选） \nPFA-GEN-\nCBL30 \n/ \n/ \n/ \n15 \n光纤（10m）（可选） \nH700179 \n/ \n/ \n本次检测未\n使用 \n"
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "page_text",
+      "location": null,
+      "metadata": {
+        "finding_id": "53bbeec9-998b-4868-9627-00d9cc3b7ab0-c04-sample-row-4-部件名称",
+        "check_id": "C04",
+        "file_id": "36628a34943d8df5"
+      }
+    }
+  ],
+  "metadata": {
+    "source": "report_codex_evidence_builder",
+    "check_id": "C04",
+    "deterministic_finding_count": 35,
+    "target_count": 1,
+    "total_candidate_targets": 35,
+    "emitted_targets": 1,
+    "truncated": true,
+    "omitted_targets_count": 25,
+    "target_offset": 9,
+    "batch_index": 9,
+    "batch_size": 1,
+    "max_targets_per_task": 5,
+    "max_targets_per_batch": 1
+  }
+}

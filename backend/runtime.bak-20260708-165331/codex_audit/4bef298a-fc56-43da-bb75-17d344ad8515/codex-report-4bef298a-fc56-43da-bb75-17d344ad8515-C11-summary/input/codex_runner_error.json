@@ -1,0 +1,23 @@
+{
+  "code": "CODEX_EXIT_NONZERO",
+  "exit_code": 1,
+  "retry_after_text": null,
+  "workspace_dir": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/4bef298a-fc56-43da-bb75-17d344ad8515/codex-report-4bef298a-fc56-43da-bb75-17d344ad8515-C11-summary/input",
+  "prompt_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/4bef298a-fc56-43da-bb75-17d344ad8515/codex-report-4bef298a-fc56-43da-bb75-17d344ad8515-C11-summary/input/prompt.md",
+  "prompt_size_bytes": 13409,
+  "evidence_package_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/4bef298a-fc56-43da-bb75-17d344ad8515/codex-report-4bef298a-fc56-43da-bb75-17d344ad8515-C11-summary/input/evidence_package.json",
+  "evidence_package_size_bytes": 2093,
+  "output_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/4bef298a-fc56-43da-bb75-17d344ad8515/codex-report-4bef298a-fc56-43da-bb75-17d344ad8515-C11-summary/input/codex_review_output.json",
+  "output_exists": false,
+  "output_schema_path": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/4bef298a-fc56-43da-bb75-17d344ad8515/codex-report-4bef298a-fc56-43da-bb75-17d344ad8515-C11-summary/input/codex_review_output.schema.json",
+  "stdout_size_bytes": 0,
+  "stderr_size_bytes": 14884,
+  "output_size_bytes": 0,
+  "stderr_tail": "nistic report check summary and decide whether evidence is sufficient\\\", \\\"check_id\\\": \\\"C11\\\", \\\"check_name\\\": \\\"页码连续性\\\", \\\"deterministic_finding_count\\\": 0, \\\"finding_codes\\\": [], \\\"rule_output_role\\\": \\\"candidate_summary_not_final_conclusion\\\", \\\"status\\\": \\\"pass\\\", \\\"summary\\\": \\\"报告页码连续且总页数一致\\\"}\", \"text\": \"报告自检规则初判汇总上下文。\", \"title\": \"C11 deterministic check summary\"}\n\n2026-07-03T06:58:28.183874Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when AuthRequired(AuthRequiredError { www_authenticate_header: \"Bearer resource_metadata=\\\"https://mcp.figma.com/.well-known/oauth-protected-resource\\\",scope=\\\"mcp:connect\\\",authorization_uri=\\\"https://api.figma.com/.well-known/oauth-authorization-server\\\"\" })\n**Producing JSON audit result**\n**Formatting JSON output for audit**\nERROR: Reconnecting... 1/5\nERROR: Reconnecting... 2/5\nERROR: Reconnecting... 3/5\nERROR: Reconnecting... 4/5\nERROR: Reconnecting... 5/5\nERROR: stream disconnected before completion: error sending request for url (https://chatgpt.com/backend-api/codex/responses)\nERROR: stream disconnected before completion: error sending request for url (https://chatgpt.com/backend-api/codex/responses)\n",
+  "stdout_tail": "",
+  "target_ids": [
+    "report-codex-check-summary-C11"
+  ],
+  "package_id": "codex-report-4bef298a-fc56-43da-bb75-17d344ad8515-C11-summary",
+  "task_id": "4bef298a-fc56-43da-bb75-17d344ad8515"
+}

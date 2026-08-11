@@ -1,0 +1,14 @@
+{
+  "package_id": "codex-report-7b20f4a4-e99e-42c3-9151-3d00b16c259c-C04-batch-0",
+  "task_id": "7b20f4a4-e99e-42c3-9151-3d00b16c259c",
+  "root_dir": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/7b20f4a4-e99e-42c3-9151-3d00b16c259c/codex-report-7b20f4a4-e99e-42c3-9151-3d00b16c259c-C04-batch-0/input",
+  "package_json_path": "evidence_package.json",
+  "item_file_paths": [
+    "items/7b20f4a4-e99e-42c3-9151-3d00b16c259c-c04-sample-row-1-label-page.png"
+  ],
+  "created_at": "2026-06-26T13:05:52.010593Z",
+  "metadata": {
+    "schema_version": "evidence-package-v1",
+    "kind": "report_rule_review"
+  }
+}

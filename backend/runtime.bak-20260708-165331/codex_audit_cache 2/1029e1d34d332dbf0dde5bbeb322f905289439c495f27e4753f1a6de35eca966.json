@@ -1,0 +1,720 @@
+{
+  "cache_key": "1029e1d34d332dbf0dde5bbeb322f905289439c495f27e4753f1a6de35eca966",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-4ead3ef8-6070-47a4-81ad-0701e65331e4-ptr-batch-2-ptr_review:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pulse3:unbound",
+      "request_id": "codex-request-4ead3ef8-6070-47a4-81ad-0701e65331e4-ptr-batch-2",
+      "task_id": "4ead3ef8-6070-47a4-81ad-0701e65331e4",
+      "target": {
+        "target_id": "ptr_review:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pulse3:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pulse3:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 脉冲相间隔 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pulse3:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pulse3:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "report_inspection_group:157 的 2.2.2 窗口显示 PULSE3 段存在“脉冲相间隔 1μsec±20% -13%～-8% 符合 /”，与 rule_context 中 actual=null 的未绑定初判冲突。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pulse3:unbound",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:04:31.633630Z",
+      "completed_at": "2026-07-06T06:04:31.633630Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 176.178388,
+        "exit_code": 0,
+        "stdout_size_bytes": 4157,
+        "stderr_size_bytes": 314382,
+        "output_size_bytes": 4156,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-4ead3ef8-6070-47a4-81ad-0701e65331e4-batch-2",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.004338,
+          "evidence_package_size_bytes": 215305,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 7e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.002491,
+          "prompt_size_bytes": 30819,
+          "schema_prepare_seconds": 0.000414,
+          "codex_exec_seconds": 176.178388,
+          "result_validation_seconds": 1.4e-05
+        },
+        "cache_key": "1029e1d34d332dbf0dde5bbeb322f905289439c495f27e4753f1a6de35eca966"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-4ead3ef8-6070-47a4-81ad-0701e65331e4-ptr-batch-2-ptr_review:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pf_reversible:unbound",
+      "request_id": "codex-request-4ead3ef8-6070-47a4-81ad-0701e65331e4-ptr-batch-2",
+      "task_id": "4ead3ef8-6070-47a4-81ad-0701e65331e4",
+      "target": {
+        "target_id": "ptr_review:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pf_reversible:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pf_reversible:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 脉冲相间隔 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pf_reversible:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pf_reversible:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "report_inspection_group:157 的 2.2.2 窗口显示 PFReversible 段存在“脉冲相间隔 1μsec±20% +11% /”，可定位该参数行，反驳未完成报告结果绑定的初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:pulse_phase_interval:pf_reversible:unbound",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:04:31.633630Z",
+      "completed_at": "2026-07-06T06:04:31.633630Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 176.178388,
+        "exit_code": 0,
+        "stdout_size_bytes": 4157,
+        "stderr_size_bytes": 314382,
+        "output_size_bytes": 4156,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-4ead3ef8-6070-47a4-81ad-0701e65331e4-batch-2",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.004338,
+          "evidence_package_size_bytes": 215305,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 7e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.002491,
+          "prompt_size_bytes": 30819,
+          "schema_prepare_seconds": 0.000414,
+          "codex_exec_seconds": 176.178388,
+          "result_validation_seconds": 1.4e-05
+        },
+        "cache_key": "1029e1d34d332dbf0dde5bbeb322f905289439c495f27e4753f1a6de35eca966"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-4ead3ef8-6070-47a4-81ad-0701e65331e4-ptr-batch-2-ptr_review:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pulse3:unbound",
+      "request_id": "codex-request-4ead3ef8-6070-47a4-81ad-0701e65331e4-ptr-batch-2",
+      "task_id": "4ead3ef8-6070-47a4-81ad-0701e65331e4",
+      "target": {
+        "target_id": "ptr_review:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pulse3:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pulse3:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 波形类型 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pulse3:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pulse3:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "report_inspection_group:157 的 2.2.2 窗口显示 PULSE3 段存在“波形类型 三相 符合要求 /”，可绑定波形类型行，规则未绑定初判不成立。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pulse3:unbound",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:04:31.633630Z",
+      "completed_at": "2026-07-06T06:04:31.633630Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 176.178388,
+        "exit_code": 0,
+        "stdout_size_bytes": 4157,
+        "stderr_size_bytes": 314382,
+        "output_size_bytes": 4156,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-4ead3ef8-6070-47a4-81ad-0701e65331e4-batch-2",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.004338,
+          "evidence_package_size_bytes": 215305,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 7e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.002491,
+          "prompt_size_bytes": 30819,
+          "schema_prepare_seconds": 0.000414,
+          "codex_exec_seconds": 176.178388,
+          "result_validation_seconds": 1.4e-05
+        },
+        "cache_key": "1029e1d34d332dbf0dde5bbeb322f905289439c495f27e4753f1a6de35eca966"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-4ead3ef8-6070-47a4-81ad-0701e65331e4-ptr-batch-2-ptr_review:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pf_reversible:unbound",
+      "request_id": "codex-request-4ead3ef8-6070-47a4-81ad-0701e65331e4-ptr-batch-2",
+      "task_id": "4ead3ef8-6070-47a4-81ad-0701e65331e4",
+      "target": {
+        "target_id": "ptr_review:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pf_reversible:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pf_reversible:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 波形类型 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pf_reversible:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pf_reversible:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "report_inspection_group:157 的 2.2.2 窗口显示 PFReversible 段存在“波形类型 双相 符合要求 /”，可定位该参数行，反驳未绑定初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:waveform_type:pf_reversible:unbound",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:04:31.633630Z",
+      "completed_at": "2026-07-06T06:04:31.633630Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 176.178388,
+        "exit_code": 0,
+        "stdout_size_bytes": 4157,
+        "stderr_size_bytes": 314382,
+        "output_size_bytes": 4156,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-4ead3ef8-6070-47a4-81ad-0701e65331e4-batch-2",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.004338,
+          "evidence_package_size_bytes": 215305,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 7e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.002491,
+          "prompt_size_bytes": 30819,
+          "schema_prepare_seconds": 0.000414,
+          "codex_exec_seconds": 176.178388,
+          "result_validation_seconds": 1.4e-05
+        },
+        "cache_key": "1029e1d34d332dbf0dde5bbeb322f905289439c495f27e4753f1a6de35eca966"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-4ead3ef8-6070-47a4-81ad-0701e65331e4-ptr-batch-2-ptr_review:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pulse3:unbound",
+      "request_id": "codex-request-4ead3ef8-6070-47a4-81ad-0701e65331e4-ptr-batch-2",
+      "task_id": "4ead3ef8-6070-47a4-81ad-0701e65331e4",
+      "target": {
+        "target_id": "ptr_review:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pulse3:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pulse3:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.2 的参数 正峰值/负峰值 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 157 未稳定展开表格参数结果，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pulse3:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pulse3:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "report_inspection_group:157 的 2.2.2 窗口显示 PULSE3 段存在“正峰值/负峰值 5±20% -9% /”，报告行证据已给出对应参数和值，故反驳 actual=null 的未绑定初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "rule_context:4ead3ef8-6070-47a4-81ad-0701e65331e4:PTR_ATOMIC:2.2.2:2.2.2:peak_ratio:pulse3:unbound",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:04:31.633630Z",
+      "completed_at": "2026-07-06T06:04:31.633630Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 176.178388,
+        "exit_code": 0,
+        "stdout_size_bytes": 4157,
+        "stderr_size_bytes": 314382,
+        "output_size_bytes": 4156,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-4ead3ef8-6070-47a4-81ad-0701e65331e4-batch-2",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.004338,
+          "evidence_package_size_bytes": 215305,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 7e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.002491,
+          "prompt_size_bytes": 30819,
+          "schema_prepare_seconds": 0.000414,
+          "codex_exec_seconds": 176.178388,
+          "result_validation_seconds": 1.4e-05
+        },
+        "cache_key": "1029e1d34d332dbf0dde5bbeb322f905289439c495f27e4753f1a6de35eca966"
+      }
+    }
+  ]
+}

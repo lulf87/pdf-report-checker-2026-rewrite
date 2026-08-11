@@ -1,0 +1,878 @@
+{
+  "package_id": "codex-ptr-b2c6d199-9498-4c19-a145-e2737e134a0f-batch-1",
+  "task_id": "b2c6d199-9498-4c19-a145-e2737e134a0f",
+  "task_type": "ptr_compare",
+  "kind": "ptr_clause_review",
+  "schema_version": "evidence-package-v1",
+  "created_at": "2026-07-05T02:16:15.000663Z",
+  "targets": [
+    {
+      "target_id": "ptr_review:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.6:missing",
+      "target_type": "ptr_clause",
+      "check_id": "PTR_CLAUSE",
+      "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.6:missing",
+      "finding_code": "PTR_CLAUSE_MISSING",
+      "summary": "报告标准要求中未找到 PTR 条款 2.1.6。",
+      "evidence_refs": [
+        "finding:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.6:missing",
+        "rule_context:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.6:missing",
+        "ptr_clause:ptr-2.1.6"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "clause_number": "2.1.6",
+        "table_number": null,
+        "parameter_name": null
+      }
+    },
+    {
+      "target_id": "ptr_review:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.7:missing",
+      "target_type": "ptr_clause",
+      "check_id": "PTR_CLAUSE",
+      "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.7:missing",
+      "finding_code": "PTR_CLAUSE_MISSING",
+      "summary": "报告标准要求中未找到 PTR 条款 2.1.7。",
+      "evidence_refs": [
+        "finding:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.7:missing",
+        "rule_context:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.7:missing",
+        "ptr_clause:ptr-2.1.7"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "clause_number": "2.1.7",
+        "table_number": null,
+        "parameter_name": null
+      }
+    },
+    {
+      "target_id": "ptr_review:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.8:missing",
+      "target_type": "ptr_clause",
+      "check_id": "PTR_CLAUSE",
+      "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.8:missing",
+      "finding_code": "PTR_CLAUSE_MISSING",
+      "summary": "报告标准要求中未找到 PTR 条款 2.1.8。",
+      "evidence_refs": [
+        "finding:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.8:missing",
+        "rule_context:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.8:missing",
+        "ptr_clause:ptr-2.1.8"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "clause_number": "2.1.8",
+        "table_number": null,
+        "parameter_name": null
+      }
+    },
+    {
+      "target_id": "ptr_review:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.9:missing",
+      "target_type": "ptr_clause",
+      "check_id": "PTR_CLAUSE",
+      "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.9:missing",
+      "finding_code": "PTR_CLAUSE_MISSING",
+      "summary": "报告标准要求中未找到 PTR 条款 2.1.9。",
+      "evidence_refs": [
+        "finding:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.9:missing",
+        "rule_context:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.9:missing",
+        "ptr_clause:ptr-2.1.9"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "clause_number": "2.1.9",
+        "table_number": null,
+        "parameter_name": null
+      }
+    },
+    {
+      "target_id": "ptr_review:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.10:missing",
+      "target_type": "ptr_clause",
+      "check_id": "PTR_CLAUSE",
+      "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.10:missing",
+      "finding_code": "PTR_CLAUSE_MISSING",
+      "summary": "报告标准要求中未找到 PTR 条款 2.1.10。",
+      "evidence_refs": [
+        "finding:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.10:missing",
+        "rule_context:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.10:missing",
+        "ptr_clause:ptr-2.1.10"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "clause_number": "2.1.10",
+        "table_number": null,
+        "parameter_name": null
+      }
+    }
+  ],
+  "items": [
+    {
+      "ref_id": "finding:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.6:missing",
+      "source_type": "finding",
+      "title": "报告标准要求中未找到 PTR 条款 2.1.6。",
+      "text": null,
+      "structured": {
+        "id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.6:missing",
+        "task_id": "b2c6d199-9498-4c19-a145-e2737e134a0f",
+        "check_id": "PTR_CLAUSE",
+        "severity": "error",
+        "code": "PTR_CLAUSE_MISSING",
+        "message": "报告标准要求中未找到 PTR 条款 2.1.6。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 2,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "定时功能射频消融仪具有长持续时间和短持续时间。长持续时间范围为1-120 s,短持续时间为1-7 s。准确度应精确到250ms以内。",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-clause-2.1.6",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 2,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "定时功能\n射频消融仪具有长持续时间和短持续时间。长持续时间范围为 1-120 s，短\n持续时间为 1-7 s。准确度应精确到 250 ms 以内。",
+            "normalized_text": "定时功能射频消融仪具有长持续时间和短持续时间。长持续时间范围为1-120 s,短持续时间为1-7 s。准确度应精确到250ms以内。",
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "报告标准要求",
+            "reason": "未找到标准条款 2.1.6 对应的报告条款正文。",
+            "expected_source": "report",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.1.6"
+        }
+      },
+      "file_path": null,
+      "page_number": 2,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 2,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.6:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.6:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.6:missing",
+        "check_id": "PTR_CLAUSE",
+        "code": "PTR_CLAUSE_MISSING",
+        "severity": "error",
+        "message": "报告标准要求中未找到 PTR 条款 2.1.6。",
+        "expected": "定时功能射频消融仪具有长持续时间和短持续时间。长持续时间范围为1-120 s,短持续时间为1-7 s。准确度应精确到250ms以内。",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.1.6"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.6:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.1.6",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.1.6",
+      "text": "定时功能\n射频消融仪具有长持续时间和短持续时间。长持续时间范围为 1-120 s，短\n持续时间为 1-7 s。准确度应精确到 250 ms 以内。",
+      "structured": {
+        "clause_id": "ptr-2.1.6",
+        "number": "2.1.6",
+        "title": "定时功能",
+        "body_text": "定时功能\n射频消融仪具有长持续时间和短持续时间。长持续时间范围为 1-120 s，短\n持续时间为 1-7 s。准确度应精确到 250 ms 以内。",
+        "table_numbers": [],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 2,
+      "section": "2.1.6",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 2,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.1.6",
+        "clause_number": "2.1.6"
+      }
+    },
+    {
+      "ref_id": "finding:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.7:missing",
+      "source_type": "finding",
+      "title": "报告标准要求中未找到 PTR 条款 2.1.7。",
+      "text": null,
+      "structured": {
+        "id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.7:missing",
+        "task_id": "b2c6d199-9498-4c19-a145-e2737e134a0f",
+        "check_id": "PTR_CLAUSE",
+        "severity": "error",
+        "code": "PTR_CLAUSE_MISSING",
+        "message": "报告标准要求中未找到 PTR 条款 2.1.7。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 2,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "控制参数射频消融仪短持续时间控制参数应符合表4的要求: 表4短持续时间控制参数",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-clause-2.1.7",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 2,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "控制参数\n射频消融仪短持续时间控制参数应符合表 4 的要求：\n表 4 短持续时间控制参数",
+            "normalized_text": "控制参数射频消融仪短持续时间控制参数应符合表4的要求: 表4短持续时间控制参数",
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "报告标准要求",
+            "reason": "未找到标准条款 2.1.7 对应的报告条款正文。",
+            "expected_source": "report",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.1.7"
+        }
+      },
+      "file_path": null,
+      "page_number": 2,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 2,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.7:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.7:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.7:missing",
+        "check_id": "PTR_CLAUSE",
+        "code": "PTR_CLAUSE_MISSING",
+        "severity": "error",
+        "message": "报告标准要求中未找到 PTR 条款 2.1.7。",
+        "expected": "控制参数射频消融仪短持续时间控制参数应符合表4的要求: 表4短持续时间控制参数",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.1.7"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.7:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.1.7",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.1.7",
+      "text": "控制参数\n射频消融仪短持续时间控制参数应符合表 4 的要求：\n表 4 短持续时间控制参数",
+      "structured": {
+        "clause_id": "ptr-2.1.7",
+        "number": "2.1.7",
+        "title": "控制参数",
+        "body_text": "控制参数\n射频消融仪短持续时间控制参数应符合表 4 的要求：\n表 4 短持续时间控制参数",
+        "table_numbers": [
+          "4"
+        ],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 2,
+      "section": "2.1.7",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 2,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.1.7",
+        "clause_number": "2.1.7"
+      }
+    },
+    {
+      "ref_id": "finding:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.8:missing",
+      "source_type": "finding",
+      "title": "报告标准要求中未找到 PTR 条款 2.1.8。",
+      "text": null,
+      "structured": {
+        "id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.8:missing",
+        "task_id": "b2c6d199-9498-4c19-a145-e2737e134a0f",
+        "check_id": "PTR_CLAUSE",
+        "severity": "error",
+        "code": "PTR_CLAUSE_MISSING",
+        "message": "报告标准要求中未找到 PTR 条款 2.1.8。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 3,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "保护功能a)设备应有阻抗超限报警功能,超出设定阻抗监测范围应能停止射频输出。b)设备在温度控制模式下应具有超温度限制报警并自动切断射频输出功能。",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-clause-2.1.8",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 3,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "保护功能\na) 设备应有阻抗超限报警功能，超出设定阻抗监测范围应能停止射频输\n出。\nb) 设备在温度控制模式下应具有超温度限制报警并自动切断射频输出功\n能。",
+            "normalized_text": "保护功能a)设备应有阻抗超限报警功能,超出设定阻抗监测范围应能停止射频输出。b)设备在温度控制模式下应具有超温度限制报警并自动切断射频输出功能。",
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "报告标准要求",
+            "reason": "未找到标准条款 2.1.8 对应的报告条款正文。",
+            "expected_source": "report",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.1.8"
+        }
+      },
+      "file_path": null,
+      "page_number": 3,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 3,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.8:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.8:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.8:missing",
+        "check_id": "PTR_CLAUSE",
+        "code": "PTR_CLAUSE_MISSING",
+        "severity": "error",
+        "message": "报告标准要求中未找到 PTR 条款 2.1.8。",
+        "expected": "保护功能a)设备应有阻抗超限报警功能,超出设定阻抗监测范围应能停止射频输出。b)设备在温度控制模式下应具有超温度限制报警并自动切断射频输出功能。",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.1.8"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.8:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.1.8",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.1.8",
+      "text": "保护功能\na) 设备应有阻抗超限报警功能，超出设定阻抗监测范围应能停止射频输\n出。\nb) 设备在温度控制模式下应具有超温度限制报警并自动切断射频输出功\n能。",
+      "structured": {
+        "clause_id": "ptr-2.1.8",
+        "number": "2.1.8",
+        "title": "保护功能",
+        "body_text": "保护功能\na) 设备应有阻抗超限报警功能，超出设定阻抗监测范围应能停止射频输\n出。\nb) 设备在温度控制模式下应具有超温度限制报警并自动切断射频输出功\n能。",
+        "table_numbers": [],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 3,
+      "section": "2.1.8",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 3,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.1.8",
+        "clause_number": "2.1.8"
+      }
+    },
+    {
+      "ref_id": "finding:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.9:missing",
+      "source_type": "finding",
+      "title": "报告标准要求中未找到 PTR 条款 2.1.9。",
+      "text": null,
+      "structured": {
+        "id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.9:missing",
+        "task_id": "b2c6d199-9498-4c19-a145-e2737e134a0f",
+        "check_id": "PTR_CLAUSE",
+        "severity": "error",
+        "code": "PTR_CLAUSE_MISSING",
+        "message": "报告标准要求中未找到 PTR 条款 2.1.9。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 3,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "外观设备表面应平整光洁、色泽均匀、无明显伤痕,文字标志清晰,操作机构灵活,紧固件应无松动。",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-clause-2.1.9",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 3,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "外观\n设备表面应平整光洁、色泽均匀、无明显伤痕，文字标志清晰，操作机构\n灵活，紧固件应无松动。",
+            "normalized_text": "外观设备表面应平整光洁、色泽均匀、无明显伤痕,文字标志清晰,操作机构灵活,紧固件应无松动。",
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "报告标准要求",
+            "reason": "未找到标准条款 2.1.9 对应的报告条款正文。",
+            "expected_source": "report",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.1.9"
+        }
+      },
+      "file_path": null,
+      "page_number": 3,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 3,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.9:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.9:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.9:missing",
+        "check_id": "PTR_CLAUSE",
+        "code": "PTR_CLAUSE_MISSING",
+        "severity": "error",
+        "message": "报告标准要求中未找到 PTR 条款 2.1.9。",
+        "expected": "外观设备表面应平整光洁、色泽均匀、无明显伤痕,文字标志清晰,操作机构灵活,紧固件应无松动。",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.1.9"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.9:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.1.9",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.1.9",
+      "text": "外观\n设备表面应平整光洁、色泽均匀、无明显伤痕，文字标志清晰，操作机构\n灵活，紧固件应无松动。",
+      "structured": {
+        "clause_id": "ptr-2.1.9",
+        "number": "2.1.9",
+        "title": "外观",
+        "body_text": "外观\n设备表面应平整光洁、色泽均匀、无明显伤痕，文字标志清晰，操作机构\n灵活，紧固件应无松动。",
+        "table_numbers": [],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 3,
+      "section": "2.1.9",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 3,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.1.9",
+        "clause_number": "2.1.9"
+      }
+    },
+    {
+      "ref_id": "finding:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.10:missing",
+      "source_type": "finding",
+      "title": "报告标准要求中未找到 PTR 条款 2.1.10。",
+      "text": null,
+      "structured": {
+        "id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.10:missing",
+        "task_id": "b2c6d199-9498-4c19-a145-e2737e134a0f",
+        "check_id": "PTR_CLAUSE",
+        "severity": "error",
+        "code": "PTR_CLAUSE_MISSING",
+        "message": "报告标准要求中未找到 PTR 条款 2.1.10。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 3,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "手动停止功能射频消融仪应具有手动停止射频输出的功能,转为待机状态。",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-clause-2.1.10",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 3,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "手动停止功能\n射频消融仪应具有手动停止射频输出的功能，转为待机状态。",
+            "normalized_text": "手动停止功能射频消融仪应具有手动停止射频输出的功能,转为待机状态。",
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [
+          {
+            "label": "报告标准要求",
+            "reason": "未找到标准条款 2.1.10 对应的报告条款正文。",
+            "expected_source": "report",
+            "location": null,
+            "metadata": {}
+          }
+        ],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.1.10"
+        }
+      },
+      "file_path": null,
+      "page_number": 3,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 3,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.10:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING",
+        "severity": "error"
+      }
+    },
+    {
+      "ref_id": "rule_context:b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.10:missing",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.10:missing",
+        "check_id": "PTR_CLAUSE",
+        "code": "PTR_CLAUSE_MISSING",
+        "severity": "error",
+        "message": "报告标准要求中未找到 PTR 条款 2.1.10。",
+        "expected": "手动停止功能射频消融仪应具有手动停止射频输出的功能,转为待机状态。",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.1.10"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "b2c6d199-9498-4c19-a145-e2737e134a0f:PTR_CLAUSE:2.1.10:missing",
+        "check_id": "PTR_CLAUSE",
+        "finding_code": "PTR_CLAUSE_MISSING"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.1.10",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.1.10",
+      "text": "手动停止功能\n射频消融仪应具有手动停止射频输出的功能，转为待机状态。",
+      "structured": {
+        "clause_id": "ptr-2.1.10",
+        "number": "2.1.10",
+        "title": "手动停止功能",
+        "body_text": "手动停止功能\n射频消融仪应具有手动停止射频输出的功能，转为待机状态。",
+        "table_numbers": [],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 3,
+      "section": "2.1.10",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 3,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.1.10",
+        "clause_number": "2.1.10"
+      }
+    }
+  ],
+  "metadata": {
+    "source": "ptr_compare_usecase",
+    "deterministic_finding_count": 12,
+    "target_count": 5,
+    "total_candidate_targets": 12,
+    "emitted_targets": 5,
+    "truncated": true,
+    "omitted_targets_count": 2,
+    "target_offset": 5,
+    "batch_index": 1,
+    "batch_size": 5,
+    "max_targets_per_task": 5,
+    "max_targets_per_batch": 5
+  }
+}

@@ -174,6 +174,7 @@ def test_cli_runner_builds_safe_codex_exec_command(tmp_path, monkeypatch) -> Non
     cmd = captured["cmd"]
     assert isinstance(cmd, list)
     assert cmd[:2] == ["codex", "exec"]
+    assert "--ignore-user-config" in cmd
     assert cmd[cmd.index("--cd") + 1] == str(workspace.resolve())
     assert cmd[cmd.index("--sandbox") + 1] == "read-only"
     assert "--ephemeral" in cmd
@@ -181,6 +182,8 @@ def test_cli_runner_builds_safe_codex_exec_command(tmp_path, monkeypatch) -> Non
     assert cmd[cmd.index("-o") + 1] == str((workspace / "codex_review_output.json").resolve())
     assert "danger-full-access" not in cmd
     assert "workspace-write" not in cmd
+    assert cmd[cmd.index("--model") + 1] == "gpt-5.6-terra"
+    assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="medium"'
     assert captured["kwargs"]["timeout"] == 7
     assert results[0].status is CodexReviewStatus.SUCCEEDED
     assert results[0].verdict is CodexReviewVerdict.CONFIRM
@@ -192,6 +195,66 @@ def test_cli_runner_builds_safe_codex_exec_command(tmp_path, monkeypatch) -> Non
     assert results[0].metadata["stderr_size_bytes"] == 0
     assert results[0].metadata["output_size_bytes"] > 0
     assert results[0].metadata["image_count"] == 0
+    assert results[0].metadata["effective_model"] == "gpt-5.6-terra"
+    assert results[0].metadata["effective_reasoning_effort"] == "medium"
+
+
+def test_cli_runner_adds_selected_model_without_mutating_original(tmp_path, monkeypatch) -> None:
+    workspace = tmp_path / "runtime" / "codex_audit" / "task-1" / "pkg-1" / "input"
+    workspace.mkdir(parents=True)
+    prompt_path = workspace / "prompt.txt"
+    prompt_path.write_text("Review evidence_package.json", encoding="utf-8")
+    captured: list[list[str]] = []
+
+    def fake_run(cmd, **kwargs):
+        del kwargs
+        captured.append(cmd)
+        output_path = Path(cmd[cmd.index("-o") + 1])
+        output_path.write_text(json.dumps(_output_payload()), encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    original = CodexCliRunner(CodexCliRunnerConfig(enabled=True, allow_real_execution=True))
+    selected = original.with_model("gpt-5.4/custom:model_1")
+
+    results = selected.run_review(_request(), _package(), workspace, prompt_path=prompt_path)
+
+    assert original.config.model == "gpt-5.6-terra"
+    assert selected.config.model == "gpt-5.4/custom:model_1"
+    assert captured[0][captured[0].index("--model") + 1] == "gpt-5.4/custom:model_1"
+    assert results[0].metadata["effective_model"] == "gpt-5.4/custom:model_1"
+
+
+def test_cli_runner_adds_selected_reasoning_effort_without_mutating_original(tmp_path, monkeypatch) -> None:
+    workspace = tmp_path / "runtime" / "codex_audit" / "task-1" / "pkg-1" / "input"
+    workspace.mkdir(parents=True)
+    prompt_path = workspace / "prompt.txt"
+    prompt_path.write_text("Review evidence_package.json", encoding="utf-8")
+    captured: list[list[str]] = []
+
+    def fake_run(cmd, **kwargs):
+        del kwargs
+        captured.append(cmd)
+        output_path = Path(cmd[cmd.index("-o") + 1])
+        output_path.write_text(json.dumps(_output_payload()), encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    original = CodexCliRunner(CodexCliRunnerConfig(enabled=True, allow_real_execution=True))
+    selected = original.with_reasoning_effort("high")
+
+    results = selected.run_review(_request(), _package(), workspace, prompt_path=prompt_path)
+
+    assert original.config.reasoning_effort == "medium"
+    assert selected.config.reasoning_effort == "high"
+    assert captured[0][captured[0].index("-c") + 1] == 'model_reasoning_effort="high"'
+    assert results[0].metadata["effective_reasoning_effort"] == "high"
+    assert selected.cache_identity["runtime_config_version"] == "codex-runtime-v2"
+
+
+def test_cli_runner_rejects_reasoning_override_in_extra_args() -> None:
+    with pytest.raises(CodexRunnerConfigurationError, match="reasoning"):
+        CodexCliRunnerConfig(extra_args=["-c", 'model_reasoning_effort="max"'])
 
 
 def test_cli_runner_passes_workspace_images_as_codex_image_inputs(tmp_path, monkeypatch) -> None:

@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"high","evidence_refs":["check_result:C01"],"metadata":{},"reasoning_summary":"仅有C01规则初判汇总，未提供首页与第三页字段原文、截图或结构化比对证据；rule_context本身不能作为最终事实确认，因此无法确认或反驳一致性结论。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C01","verdict":"uncertain"}],"schema_version":"1.0"}

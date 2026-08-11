@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from app.domain.result import CheckResult
-from app.infrastructure.export.common import build_export_payload
+from app.infrastructure.export.common import ExportView, build_export_payload
 
 
 def export_check_results_to_json(
@@ -16,6 +16,7 @@ def export_check_results_to_json(
     input_files: Sequence[str] | None = None,
     diagnostics: Sequence[str] | None = None,
     metadata: dict[str, Any] | None = None,
+    view: ExportView = "audit",
 ) -> bytes:
     payload = build_export_payload(
         results,
@@ -24,6 +25,7 @@ def export_check_results_to_json(
         input_files=input_files,
         diagnostics=diagnostics,
         metadata=metadata,
+        view=view,
     )
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
 

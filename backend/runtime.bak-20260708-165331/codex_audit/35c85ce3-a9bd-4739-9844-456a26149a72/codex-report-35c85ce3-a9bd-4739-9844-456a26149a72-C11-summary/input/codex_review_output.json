@@ -1,0 +1,1 @@
+{"reviews":[{"confidence":"high","evidence_refs":["check_result:C11"],"metadata":{},"reasoning_summary":"仅提供了 C11 规则初判汇总，显示 status=pass 且 finding_count=0；未提供实际页码序列、总页数来源或页面证据，无法独立确认或反驳页码连续性。","status":"succeeded","suggested_finding":null,"suggested_severity":null,"target_id":"report-codex-check-summary-C11","verdict":"uncertain"}],"schema_version":"1.0"}

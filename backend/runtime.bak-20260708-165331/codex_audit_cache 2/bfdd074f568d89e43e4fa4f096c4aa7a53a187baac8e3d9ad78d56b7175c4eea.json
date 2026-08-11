@@ -1,0 +1,664 @@
+{
+  "cache_key": "bfdd074f568d89e43e4fa4f096c4aa7a53a187baac8e3d9ad78d56b7175c4eea",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-2-ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.11:table-2:missing",
+      "request_id": "codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-2",
+      "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+      "target": {
+        "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.11:table-2:missing",
+        "target_type": "ptr_table",
+        "check_id": "PTR_TABLE",
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.11:table-2:missing",
+        "finding_code": "PTR_TABLE_MISSING",
+        "title": "PTR 条款 2.1.11 引用的表 2 未找到。",
+        "summary": "规则初判 PTR_TABLE_MISSING；check_id=PTR_TABLE；clause=2.1.11；table=2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.11:table-2:missing",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.11:table-2:missing",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.1.11",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_TABLE_MISSING",
+          "severity": "error",
+          "clause_number": "2.1.11",
+          "table_number": "2",
+          "parameter_name": null,
+          "atomic_id": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "medium",
+      "reasoning_summary": "ptr_clause:ptr-2.1.11 与 finding 原始证据均显示条款引用“表2-1”，不是候选所称“表2”；现有证据不能确认“表2”缺失这一初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.11:table-2:missing",
+        "ptr_clause:ptr-2.1.11"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T10:43:40.671627Z",
+      "completed_at": "2026-07-06T10:43:40.671627Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 192.443777,
+        "exit_code": 0,
+        "stdout_size_bytes": 3951,
+        "stderr_size_bytes": 106955,
+        "output_size_bytes": 3950,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-batch-2",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.002358,
+          "evidence_package_size_bytes": 41418,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "externalized_text_count": 0,
+          "image_materialization_seconds": 5e-06,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001945,
+          "prompt_size_bytes": 26864,
+          "schema_prepare_seconds": 0.000421,
+          "codex_exec_seconds": 192.443777,
+          "result_validation_seconds": 5e-06
+        },
+        "cache_key": "bfdd074f568d89e43e4fa4f096c4aa7a53a187baac8e3d9ad78d56b7175c4eea"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-2-ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.12:table-2:missing",
+      "request_id": "codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-2",
+      "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+      "target": {
+        "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.12:table-2:missing",
+        "target_type": "ptr_table",
+        "check_id": "PTR_TABLE",
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.12:table-2:missing",
+        "finding_code": "PTR_TABLE_MISSING",
+        "title": "PTR 条款 2.1.12 引用的表 2 未找到。",
+        "summary": "规则初判 PTR_TABLE_MISSING；check_id=PTR_TABLE；clause=2.1.12；table=2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.12:table-2:missing",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.12:table-2:missing",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.1.12",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_TABLE_MISSING",
+          "severity": "error",
+          "clause_number": "2.1.12",
+          "table_number": "2",
+          "parameter_name": null,
+          "atomic_id": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "medium",
+      "reasoning_summary": "ptr_clause:ptr-2.1.12 与 finding 原始证据均显示条款引用“表2-1”，不是候选所称“表2”；现有证据不能确认“表2”缺失这一初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.1.12:table-2:missing",
+        "ptr_clause:ptr-2.1.12"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T10:43:40.671627Z",
+      "completed_at": "2026-07-06T10:43:40.671627Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 192.443777,
+        "exit_code": 0,
+        "stdout_size_bytes": 3951,
+        "stderr_size_bytes": 106955,
+        "output_size_bytes": 3950,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-batch-2",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.002358,
+          "evidence_package_size_bytes": 41418,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "externalized_text_count": 0,
+          "image_materialization_seconds": 5e-06,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001945,
+          "prompt_size_bytes": 26864,
+          "schema_prepare_seconds": 0.000421,
+          "codex_exec_seconds": 192.443777,
+          "result_validation_seconds": 5e-06
+        },
+        "cache_key": "bfdd074f568d89e43e4fa4f096c4aa7a53a187baac8e3d9ad78d56b7175c4eea"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-2-ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.3:table-2:missing",
+      "request_id": "codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-2",
+      "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+      "target": {
+        "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.3:table-2:missing",
+        "target_type": "ptr_table",
+        "check_id": "PTR_TABLE",
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.3:table-2:missing",
+        "finding_code": "PTR_TABLE_MISSING",
+        "title": "PTR 条款 2.3 引用的表 2 未找到。",
+        "summary": "规则初判 PTR_TABLE_MISSING；check_id=PTR_TABLE；clause=2.3；table=2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.3:table-2:missing",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.3:table-2:missing",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.3",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_TABLE_MISSING",
+          "severity": "error",
+          "clause_number": "2.3",
+          "table_number": "2",
+          "parameter_name": null,
+          "atomic_id": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "ptr_clause:ptr-2.3 与 finding 原始证据显示条款引用“表 2-2”，且同段已包含“表 2-2 特殊功能”及表内条目，候选“表2未找到”与证据冲突。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_TABLE:2.3:table-2:missing",
+        "ptr_clause:ptr-2.3"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T10:43:40.671627Z",
+      "completed_at": "2026-07-06T10:43:40.671627Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 192.443777,
+        "exit_code": 0,
+        "stdout_size_bytes": 3951,
+        "stderr_size_bytes": 106955,
+        "output_size_bytes": 3950,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-batch-2",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.002358,
+          "evidence_package_size_bytes": 41418,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "externalized_text_count": 0,
+          "image_materialization_seconds": 5e-06,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001945,
+          "prompt_size_bytes": 26864,
+          "schema_prepare_seconds": 0.000421,
+          "codex_exec_seconds": 192.443777,
+          "result_validation_seconds": 5e-06
+        },
+        "cache_key": "bfdd074f568d89e43e4fa4f096c4aa7a53a187baac8e3d9ad78d56b7175c4eea"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-2-ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2.2:declared-missing",
+      "request_id": "codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-2",
+      "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+      "target": {
+        "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2.2:declared-missing",
+        "target_type": "inspection_item",
+        "check_id": "PTR_REPORT_SCOPE",
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2.2:declared-missing",
+        "finding_code": "PTR_SCOPE_DECLARED_ITEM_MISSING_IN_REPORT",
+        "title": "报告首页声明检验项目 2.2.2，但实际检验表未发现对应 2.x 条款。",
+        "summary": "规则初判 PTR_SCOPE_DECLARED_ITEM_MISSING_IN_REPORT；check_id=PTR_REPORT_SCOPE；clause=2.2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2.2:declared-missing",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2.2:declared-missing",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_SCOPE_DECLARED_ITEM_MISSING_IN_REPORT",
+          "severity": "error",
+          "clause_number": "2.2.2",
+          "table_number": null,
+          "parameter_name": null,
+          "atomic_id": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "confirm",
+      "confidence": "medium",
+      "reasoning_summary": "report_scope:declaration 明确声明 2.2.2；report_scope:inspection_items 为未截断的相关检验项列表，仅见 2.1.11，未见 2.2.2，对候选缺失判断形成支持。",
+      "suggested_severity": "error",
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2.2:declared-missing",
+        "report_scope:declaration",
+        "report_scope:inspection_items"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T10:43:40.671627Z",
+      "completed_at": "2026-07-06T10:43:40.671627Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 192.443777,
+        "exit_code": 0,
+        "stdout_size_bytes": 3951,
+        "stderr_size_bytes": 106955,
+        "output_size_bytes": 3950,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-batch-2",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.002358,
+          "evidence_package_size_bytes": 41418,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "externalized_text_count": 0,
+          "image_materialization_seconds": 5e-06,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001945,
+          "prompt_size_bytes": 26864,
+          "schema_prepare_seconds": 0.000421,
+          "codex_exec_seconds": 192.443777,
+          "result_validation_seconds": 5e-06
+        },
+        "cache_key": "bfdd074f568d89e43e4fa4f096c4aa7a53a187baac8e3d9ad78d56b7175c4eea"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-2-ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8.2:declared-missing",
+      "request_id": "codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-2",
+      "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+      "target": {
+        "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8.2:declared-missing",
+        "target_type": "inspection_item",
+        "check_id": "PTR_REPORT_SCOPE",
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8.2:declared-missing",
+        "finding_code": "PTR_SCOPE_DECLARED_ITEM_MISSING_IN_REPORT",
+        "title": "报告首页声明检验项目 2.8.2，但实际检验表未发现对应 2.x 条款。",
+        "summary": "规则初判 PTR_SCOPE_DECLARED_ITEM_MISSING_IN_REPORT；check_id=PTR_REPORT_SCOPE；clause=2.8.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8.2:declared-missing",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8.2:declared-missing",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_SCOPE_DECLARED_ITEM_MISSING_IN_REPORT",
+          "severity": "error",
+          "clause_number": "2.8.2",
+          "table_number": null,
+          "parameter_name": null,
+          "atomic_id": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "confirm",
+      "confidence": "medium",
+      "reasoning_summary": "report_scope:declaration 明确声明 2.8.2；report_scope:inspection_items 为未截断的相关检验项列表，仅见 2.1.11，未见 2.8.2，对候选缺失判断形成支持。",
+      "suggested_severity": "error",
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8.2:declared-missing",
+        "report_scope:declaration",
+        "report_scope:inspection_items"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T10:43:40.671627Z",
+      "completed_at": "2026-07-06T10:43:40.671627Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 192.443777,
+        "exit_code": 0,
+        "stdout_size_bytes": 3951,
+        "stderr_size_bytes": 106955,
+        "output_size_bytes": 3950,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-batch-2",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.002358,
+          "evidence_package_size_bytes": 41418,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "externalized_text_count": 0,
+          "image_materialization_seconds": 5e-06,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001945,
+          "prompt_size_bytes": 26864,
+          "schema_prepare_seconds": 0.000421,
+          "codex_exec_seconds": 192.443777,
+          "result_validation_seconds": 5e-06
+        },
+        "cache_key": "bfdd074f568d89e43e4fa4f096c4aa7a53a187baac8e3d9ad78d56b7175c4eea"
+      }
+    }
+  ]
+}

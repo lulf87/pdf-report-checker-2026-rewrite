@@ -66,6 +66,8 @@ def _build_codex_runner(settings: Settings) -> CodexCliRunner:
             sandbox=settings.codex_audit_sandbox,
             timeout_seconds=settings.codex_audit_timeout_seconds,
             ephemeral=settings.codex_audit_ephemeral,
+            model=settings.codex_audit_model,
+            reasoning_effort=settings.codex_audit_reasoning_effort,
         )
     )
 

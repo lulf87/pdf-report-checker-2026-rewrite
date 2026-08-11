@@ -1,0 +1,39 @@
+{
+  "package_id": "codex-report-ae5253f4-fe78-4a91-bb49-1c840f4cbeda-C07-batch-1",
+  "task_id": "ae5253f4-fe78-4a91-bb49-1c840f4cbeda",
+  "root_dir": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/ae5253f4-fe78-4a91-bb49-1c840f4cbeda/codex-report-ae5253f4-fe78-4a91-bb49-1c840f4cbeda-C07-batch-1/input",
+  "package_json_path": "evidence_package.json",
+  "item_file_paths": [
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-151-result-token-recovery-uncertain-c07-page-p103.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-151-result-token-recovery-uncertain-c07-table-p103.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-151-result-token-recovery-uncertain-c07-page-p104.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-151-result-token-recovery-uncertain-c07-table-p104.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-151-result-token-recovery-uncertain-c07-item-group-p104.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-151-result-token-recovery-uncertain-c07-result-p104.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-151-result-token-recovery-uncertain-c07-conclusion-p104.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-151-result-token-recovery-uncertain-c07-remark-p104.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-page-p117.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-table-p117.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-item-group-p117.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-result-p117.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-conclusion-p117.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-remark-p117.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-page-p118.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-table-p118.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-item-group-p118.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-result-p118.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-conclusion-p118.png",
+    "items/ae5253f4-fe78-4a91-bb49-1c840f4cbeda-c07-195-conclusion-mismatch-c07-remark-p118.png"
+  ],
+  "created_at": "2026-07-03T05:49:27.019382Z",
+  "metadata": {
+    "schema_version": "evidence-package-v1",
+    "kind": "report_rule_review",
+    "image_materialization_seconds": 0.470953,
+    "image_items_count": 20,
+    "materialized_image_count": 20,
+    "materialized_image_bytes": 4112986,
+    "externalized_text_count": 0,
+    "externalized_text_bytes": 0
+  }
+}

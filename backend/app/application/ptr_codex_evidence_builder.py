@@ -30,6 +30,7 @@ from app.domain.evidence_package import (
 from app.domain.finding import Finding
 from app.domain.inspection_group import InspectionItemGroup
 from app.domain.ptr import PTRClause, PTRDocument, PTRTable
+from app.domain.ptr_comparison import ReportClauseIdentity, ReportSubclauseIndex
 from app.domain.report import InspectionItem, ReportDocument
 from app.domain.report_scope import ReportInspectionScope
 from app.domain.result import CheckResult
@@ -65,6 +66,14 @@ CLAUSE_CODES = {
     "PTR_CLAUSE_TEXT_MISMATCH",
     "PTR_CLAUSE_MISSING",
     "PTR_CLAUSE_INVALID_MATCH_CANDIDATE",
+    "PTR_CLAUSE_IDENTITY_MISMATCH",
+    "PTR_REPORT_CLAUSE_NUMBER_MISMATCH",
+    "PTR_CLAUSE_IDENTITY_AMBIGUOUS",
+}
+CLAUSE_IDENTITY_CODES = {
+    "PTR_CLAUSE_IDENTITY_MISMATCH",
+    "PTR_REPORT_CLAUSE_NUMBER_MISMATCH",
+    "PTR_CLAUSE_IDENTITY_AMBIGUOUS",
 }
 TABLE_CODES = {
     "PTR_TABLE_MISSING",
@@ -170,6 +179,9 @@ class PtrCodexEvidenceBuilder:
                         "table_number": finding.metadata.get("table_number"),
                         "parameter_name": finding.metadata.get("parameter_name"),
                         "atomic_id": finding.metadata.get("atomic_id"),
+                        "clause_identity_status": finding.metadata.get("clause_identity_status"),
+                        "selected_report_clause_number": finding.metadata.get("selected_report_clause_number"),
+                        "selected_report_title": finding.metadata.get("selected_report_title"),
                         **_selected_metadata(finding, NUMERIC_TARGET_METADATA_KEYS),
                     },
                 )
@@ -195,6 +207,9 @@ class PtrCodexEvidenceBuilder:
                         "table_number": finding.metadata.get("table_number"),
                         "parameter_name": finding.metadata.get("parameter_name"),
                         "atomic_id": finding.metadata.get("atomic_id"),
+                        "clause_identity_status": finding.metadata.get("clause_identity_status"),
+                        "selected_report_clause_number": finding.metadata.get("selected_report_clause_number"),
+                        "selected_report_title": finding.metadata.get("selected_report_title"),
                         **_selected_metadata(finding, NUMERIC_TARGET_METADATA_KEYS),
                     },
                 )
@@ -222,7 +237,7 @@ class PtrCodexEvidenceBuilder:
             task_type=task_type,
             mode="verify",
             targets=review_targets,
-            prompt_version="ptr-review-v2",
+            prompt_version="ptr-review-v3",
             schema_version="codex-review-output-v1",
             created_at=_utc_now(),
             metadata={
@@ -312,6 +327,9 @@ class PtrCodexEvidenceBuilder:
         group_item = self._report_inspection_group_item_for_finding(finding, report_doc)
         if group_item is not None:
             self._add_item(items_by_ref, group_item, refs)
+
+        for identity_item in self._report_clause_identity_items_for_finding(finding, report_doc):
+            self._add_item(items_by_ref, identity_item, refs)
 
         for ptr_table in self._ptr_tables_for_finding(finding, ptr_doc):
             item = self._ptr_table_item(ptr_table)
@@ -584,6 +602,83 @@ class PtrCodexEvidenceBuilder:
             return ptr_group_for_clause(clause_number, groups)
         return None
 
+    def _report_clause_identity_items_for_finding(
+        self,
+        finding: Finding,
+        report_doc: ReportDocument,
+    ) -> list[EvidenceItem]:
+        alignment = finding.metadata.get("clause_identity_alignment")
+        if not isinstance(alignment, dict):
+            return []
+        raw_index = report_doc.metadata.get("report_subclause_index")
+        if not isinstance(raw_index, (dict, ReportSubclauseIndex)):
+            return []
+        index = raw_index if isinstance(raw_index, ReportSubclauseIndex) else ReportSubclauseIndex.model_validate(raw_index)
+        identities_by_id = {identity.identity_id: identity for identity in index.identities}
+        selected = alignment.get("selected_report_identity")
+        selected_id = str(selected.get("identity_id") or "") if isinstance(selected, dict) else ""
+        candidates = alignment.get("candidates")
+        candidate_rows = candidates if isinstance(candidates, list) else []
+        ordered_ids: list[str] = []
+        for candidate in candidate_rows:
+            if not isinstance(candidate, dict) or candidate.get("number_relation") != "exact":
+                continue
+            ordered_ids.append(str(candidate.get("report_identity_id") or ""))
+        if selected_id:
+            ordered_ids.append(selected_id)
+        ordered_ids.extend(
+            str(candidate.get("report_identity_id") or "")
+            for candidate in candidate_rows
+            if isinstance(candidate, dict)
+            and candidate.get("rejected_reason") is None
+            and any(
+                candidate.get(key) in {"exact", "alias", "similar"}
+                for key in ("title_relation", "table_row_relation", "parameter_relation")
+            )
+        )
+        result: list[EvidenceItem] = []
+        for identity_id in dict.fromkeys(identity_id for identity_id in ordered_ids if identity_id):
+            identity = identities_by_id.get(identity_id)
+            if identity is None:
+                continue
+            result.append(self._report_clause_identity_item(identity))
+            if len(result) >= self.max_table_records:
+                break
+        return result
+
+    def _report_clause_identity_item(self, identity: ReportClauseIdentity) -> EvidenceItem:
+        return EvidenceItem(
+            ref_id=identity.identity_id,
+            source_type=EvidenceSourceType.TABLE,
+            title=self._sanitize_text(
+                f"Report clause {identity.clause_number or 'unnumbered'} {identity.title or ''}"
+            ),
+            text=self._sanitize_text(
+                " ".join(
+                    value
+                    for value in (
+                        identity.clause_number,
+                        identity.title,
+                        identity.standard_requirement_text,
+                        identity.test_result,
+                        identity.conclusion,
+                    )
+                    if value
+                )
+            ),
+            structured=self._safe_payload(
+                {"report_clause_identity": identity.model_dump(mode="json")}
+            ),
+            page_number=identity.source_page,
+            section=identity.clause_number,
+            metadata={
+                "source": "report_subclause_index",
+                "item_no": identity.item_no,
+                "clause_number": identity.clause_number,
+                "source_row": identity.source_row,
+            },
+        )
+
     def _report_inspection_group_summary(
         self,
         group: InspectionItemGroup,
@@ -637,7 +732,7 @@ class PtrCodexEvidenceBuilder:
         clause: PTRClause,
         ptr_doc: PTRDocument,
     ) -> list[PTRClause]:
-        if finding.check_id != "PTR_TABLE":
+        if finding.check_id != "PTR_TABLE" and finding.code not in CLAUSE_IDENTITY_CODES:
             return []
         parents: list[PTRClause] = []
         parent_number = clause.number.parent()
@@ -650,9 +745,17 @@ class PtrCodexEvidenceBuilder:
 
     def _ptr_tables_for_finding(self, finding: Finding, ptr_doc: PTRDocument) -> list[PTRTable]:
         table_number = str(finding.metadata.get("table_number") or "")
-        if not table_number:
+        if table_number:
+            return ptr_doc.get_tables_by_number(table_number)
+        if finding.code not in CLAUSE_IDENTITY_CODES:
             return []
-        return ptr_doc.get_tables_by_number(table_number)
+        clause = self._clause_for_finding(finding, ptr_doc)
+        if clause is None:
+            return []
+        tables: list[PTRTable] = []
+        for number in clause.get_all_table_numbers():
+            tables.extend(ptr_doc.get_tables_by_number(number))
+        return tables
 
     def _report_tables_for_finding(self, finding: Finding, report_doc: ReportDocument) -> list[CanonicalTable]:
         tables = self._report_canonical_tables(report_doc)

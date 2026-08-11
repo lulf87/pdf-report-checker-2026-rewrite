@@ -36,12 +36,28 @@ class NumericLimitExpression:
 
 
 def classify_requirement(clause: PTRClause, ptr_doc: PTRDocument | None = None) -> RequirementClassification:
-    text = _clause_text(clause)
-    numeric_requirements = _numeric_text_requirements(clause, text)
-    if numeric_requirements:
+    text = clause_local_text(clause)
+
+    if _has_table_reference(clause, text):
+        if _is_software_function_table(clause, text):
+            return RequirementClassification(requirement_type=RequirementType.SOFTWARE_FUNCTION_TABLE)
         return RequirementClassification(
-            requirement_type=RequirementType.NUMERIC_LIMIT,
-            atomic_requirements=numeric_requirements,
+            requirement_type=RequirementType.TABLE_DRIVEN,
+            atomic_requirements=_table_local_requirements(clause, text),
+        )
+
+    mixed_torque_requirements = _mixed_torque_requirements(clause, text)
+    if mixed_torque_requirements:
+        return RequirementClassification(
+            requirement_type=RequirementType.NUMERIC_RANGE,
+            atomic_requirements=mixed_torque_requirements,
+        )
+
+    deviation_requirements = _deviation_requirements(clause, text)
+    if deviation_requirements:
+        return RequirementClassification(
+            requirement_type=RequirementType.NUMERIC_RANGE,
+            atomic_requirements=deviation_requirements,
         )
 
     functional_requirements = _functional_requirements(clause, text)
@@ -51,14 +67,15 @@ def classify_requirement(clause: PTRClause, ptr_doc: PTRDocument | None = None) 
             atomic_requirements=functional_requirements,
         )
 
-    if _is_software_function_table(clause, text):
-        return RequirementClassification(requirement_type=RequirementType.SOFTWARE_FUNCTION_TABLE)
-
-    if _has_table_reference(clause, text):
-        return RequirementClassification(requirement_type=RequirementType.TABLE_DRIVEN)
-
     if _is_external_standard_coverage(text):
         return RequirementClassification(requirement_type=RequirementType.EXTERNAL_STANDARD_COVERAGE)
+
+    numeric_requirements = _numeric_text_requirements(clause, text)
+    if numeric_requirements:
+        return RequirementClassification(
+            requirement_type=RequirementType.NUMERIC_LIMIT,
+            atomic_requirements=numeric_requirements,
+        )
 
     return RequirementClassification(
         requirement_type=RequirementType.UNKNOWN_NEEDS_REVIEW,
@@ -95,7 +112,15 @@ def _numeric_text_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRe
         )
 
     if "最大输出能量" in text or "输出能量" in text:
-        value = _limit_value(text, unit="mJ") or 258
+        value = _limit_value(text, unit="mJ")
+        has_limit_semantics = "最大输出能量" in text or any(
+            token in text for token in ("不超过", "不大于", "小于", "低于", "至多")
+        )
+        if value is None or not has_limit_semantics:
+            value = None
+    else:
+        value = None
+    if value is not None:
         requirements.append(
             _text_requirement(
                 clause,
@@ -112,6 +137,46 @@ def _numeric_text_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRe
         requirements.extend(_generic_numeric_limit_requirements(clause, text))
 
     return requirements
+
+
+def _deviation_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRequirement]:
+    normalized = str(text or "").replace("+/-", "±").replace("＋／－", "±")
+    pattern = re.compile(
+        r"(?P<descriptor>"
+        r"偏差(?:为)?|允许误差(?:为)?|允差(?:为)?|公差(?:为)?|"
+        r"(?:测量)?精度(?:应)?(?:不大于|不超过)?(?:为)?"
+        r")\s*[:：]?\s*"
+        r"(?P<tolerance>±\s*(?P<value>\d+(?:\.\d+)?)\s*"
+        r"(?P<unit>%|℃|°C|[A-Za-zμµΩ⁻¹·/]+)?)",
+        flags=re.IGNORECASE,
+    )
+    matches = list(pattern.finditer(normalized))
+    if len(matches) != 1:
+        return []
+
+    match = matches[0]
+    descriptor = match.group("descriptor")
+    tolerance_text = re.sub(r"\s+", "", match.group("tolerance")).replace("µ", "μ")
+    expected_text = _clause_requirement_text(clause, fallback=text)
+    suffix = "accuracy" if "精度" in descriptor else "deviation"
+    label = str(clause.title or "").strip() or f"条款 {clause.number}"
+    return [
+        _text_requirement(
+            clause,
+            suffix=suffix,
+            label=label,
+            expected_text=expected_text,
+            expected_value=float(match.group("value")),
+            operator="deviation_within_tolerance",
+            unit=_normalize_numeric_unit(match.group("unit")),
+            metadata={
+                "match_keywords": [label],
+                "result_binding": "clause_window",
+                "tolerance_text": tolerance_text,
+                "deviation_requirement": True,
+            },
+        )
+    ]
 
 
 def _generic_numeric_limit_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRequirement]:
@@ -140,6 +205,55 @@ def _generic_numeric_limit_requirements(clause: PTRClause, text: str) -> list[PT
             )
         )
     return requirements
+
+
+def _mixed_torque_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRequirement]:
+    normalized = re.sub(r"\s+", "", str(text or "")).replace("µ", "μ")
+    withstand = re.search(
+        r"(?:承受|耐受).{0,20}?(?:最小|至少|不小于)\s*(?P<value>\d+(?:\.\d+)?)\s*N[·・.]?cm.{0,30}?(?:不应损坏|无损坏)",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    preset = re.search(
+        r"(?:预置|预设|设定)(?:力矩|扭矩).{0,10}?(?P<nominal>\d+(?:\.\d+)?)\s*±\s*(?P<tolerance>\d+(?:\.\d+)?)\s*N[·・.]?cm",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    if withstand is None or preset is None:
+        return []
+
+    withstand_value = float(withstand.group("value"))
+    nominal = float(preset.group("nominal"))
+    tolerance = float(preset.group("tolerance"))
+    return [
+        _text_requirement(
+            clause,
+            suffix="torque_withstand",
+            label="六角轴承受扭矩",
+            expected_text=f"至少{withstand_value:g} N·cm且不损坏",
+            expected_value=withstand_value,
+            operator="functional",
+            unit="N·cm",
+            metadata={
+                "match_keywords": ["承受", "扭矩", "不损坏"],
+                "result_binding": "clause_window",
+            },
+        ),
+        _text_requirement(
+            clause,
+            suffix="preset_torque",
+            label="预置力矩",
+            expected_text=f"{nominal:g}±{tolerance:g} N·cm",
+            expected_value=nominal,
+            operator="deviation_within_tolerance",
+            unit="N·cm",
+            metadata={
+                "match_keywords": ["预置力矩", "预设扭矩", "设定扭矩"],
+                "result_binding": "clause_window",
+                "tolerance_text": f"±{tolerance:g} N·cm",
+            },
+        ),
+    ]
 
 
 def extract_numeric_limit_expressions(text: str) -> list[NumericLimitExpression]:
@@ -357,6 +471,10 @@ def _preset_timing_requirements(
 
 
 def _functional_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRequirement]:
+    programmable_setting = _programmable_setting_requirement(clause, text)
+    if programmable_setting is not None:
+        return [programmable_setting]
+
     specs: list[tuple[str, str, tuple[str, ...]]] = [
         ("r_wave_sync", "R 波同步", ("R波同步", "R 波同步")),
         ("impedance_out_of_range_protection", "阻抗超出保护", ("阻抗超出保护", "阻抗超限保护")),
@@ -381,6 +499,37 @@ def _functional_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRequ
     if generic is not None and not requirements:
         requirements.append(generic)
     return requirements
+
+
+def _programmable_setting_requirement(clause: PTRClause, text: str) -> PTRAtomicRequirement | None:
+    compact = _compact(text)
+    markers = (
+        "可调等级",
+        "可调范围",
+        "调节范围",
+        "设置范围",
+        "程控范围",
+        "测量范围",
+    )
+    if not any(marker in compact for marker in markers):
+        return None
+    if any(marker in compact for marker in ("测量精度", "允许误差", "允差", "公差")):
+        return None
+
+    label = str(clause.title or "").strip() or f"条款 {clause.number}"
+    suffix = "measurement_range" if "测量范围" in compact else "setting_range"
+    return _text_requirement(
+        clause,
+        suffix=suffix,
+        label=label,
+        expected_text=_clause_requirement_text(clause, fallback=text),
+        operator="functional",
+        metadata={
+            "match_keywords": [label],
+            "result_binding": "clause_window",
+            "programmable_setting": True,
+        },
+    )
 
 
 def _generic_functional_requirement(clause: PTRClause, text: str) -> PTRAtomicRequirement | None:
@@ -444,12 +593,61 @@ def _text_requirement(
     )
 
 
-def _clause_text(clause: PTRClause) -> str:
-    return "\n".join(
-        str(value or "")
-        for value in (clause.title, clause.body_text, clause.text_content, clause.full_text)
-        if str(value or "").strip()
+def clause_local_text(clause: PTRClause, *, include_title: bool = True) -> str:
+    body = str(clause.body_text or clause.text_content or clause.full_text or "")
+    table_numbers = [re.escape(str(number)) for number in clause.get_all_table_numbers() if str(number)]
+    if table_numbers:
+        marker = re.search(rf"\n\s*表\s*(?:{'|'.join(table_numbers)})(?:\D|$)", body)
+        if marker is not None:
+            body = body[: marker.start()].strip()
+
+    title = str(clause.title or "").strip()
+    if title:
+        numbered_heading = re.compile(
+            rf"^\s*{re.escape(str(clause.number))}\s*{re.escape(title)}(?:\s*[:：]?\s*)",
+        )
+        title_line = re.compile(rf"^\s*{re.escape(title)}\s*(?:\r?\n|[:：])\s*")
+        if numbered_heading.match(body):
+            body = numbered_heading.sub("", body, count=1)
+        elif title_line.match(body):
+            body = title_line.sub("", body, count=1)
+    body = re.sub(r"\s+", " ", body).strip()
+    return "\n".join(value for value in (title if include_title else "", body) if value)
+
+
+def _clause_requirement_text(clause: PTRClause, *, fallback: str) -> str:
+    value = clause_local_text(clause, include_title=False) or str(fallback or "")
+    page_marker = re.search(r"\bPage\s+\d+\s+of\s+\d+\b", value, flags=re.IGNORECASE)
+    value = re.sub(r"\bPage\s+\d+\s+of\s+\d+\b", " ", value, flags=re.IGNORECASE)
+    title = str(clause.title or "").strip()
+    if page_marker is not None and title:
+        title_index = value.find(title)
+        if 0 <= title_index <= 160:
+            value = value[title_index:]
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _table_local_requirements(clause: PTRClause, text: str) -> list[PTRAtomicRequirement]:
+    tolerance = re.search(
+        r"(?:允许误差|允差)\s*[:：]?\s*"
+        r"(?P<value>(?:±\s*\d+(?:\.\d+)?|[-−]\s*\d+(?:\.\d+)?\s*/\s*[+＋]?\s*\d+(?:\.\d+)?)"
+        r"\s*[A-Za-z0-9μµΩ⁻¹\-−/]*)",
+        text,
+        flags=re.IGNORECASE,
     )
+    if tolerance is None:
+        return []
+    expected = _clean_expected_text(tolerance.group("value"))
+    return [
+        _text_requirement(
+            clause,
+            suffix="table_local_tolerance",
+            label=str(clause.title or f"条款 {clause.number}").strip(),
+            expected_text=expected,
+            operator="deviation_within_tolerance",
+            metadata={"match_keywords": [str(clause.title or "").strip()], "result_binding": "clause_window"},
+        )
+    ]
 
 
 def _has_table_reference(clause: PTRClause, text: str) -> bool:
@@ -520,6 +718,7 @@ __all__ = [
     "NumericLimitExpression",
     "RequirementClassification",
     "RequirementType",
+    "clause_local_text",
     "classify_requirement",
     "extract_numeric_limit_expressions",
     "extract_standalone_numeric_unit",

@@ -10,6 +10,7 @@ from app.domain.ptr_comparison import PTRAtomicComparisonRow, PTRAtomicRequireme
 from app.domain.table import ParameterRecord
 from app.rules.ptr.requirement_classifier import (
     RequirementType,
+    clause_local_text,
     classify_requirement,
     extract_numeric_limit_expressions,
     extract_standalone_numeric_unit,
@@ -20,7 +21,8 @@ from app.rules.ptr.report_item_grouping import (
     ptr_group_test_result,
     ptr_group_text,
 )
-from app.rules.ptr.table_registry import model_aware_table_requirements
+from app.rules.ptr.report_result_index import ReportResultRowIndex, build_report_result_row_index
+from app.rules.ptr.table_registry import generic_table_requirements, model_aware_table_requirements
 
 
 WAVEFORM_TABLE_PARAMETERS: tuple[tuple[str, str], ...] = (
@@ -142,18 +144,42 @@ BASIC_ELECTRICAL_AV_INTERVAL_CONDITIONS: tuple[tuple[str, str, tuple[str, ...], 
 
 
 def build_atomic_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtomicRequirement]:
+    classification = classify_requirement(clause, ptr_doc)
+    if (
+        clause.children_ids
+        and classification.requirement_type == RequirementType.TABLE_DRIVEN
+        and not classification.atomic_requirements
+    ):
+        return []
     if _clause_indicates_torque_wrench_size(clause):
         return _torque_wrench_size_requirements(str(clause.number))
     if _clause_references_basic_electrical_table2_1(clause):
         return _basic_electrical_table2_1_requirements(clause, ptr_doc)
-    model_table_requirements = model_aware_table_requirements(clause, ptr_doc)
-    if model_table_requirements:
-        return model_table_requirements
-    classification = classify_requirement(clause, ptr_doc)
-    if classification.atomic_requirements:
-        return classification.atomic_requirements
     if classification.requirement_type == RequirementType.SOFTWARE_FUNCTION_TABLE or _clause_indicates_waveform_table(clause):
         return _table_requirements(clause, ptr_doc)
+    model_table_requirements = model_aware_table_requirements(clause, ptr_doc)
+    if model_table_requirements:
+        local_tolerance = next(
+            (
+                requirement.expected_text
+                for requirement in classification.atomic_requirements
+                if requirement.operator == "deviation_within_tolerance" and requirement.expected_text
+            ),
+            None,
+        )
+        if local_tolerance:
+            model_table_requirements = [
+                requirement.model_copy(
+                    update={"metadata": {**requirement.metadata, "clause_local_tolerance": local_tolerance}}
+                )
+                for requirement in model_table_requirements
+            ]
+        return [*model_table_requirements, *classification.atomic_requirements]
+    generic_requirements = generic_table_requirements(clause, ptr_doc)
+    if generic_requirements:
+        return generic_requirements
+    if classification.atomic_requirements:
+        return classification.atomic_requirements
     return []
 
 
@@ -169,15 +195,24 @@ def build_atomic_comparison_rows(
         return []
     group = report_matches[0] if report_matches else None
     report_atomic_results = build_report_atomic_results(group, page_text_by_page=page_text_by_page) if group is not None else []
+    result_index = (
+        build_report_result_row_index(group, page_text_by_page=page_text_by_page)
+        if group is not None
+        else ReportResultRowIndex()
+    )
     rows: list[PTRAtomicComparisonRow] = []
     for requirement in requirements:
         bound_results = _report_results_for_requirement(requirement, report_atomic_results)
         if bound_results:
             rows.extend(_comparison_row(requirement, group, result) for result in bound_results)
             continue
+        indexed_results = _indexed_report_results_for_requirement(requirement, clause, result_index)
+        if indexed_results:
+            rows.extend(_comparison_row(requirement, group, result) for result in indexed_results)
+            continue
         software_result = (
             _software_result_for_requirement(requirement, group, page_text_by_page=page_text_by_page)
-            if requirement.source == "ptr_table" and requirement.clause_id == "2.6"
+            if requirement.source == "ptr_table" and "软件功能" in str(requirement.table_title or "")
             else None
         )
         if software_result is not None:
@@ -440,10 +475,15 @@ def _table_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtom
             return _fallback_software_table_requirements(clause_number)
         return []
     if _clause_indicates_waveform_table(clause):
-        return _waveform_table_requirements(clause_number, table)
+        requirements = _waveform_table_requirements(clause_number, table)
+        return requirements or _fallback_waveform_table_requirements(clause_number)
+    if _clause_indicates_software_table(clause):
+        requirements = _software_table_requirements_from_raw_rows(clause_number, table)
+        if requirements:
+            return requirements
     title = _table_title(table)
     table_key = table_key_for_clause_table(clause_number, table)
-    return [
+    requirements = [
         PTRAtomicRequirement(
             atomic_id=f"{clause_number}:table{table.table_number}:{_slug(_record_label(record, clause_number))}",
             clause_id=clause_number,
@@ -461,15 +501,20 @@ def _table_requirements(clause: PTRClause, ptr_doc: PTRDocument) -> list[PTRAtom
         )
         for record in table.canonical_table.parameter_records
     ]
+    if requirements:
+        return requirements
+    if _clause_indicates_software_table(clause):
+        return _fallback_software_table_requirements(clause_number)
+    return []
 
 
 def _clause_indicates_waveform_table(clause: PTRClause) -> bool:
-    text = _compact(" ".join([clause.title or "", clause.body_text or "", clause.full_text or ""]))
+    text = _compact(" ".join([clause.title or "", clause_local_text(clause, include_title=False)]))
     return "波形参数" in text or ("输出波形" in text and "表" in text)
 
 
 def _clause_indicates_software_table(clause: PTRClause) -> bool:
-    text = _compact(" ".join([clause.title or "", clause.body_text or "", clause.full_text or ""]))
+    text = _compact(" ".join([clause.title or "", clause_local_text(clause, include_title=False)]))
     return "软件功能" in text and ("表" in text or bool(clause.table_refs or clause.table_references))
 
 
@@ -550,6 +595,52 @@ def _fallback_software_table_requirements(clause_number: str) -> list[PTRAtomicR
         )
         for component, function_name in SOFTWARE_FUNCTION_REQUIREMENTS
     ]
+
+
+def _software_table_requirements_from_raw_rows(
+    clause_number: str,
+    table: PTRTable,
+) -> list[PTRAtomicRequirement]:
+    raw_rows = table.metadata.get("raw_rows")
+    if not isinstance(raw_rows, list):
+        return []
+    title = _table_title(table)
+    table_key = table_key_for_clause_table(clause_number, table)
+    requirements: list[PTRAtomicRequirement] = []
+    for raw_row in raw_rows:
+        if not isinstance(raw_row, list) or len(raw_row) < 2:
+            continue
+        cells = [str(value or "").strip() for value in raw_row]
+        component = cells[0]
+        if not component or _compact(component) in {"组件", "功能"}:
+            continue
+        function_text = "\n".join(value for value in cells[1:] if value)
+        functions = [
+            re.sub(r"\s+", " ", value).strip(" -；;、")
+            for value in re.split(r"[•●▪]+", function_text)
+            if re.sub(r"\s+", " ", value).strip(" -；;、")
+        ]
+        for function_name in functions:
+            requirements.append(
+                PTRAtomicRequirement(
+                    atomic_id=f"{clause_number}:table{table.table_number}:{_slug(f'{component} - {function_name}')}",
+                    clause_id=clause_number,
+                    label=f"{component} - {function_name}",
+                    expected_text="要求=具备",
+                    operator="functional_or_equal",
+                    source="ptr_table",
+                    table_number=str(table.table_number or ""),
+                    table_title=title,
+                    table_key=table_key,
+                    metadata={
+                        "parameter_name": function_name,
+                        "dimensions": {"组件": component},
+                        "values": {"要求": "具备"},
+                        "table_row_label": function_name,
+                    },
+                )
+            )
+    return requirements
 
 
 def _clause_references_basic_electrical_table2_1(clause: PTRClause) -> bool:
@@ -893,18 +984,26 @@ def _comparison_row(
         actual = report_atomic_result.actual
         page = report_atomic_result.report_page or _first_page(group)
         item_no = report_atomic_result.report_item_no or ((group.display_item_no or group.item_no) if group else None)
+        report_clause_number = report_atomic_result.report_clause_number
+        report_source_row = report_atomic_result.report_source_row
         candidate_actuals = list(report_atomic_result.candidate_actuals)
         confidence = report_atomic_result.confidence
         source_text = report_atomic_result.source_text
+        diagnostics = list(report_atomic_result.diagnostics)
         preset = report_atomic_result.preset
+        condition = report_atomic_result.condition or requirement.metadata.get("condition")
         unit = report_atomic_result.unit or requirement.unit
         atomic_id = report_atomic_result.atomic_id
     else:
         actual, page, item_no = _actual_for_requirement(requirement, group)
+        report_clause_number = None
+        report_source_row = None
         candidate_actuals = []
         confidence = None
         source_text = None
+        diagnostics = []
         preset = requirement.metadata.get("preset") if isinstance(requirement.metadata, dict) else None
+        condition = requirement.metadata.get("condition")
         unit = (
             _numeric_result_unit(requirement, group) or requirement.unit
             if requirement.metadata.get("numeric_limit") is True
@@ -922,7 +1021,7 @@ def _comparison_row(
         clause_id=requirement.clause_id,
         label=requirement.label,
         preset=preset,
-        condition=requirement.metadata.get("condition"),
+        condition=condition,
         model_column=requirement.metadata.get("model_column"),
         table_row_label=requirement.metadata.get("table_row_label"),
         parent_clause=requirement.metadata.get("parent_clause"),
@@ -941,13 +1040,65 @@ def _comparison_row(
         reason=reason,
         report_page=page,
         report_item_no=item_no,
+        report_clause_number=report_clause_number,
+        report_source_row=report_source_row,
         confidence=confidence,
         source=requirement.source,
         source_text=source_text,
         table_number=requirement.table_number,
         table_title=requirement.table_title,
         table_key=requirement.table_key,
+        diagnostics=diagnostics,
     )
+
+
+def _indexed_report_results_for_requirement(
+    requirement: PTRAtomicRequirement,
+    clause: PTRClause,
+    result_index: ReportResultRowIndex,
+) -> list[PTRReportAtomicResult]:
+    if requirement.metadata.get("not_applicable_by_model") is True:
+        return []
+    if requirement.metadata.get("preset") or (
+        requirement.source == "ptr_table" and requirement.clause_id == "2.6"
+    ):
+        return []
+    row_label = requirement.metadata.get("table_row_label") or requirement.label
+    condition = requirement.metadata.get("condition")
+    prefer_numeric = requirement.operator == "deviation_within_tolerance" or requirement.metadata.get("numeric_limit") is True
+    if requirement.metadata.get("axis_type") == "model" and _tolerance_text(str(row_label or "")):
+        prefer_numeric = True
+    matches = result_index.find(
+        clause_number=requirement.clause_id,
+        clause_title=clause.title,
+        row_label=str(row_label or "") or None,
+        condition=str(condition or "") or None,
+        expected_text=requirement.expected_text,
+        prefer_numeric=prefer_numeric,
+    )
+    results: list[PTRReportAtomicResult] = []
+    multiple = len(matches) > 1
+    for index, match in enumerate(matches, start=1):
+        suffix = _slug(f"{match.condition or 'result'}-{match.source_row or index}") if multiple else None
+        atomic_id = f"{requirement.atomic_id}:{suffix}" if suffix else requirement.atomic_id
+        results.append(
+            PTRReportAtomicResult(
+                atomic_id=atomic_id,
+                clause_id=requirement.clause_id,
+                label=requirement.label,
+                actual=_actual_subset(requirement, match.test_result),
+                unit=extract_standalone_numeric_unit(match.standard_requirement or "") or requirement.unit,
+                condition=match.condition,
+                report_item_no=match.item_no,
+                report_page=match.source_page,
+                report_clause_number=match.report_clause_number,
+                report_source_row=match.source_row,
+                source_text=match.standard_requirement,
+                confidence="high",
+                diagnostics=[{"code": code} for code in match.diagnostics],
+            )
+        )
+    return results
 
 
 def _numeric_actual_semantics(actual: str | None) -> tuple[str | None, float | None]:
@@ -985,6 +1136,8 @@ def _actual_for_requirement(requirement: PTRAtomicRequirement, group: Inspection
             projected_actual, projected_page = _model_projected_actual(requirement, group)
             if projected_actual is not None:
                 return projected_actual, projected_page or _first_page(group), item_no
+            if _group_passed(group):
+                return "符合要求", _first_page(group), item_no
         return None, _first_page(group), item_no
 
     for row in group.rows:
@@ -1025,6 +1178,9 @@ def _row_matches_requirement(requirement: PTRAtomicRequirement, row_text: str) -
         if isinstance(keywords, list) and keywords:
             return any(_compact(str(keyword)) in compact for keyword in keywords)
         return _compact(requirement.label) in compact
+    keywords = requirement.metadata.get("match_keywords") if isinstance(requirement.metadata, dict) else None
+    if isinstance(keywords, list) and keywords:
+        return any(_compact(str(keyword)) in compact for keyword in keywords)
     if atomic_id.endswith(":voltage"):
         return "电压" in compact
     if atomic_id.endswith(":current"):
@@ -1217,6 +1373,19 @@ def _status_and_reason(
         if actual is None:
             item_no = (group.display_item_no or group.item_no) if group else "未编号"
             return "needs_review", f"报告序号 {item_no} 未稳定展开表格参数结果，需复核。"
+        if requirement.operator == "deviation_within_tolerance":
+            return _deviation_status_and_reason(requirement, actual)
+        if requirement.metadata.get("clause_local_tolerance") and _signed_numbers(actual):
+            projected = requirement.model_copy(
+                update={
+                    "operator": "deviation_within_tolerance",
+                    "metadata": {
+                        **requirement.metadata,
+                        "tolerance_text": requirement.metadata.get("clause_local_tolerance"),
+                    },
+                }
+            )
+            return _deviation_status_and_reason(projected, actual)
         if _is_basic_electrical_table2_1_requirement(requirement):
             return _basic_electrical_table2_1_status_and_reason(requirement, actual, group)
         if _is_torque_wrench_requirement(requirement):
@@ -1232,6 +1401,8 @@ def _status_and_reason(
         ):
             model = requirement.metadata.get("model_column") or requirement.metadata.get("primary_model") or "适用型号"
             return "match", f"报告结果符合，PTR 父级表格按型号 {model} 投影后的要求已覆盖。"
+        if actual and "符合" in actual and "不符合" not in actual:
+            return "match", "报告表格结果及单项结论显示符合要求。"
         if _table_value_matches(requirement.expected_text, actual):
             return "match", "报告表格结果与 PTR 表格要求一致。"
         return "mismatch", f"报告结果 {actual} 与 PTR 要求 {requirement.expected_text or '无'} 不一致。"
@@ -1250,11 +1421,7 @@ def _status_and_reason(
             return "match", "报告结果与 PTR 要求一致。"
         return "needs_review", "报告功能/计数结果需复核。"
     if requirement.operator == "deviation_within_tolerance":
-        tolerance = _expected_tolerance(requirement.expected_text or "")
-        actual_values = _signed_numbers(actual or "")
-        if tolerance is not None and actual_values and all(abs(value) <= tolerance for value in actual_values):
-            return "match", f"报告偏差 {actual} 在 {requirement.expected_text} 范围内。"
-        return "needs_review", "报告偏差结果需复核。"
+        return _deviation_status_and_reason(requirement, actual)
     if actual is None:
         if candidate_actuals:
             return "candidate_found_needs_mapping", "报告中找到候选结果，但未完成结构化绑定。"
@@ -3061,6 +3228,8 @@ def _safe_excerpt(value: str, *, limit: int = 180) -> str:
 def _expected_display(requirement: PTRAtomicRequirement) -> str | None:
     if requirement.operator == "functional":
         return requirement.expected_text
+    if requirement.operator == "deviation_within_tolerance" and requirement.expected_text:
+        return requirement.expected_text
     if requirement.expected_value is not None and requirement.operator:
         value = int(requirement.expected_value) if requirement.expected_value.is_integer() else requirement.expected_value
         unit = f" {requirement.unit}" if requirement.unit else ""
@@ -3118,6 +3287,36 @@ def _waveform_report_actual_satisfies(expected: str | None, actual: str | None) 
 def _expected_tolerance(expected: str) -> float | None:
     match = re.search(r"±\s*(\d+(?:\.\d+)?)", str(expected or ""))
     return float(match.group(1)) if match else None
+
+
+def _expected_tolerance_bounds(expected: str) -> tuple[float, float] | None:
+    text = str(expected or "").replace("−", "-").replace("－", "-").replace("＋", "+")
+    symmetric = re.search(r"±\s*(\d+(?:\.\d+)?)", text)
+    if symmetric is not None:
+        value = float(symmetric.group(1))
+        return -value, value
+    asymmetric = re.search(r"-\s*(\d+(?:\.\d+)?)\s*/\s*\+?\s*(\d+(?:\.\d+)?)", text)
+    if asymmetric is not None:
+        return -float(asymmetric.group(1)), float(asymmetric.group(2))
+    return None
+
+
+def _deviation_status_and_reason(requirement: PTRAtomicRequirement, actual: str | None) -> tuple[str, str]:
+    tolerance_text = str(requirement.metadata.get("tolerance_text") or requirement.expected_text or "")
+    bounds = _expected_tolerance_bounds(tolerance_text)
+    actual_values = _signed_numbers(actual or "")
+    if bounds is not None and actual_values and all(bounds[0] <= value <= bounds[1] for value in actual_values):
+        return "match", f"报告偏差 {actual} 在 {tolerance_text} 范围内。"
+    return "needs_review", "报告偏差结果需复核。"
+
+
+def _tolerance_text(value: str | None) -> str | None:
+    text = str(value or "").replace("+/-", "±")
+    match = re.search(r"±\s*\d+(?:\.\d+)?(?:\s*[A-Za-zμµΩ⁻¹\-−/]*)?", text)
+    if match is not None:
+        return re.sub(r"\s+", "", match.group(0))
+    match = re.search(r"-\s*\d+(?:\.\d+)?\s*/\s*\+?\s*\d+(?:\.\d+)?(?:\s*[A-Za-zμµΩ⁻¹\-−/]*)?", text)
+    return re.sub(r"\s+", "", match.group(0)) if match is not None else None
 
 
 def _signed_numbers(value: str) -> list[float]:

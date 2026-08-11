@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
 
 import {
-  codexFinalStatusLabel,
-  codexFinalStatusTone,
   findingCodexFinalStatus,
-  groupCodexReviewsByFinding,
   normalizeCodexReviews,
 } from "../../../entities/codexReview/types";
 import {
@@ -13,7 +10,7 @@ import {
   findingUserFacingStatusTone,
 } from "../../../entities/finding/types";
 import type { Finding } from "../../../entities/finding/types";
-import { REPORT_RULE_GROUPS, checkResultSeverity } from "../../../entities/report/types";
+import { REPORT_RULE_GROUPS } from "../../../entities/report/types";
 import type { ReportSeverityFilter } from "../../../entities/report/types";
 import type {
   CheckResult,
@@ -31,11 +28,9 @@ import { Badge } from "../../../shared/ui/Badge";
 import { Button } from "../../../shared/ui/Button";
 import { ExportButtonGroup } from "../../../shared/ui/ExportButton";
 import { GlassCard } from "../../../shared/ui/GlassCard";
-import { CodexReviewList, CodexReviewOverview, FindingCodexReviewSummary } from "../../codex-review/components/CodexReviewPanel";
 import {
   buildCheckFinalView,
   buildTaskFinalView,
-  codexVerdictUserLabel,
   finalStatusPriority,
 } from "../model/finalView";
 import type { CheckFinalView } from "../model/finalView";
@@ -53,12 +48,8 @@ export function ReportResults({ task, result, onBack, onReupload }: ReportResult
   const [exportError, setExportError] = useState<string | null>(null);
   const resultBadge = buildTaskFinalView(result);
   const checkIds = useMemo(() => result.check_results.map((item) => item.check_id), [result.check_results]);
-  const codexReviews = useMemo(
-    () => result.check_results.flatMap((item) => normalizeCodexReviews(item.codex_reviews)),
-    [result.check_results],
-  );
   const filteredChecks = result.check_results.filter((check) => {
-    const severity = checkResultSeverity(check);
+    const severity = finalSeverity(check);
     return (
       (severityFilter === "all" || severity === severityFilter) &&
       (checkIdFilter === "all" || check.check_id === checkIdFilter)
@@ -78,18 +69,12 @@ export function ReportResults({ task, result, onBack, onReupload }: ReportResult
       </header>
 
       <div className="metric-grid">
-        <Metric label="候选错误" value={result.summary.candidate_errors_count} tone="warn" />
         <Metric label="确认错误" value={result.summary.confirmed_errors_count} tone="danger" />
         <Metric label="人工复核" value={result.summary.manual_review_required_count} tone="warn" />
-        <Metric label="候选已排除" value={result.summary.refuted_findings_count} />
-        {result.summary.out_of_scope_findings_count > 0 ? (
-          <Metric label="本次未覆盖" value={result.summary.out_of_scope_findings_count} />
-        ) : null}
+        <Metric label="通过规则" value={result.check_results.filter((check) => isFinalPass(check)).length} />
       </div>
 
-      <CodexAuditScopeNotice metadata={result.metadata} />
-
-      <CodexReviewOverview reviews={codexReviews} />
+      <AuditScopeNotice metadata={result.metadata} />
 
       <GlassCard className="result-card">
         <div className="row-head">
@@ -100,9 +85,9 @@ export function ReportResults({ task, result, onBack, onReupload }: ReportResult
               value={severityFilter}
             >
               <option value="all">全部级别</option>
-              <option value="error">候选错误</option>
-              <option value="warn">需复核</option>
-              <option value="info">信息</option>
+              <option value="error">确认问题</option>
+              <option value="warn">需人工复核</option>
+              <option value="info">通过</option>
             </select>
             <select aria-label="按规则编号筛选" onChange={(event) => setCheckIdFilter(event.target.value)} value={checkIdFilter}>
               <option value="all">全部规则</option>
@@ -162,7 +147,29 @@ function Metric({ label, value, tone = "info" }: { label: string; value: number;
   );
 }
 
-function CodexAuditScopeNotice({ metadata }: { metadata: Record<string, unknown> }) {
+function finalSeverity(check: CheckResult): ReportSeverityFilter {
+  const status = buildCheckFinalView(check).final_status;
+  if (status === "confirmed_error") return "error";
+  if (status === "needs_manual_review" || status === "candidate_only" || status === "audit_incomplete") return "warn";
+  return "info";
+}
+
+function isFinalPass(check: CheckResult): boolean {
+  const status = buildCheckFinalView(check).final_status;
+  return status === "passed" || status === "passed_after_review";
+}
+
+function finalVisibleFindings(check: CheckResult): Finding[] {
+  const reviews = normalizeCodexReviews(check.codex_reviews);
+  return check.findings.filter((finding) => {
+    const relatedReviews = reviews.filter((review) => review.target.finding_id === finding.id);
+    const finalStatus = findingCodexFinalStatus(finding, relatedReviews);
+    const userStatus = findingUserFacingStatus(finding, finalStatus);
+    return userStatus !== "refuted" && userStatus !== "passed";
+  });
+}
+
+function AuditScopeNotice({ metadata }: { metadata: Record<string, unknown> }) {
   const auditMetadata = metadataRecord(metadata, "codex_audit");
   const auditScope = metadataString(auditMetadata, "audit_scope");
   const includedCheckIds = metadataArray(auditMetadata, "included_check_ids");
@@ -173,9 +180,9 @@ function CodexAuditScopeNotice({ metadata }: { metadata: Record<string, unknown>
     <GlassCard className="result-card">
       <div className="row-head">
         <div>
-          <p className="row-title">Codex targeted validation</p>
+          <p className="row-title">限定范围核对</p>
           <p className="muted">
-            本次只覆盖 {includedCheckIds.length > 0 ? includedCheckIds.join(", ") : "配置筛选范围"}，未覆盖候选会标记为“本次未覆盖”。
+            本次只覆盖 {includedCheckIds.length > 0 ? includedCheckIds.join(", ") : "配置筛选范围"}，未纳入范围的规则不计入最终结论。
           </p>
         </div>
         <Badge variant="warn">非完整审核</Badge>
@@ -222,10 +229,10 @@ function CheckGroup({ title, description, checks }: { title: string; description
 
 function CheckRow({ check }: { check: CheckResult }) {
   const [expanded, setExpanded] = useState(false);
-  const codexReviews = normalizeCodexReviews(check.codex_reviews);
-  const groupedCodexReviews = groupCodexReviewsByFinding(check.findings, codexReviews);
-  const explanationDetails = check.metadata.explanation_details;
-  const comparisonDetails = check.metadata.comparison_details;
+  const finalFindings = finalVisibleFindings(check);
+  const finalComparisonDetails = check.metadata.final_comparison_details;
+  const explanationDetails = finalComparisonDetails ? undefined : check.metadata.explanation_details;
+  const comparisonDetails = finalComparisonDetails ?? check.metadata.comparison_details;
   const finalView = buildCheckFinalView(check);
 
   return (
@@ -240,8 +247,6 @@ function CheckRow({ check }: { check: CheckResult }) {
         <div className="button-row">
           {finalView.confirmed_errors_count > 0 ? <Badge variant="danger">确认问题 {finalView.confirmed_errors_count}</Badge> : null}
           {finalView.manual_review_required_count > 0 ? <Badge variant="warn">待复核 {finalView.manual_review_required_count}</Badge> : null}
-          {finalView.refuted_findings_count > 0 ? <Badge variant="success">候选已排除 {finalView.refuted_findings_count}</Badge> : null}
-          {finalView.codex_reviews_count > 0 ? <Badge variant="accent">Codex复审 {finalView.codex_reviews_count}</Badge> : null}
           <Badge pulse={finalView.primary_tone === "danger" || finalView.primary_tone === "warn"} variant={finalView.primary_tone}>
             {finalView.final_label}
           </Badge>
@@ -252,27 +257,25 @@ function CheckRow({ check }: { check: CheckResult }) {
       </div>
       {expanded ? (
         <div className="details">
-          <FinalReviewPanel finalView={finalView} reviews={codexReviews} />
-          {explanationDetails ? <ExplanationDetailsPanel details={explanationDetails} finalView={finalView} /> : null}
-          {!explanationDetails && comparisonDetails ? <ComparisonDetailsPanel details={comparisonDetails} /> : null}
-          {!explanationDetails && !comparisonDetails && check.findings.length === 0 ? <p className="muted">后端未返回核对明细。</p> : null}
-          <TechnicalDetails check={check} groupedReviews={groupedCodexReviews} reviews={codexReviews} />
+          <FinalResultPanel finalView={finalView} />
+          {finalFindings.length > 0 ? <FindingList findings={finalFindings} /> : null}
+          {comparisonDetails ? <ComparisonDetailsPanel details={comparisonDetails} /> : null}
+          {!comparisonDetails && explanationDetails ? (
+            <ExplanationDetailsPanel details={explanationDetails} finalView={finalView} />
+          ) : null}
+          {!explanationDetails && !comparisonDetails ? <p className="muted">后端未返回核对明细。</p> : null}
         </div>
       ) : null}
     </article>
   );
 }
 
-function FinalReviewPanel({ finalView, reviews }: { finalView: CheckFinalView; reviews: ReturnType<typeof normalizeCodexReviews> }) {
-  const verdictLabels = finalView.codex_verdict_labels.length
-    ? finalView.codex_verdict_labels
-    : [...new Set(reviews.filter((review) => review.verdict).map((review) => codexVerdictUserLabel(review.verdict)))];
-
+function FinalResultPanel({ finalView }: { finalView: CheckFinalView }) {
   return (
-    <section className="final-review-panel" aria-label="最终复审结果">
+    <section className="final-review-panel" aria-label="最终核对结果">
       <div className="row-head">
         <div>
-          <p className="codex-review-list-title">最终复审结果</p>
+          <p className="codex-review-list-title">最终核对结果</p>
           <p className="final-review-title">{finalView.final_label}</p>
           <p className="final-review-summary">{finalView.final_summary}</p>
         </div>
@@ -281,66 +284,16 @@ function FinalReviewPanel({ finalView, reviews }: { finalView: CheckFinalView; r
       <div className="final-review-stats">
         <FinalStat label="确认问题" value={finalView.confirmed_errors_count} tone={finalView.confirmed_errors_count > 0 ? "danger" : "info"} />
         <FinalStat label="仍需人工复核" value={finalView.manual_review_required_count} tone={finalView.manual_review_required_count > 0 ? "warn" : "info"} />
-        <FinalStat label="候选已排除" value={finalView.refuted_findings_count} tone={finalView.refuted_findings_count > 0 ? "success" : "info"} />
-        <FinalStat label="Codex复审" value={finalView.codex_reviews_count} tone={finalView.codex_reviews_count > 0 ? "accent" : "info"} />
       </div>
-      {verdictLabels.length > 0 ? (
-        <div className="comparison-source-list">
-          {verdictLabels.map((label) => (
-            <span className="comparison-source" key={label}>
-              {label}
-            </span>
-          ))}
-        </div>
-      ) : null}
     </section>
   );
 }
 
-function FinalStat({ label, value, tone }: { label: string; value: number; tone: "success" | "danger" | "warn" | "info" | "accent" }) {
+function FinalStat({ label, value, tone }: { label: string; value: number; tone: "danger" | "warn" | "info" }) {
   return (
     <div className={`final-review-stat final-review-stat-${tone}`}>
       <span>{label}</span>
       <strong>{value}</strong>
-    </div>
-  );
-}
-
-function TechnicalDetails({
-  check,
-  groupedReviews,
-  reviews,
-}: {
-  check: CheckResult;
-  groupedReviews: ReturnType<typeof groupCodexReviewsByFinding>;
-  reviews: ReturnType<typeof normalizeCodexReviews>;
-}) {
-  if (check.findings.length === 0 && reviews.length === 0) return null;
-  return (
-    <details className="technical-details">
-      <summary>技术详情</summary>
-      <div className="technical-details-body">
-        <FindingList findings={check.findings} reviewsByFindingId={groupedReviews.byFindingId} />
-        <RawFindingEnumList findings={check.findings} />
-        <CodexReviewList reviews={reviews} title="原始 Codex 复审记录" />
-      </div>
-    </details>
-  );
-}
-
-function RawFindingEnumList({ findings }: { findings: Finding[] }) {
-  if (findings.length === 0) return null;
-  return (
-    <div className="codex-review-list">
-      <p className="codex-review-list-title">原始规则枚举</p>
-      {findings.map((finding) => (
-        <div className="evidence-text" key={finding.id}>
-          <strong>{finding.code}</strong>
-          <span> rule stage: {finding.message}</span>
-          <FindingValue label="raw final_status" value={finding.metadata.final_status} />
-          <FindingValue label="codex_review_id" value={finding.metadata.codex_review_id} />
-        </div>
-      ))}
     </div>
   );
 }
@@ -356,9 +309,9 @@ function ExplanationDetailsPanel({ details, finalView }: { details: ExplanationD
       <div className="comparison-details-head">
         <div>
           <p className="codex-review-list-title">核对依据 / 摘录明细</p>
-          <p className="comparison-title">规则初筛明细</p>
+          <p className="comparison-title">核对明细</p>
           {finalView.final_status === "passed_after_review" ? (
-            <p className="comparison-reason">规则阶段需复核不等于最终仍需复核；本项候选已在最终复审中排除。</p>
+            <p className="comparison-reason">本项核对通过，未发现最终问题。</p>
           ) : null}
         </div>
         {decision ? <Badge variant={comparisonStatusTone(decision.user_facing_status)}>{decision.label || userFacingCheckLabel(decision.user_facing_status)}</Badge> : null}
@@ -524,8 +477,11 @@ function ComparisonDetailsPanel({ details }: { details: ComparisonDetails }) {
               </tr>
             </thead>
             <tbody>
-              {fields.map((field) => (
-                <ComparisonFieldRow field={field} key={`${field.field_key}-${field.field_label}`} />
+              {fields.map((field, index) => (
+                <ComparisonFieldRow
+                  field={field}
+                  key={`${field.field_key}-${field.field_label}-${field.right?.page_number ?? "no-page"}-${index}`}
+                />
               ))}
             </tbody>
           </table>
@@ -564,11 +520,11 @@ function comparisonStatusLabel(status: string): string {
   if (status === "mismatch") return "不一致";
   if (status === "missing") return "缺失";
   if (status === "passed") return "通过";
-  if (status === "refuted") return "候选问题已排除";
-  if (status === "candidate_issue") return "规则初筛候选";
+  if (status === "refuted") return "通过";
+  if (status === "candidate_issue") return "待核对";
   if (status === "confirmed_error") return "确认问题";
   if (status === "manual_review_required") return "仍需人工复核";
-  if (status === "audit_failed") return "LLM复核未完成";
+  if (status === "audit_failed") return "自动核对未完成";
   if (status === "missing_left") return "来源 A 缺失";
   if (status === "missing_right") return "来源 B 缺失";
   if (status === "needs_review") return "需复核";
@@ -584,24 +540,18 @@ function comparisonStatusTone(status: string): "success" | "danger" | "warn" | "
   return "info";
 }
 
-function FindingList({
-  findings,
-  reviewsByFindingId,
-}: {
-  findings: Finding[];
-  reviewsByFindingId: Record<string, ReturnType<typeof normalizeCodexReviews>>;
-}) {
+function FindingList({ findings }: { findings: Finding[] }) {
   return (
     <div className="panel-stack">
       {findings.map((finding) => (
-        <FindingItem finding={finding} key={finding.id} reviews={reviewsByFindingId[finding.id]} />
+        <FindingItem finding={finding} key={finding.id} />
       ))}
     </div>
   );
 }
 
-function FindingItem({ finding, reviews }: { finding: Finding; reviews: ReturnType<typeof normalizeCodexReviews> }) {
-  const finalStatus = findingCodexFinalStatus(finding, reviews);
+function FindingItem({ finding }: { finding: Finding }) {
+  const finalStatus = findingCodexFinalStatus(finding, []);
   const userStatus = findingUserFacingStatus(finding, finalStatus);
 
   return (
@@ -610,9 +560,6 @@ function FindingItem({ finding, reviews }: { finding: Finding; reviews: ReturnTy
         <Badge variant={findingUserFacingStatusTone(userStatus)}>
           {findingUserFacingStatusLabel(userStatus, finding)}
         </Badge>
-        {userStatus === "needs_review" && finalStatus !== "pending" ? (
-          <Badge variant={codexFinalStatusTone(finalStatus)}>{codexFinalStatusLabel(finalStatus)}</Badge>
-        ) : null}
         <span>
           <strong>{finding.code}</strong>: {finding.message}
           {finding.location?.page_number ? `（第 ${finding.location.page_number} 页）` : ""}
@@ -620,7 +567,6 @@ function FindingItem({ finding, reviews }: { finding: Finding; reviews: ReturnTy
           <FindingValue label="实际" value={finding.actual} />
         </span>
       </div>
-      <FindingCodexReviewSummary reviews={reviews} />
     </div>
   );
 }
@@ -629,7 +575,7 @@ function userFacingCheckLabel(status: string): string {
   if (status === "confirmed_error") return "确认错误";
   if (status === "needs_review") return "需复核";
   if (status === "candidate_issue") return "候选问题";
-  if (status === "refuted") return "候选问题已排除";
+  if (status === "refuted") return "通过";
   return "通过";
 }
 

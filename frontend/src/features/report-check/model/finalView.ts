@@ -42,8 +42,8 @@ export function buildTaskFinalView(result: TaskResult): TaskFinalView {
 
   if (finalStatus === "audit_failed" || runtimeFailures > 0 || unreviewed > 0) {
     return {
-      label: "LLM 复核未完成",
-      summary: "这不是报告确认错误，可重试或关闭 LLM 增强识别查看规则初筛。",
+      label: "自动核对未完成",
+      summary: "本次结果尚不完整，请重试后再依据最终结果处理。",
       tone: "danger",
     };
   }
@@ -70,8 +70,8 @@ export function buildTaskFinalView(result: TaskResult): TaskFinalView {
   }
   if (result.summary.candidate_errors_count > 0 || result.summary.candidate_findings_count > 0) {
     return {
-      label: "规则初筛完成",
-      summary: "存在规则初筛候选项，尚未形成完整 LLM/Codex 最终复审口径。",
+      label: "自动核对未完成",
+      summary: "本次尚未形成完整最终结果，请重试。",
       tone: "warn",
     };
   }
@@ -133,8 +133,8 @@ export function buildCheckFinalView(check: CheckResult): CheckFinalView {
     return view({
       check,
       final_status: "audit_incomplete",
-      final_label: "LLM复核未完成",
-      final_summary: "本项规则核对已完成，但 LLM/Codex 未返回完整复审结果；这不是报告确认错误。",
+      final_label: "自动核对未完成",
+      final_summary: "本项尚未形成完整最终结果，请重试。",
       confirmed_errors_count: confirmedCount,
       manual_review_required_count: manualCount,
       refuted_findings_count: refutedCount,
@@ -157,7 +157,7 @@ export function buildCheckFinalView(check: CheckResult): CheckFinalView {
       candidate_findings_count: candidateCount,
       codex_reviews_count: reviews.length,
       primary_tone: "success",
-      codex_verdict_labels: codexVerdictLabels.length ? codexVerdictLabels : ["候选问题已排除"],
+      codex_verdict_labels: codexVerdictLabels,
     });
   }
 
@@ -166,10 +166,10 @@ export function buildCheckFinalView(check: CheckResult): CheckFinalView {
     return view({
       check,
       final_status: hasCodex ? "audit_incomplete" : "candidate_only",
-      final_label: hasCodex ? "LLM复核未完成" : "规则初筛候选，待复审",
+      final_label: hasCodex ? "自动核对未完成" : "仍需完成自动核对",
       final_summary: hasCodex
-        ? "本项仍缺少完整 LLM/Codex 最终复审结果；请重试或查看技术详情。"
-        : `规则初筛发现 ${candidateCount} 个候选问题，尚未完成 LLM/Codex 复审。`,
+        ? "本项尚未形成完整最终结果，请重试。"
+        : "本项尚未完成自动核对，请重试。",
       confirmed_errors_count: confirmedCount,
       manual_review_required_count: manualCount,
       refuted_findings_count: refutedCount,
@@ -218,18 +218,13 @@ function view(viewModel: CheckFinalView & { check: CheckResult }): CheckFinalVie
 }
 
 function passedAfterReviewLabel(check: CheckResult): string {
-  if (check.check_id === "C07") return "通过（表格候选问题已排除）";
-  return "通过（候选已排除）";
+  return "通过";
 }
 
 function passedAfterReviewSummary(check: CheckResult, candidateCount: number): string {
-  if (check.check_id === "C04") {
-    return `常规 OCR 未抽到部分标签字段，因此规则初筛产生 ${candidateCount} 个候选问题；LLM/Codex 复审后确认这些候选不是最终错误。`;
-  }
-  if (check.check_id === "C07") {
-    return `规则初筛发现 ${candidateCount} 个表格候选问题，均已由 LLM/Codex 复审排除；当前没有确认错误或待人工复核项。`;
-  }
-  return `规则初筛发现 ${candidateCount} 个候选问题，均已由 LLM/Codex 复审排除；当前没有确认错误或待人工复核项。`;
+  void check;
+  void candidateCount;
+  return "本项核对通过，未发现最终问题。";
 }
 
 function passedSummary(check: CheckResult): string {
@@ -266,9 +261,9 @@ function confirmedLabel(check: CheckResult): string {
 
 function confirmedSummary(check: CheckResult, confirmedCount: number): string {
   if (check.check_id === "C07") {
-    return `复审确认 ${confirmedCount} 项检验结果与单项结论不一致。`;
+    return `确认 ${confirmedCount} 项检验结果与单项结论不一致。`;
   }
-  return `复审确认 ${confirmedCount} 项最终问题。`;
+  return `确认 ${confirmedCount} 项最终问题。`;
 }
 
 function reviewsForFinding(finding: Finding, reviews: CodexReviewResult[]): CodexReviewResult[] {

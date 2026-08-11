@@ -1,0 +1,295 @@
+{
+  "cache_key": "2f96dedfe55ff23b83e1ccf571d286f04d23a1c3702487f80ba217b06e1d46de",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-3-ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2:undeclared",
+      "request_id": "codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-3",
+      "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+      "target": {
+        "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2:undeclared",
+        "target_type": "inspection_item",
+        "check_id": "PTR_REPORT_SCOPE",
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2:undeclared",
+        "finding_code": "PTR_SCOPE_UNDECLARED_REPORT_ITEM",
+        "title": "实际检验表出现首页未声明的 PTR 检验项目 2.2。",
+        "summary": "规则初判 PTR_SCOPE_UNDECLARED_REPORT_ITEM；check_id=PTR_REPORT_SCOPE；clause=2.2",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2:undeclared",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2:undeclared",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_SCOPE_UNDECLARED_REPORT_ITEM",
+          "severity": "error",
+          "clause_number": "2.2",
+          "table_number": null,
+          "parameter_name": null,
+          "atomic_id": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "finding 证据中的实际检验项为 2.2.2，report_scope:declaration 已声明 2.2.2；ptr_clause:ptr-2.2 仅说明 PTR 父级条款内容，不能推翻首页已声明子条款。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.2:undeclared",
+        "report_scope:declaration",
+        "ptr_clause:ptr-2.2"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T10:44:11.605650Z",
+      "completed_at": "2026-07-06T10:44:11.605650Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "report_scope:declaration",
+            "expected_value": "2.2.2",
+            "field_name": "report_scope_declaration",
+            "observed_value": "declared_scope_items includes 2.2.2",
+            "reasoning": "首页检验项目声明中包含 2.2.2，finding 对应的实际检验项 metadata.standard_clause 也是 2.2.2，不支持“未声明 2.2”候选。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "1.0",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 30.922505,
+        "exit_code": 0,
+        "stdout_size_bytes": 2310,
+        "stderr_size_bytes": 41081,
+        "output_size_bytes": 2309,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-batch-3",
+          "check_id": "PTR_REPORT_SCOPE",
+          "target_count": 2,
+          "evidence_write_seconds": 0.001424,
+          "evidence_package_size_bytes": 27124,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "externalized_text_count": 0,
+          "image_materialization_seconds": 3e-06,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001499,
+          "prompt_size_bytes": 29126,
+          "schema_prepare_seconds": 0.000383,
+          "codex_exec_seconds": 30.922505,
+          "result_validation_seconds": 7e-06
+        },
+        "cache_key": "2f96dedfe55ff23b83e1ccf571d286f04d23a1c3702487f80ba217b06e1d46de"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-3-ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8:undeclared",
+      "request_id": "codex-request-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-ptr-batch-3",
+      "task_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc",
+      "target": {
+        "target_id": "ptr_review:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8:undeclared",
+        "target_type": "inspection_item",
+        "check_id": "PTR_REPORT_SCOPE",
+        "finding_id": "d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8:undeclared",
+        "finding_code": "PTR_SCOPE_UNDECLARED_REPORT_ITEM",
+        "title": "实际检验表出现首页未声明的 PTR 检验项目 2.8。",
+        "summary": "规则初判 PTR_SCOPE_UNDECLARED_REPORT_ITEM；check_id=PTR_REPORT_SCOPE；clause=2.8",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8:undeclared",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8:undeclared",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.8",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_SCOPE_UNDECLARED_REPORT_ITEM",
+          "severity": "error",
+          "clause_number": "2.8",
+          "table_number": null,
+          "parameter_name": null,
+          "atomic_id": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "finding 证据中的实际检验项为 2.8.2，report_scope:declaration 已声明 2.8.2；ptr_clause:ptr-2.8 仅说明 PTR 父级条款内容，不能证明报告出现未声明项目。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:d396f5d2-5d18-4956-834b-cfd7db5ab0dc:PTR_REPORT_SCOPE:2.8:undeclared",
+        "report_scope:declaration",
+        "ptr_clause:ptr-2.8"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T10:44:11.605650Z",
+      "completed_at": "2026-07-06T10:44:11.605650Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "report_scope:declaration",
+            "expected_value": "2.8.2",
+            "field_name": "report_scope_declaration",
+            "observed_value": "declared_scope_items includes 2.8.2",
+            "reasoning": "首页检验项目声明中包含 2.8.2，finding 对应的实际检验项 metadata.standard_clause 也是 2.8.2，不支持“未声明 2.8”候选。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "1.0",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 30.922505,
+        "exit_code": 0,
+        "stdout_size_bytes": 2310,
+        "stderr_size_bytes": 41081,
+        "output_size_bytes": 2309,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-d396f5d2-5d18-4956-834b-cfd7db5ab0dc-batch-3",
+          "check_id": "PTR_REPORT_SCOPE",
+          "target_count": 2,
+          "evidence_write_seconds": 0.001424,
+          "evidence_package_size_bytes": 27124,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "externalized_text_count": 0,
+          "image_materialization_seconds": 3e-06,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_path_collection_seconds": 4e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001499,
+          "prompt_size_bytes": 29126,
+          "schema_prepare_seconds": 0.000383,
+          "codex_exec_seconds": 30.922505,
+          "result_validation_seconds": 7e-06
+        },
+        "cache_key": "2f96dedfe55ff23b83e1ccf571d286f04d23a1c3702487f80ba217b06e1d46de"
+      }
+    }
+  ]
+}

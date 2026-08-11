@@ -167,6 +167,126 @@ def test_c02_and_c03_evidence_contains_expected_actual_field_and_ocr_context() -
     assert any("中文标签 OCR" in item.title for item in label_items)
 
 
+@pytest.mark.parametrize(
+    ("check_id", "field_name", "field_value"),
+    [
+        ("C02", "型号规格", "D141701IL"),
+        ("C03", "生产日期", "2022-09-15"),
+    ],
+)
+def test_c02_and_c03_caption_only_label_with_source_pdf_adds_visual_evidence(
+    tmp_path: Path,
+    check_id: str,
+    field_name: str,
+    field_value: str,
+) -> None:
+    source_pdf = tmp_path / "report.pdf"
+    source_pdf.write_bytes(b"%PDF-1.4\n%fake for builder metadata only\n")
+    finding = _finding(
+        check_id=check_id,
+        actual=field_value,
+        metadata={
+            "field_name": field_name,
+            "label_id": "label-visual",
+            "matched_label_key": field_name,
+            "page_number": 130,
+        },
+    )
+    report_field = ReportField(
+        name=field_name,
+        value=field_value,
+        raw_value=field_value,
+        location=Location(source_type=SourceType.REPORT, page_number=3, section="第三页"),
+        confidence=Confidence.HIGH,
+    )
+    third_page = ThirdPageInfo(
+        model_spec=report_field if field_name == "型号规格" else None,
+        production_date=report_field if field_name == "生产日期" else None,
+        fields=[report_field],
+    )
+    report = ReportDocument(
+        third_page=third_page,
+        labels=[
+            LabelOCRResult(
+                label_id="label-visual",
+                page_number=130,
+                caption_id="label-caption-visual",
+                caption_text="心脏脉冲电场/射频双能量消融系统 中文标签样张",
+                fields=[],
+                raw_blocks=[],
+                confidence=Confidence.MEDIUM,
+            )
+        ],
+    )
+
+    bundle = ReportCodexEvidenceBuilder().build(
+        task_id="task-1",
+        task_type=TaskType.REPORT_CHECK.value,
+        result=_check_result(check_id, [finding]),
+        report=report,
+        parsed_pdf=_parsed_pdf(),
+        source_pdf_path=source_pdf,
+    )
+
+    assert bundle is not None
+    target = bundle.request.targets[0]
+    image_item = next(item for item in bundle.evidence_package.items if item.ref_id.startswith("label_image:"))
+    label_item = next(item for item in bundle.evidence_package.items if item.ref_id.startswith("label_ocr:"))
+    assert image_item.file_path == f"items/task-1-{check_id}-main-label-page.png"
+    assert image_item.metadata["codex_image_input"] is True
+    assert image_item.metadata["render_page_number"] == 130
+    assert image_item.ref_id in {ref.ref_id for ref in target.evidence_refs}
+    assert target.metadata["evidence_has_visual_label_input"] is True
+    assert target.metadata["evidence_can_verify_label_content"] is True
+    assert label_item.structured["label_content_verification"]["evidence_has_visual_label_input"] is True
+
+
+def test_c03_missing_date_uses_explicit_selected_label_instead_of_first_report_label() -> None:
+    cover_candidate = LabelOCRResult(
+        label_id="cover-candidate",
+        page_number=1,
+        caption_text=None,
+        fields=[],
+        raw_blocks=["检验报告封面"],
+    )
+    selected_label = LabelOCRResult(
+        label_id="main-nameplate",
+        page_number=102,
+        caption_text="№5 射频皮肤治疗仪 中文铭牌",
+        fields=[],
+        raw_blocks=["№5 射频皮肤治疗仪 中文铭牌"],
+    )
+    finding = _finding(
+        check_id="C03",
+        code="DATE_FIELD_MISSING",
+        metadata={
+            "missing_source": "label_ocr",
+            "field_name": "production_date",
+            "label_id": "main-nameplate",
+            "label_page_number": 102,
+        },
+    )
+    report = _report_document().model_copy(update={"labels": [cover_candidate, selected_label]})
+
+    bundle = ReportCodexEvidenceBuilder().build(
+        task_id="task-1",
+        task_type=TaskType.REPORT_CHECK.value,
+        result=_check_result("C03", [finding]),
+        report=report,
+        parsed_pdf=_parsed_pdf(),
+    )
+
+    assert bundle is not None
+    label_item = next(
+        item
+        for item in bundle.evidence_package.items
+        if item.source_type is EvidenceSourceType.LABEL_OCR
+    )
+    assert label_item.page_number == 102
+    assert label_item.structured["label_id"] == "main-nameplate"
+    assert label_item.structured["caption_text"] == "№5 射频皮肤治疗仪 中文铭牌"
+
+
 def test_c04_evidence_contains_sample_description_and_label_context() -> None:
     finding = _finding(check_id="C04", metadata=_metadata_for_check("C04"))
 

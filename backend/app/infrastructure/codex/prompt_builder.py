@@ -151,6 +151,8 @@ class PromptBuilder:
 
     def _render_target_specific_instructions(self, targets: list[CodexReviewTarget]) -> str:
         sections: list[str] = []
+        if self._has_clause_identity_target(targets):
+            sections.append(self._render_clause_identity_instructions())
         if self._has_numeric_requirement_target(targets):
             sections.append(self._render_numeric_requirement_instructions())
         if self._has_c07_visual_target(targets):
@@ -158,6 +160,33 @@ class PromptBuilder:
         if self._has_c07_complex_matrix_target(targets):
             sections.append(self._render_c07_complex_matrix_instructions())
         return "\n\n".join(sections)
+
+    def _has_clause_identity_target(self, targets: list[CodexReviewTarget]) -> bool:
+        identity_codes = {
+            "PTR_CLAUSE_IDENTITY_MISMATCH",
+            "PTR_REPORT_CLAUSE_NUMBER_MISMATCH",
+            "PTR_CLAUSE_IDENTITY_AMBIGUOUS",
+        }
+        return any(
+            target.finding_code in identity_codes
+            or (isinstance(target.metadata, dict) and bool(target.metadata.get("clause_identity_status")))
+            for target in targets
+        )
+
+    def _render_clause_identity_instructions(self) -> str:
+        return "\n".join(
+            [
+                "## PTR Clause Identity Review Instructions",
+                "",
+                "- 先判断 PTR 条款与每个报告候选是否为同一参数或功能，再判断要求和结果。",
+                "- 条款编号相同但名称、参数不同，不得认为覆盖；必须排除该同编号候选。",
+                "- 条款编号不同但名称、表格行和要求一致，可以作为语义候选，但必须指出编号不一致。",
+                "- parent group 整体结论“符合”不能替代子条款身份核验。",
+                "- 不得使用其他子条款的结果，也不得把 item_no、页码、条款号或标准要求当作 actual。",
+                "- 只使用 target 允许的当前 PTR、精确编号候选、语义候选、父级大组和相关表格证据。",
+                "- 候选不唯一、子条款内容不足或结果来源无法定位时，应 uncertain。",
+            ]
+        )
 
     def _has_numeric_requirement_target(self, targets: list[CodexReviewTarget]) -> bool:
         for target in targets:
@@ -230,6 +259,9 @@ class PromptBuilder:
                 "- 不能仅因结构化抽取遗漏存在就 confirm/manual；应区分抽取遗漏本身与最终候选是否仍需复核。",
                 "- 续行中的“符合要求”若属于同一 item group，应作为有效检验结果。",
                 "- 如果同一 item group 内视觉可见“符合要求”或其他有效检验结果，且单项结论为“符合”，应 refute extraction-uncertain candidate。",
+                "- 如果同一 item group 内有直接结构化或视觉可见的数值/“符合要求”等实质检验结果，而单项结论为“/”，应 confirm 单项结论填写错误。",
+                "- 如果检验结果单元格明确为“/”且单项结论为“符合”，应 confirm 单项结论填写错误；报告范围排除或另见外部报告不能把 C07 的空白结果改判为“符合”。",
+                "- 续表页如果再次填写了单项结论，应逐个核对该物理单元格；不要用首页或前一页的结论替代续表页结论。",
                 "- 只有图像无法稳定读取对应行/列，或无法确认 result token 属于该 item group，才 uncertain。",
                 "- 如果图片证据仍不清楚，或复杂矩阵表无法稳定判读，应 uncertain。",
                 "- complex_matrix_table=true 时，不按普通 C07 直接 confirm；证据不足则 uncertain 或 specialized matrix review。",

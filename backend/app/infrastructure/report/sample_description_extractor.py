@@ -59,6 +59,17 @@ class SampleDescriptionExtractor:
                     )
                     if row is not None:
                         rows.append(row)
+        rows.extend(
+            self._prose_rows(
+                parsed_pdf,
+                start_index=row_counter,
+                existing_component_names={
+                    _compact(_field_value(row.component_name) or "")
+                    for row in rows
+                    if _field_value(row.component_name)
+                },
+            )
+        )
         return rows
 
     def extract_components(self, parsed_pdf: ParsedPdf) -> list[SampleComponent]:
@@ -149,6 +160,88 @@ class SampleDescriptionExtractor:
                 "source_table_id": table.table_id,
                 "field_columns": dict(header_map),
                 **sample_role,
+            },
+        )
+
+    def _prose_rows(
+        self,
+        parsed_pdf: ParsedPdf,
+        *,
+        start_index: int,
+        existing_component_names: set[str],
+    ) -> list[SampleDescriptionRow]:
+        rows: list[SampleDescriptionRow] = []
+        row_counter = start_index
+        seen_names = set(existing_component_names)
+        for page in parsed_pdf.pages:
+            for list_text, component_names in _prose_component_lists(page.text):
+                for component_name in component_names:
+                    normalized_name = _compact(component_name)
+                    if not normalized_name or normalized_name in seen_names:
+                        continue
+                    seen_names.add(normalized_name)
+                    row_counter += 1
+                    rows.append(
+                        self._prose_row(
+                            parsed_pdf=parsed_pdf,
+                            page_number=page.page_number,
+                            row_counter=row_counter,
+                            component_name=component_name,
+                            list_text=list_text,
+                        )
+                    )
+        return rows
+
+    def _prose_row(
+        self,
+        *,
+        parsed_pdf: ParsedPdf,
+        page_number: int,
+        row_counter: int,
+        component_name: str,
+        list_text: str,
+    ) -> SampleDescriptionRow:
+        row_id = f"sample-prose-{row_counter}"
+        location = Location(
+            source_id=parsed_pdf.file_id,
+            source_type=SourceType.REPORT,
+            page_number=page_number,
+            section="样品描述",
+            description=f"样品描述文本组件：{component_name}",
+        )
+        evidence = Evidence(
+            id=f"{parsed_pdf.file_id}:sample-prose:{page_number}:{row_counter}",
+            source_type=SourceType.REPORT,
+            location=location,
+            raw_text=component_name,
+            normalized_text=_compact(component_name),
+            value=component_name,
+            method=EvidenceMethod.PDF_TEXT,
+            confidence=Confidence.HIGH,
+            metadata={"source_format": "prose_component_list", "list_text": list_text},
+        )
+        component_field = ReportField(
+            name="部件名称",
+            raw_value=component_name,
+            value=component_name,
+            normalized_value=_compact(component_name),
+            location=location,
+            evidence=[evidence],
+            confidence=Confidence.HIGH,
+            aliases=[alias for alias in FIELD_COLUMNS["component_name"] if alias != "部件名称"],
+            metadata={"field_name": "component_name", "source_format": "prose_component_list"},
+        )
+        return SampleDescriptionRow(
+            row_id=row_id,
+            component_key=ComponentKey(name=component_name),
+            component_name=component_field,
+            row_location=location,
+            evidence=[evidence],
+            metadata={
+                "source_format": "prose_component_list",
+                "source_context": "样品描述文本组件清单",
+                "sample_role": "main_sample",
+                "supporting_equipment": False,
             },
         )
 
@@ -274,3 +367,46 @@ def _parse_int(value: str | None) -> int | None:
 
 def _compact(text: str) -> str:
     return re.sub(r"\s+", "", text or "")
+
+
+_PROSE_COMPONENT_PATTERNS = (
+    re.compile(
+        r"(?:被检|送检)?样品[^。；]{0,180}?(?:包括|包含)\s*[:：]?\s*(?P<items>[^。；]{3,1600})",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?:被检|送检)?样品[^。；]{0,180}?由\s*[:：]?\s*(?P<items>[^。；]{3,1600}?)\s*组成",
+        re.IGNORECASE,
+    ),
+)
+_LIST_SEPARATOR_RE = re.compile(r"\s*[、，,；;]\s*")
+_FINAL_CONJUNCTION_RE = re.compile(
+    r"(?<=[线器元管泵关车坞台盒针头座件机])\s*(?:以及|及|和)\s*(?=[A-Za-z0-9\u4e00-\u9fff])",
+    re.IGNORECASE,
+)
+
+
+def _prose_component_lists(page_text: str) -> list[tuple[str, list[str]]]:
+    if "样品描述" not in _compact(page_text):
+        return []
+    normalized_text = re.sub(r"[\t\r\n]+", " ", page_text or "")
+    results: list[tuple[str, list[str]]] = []
+    for pattern in _PROSE_COMPONENT_PATTERNS:
+        for match in pattern.finditer(normalized_text):
+            list_text = match.group("items").strip()
+            names = _split_component_list(list_text)
+            if len(names) >= 2:
+                results.append((list_text, names))
+    return results
+
+
+def _split_component_list(list_text: str) -> list[str]:
+    names: list[str] = []
+    for segment in _LIST_SEPARATOR_RE.split(list_text):
+        for candidate in _FINAL_CONJUNCTION_RE.split(segment):
+            name = re.sub(r"^(?:以及|及|和)\s*", "", candidate).strip(" \t\r\n：:-—")
+            name = re.sub(r"(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])", "", name)
+            name = re.sub(r"\s*等$", "", name).strip()
+            if 1 < len(_compact(name)) <= 100:
+                names.append(name)
+    return names

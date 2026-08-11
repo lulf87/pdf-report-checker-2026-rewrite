@@ -1,0 +1,18 @@
+{
+  "package_id": "codex-ptr-7ba7241c-c379-41c5-b7ac-a9e23c1ad113-batch-0",
+  "task_id": "7ba7241c-c379-41c5-b7ac-a9e23c1ad113",
+  "root_dir": "/Users/lulingfeng/Documents/工作/开发/报告核对工具2026.6.3/backend/runtime/codex_audit/7ba7241c-c379-41c5-b7ac-a9e23c1ad113/codex-ptr-7ba7241c-c379-41c5-b7ac-a9e23c1ad113-batch-0/input",
+  "package_json_path": "evidence_package.json",
+  "item_file_paths": [],
+  "created_at": "2026-07-06T16:54:00.640645Z",
+  "metadata": {
+    "schema_version": "evidence-package-v1",
+    "kind": "ptr_table_review",
+    "image_materialization_seconds": 1e-06,
+    "image_items_count": 0,
+    "materialized_image_count": 0,
+    "materialized_image_bytes": 0,
+    "externalized_text_count": 0,
+    "externalized_text_bytes": 0
+  }
+}

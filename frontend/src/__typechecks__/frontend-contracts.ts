@@ -108,8 +108,10 @@ const result: TaskResult = {
     candidate_errors_count: 1,
     confirmed_findings_count: 1,
     confirmed_errors_count: 1,
+    confirmed_document_issue_count: 0,
     refuted_findings_count: 0,
     manual_review_required_count: 0,
+    policy_review_required_count: 0,
     suggested_additional_findings_count: 0,
     out_of_scope_findings_count: 0,
     summary_only_findings_count: 0,
@@ -243,7 +245,6 @@ const ptrClause: PTRClauseViewModel = {
   summary: "条款不一致",
   findings: [finding],
   diffs: finding.diff_fragments,
-  codexReviews: [codexReview],
 };
 
 const reportView: ReportCheckResultView = {

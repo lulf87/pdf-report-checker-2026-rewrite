@@ -1,0 +1,158 @@
+{
+  "cache_key": "45a59f453b38c41ac9a40f2a1774494e52025b192ff7c8b4a15b3c1a6fbd1618",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-41847e97-96d8-4371-80c5-66a1a377891c-ptr-batch-1-ptr_review:41847e97-96d8-4371-80c5-66a1a377891c:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+      "request_id": "codex-request-41847e97-96d8-4371-80c5-66a1a377891c-ptr-batch-1",
+      "task_id": "41847e97-96d8-4371-80c5-66a1a377891c",
+      "target": {
+        "target_id": "ptr_review:41847e97-96d8-4371-80c5-66a1a377891c:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "41847e97-96d8-4371-80c5-66a1a377891c:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.2.6 的参数 单个脉冲最大输出能量 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告结果未能稳定抽取，需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:41847e97-96d8-4371-80c5-66a1a377891c:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:41847e97-96d8-4371-80c5-66a1a377891c:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:157",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.2.6",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "high",
+      "reasoning_summary": "ptr_clause:ptr-2.2.6 给出2.2.6最大输出能量要求；report_inspection_group:157 的page 101续页行显示2.2.6最大输出能量结果为159，finding中称未完成结构化绑定与证据冲突。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:41847e97-96d8-4371-80c5-66a1a377891c:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "ptr_clause:ptr-2.2.6",
+        "report_inspection_group:157"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-05T08:07:03.953028Z",
+      "completed_at": "2026-07-05T08:07:03.953028Z",
+      "metadata": {
+        "field_comparisons": [
+          {
+            "evidence_ref": "ptr_clause:ptr-2.2.6",
+            "expected_value": "<258 mJ",
+            "field_name": "单个脉冲最大输出能量",
+            "observed_value": "159 mJ",
+            "reasoning": "报告检验项组157的续页行显示2.2.6最大输出能量要求为小于258mJ，结果值为159，能够与该PTR原子项绑定。",
+            "status": "match"
+          }
+        ],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "1.0",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 66.363786,
+        "exit_code": 0,
+        "stdout_size_bytes": 1179,
+        "stderr_size_bytes": 33037,
+        "output_size_bytes": 1178,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-41847e97-96d8-4371-80c5-66a1a377891c-batch-1",
+          "check_id": "PTR_TABLE",
+          "target_count": 1,
+          "evidence_write_seconds": 0.001877,
+          "evidence_package_size_bytes": 46701,
+          "image_items_count": 0,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "externalized_text_count": 0,
+          "materialized_image_bytes": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 8e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.001085,
+          "prompt_size_bytes": 30618,
+          "schema_prepare_seconds": 0.000333,
+          "codex_exec_seconds": 66.363786,
+          "result_validation_seconds": 5e-06
+        },
+        "cache_key": "45a59f453b38c41ac9a40f2a1774494e52025b192ff7c8b4a15b3c1a6fbd1618"
+      }
+    }
+  ]
+}

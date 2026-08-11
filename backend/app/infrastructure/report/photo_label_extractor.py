@@ -87,40 +87,45 @@ class PhotoLabelExtractor:
             fields = extract_label_field_candidates(page.text)
             page_captions = captions_by_page.get(page.page_number, [])
             label_captions = [caption for caption in page_captions if caption.caption_type == "label"]
-            if not fields and not label_captions:
+            if not label_captions and not _is_standalone_label_page(page, fields):
                 continue
-
-            label_counter += 1
-            caption = label_captions[0] if label_captions else (page_captions[0] if page_captions else None)
-            label_id = f"label-{label_counter}"
-            label_fields = [
-                self._label_field(
-                    parsed_pdf=parsed_pdf,
-                    label_id=label_id,
-                    page=page,
-                    field_name=field_name,
-                    raw_value=value,
-                )
-                for field_name, value in fields.items()
+            caption_candidates: list[PhotoCaption | None] = label_captions or [
+                page_captions[0] if page_captions else None
             ]
-            labels.append(
-                LabelOCR(
-                    label_id=label_id,
-                    page_number=page.page_number,
-                    caption_id=caption.caption_id if caption else None,
-                    caption_text=caption.text if caption else None,
-                    fields=label_fields,
-                    raw_blocks=[line for line in page.text.splitlines() if line.strip()],
-                    language="zh",
-                    ocr_engine="pdf_text",
-                    confidence=Confidence.HIGH if fields else Confidence.MEDIUM,
-                    evidence=[evidence for field in label_fields for evidence in field.evidence],
-                    metadata={
-                        "candidate_source": "pdf_text_label_page",
-                        "subject_name": caption.subject_name if caption else None,
-                    },
+            multiple_label_captions = len(label_captions) > 1
+            for caption in caption_candidates:
+                label_counter += 1
+                label_id = f"label-{label_counter}"
+                candidate_fields = {} if multiple_label_captions else fields
+                label_fields = [
+                    self._label_field(
+                        parsed_pdf=parsed_pdf,
+                        label_id=label_id,
+                        page=page,
+                        field_name=field_name,
+                        raw_value=value,
+                    )
+                    for field_name, value in candidate_fields.items()
+                ]
+                labels.append(
+                    LabelOCR(
+                        label_id=label_id,
+                        page_number=page.page_number,
+                        caption_id=caption.caption_id if caption else None,
+                        caption_text=caption.text if caption else None,
+                        fields=label_fields,
+                        raw_blocks=[line for line in page.text.splitlines() if line.strip()],
+                        language="zh",
+                        ocr_engine="pdf_text",
+                        confidence=Confidence.HIGH if candidate_fields else Confidence.MEDIUM,
+                        evidence=[evidence for field in label_fields for evidence in field.evidence],
+                        metadata={
+                            "candidate_source": "pdf_text_label_page",
+                            "subject_name": caption.subject_name if caption else None,
+                            "multiple_label_captions_on_page": multiple_label_captions,
+                        },
+                    )
                 )
-            )
         return labels
 
     def _caption_lines(self, page: PdfPage) -> list[str]:
@@ -302,6 +307,8 @@ def parse_caption_subject(caption_text: str) -> str:
     category_patterns = [
         r"中文标签样张",
         r"中文标签",
+        r"中文铭牌",
+        r"中文标牌",
         r"包装标签样张",
         r"包装标签",
         r"标签样张",
@@ -444,6 +451,23 @@ def _is_valid_field_value(field_name: str, value: str) -> bool:
 
 def _looks_like_field_line(text: str) -> bool:
     return bool(re.match(r"^[^：:]{1,12}[：:]", text or ""))
+
+
+def _is_standalone_label_page(page: PdfPage, fields: dict[str, str]) -> bool:
+    if not fields:
+        return False
+    compact_text = _compact(page.text)
+    if "检验报告" in compact_text and ("报告编号" in compact_text or "样品编号" in compact_text):
+        return False
+    identity_fields = {
+        "product_name",
+        "model_spec",
+        "production_date",
+        "expiration_date",
+        "batch_number",
+        "serial_number",
+    }
+    return len(identity_fields.intersection(fields)) >= 2
 
 
 def _clean_field_value(value: str) -> str:

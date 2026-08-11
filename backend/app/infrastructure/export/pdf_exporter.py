@@ -7,7 +7,7 @@ from typing import Any
 import fitz
 
 from app.domain.result import CheckResult
-from app.infrastructure.export.common import build_export_payload
+from app.infrastructure.export.common import ExportView, build_export_payload
 
 
 PAGE_WIDTH = 595
@@ -25,6 +25,7 @@ def export_check_results_to_pdf(
     input_files: Sequence[str] | None = None,
     diagnostics: Sequence[str] | None = None,
     metadata: dict[str, Any] | None = None,
+    view: ExportView = "audit",
 ) -> bytes:
     payload = build_export_payload(
         results,
@@ -33,6 +34,7 @@ def export_check_results_to_pdf(
         input_files=input_files,
         diagnostics=diagnostics,
         metadata=metadata,
+        view=view,
     )
     lines = _payload_to_lines(payload, title)
     document = fitz.open()
@@ -60,6 +62,7 @@ def export_check_results_to_pdf(
 def _payload_to_lines(payload: dict[str, Any], title: str) -> list[str]:
     summary = payload["summary"]
     task = payload["task"]
+    final_view = payload.get("view") == "final"
     lines = [
         title,
         "",
@@ -69,35 +72,41 @@ def _payload_to_lines(payload: dict[str, Any], title: str) -> list[str]:
         f"input_files: {', '.join(task.get('input_files') or [])}",
         "",
         "Summary",
+        f"final_audit_status: {summary.get('final_audit_status') or ''}",
         f"total_checks: {summary['total_checks']}",
         f"pass_count: {summary['pass_count']}",
         f"review_count: {summary['review_count']}",
-        f"candidate_errors_count: {summary['candidate_errors_count']}",
         f"confirmed_errors_count: {summary['confirmed_errors_count']}",
         f"manual_review_required_count: {summary['manual_review_required_count']}",
-        f"refuted_findings_count: {summary['refuted_findings_count']}",
-        f"legacy_fail_count: {summary['fail_count']}",
-        f"legacy_error_count: {summary['error_count']}",
-        f"legacy_warn_count: {summary['warn_count']}",
     ]
+    if not final_view:
+        lines.extend(
+            [
+                f"candidate_errors_count: {summary['candidate_errors_count']}",
+                f"refuted_findings_count: {summary['refuted_findings_count']}",
+                f"legacy_fail_count: {summary['fail_count']}",
+                f"legacy_error_count: {summary['error_count']}",
+                f"legacy_warn_count: {summary['warn_count']}",
+            ]
+        )
 
     lines.extend(_ptr_comparison_detail_lines(payload))
     lines.extend(["", "Check Results"])
 
     for result in payload["check_results"]:
-        lines.extend(
-            [
-                f"check_id: {result['check_id']}",
-                f"check_name: {result['check_name']}",
-                f"user_facing_status: {((result.get('metadata') or {}).get('user_facing_status')) or ''}",
-                f"deterministic_status: {result['status']}",
-                f"severity: {result.get('severity') or ''}",
-                f"summary: {result.get('summary') or ''}",
-            ]
-        )
+        result_lines = [
+            f"check_id: {result['check_id']}",
+            f"check_name: {result['check_name']}",
+            f"status: {result.get('final_status') or ((result.get('metadata') or {}).get('user_facing_status')) or result['status']}",
+            f"severity: {result.get('severity') or ''}",
+            f"summary: {result.get('final_summary') or result.get('summary') or ''}",
+        ]
+        if not final_view:
+            result_lines.insert(3, f"deterministic_status: {result['status']}")
+        lines.extend(result_lines)
         lines.extend(_comparison_detail_lines(result))
 
-    lines.extend(["", "技术详情附录", "Findings"])
+    lines.extend(["", "最终问题" if final_view else "技术详情附录", "Findings"])
     if not payload["findings"]:
         lines.append("No findings")
     for finding in payload["findings"]:
@@ -147,8 +156,9 @@ def _ptr_comparison_detail_lines(payload: dict[str, Any]) -> list[str]:
         f"needs_review_count: {details.get('needs_review_count') or 0}",
         f"confirmed_errors_count: {details.get('confirmed_errors_count') or 0}",
         f"manual_review_required_count: {details.get('manual_review_required_count') or 0}",
-        f"refuted_findings_count: {details.get('refuted_findings_count') or 0}",
     ]
+    if payload.get("view") != "final":
+        lines.append(f"refuted_findings_count: {details.get('refuted_findings_count') or 0}")
     items = details.get("items") or []
     if not isinstance(items, list):
         return lines

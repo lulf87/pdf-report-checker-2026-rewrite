@@ -1,0 +1,871 @@
+{
+  "package_id": "codex-ptr-68b33548-3d0b-40d6-aa83-6c8fa932eb1e-batch-1",
+  "task_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e",
+  "task_type": "ptr_compare",
+  "kind": "ptr_parameter_review",
+  "schema_version": "evidence-package-v1",
+  "created_at": "2026-07-05T09:17:36.567517Z",
+  "targets": [
+    {
+      "target_id": "ptr_review:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+      "target_type": "ptr_parameter",
+      "check_id": "PTR_TABLE",
+      "finding_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+      "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+      "summary": "PTR 条款 2.2.6 的参数 单个脉冲最大输出能量 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告结果未能稳定抽取，需复核。",
+      "evidence_refs": [
+        "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "report_scope:declaration",
+        "report_scope:external_standard_ranges",
+        "report_scope:inspection_items",
+        "ptr_clause:ptr-2.2.6",
+        "report_inspection_group:157"
+      ],
+      "metadata": {
+        "source": "ptr_compare_usecase",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "clause_number": "2.2.6",
+        "table_number": null,
+        "parameter_name": null
+      }
+    }
+  ],
+  "items": [
+    {
+      "ref_id": "finding:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+      "source_type": "finding",
+      "title": "PTR 条款 2.2.6 的参数 单个脉冲最大输出能量 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告结果未能稳定抽取，需复核。",
+      "text": null,
+      "structured": {
+        "id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "task_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e",
+        "check_id": "PTR_TABLE",
+        "severity": "warn",
+        "code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "message": "PTR 条款 2.2.6 的参数 单个脉冲最大输出能量 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告结果未能稳定抽取，需复核。",
+        "location": {
+          "source_id": null,
+          "source_type": "ptr",
+          "page_number": 4,
+          "bbox": null,
+          "section": "chapter_2",
+          "table_id": null,
+          "row_index": null,
+          "column_name": null,
+          "text_span": null,
+          "description": null
+        },
+        "expected": "<258 mJ",
+        "actual": null,
+        "evidence": [
+          {
+            "id": "ptr-atomic-2.2.6:max_energy",
+            "source_type": "ptr",
+            "location": {
+              "source_id": null,
+              "source_type": "ptr",
+              "page_number": 4,
+              "bbox": null,
+              "section": "chapter_2",
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "2.2.6 最大输出能量\n最大输出能量\n脉冲宽度\n1 个脉冲\n1 次脉冲\n正峰值\n脉冲宽度×5\n负峰值\n相间间隔\n在 12 个脉冲串中共输送 1500 次脉冲。\n脉冲串间存在时间延迟。\n脉冲组间隔\natomic=2.2.6:max_energy; expected=<258 mJ",
+            "normalized_text": null,
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          },
+          {
+            "id": "report-atomic-2.2.6:max_energy",
+            "source_type": "report",
+            "location": {
+              "source_id": null,
+              "source_type": "report",
+              "page_number": 99,
+              "bbox": null,
+              "section": null,
+              "table_id": null,
+              "row_index": null,
+              "column_name": null,
+              "text_span": null,
+              "description": null
+            },
+            "raw_text": "157；心脏脉冲\n电场消融\n仪；2.2；2.2.1 心脏脉冲电场消融仪输出 \n心脏脉冲电场消融仪应至少能够提供： \n电压：3333V（峰值） \n单位：V\n𝑝；3375；符合；/；157 心脏脉冲\n电场消融\n仪 2.2 2.2.1 心脏脉冲电场消融仪输出 \n心脏脉冲电场消融仪应至少能够提供： \n电压：3333V（峰值） \n单位：V\n𝑝 3375 符合 /；电流：57A（峰值） \n单位：A\n𝑝；59；电流：57A（峰值） \n单位：A\n𝑝 59 /；2.2.2 心脏脉冲电场消融仪输出波形图和波形参数 \n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满\n足表 6 的要求。 \n图 1 是心脏脉冲电场消融仪输出波形图。；2.2.2 心脏脉冲电场消融仪输出波形图和波形参数 \n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满\n足表 6 的要求。 \n图 1 是心脏脉冲电场消融仪输出波形图。 /；续\n157；脉冲相\n间隔；1μsec±20%；-13%～-8%；续\n157 心脏脉冲\n电场消融\n仪 2.2 脉冲相\n间隔 1μsec±20% -13%～-8% 符合 /；2.2.3 脉冲上升时间 \n脉冲上升时间应不超过 700ns。 \n单位：ns；430；PULSE3 预\n设；2.2.3 脉冲上升时间 \n脉冲上升时间应不超过 700ns。 \n单位：ns 430 PULSE3 预\n设；2.2.5 脉冲衰减 \n稳定输出后（第一个脉冲组之后），每个脉冲\n组开始时的电压相比前一组脉冲组结束时电压\n衰减应在 10%内。；1%；续\n157 心脏脉冲\n电场消融\n仪 2.2 2.2.5 脉冲衰减 \n稳定输出后（第一个脉冲组之后），每个脉冲\n组开始时的电压相比前一组脉冲组结束时电压\n衰减应在 10%内。 1% 符合 /；2.2.6 最大输出能量 \n单个脉冲最大输出能量应小于 258mJ。 \n单位：mJ；159；2.2.6 最大输出能量 \n单个脉冲最大输出能量应小于 258mJ。 \n单位：mJ 159 /；2.2.7 保护功能 \n2.2.7.1 温度超限保护 \n心脏脉冲电场消融仪应具有温度超限报警功能\n并自动切断脉冲电场能量输出。；符合要求；2.2.7 保护功能 \n2.2.7.1 温度超限保护 \n心脏脉冲电场消融仪应具有温度超限报警功能\n并自动切断脉冲电场能量输出。 符合要求 /；2.2.7.2 过流保护 \n如果测量的脉冲电场输出电流高于“最大限\n值”超过 50ms 时，则应生成错误提示。；2.2.7.2 过流保护 \n如果测量的脉冲电场输出电流高于“最大限\n值”超过 50ms 时，则应生成错误提示。 符合要求 /",
+            "normalized_text": null,
+            "value": null,
+            "method": "pdf_text",
+            "confidence": null,
+            "image_ref": null,
+            "metadata": {}
+          }
+        ],
+        "missing_evidence": [],
+        "diff_fragments": [],
+        "confidence": "medium",
+        "metadata": {
+          "clause_number": "2.2.6",
+          "atomic_id": "2.2.6:max_energy",
+          "atomic_label": "单个脉冲最大输出能量",
+          "preset": null,
+          "item_no": "157",
+          "report_page": 99,
+          "candidate_actuals": [],
+          "expected": "<258 mJ",
+          "actual": null,
+          "codex_required": true,
+          "review_hint": "请在报告序号 157 的 page 101 行中查找最大输出能量 159 mJ。"
+        }
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "chapter_2",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "finding_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "severity": "warn"
+      }
+    },
+    {
+      "ref_id": "rule_context:68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+      "source_type": "rule_context",
+      "title": "PTR deterministic finding context",
+      "text": null,
+      "structured": {
+        "finding_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "check_id": "PTR_TABLE",
+        "code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "severity": "warn",
+        "message": "PTR 条款 2.2.6 的参数 单个脉冲最大输出能量 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告结果未能稳定抽取，需复核。",
+        "expected": "<258 mJ",
+        "actual": null,
+        "metadata": {
+          "clause_number": "2.2.6",
+          "atomic_id": "2.2.6:max_energy",
+          "atomic_label": "单个脉冲最大输出能量",
+          "preset": null,
+          "item_no": "157",
+          "report_page": 99,
+          "candidate_actuals": [],
+          "expected": "<258 mJ",
+          "actual": null,
+          "codex_required": true,
+          "review_hint": "请在报告序号 157 的 page 101 行中查找最大输出能量 159 mJ。"
+        },
+        "audit_reason": "review deterministic PTR candidate finding against focused evidence"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": null,
+      "location": null,
+      "metadata": {
+        "finding_id": "68b33548-3d0b-40d6-aa83-6c8fa932eb1e:PTR_ATOMIC:2.2.6:2.2.6:max_energy:unbound",
+        "check_id": "PTR_TABLE",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND"
+      }
+    },
+    {
+      "ref_id": "report_scope:declaration",
+      "source_type": "report_field",
+      "title": "Report homepage inspection scope declaration",
+      "text": "2.2、 2.5、2.6 （除生物相容性、电磁兼容性）",
+      "structured": {
+        "declared_scope_items": [
+          "2.2",
+          "2.5",
+          "2.6"
+        ],
+        "declared_scope_ranges": [],
+        "excluded_topics": [
+          "生物相容性",
+          "电磁兼容性"
+        ],
+        "source_page": 3,
+        "source_text": "2.2、 2.5、2.6 （除生物相容性、电磁兼容性）",
+        "ptr_direct_content_starts_after": "156"
+      },
+      "file_path": null,
+      "page_number": 3,
+      "section": "report_scope",
+      "location": null,
+      "metadata": {
+        "source": "report_homepage",
+        "field_name": "检验项目"
+      }
+    },
+    {
+      "ref_id": "report_scope:external_standard_ranges",
+      "source_type": "metadata",
+      "title": "Report external standard sequence ranges",
+      "text": null,
+      "structured": {
+        "external_standard_ranges": [
+          {
+            "start_item_no": "1",
+            "end_item_no": "118",
+            "standard": "GB 9706.1-2020",
+            "source_page": 5,
+            "source_text": "序号 1～序号 118 为 GB 9706.1-2020 标准的内容，序号 119～序号 156 为 GB 9706.202-2021 标准的内容。 3、本次检验，是与委托方提供的电生理三维导航系统（型号：AFR-00016，批号：25230007CW，生 产日期：2025/06/02，制造商：Medtronic, Inc.美敦力公司，软件版本为 2.1.17-0003）、台车 （型号：AFR-00013，批号：0231676121， 生产日期：2025/07/01，制造商：Medtronic, Inc.美敦 力公司）、灌注泵（型号：AFR-00005，批号：2521001CMO，生产日期：2025/05/19，制造商： Medtronic, Inc.美敦力公司，软件版本：1.1.2-0002）、泵管（型号：AFR-00002，批号： 0230958565，生产日期：2025/05/19，制造商：Medtronic, Inc.美敦力公司）、射频消融仪（型 号：AFR-00004，批号：2524004CRO，生产日期：2025/06/10，制造商：Medtronic, Inc.美敦力公 司，软件版本：1.3.1-0001，固件版本：5.01）、一次性使用磁定位三维标测射频脉冲晶格异形导管 （型号：AFR-00001，批号：0230752610，生产日期：2025-02-28，制造商：Medtronic, Inc.美敦 力公司）、导管延长线缆（型号：AFR-00006，批号：0230738609，生产日期：2025-02-20，制造 商：Medtronic, Inc.美敦力公司）、磁定位参考电极（型号：AFR-00021，批号：A11497，生产日 期：2024-11-30，制造商：Medtronic, Inc.美敦力公司）、阻抗定位参考电极（型号：AFR-00015， 批号：A11483，生产日期：2025-4-30，制造商：Medtronic, Inc.美敦力公司）配合使用时的检验 结果。 4、本次检验，电磁兼容性检验见国医检(磁)字 QW2025 第 1540 号。 5、本次检验，固件版本为 7.07。 6、本报告中有检验项目不涉及国家标准、行业标准，不能直接作为资质认定许可的依据，但本实 验室对报告涉及的检验项目具备相应的承检能力。",
+            "item_count": 118,
+            "passed_count": 73,
+            "sample_items": [
+              {
+                "item_no": "1",
+                "page": 10,
+                "standard_clause": "4.1",
+                "standard_requirement": "除非另有规定，本部分的要求应适用于正常使\n用和合理可预见的误用。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "2",
+                "page": 10,
+                "standard_clause": "4.2",
+                "standard_requirement": "4.2.2 风险管理的通用要求 \n应执行符合 YY/T 0316 的风险管理过程。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "3",
+                "page": 10,
+                "standard_clause": "4.3",
+                "standard_requirement": "在风险分析中，除了与基本安全相关的性能\n外，制造商还应识别 ME 设备或 ME 系统临床功\n能的性能，这对于实现预期用途是必需的，或\n者能够影响 ME 设备或 ME 系统的安全性。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "4",
+                "page": 11,
+                "standard_clause": "4.4",
+                "standard_requirement": "制造商应在风险管理文档中声明 ME 设备或 ME\n系统的预期使用寿命。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "5",
+                "page": 11,
+                "standard_clause": "4.5",
+                "standard_requirement": "制造商提供科学数据或临床意见或比较研究来\n证明应用替代的风险控制措施或替代的试验方\n法所得到的剩余风险仍然是可接受的，且与应\n用本部分的要求所得到的剩余风险可比，则风\n险控制替代的措施或试验方法是可接受。",
+                "test_result": "——",
+                "single_conclusion": "/",
+                "remark": "/"
+              },
+              {
+                "item_no": "6",
+                "page": 11,
+                "standard_clause": "4.6",
+                "standard_requirement": "对于那些接触患者但在应用部分定义之外的部\n分，风险管理过程应评估其是否需要符合应用\n部分的要求。除非评估确定需要适用 BF 型应\n用部分或 CF 型应用部分的要求，否则有关的\n部分应适用 B 型应用部分的要求。",
+                "test_result": "——",
+                "single_conclusion": "/",
+                "remark": "/"
+              },
+              {
+                "item_no": "7",
+                "page": 11,
+                "standard_clause": "4.7",
+                "standard_requirement": "ME 设备应被设计和制造成保持单一故障安\n全，或通过 4.2 的应用，确定风险仍然可接\n受。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "8",
+                "page": 11,
+                "standard_clause": "4.8",
+                "standard_requirement": "除本部分中特殊规定的或通过风险管理过程控\n制的特例外，其故障可能导致危险情况的所有\n元器件，包括电线，应根据它们规定的额定值\n使用。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              }
+            ]
+          },
+          {
+            "start_item_no": "119",
+            "end_item_no": "156",
+            "standard": "GB 9706.202-2021",
+            "source_page": 5,
+            "source_text": "序号 119～序号 156 为 GB 9706.202-2021 标准的内容。 3、本次检验，是与委托方提供的电生理三维导航系统（型号：AFR-00016，批号：25230007CW，生 产日期：2025/06/02，制造商：Medtronic, Inc.美敦力公司，软件版本为 2.1.17-0003）、台车 （型号：AFR-00013，批号：0231676121， 生产日期：2025/07/01，制造商：Medtronic, Inc.美敦 力公司）、灌注泵（型号：AFR-00005，批号：2521001CMO，生产日期：2025/05/19，制造商： Medtronic, Inc.美敦力公司，软件版本：1.1.2-0002）、泵管（型号：AFR-00002，批号： 0230958565，生产日期：2025/05/19，制造商：Medtronic, Inc.美敦力公司）、射频消融仪（型 号：AFR-00004，批号：2524004CRO，生产日期：2025/06/10，制造商：Medtronic, Inc.美敦力公 司，软件版本：1.3.1-0001，固件版本：5.01）、一次性使用磁定位三维标测射频脉冲晶格异形导管 （型号：AFR-00001，批号：0230752610，生产日期：2025-02-28，制造商：Medtronic, Inc.美敦 力公司）、导管延长线缆（型号：AFR-00006，批号：0230738609，生产日期：2025-02-20，制造 商：Medtronic, Inc.美敦力公司）、磁定位参考电极（型号：AFR-00021，批号：A11497，生产日 期：2024-11-30，制造商：Medtronic, Inc.美敦力公司）、阻抗定位参考电极（型号：AFR-00015， 批号：A11483，生产日期：2025-4-30，制造商：Medtronic, Inc.美敦力公司）配合使用时的检验 结果。 4、本次检验，电磁兼容性检验见国医检(磁)字 QW2025 第 1540 号。 5、本次检验，固件版本为 7.07。 6、本报告中有检验项目不涉及国家标准、行业标准，不能直接作为资质认定许可的依据，但本实 验室对报告涉及的检验项目具备相应的承检能力。",
+            "item_count": 38,
+            "passed_count": 28,
+            "sample_items": [
+              {
+                "item_no": "119",
+                "page": 79,
+                "standard_clause": "201.4.2.\n3.101",
+                "standard_requirement": "制造商在其风险分析中应包含高频手术设备和\n/或高频附件在大电流模式下使用的可能性和\n这会对中性电极下发热的影响。",
+                "test_result": "——",
+                "single_conclusion": "/",
+                "remark": "/"
+              },
+              {
+                "item_no": "120",
+                "page": 79,
+                "standard_clause": "201.4.3",
+                "standard_requirement": "增补： \n201.8.4.101 的第三个连字符和",
+                "test_result": "——",
+                "single_conclusion": "/",
+                "remark": "/"
+              },
+              {
+                "item_no": "121",
+                "page": 80,
+                "standard_clause": "201.4.7.\n101",
+                "standard_requirement": "以下单一故障状态是本文件中特殊要求和测试\n的项目： \na) 可能引起不可接受的风险的连续性监测器\n或接触质量监测器故障（见 201.8.4.101）；",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "122",
+                "page": 80,
+                "standard_clause": "201.4.11",
+                "standard_requirement": "替换符合性试验中的第一个破折号： \n——高频手术设备应在输出模式下运行，并用\n负载使设备产生最大稳态输入电流。测量输入\n电流，并与标记和技术说明书的内容进行比\n较。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "123",
+                "page": 80,
+                "standard_clause": "201.7.2.\n8.2",
+                "standard_requirement": "修改： \n通用标准中 7.2.8.2 不适用于手术输出端子或\n中性电极端子。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "124",
+                "page": 80,
+                "standard_clause": "201.7.2.\n10",
+                "standard_requirement": "增补： \n防除颤应用部分标识要求的相关符号应附加到\n前面板上，不要求加到应用部分。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "125",
+                "page": 81,
+                "standard_clause": "201.7.4.\n2",
+                "standard_requirement": "增补： \n输出控制器应具有刻度和/或合适的指示器，\n用来表示高频输出的相对强度。指示器不应标\n有“瓦（W）”，除非在 201.7.9.3.1 中规定的\n整个负载电阻范围内，指示功率的精度偏差在\n±20%以内。",
+                "test_result": "符合要求",
+                "single_conclusion": "符合",
+                "remark": "/"
+              },
+              {
+                "item_no": "126",
+                "page": 81,
+                "standard_clause": "201.7.8.\n1",
+                "standard_requirement": "将通用标准中的表 2 替换为表 201.101 \n表 201.101 指示灯的颜色及其用于高频手术设备的含义",
+                "test_result": "符合",
+                "single_conclusion": "/",
+                "remark": ""
+              }
+            ]
+          }
+        ]
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": "external_standard_ranges",
+      "location": null,
+      "metadata": {
+        "source": "report_model_spec_or_notes"
+      }
+    },
+    {
+      "ref_id": "report_scope:inspection_items",
+      "source_type": "table",
+      "title": "Report inspection table items relevant to scope",
+      "text": null,
+      "structured": {
+        "items": [
+          {
+            "item_no": "157",
+            "page": 99,
+            "standard_clause": "2.2",
+            "standard_requirement": "2.2.1 心脏脉冲电场消融仪输出 \n心脏脉冲电场消融仪应至少能够提供： \n电压：3333V（峰值） \n单位：V\n𝑝",
+            "test_result": "3375",
+            "single_conclusion": "符合",
+            "remark": "/"
+          }
+        ],
+        "item_count": 1,
+        "truncated": false
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": "inspection_items",
+      "location": null,
+      "metadata": {
+        "source": "report_inspection_table"
+      }
+    },
+    {
+      "ref_id": "ptr_clause:ptr-2.2.6",
+      "source_type": "ptr_clause",
+      "title": "PTR clause 2.2.6",
+      "text": "最大输出能量\n脉冲宽度\n1 个脉冲\n1 次脉冲\n正峰值\n脉冲宽度×5\n负峰值\n相间间隔\n在 12 个脉冲串中共输送 1500 次脉冲。\n脉冲串间存在时间延迟。\n脉冲组间隔",
+      "structured": {
+        "clause_id": "ptr-2.2.6",
+        "number": "2.2.6",
+        "title": "最大输出能量",
+        "body_text": "最大输出能量\n脉冲宽度\n1 个脉冲\n1 次脉冲\n正峰值\n脉冲宽度×5\n负峰值\n相间间隔\n在 12 个脉冲串中共输送 1500 次脉冲。\n脉冲串间存在时间延迟。\n脉冲组间隔",
+        "table_numbers": [],
+        "scope_type": "requirement",
+        "taxonomy": "requirement"
+      },
+      "file_path": null,
+      "page_number": 4,
+      "section": "2.2.6",
+      "location": {
+        "source_id": null,
+        "source_type": "ptr",
+        "page_number": 4,
+        "bbox": null,
+        "section": "chapter_2",
+        "table_id": null,
+        "row_index": null,
+        "column_name": null,
+        "text_span": null,
+        "description": null
+      },
+      "metadata": {
+        "clause_id": "ptr-2.2.6",
+        "clause_number": "2.2.6"
+      }
+    },
+    {
+      "ref_id": "report_inspection_group:157",
+      "source_type": "table",
+      "title": "Report inspection item group 157",
+      "text": null,
+      "structured": {
+        "inspection_item_group": {
+          "item_no": "157",
+          "display_item_no": "157",
+          "pages": [
+            99,
+            100,
+            101
+          ],
+          "group_row_count": 9,
+          "standard_requirement": "2.2.1 心脏脉冲电场消融仪输出 \n心脏脉冲电场消融仪应至少能够提供： \n电压：3333V（峰值） \n单位：V\n𝑝；电流：57A（峰值） \n单位：A\n𝑝；2.2.2 心脏脉冲电场消融仪输出波形图和波形参数 \n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满\n足表 6 的要求。 \n图 1 是心脏脉冲电场消融仪输出波形图。；脉冲相\n间隔；2.2.3 脉冲上升时间 \n脉冲上升时间应不超过 700ns。 \n单位：ns；2.2.5 脉冲衰减 \n稳定输出后（第一个脉冲组之后），每个脉冲\n组开始时的电压相比前一组脉冲组结束时电压\n衰减应在 10%内。；2.2.6 最大输出能量 \n单个脉冲最大输出能量应小于 258mJ。 \n单位：mJ；2.2.7 保护功能 \n2.2.7.1 温度超限保护 \n心脏脉冲电场消融仪应具有温度超限报警功能\n并自动切断脉冲电场能量输出。；2.2.7.2 过流保护 \n如果测量的脉冲电场输出电流高于“最大限\n值”超过 50ms 时，则应生成错误提示。",
+          "test_result": "3375 / 59 / 1μsec±20% / 430 / 1% / 159",
+          "single_conclusion": "符合",
+          "compact_rows": [
+            {
+              "page_number": 99,
+              "row_index": 3,
+              "sequence_raw": "157",
+              "item_name": "心脏脉冲\n电场消融\n仪",
+              "standard_clause": "2.2",
+              "standard_requirement": "2.2.1 心脏脉冲电场消融仪输出 \n心脏脉冲电场消融仪应至少能够提供： \n电压：3333V（峰值） \n单位：V\n𝑝",
+              "test_result": "3375",
+              "single_conclusion": "符合",
+              "remark": "/"
+            },
+            {
+              "page_number": 99,
+              "row_index": 4,
+              "sequence_raw": "电流：57A（峰值） \n单位：A\n𝑝",
+              "item_name": "59",
+              "standard_clause": "/",
+              "standard_requirement": "",
+              "test_result": "",
+              "single_conclusion": "",
+              "remark": ""
+            },
+            {
+              "page_number": 99,
+              "row_index": 5,
+              "sequence_raw": "2.2.2 心脏脉冲电场消融仪输出波形图和波形参数 \n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满\n足表 6 的要求。 \n图 1 是心脏脉冲电场消融仪输出波形图。",
+              "item_name": "/",
+              "standard_clause": "",
+              "standard_requirement": "",
+              "test_result": "",
+              "single_conclusion": "",
+              "remark": ""
+            },
+            {
+              "page_number": 100,
+              "row_index": 1,
+              "sequence_raw": "续\n157",
+              "item_name": "心脏脉冲\n电场消融\n仪",
+              "standard_clause": "2.2",
+              "standard_requirement": "脉冲相\n间隔",
+              "test_result": "1μsec±20%",
+              "single_conclusion": "-13%～-8%",
+              "remark": "符合"
+            },
+            {
+              "page_number": 100,
+              "row_index": 15,
+              "sequence_raw": "2.2.3 脉冲上升时间 \n脉冲上升时间应不超过 700ns。 \n单位：ns",
+              "item_name": "430",
+              "standard_clause": "PULSE3 预\n设",
+              "standard_requirement": "",
+              "test_result": "",
+              "single_conclusion": "",
+              "remark": ""
+            },
+            {
+              "page_number": 101,
+              "row_index": 1,
+              "sequence_raw": "续\n157",
+              "item_name": "心脏脉冲\n电场消融\n仪",
+              "standard_clause": "2.2",
+              "standard_requirement": "2.2.5 脉冲衰减 \n稳定输出后（第一个脉冲组之后），每个脉冲\n组开始时的电压相比前一组脉冲组结束时电压\n衰减应在 10%内。",
+              "test_result": "1%",
+              "single_conclusion": "符合",
+              "remark": "/"
+            },
+            {
+              "page_number": 101,
+              "row_index": 2,
+              "sequence_raw": "2.2.6 最大输出能量 \n单个脉冲最大输出能量应小于 258mJ。 \n单位：mJ",
+              "item_name": "159",
+              "standard_clause": "/",
+              "standard_requirement": "",
+              "test_result": "",
+              "single_conclusion": "",
+              "remark": ""
+            },
+            {
+              "page_number": 101,
+              "row_index": 3,
+              "sequence_raw": "2.2.7 保护功能 \n2.2.7.1 温度超限保护 \n心脏脉冲电场消融仪应具有温度超限报警功能\n并自动切断脉冲电场能量输出。",
+              "item_name": "符合要求",
+              "standard_clause": "/",
+              "standard_requirement": "",
+              "test_result": "",
+              "single_conclusion": "",
+              "remark": ""
+            },
+            {
+              "page_number": 101,
+              "row_index": 4,
+              "sequence_raw": "2.2.7.2 过流保护 \n如果测量的脉冲电场输出电流高于“最大限\n值”超过 50ms 时，则应生成错误提示。",
+              "item_name": "符合要求",
+              "standard_clause": "/",
+              "standard_requirement": "",
+              "test_result": "",
+              "single_conclusion": "",
+              "remark": ""
+            }
+          ],
+          "source_rows": [
+            {
+              "page_number": 99,
+              "row_index": 3,
+              "sequence_raw": "157",
+              "row_text": "157 心脏脉冲\n电场消融\n仪 2.2 2.2.1 心脏脉冲电场消融仪输出 \n心脏脉冲电场消融仪应至少能够提供： \n电压：3333V（峰值） \n单位：V\n𝑝 3375 符合 /",
+              "source_text": "157 心脏脉冲\n电场消融\n仪 2.2 2.2.1 心脏脉冲电场消融仪输出 \n心脏脉冲电场消融仪应至少能够提供： \n电压：3333V（峰值） \n单位：V\n𝑝 3375 符合 /",
+              "table_row_text": null,
+              "combined_row_text": "157 心脏脉冲\n电场消融\n仪 2.2 2.2.1 心脏脉冲电场消融仪输出 \n心脏脉冲电场消融仪应至少能够提供： \n电压：3333V（峰值） \n单位：V\n𝑝 3375 符合 /"
+            },
+            {
+              "page_number": 99,
+              "row_index": 4,
+              "sequence_raw": "电流：57A（峰值） \n单位：A\n𝑝",
+              "row_text": "电流：57A（峰值） \n单位：A\n𝑝 59 /",
+              "source_text": "电流：57A（峰值） \n单位：A\n𝑝 59 /",
+              "table_row_text": null,
+              "combined_row_text": "电流：57A（峰值） \n单位：A\n𝑝 59 /"
+            },
+            {
+              "page_number": 99,
+              "row_index": 5,
+              "sequence_raw": "2.2.2 心脏脉冲电场消融仪输出波形图和波形参数 \n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满\n足表 6 的要求。 \n图 1 是心脏脉冲电场消融仪输出波形图。",
+              "row_text": "2.2.2 心脏脉冲电场消融仪输出波形图和波形参数 \n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满\n足表 6 的要求。 \n图 1 是心脏脉冲电场消融仪输出波形图。 /",
+              "source_text": "2.2.2 心脏脉冲电场消融仪输出波形图和波形参数 \n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满\n足表 6 的要求。 \n图 1 是心脏脉冲电场消融仪输出波形图。 /",
+              "table_row_text": null,
+              "combined_row_text": "2.2.2 心脏脉冲电场消融仪输出波形图和波形参数 \n心脏脉冲电场消融仪的输出波形图见图 1，波形参数应满\n足表 6 的要求。 \n图 1 是心脏脉冲电场消融仪输出波形图。 /"
+            },
+            {
+              "page_number": 100,
+              "row_index": 1,
+              "sequence_raw": "续\n157",
+              "row_text": "续\n157 心脏脉冲\n电场消融\n仪 2.2 脉冲相\n间隔 1μsec±20% -13%～-8% 符合 /",
+              "source_text": "续\n157 心脏脉冲\n电场消融\n仪 2.2 脉冲相\n间隔 1μsec±20% -13%～-8% 符合",
+              "table_row_text": null,
+              "combined_row_text": "续\n157 心脏脉冲\n电场消融\n仪 2.2 脉冲相\n间隔 1μsec±20% -13%～-8% 符合"
+            },
+            {
+              "page_number": 100,
+              "row_index": 15,
+              "sequence_raw": "2.2.3 脉冲上升时间 \n脉冲上升时间应不超过 700ns。 \n单位：ns",
+              "row_text": "2.2.3 脉冲上升时间 \n脉冲上升时间应不超过 700ns。 \n单位：ns 430 PULSE3 预\n设",
+              "source_text": "2.2.3 脉冲上升时间 \n脉冲上升时间应不超过 700ns。 \n单位：ns 430 PULSE3 预\n设",
+              "table_row_text": null,
+              "combined_row_text": "2.2.3 脉冲上升时间 \n脉冲上升时间应不超过 700ns。 \n单位：ns 430 PULSE3 预\n设"
+            },
+            {
+              "page_number": 101,
+              "row_index": 1,
+              "sequence_raw": "续\n157",
+              "row_text": "续\n157 心脏脉冲\n电场消融\n仪 2.2 2.2.5 脉冲衰减 \n稳定输出后（第一个脉冲组之后），每个脉冲\n组开始时的电压相比前一组脉冲组结束时电压\n衰减应在 10%内。 1% 符合 /",
+              "source_text": "续\n157 心脏脉冲\n电场消融\n仪 2.2 2.2.5 脉冲衰减 \n稳定输出后（第一个脉冲组之后），每个脉冲\n组开始时的电压相比前一组脉冲组结束时电压\n衰减应在 10%内。 1% 符合 /",
+              "table_row_text": null,
+              "combined_row_text": "续\n157 心脏脉冲\n电场消融\n仪 2.2 2.2.5 脉冲衰减 \n稳定输出后（第一个脉冲组之后），每个脉冲\n组开始时的电压相比前一组脉冲组结束时电压\n衰减应在 10%内。 1% 符合 /"
+            },
+            {
+              "page_number": 101,
+              "row_index": 2,
+              "sequence_raw": "2.2.6 最大输出能量 \n单个脉冲最大输出能量应小于 258mJ。 \n单位：mJ",
+              "row_text": "2.2.6 最大输出能量 \n单个脉冲最大输出能量应小于 258mJ。 \n单位：mJ 159 /",
+              "source_text": "2.2.6 最大输出能量 \n单个脉冲最大输出能量应小于 258mJ。 \n单位：mJ 159 /",
+              "table_row_text": null,
+              "combined_row_text": "2.2.6 最大输出能量 \n单个脉冲最大输出能量应小于 258mJ。 \n单位：mJ 159 /"
+            },
+            {
+              "page_number": 101,
+              "row_index": 3,
+              "sequence_raw": "2.2.7 保护功能 \n2.2.7.1 温度超限保护 \n心脏脉冲电场消融仪应具有温度超限报警功能\n并自动切断脉冲电场能量输出。",
+              "row_text": "2.2.7 保护功能 \n2.2.7.1 温度超限保护 \n心脏脉冲电场消融仪应具有温度超限报警功能\n并自动切断脉冲电场能量输出。 符合要求 /",
+              "source_text": "2.2.7 保护功能 \n2.2.7.1 温度超限保护 \n心脏脉冲电场消融仪应具有温度超限报警功能\n并自动切断脉冲电场能量输出。 符合要求 /",
+              "table_row_text": null,
+              "combined_row_text": "2.2.7 保护功能 \n2.2.7.1 温度超限保护 \n心脏脉冲电场消融仪应具有温度超限报警功能\n并自动切断脉冲电场能量输出。 符合要求 /"
+            },
+            {
+              "page_number": 101,
+              "row_index": 4,
+              "sequence_raw": "2.2.7.2 过流保护 \n如果测量的脉冲电场输出电流高于“最大限\n值”超过 50ms 时，则应生成错误提示。",
+              "row_text": "2.2.7.2 过流保护 \n如果测量的脉冲电场输出电流高于“最大限\n值”超过 50ms 时，则应生成错误提示。 符合要求 /",
+              "source_text": "2.2.7.2 过流保护 \n如果测量的脉冲电场输出电流高于“最大限\n值”超过 50ms 时，则应生成错误提示。 符合要求 /",
+              "table_row_text": null,
+              "combined_row_text": "2.2.7.2 过流保护 \n如果测量的脉冲电场输出电流高于“最大限\n值”超过 50ms 时，则应生成错误提示。 符合要求 /"
+            }
+          ],
+          "report_atomic_results": [
+            {
+              "atomic_id": "2.2.1:voltage",
+              "clause_id": "2.2.1",
+              "label": "电压",
+              "actual": "3375",
+              "unit": "V",
+              "preset": null,
+              "report_item_no": "157",
+              "report_page": 99,
+              "source_text": "157 心脏脉冲 电场消融 仪 2.2 2.2.1 心脏脉冲电场消融仪输出 心脏脉冲电场消融仪应至少能够提供： 电压：3333V（峰值） 单位：V 𝑝 3375 符合 / 157 心脏脉冲 电场消融 仪 2.2 2.2.1 心脏脉冲电场消融仪输出 心脏脉冲电场消融仪应至少能够提供： 电压：3333V（峰值） 单位：V 𝑝 3375 符合 /",
+              "confidence": "high",
+              "diagnostics": [
+                {
+                  "method": "row_text_voltage",
+                  "confidence": "high",
+                  "source_text_excerpt": "157 心脏脉冲 电场消融 仪 2.2 2.2.1 心脏脉冲电场消融仪输出 心脏脉冲电场消融仪应至少能够提供： 电压：3333V（峰值） 单位：V 𝑝 3375 符合 / 157 心脏脉冲 电场消融 仪 2.2 2.2.1 心脏脉冲电场消融仪输出 心脏脉冲电场消融仪应至少能够提供： 电压：3333V（峰值） 单位：V 𝑝 3375 符合 /"
+                }
+              ],
+              "candidate_actuals": []
+            },
+            {
+              "atomic_id": "2.2.1:current",
+              "clause_id": "2.2.1",
+              "label": "电流",
+              "actual": "59",
+              "unit": "A",
+              "preset": null,
+              "report_item_no": "157",
+              "report_page": 99,
+              "source_text": "电流：57A（峰值） 单位：A 𝑝 59 / 电流：57A（峰值） 单位：A 𝑝 59 /",
+              "confidence": "high",
+              "diagnostics": [
+                {
+                  "method": "row_text_current",
+                  "confidence": "high",
+                  "source_text_excerpt": "电流：57A（峰值） 单位：A 𝑝 59 / 电流：57A（峰值） 单位：A 𝑝 59 /"
+                }
+              ],
+              "candidate_actuals": []
+            },
+            {
+              "atomic_id": "2.2.3:rise_time:pulse3",
+              "clause_id": "2.2.3",
+              "label": "脉冲上升时间",
+              "actual": null,
+              "unit": "ns",
+              "preset": "PULSE3",
+              "report_item_no": "157",
+              "report_page": 100,
+              "source_text": "2.2.3 脉冲上升时间 脉冲上升时间应不超过 700ns。 单位：ns 430 PULSE3 预 设 2.2.3 脉冲上升时间 脉冲上升时间应不超过 700ns。 单位：ns 430 PULSE3 预 设",
+              "confidence": "medium",
+              "diagnostics": [
+                {
+                  "method": "row_text_rise_time_candidate_missing",
+                  "confidence": "medium",
+                  "source_text_excerpt": "2.2.3 脉冲上升时间 脉冲上升时间应不超过 700ns。 单位：ns 430 PULSE3 预 设 2.2.3 脉冲上升时间 脉冲上升时间应不超过 700ns。 单位：ns 430 PULSE3 预 设"
+                }
+              ],
+              "candidate_actuals": []
+            },
+            {
+              "atomic_id": "2.2.3:rise_time:pf_reversible",
+              "clause_id": "2.2.3",
+              "label": "脉冲上升时间",
+              "actual": null,
+              "unit": "ns",
+              "preset": "PF Reversible",
+              "report_item_no": "157",
+              "report_page": 100,
+              "source_text": "2.2.3 脉冲上升时间 脉冲上升时间应不超过 700ns。 单位：ns 430 PULSE3 预 设 2.2.3 脉冲上升时间 脉冲上升时间应不超过 700ns。 单位：ns 430 PULSE3 预 设",
+              "confidence": "medium",
+              "diagnostics": [
+                {
+                  "method": "row_text_rise_time_candidate_missing",
+                  "confidence": "medium",
+                  "source_text_excerpt": "2.2.3 脉冲上升时间 脉冲上升时间应不超过 700ns。 单位：ns 430 PULSE3 预 设 2.2.3 脉冲上升时间 脉冲上升时间应不超过 700ns。 单位：ns 430 PULSE3 预 设"
+                }
+              ],
+              "candidate_actuals": []
+            },
+            {
+              "atomic_id": "2.2.5:decay",
+              "clause_id": "2.2.5",
+              "label": "脉冲衰减",
+              "actual": "1",
+              "unit": "%",
+              "preset": null,
+              "report_item_no": "157",
+              "report_page": 101,
+              "source_text": "续 157 心脏脉冲 电场消融 仪 2.2 2.2.5 脉冲衰减 稳定输出后（第一个脉冲组之后），每个脉冲 组开始时的电压相比前一组脉冲组结束时电压 衰减应在 10%内。 1% 符合 / 续 157 心脏脉冲 电场消融 仪 2.2 2.2.5 脉冲衰减 稳定输出后（第一个脉冲组之后），每个脉冲 组开始时的电压相比前一组脉冲组结束时电压 衰减应在 10%内。 ...",
+              "confidence": "high",
+              "diagnostics": [
+                {
+                  "method": "row_text_decay",
+                  "confidence": "high",
+                  "source_text_excerpt": "续 157 心脏脉冲 电场消融 仪 2.2 2.2.5 脉冲衰减 稳定输出后（第一个脉冲组之后），每个脉冲 组开始时的电压相比前一组脉冲组结束时电压 衰减应在 10%内。 1% 符合 / 续 157 心脏脉冲 电场消融 仪 2.2 2.2.5 脉冲衰减 稳定输出后（第一个脉冲组之后），每个脉冲 组开始时的电压相比前一组脉冲组结束时电压 衰减应在 10%内。 ..."
+                }
+              ],
+              "candidate_actuals": []
+            },
+            {
+              "atomic_id": "2.2.7.1:temperature_limit_protection",
+              "clause_id": "2.2.7.1",
+              "label": "温度超限保护",
+              "actual": "符合要求",
+              "unit": null,
+              "preset": null,
+              "report_item_no": "157",
+              "report_page": 101,
+              "source_text": "2.2.7 保护功能 2.2.7.1 温度超限保护 心脏脉冲电场消融仪应具有温度超限报警功能 并自动切断脉冲电场能量输出。 符合要求 / 2.2.7 保护功能 2.2.7.1 温度超限保护 心脏脉冲电场消融仪应具有温度超限报警功能 并自动切断脉冲电场能量输出。 符合要求 /",
+              "confidence": "high",
+              "diagnostics": [
+                {
+                  "method": "row_text_functional",
+                  "confidence": "high",
+                  "source_text_excerpt": "2.2.7 保护功能 2.2.7.1 温度超限保护 心脏脉冲电场消融仪应具有温度超限报警功能 并自动切断脉冲电场能量输出。 符合要求 / 2.2.7 保护功能 2.2.7.1 温度超限保护 心脏脉冲电场消融仪应具有温度超限报警功能 并自动切断脉冲电场能量输出。 符合要求 /"
+                }
+              ],
+              "candidate_actuals": []
+            },
+            {
+              "atomic_id": "2.2.7.2:over_current_protection",
+              "clause_id": "2.2.7.2",
+              "label": "过流保护",
+              "actual": "符合要求",
+              "unit": null,
+              "preset": null,
+              "report_item_no": "157",
+              "report_page": 101,
+              "source_text": "2.2.7.2 过流保护 如果测量的脉冲电场输出电流高于“最大限 值”超过 50ms 时，则应生成错误提示。 符合要求 / 2.2.7.2 过流保护 如果测量的脉冲电场输出电流高于“最大限 值”超过 50ms 时，则应生成错误提示。 符合要求 /",
+              "confidence": "high",
+              "diagnostics": [
+                {
+                  "method": "row_text_functional",
+                  "confidence": "high",
+                  "source_text_excerpt": "2.2.7.2 过流保护 如果测量的脉冲电场输出电流高于“最大限 值”超过 50ms 时，则应生成错误提示。 符合要求 / 2.2.7.2 过流保护 如果测量的脉冲电场输出电流高于“最大限 值”超过 50ms 时，则应生成错误提示。 符合要求 /"
+                }
+              ],
+              "candidate_actuals": []
+            }
+          ],
+          "diagnostics": [
+            {
+              "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+              "source_index": 1057,
+              "source_page": 101,
+              "source_row_index": 3,
+              "sequence_raw": "2.2.7 保护功能 \n2.2.7.1 温度超限保护 \n心脏脉冲电场消融仪应具有温度超限报警功能\n并自动切断脉冲电场能量输出。",
+              "standard_clause": "/",
+              "source_text_excerpt": "2.2.7 保护功能 \n2.2.7.1 温度超限保护 \n心脏脉冲电场消融仪应具有温度超限报警功能\n并自动切断脉冲电场能量输出。 符合要求 /",
+              "recovery_method": "row_text_ambiguous_result",
+              "confidence": "uncertain",
+              "possible_result_tokens": [
+                "符合要求",
+                "符合"
+              ]
+            },
+            {
+              "code": "RESULT_TOKEN_RECOVERY_UNCERTAIN",
+              "source_index": 1058,
+              "source_page": 101,
+              "source_row_index": 4,
+              "sequence_raw": "2.2.7.2 过流保护 \n如果测量的脉冲电场输出电流高于“最大限\n值”超过 50ms 时，则应生成错误提示。",
+              "standard_clause": "/",
+              "source_text_excerpt": "2.2.7.2 过流保护 \n如果测量的脉冲电场输出电流高于“最大限\n值”超过 50ms 时，则应生成错误提示。 符合要求 /",
+              "recovery_method": "row_text_ambiguous_result",
+              "confidence": "uncertain",
+              "possible_result_tokens": [
+                "符合要求",
+                "符合"
+              ]
+            },
+            {
+              "code": "CONFLICTING_EFFECTIVE_CONCLUSION",
+              "item_no": "157",
+              "values": [
+                "符合",
+                "-13%～-8%",
+                "符合"
+              ]
+            }
+          ]
+        }
+      },
+      "file_path": null,
+      "page_number": 99,
+      "section": "inspection_item_group",
+      "location": null,
+      "metadata": {
+        "source": "report_inspection_table",
+        "item_no": "157"
+      }
+    }
+  ],
+  "metadata": {
+    "source": "ptr_compare_usecase",
+    "deterministic_finding_count": 6,
+    "target_count": 1,
+    "total_candidate_targets": 6,
+    "emitted_targets": 1,
+    "truncated": false,
+    "omitted_targets_count": 0,
+    "target_offset": 5,
+    "batch_index": 1,
+    "batch_size": 1,
+    "max_targets_per_task": 5,
+    "max_targets_per_batch": 5
+  }
+}

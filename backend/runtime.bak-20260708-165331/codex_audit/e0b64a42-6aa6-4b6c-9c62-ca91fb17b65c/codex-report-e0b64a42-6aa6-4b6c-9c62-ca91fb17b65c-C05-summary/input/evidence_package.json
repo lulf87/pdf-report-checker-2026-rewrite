@@ -1,0 +1,70 @@
+{
+  "package_id": "codex-report-e0b64a42-6aa6-4b6c-9c62-ca91fb17b65c-C05-summary",
+  "task_id": "e0b64a42-6aa6-4b6c-9c62-ca91fb17b65c",
+  "task_type": "report_check",
+  "kind": "report_rule_review",
+  "schema_version": "evidence-package-v1",
+  "created_at": "2026-07-03T07:14:40.075408Z",
+  "targets": [
+    {
+      "target_id": "report-codex-check-summary-C05",
+      "target_type": "check_result",
+      "check_id": "C05",
+      "finding_id": null,
+      "finding_code": null,
+      "summary": "样品描述部件均有对应照片",
+      "evidence_refs": [
+        "check_result:C05"
+      ],
+      "metadata": {
+        "source": "report_codex_evidence_builder",
+        "target_kind": "check_result_summary",
+        "summary_only": true
+      }
+    }
+  ],
+  "items": [
+    {
+      "ref_id": "check_result:C05",
+      "source_type": "rule_context",
+      "title": "C05 deterministic check summary",
+      "text": "样品描述部件与照片 caption 覆盖关系的规则初判上下文。",
+      "structured": {
+        "check_id": "C05",
+        "check_name": "照片覆盖",
+        "status": "pass",
+        "summary": "样品描述部件均有对应照片",
+        "deterministic_finding_count": 0,
+        "finding_codes": [],
+        "rule_output_role": "candidate_summary_not_final_conclusion",
+        "audit_reason": "review deterministic report check summary and decide whether evidence is sufficient"
+      },
+      "file_path": null,
+      "page_number": null,
+      "section": "C05",
+      "location": null,
+      "metadata": {
+        "check_id": "C05",
+        "target_kind": "check_result_summary",
+        "summary_only": true
+      }
+    }
+  ],
+  "metadata": {
+    "source": "report_codex_evidence_builder",
+    "check_id": "C05",
+    "deterministic_finding_count": 0,
+    "target_count": 1,
+    "summary_target": true,
+    "summary_only": true,
+    "total_candidate_targets": 1,
+    "emitted_targets": 1,
+    "truncated": false,
+    "omitted_targets_count": 0,
+    "target_offset": 0,
+    "batch_index": 0,
+    "batch_size": 1,
+    "max_targets_per_task": 5,
+    "max_targets_per_batch": 5
+  }
+}

@@ -16,9 +16,35 @@ from app.rules.report.context import CheckContext
 NO_VALUE_MARKERS = {"", "/", "／", "-", "—", "——", "见实物"}
 PLACEHOLDER_MARKERS = {"/", "／", "-", "—", "——"}
 CHINESE_LABEL_KEYWORDS = ("中文标签", "中文标签样张", "标签样张", "铭牌", "标牌")
-LABEL_WORDS = ("标签", "中文标签", "标签样张", "中文标签样张", "包装标签")
+LABEL_WORDS = (
+    "标签",
+    "中文标签",
+    "标签样张",
+    "中文标签样张",
+    "包装标签",
+    "铭牌",
+    "中文铭牌",
+    "标牌",
+    "中文标牌",
+)
 PHOTO_WORDS = ("照片", "图片", "外观", "检品外观")
 SEE_SAMPLE_DESCRIPTION_PATTERN = re.compile(r"见\s*[\"'“”‘’]?\s*样品描述\s*[\"'“”‘’]?\s*栏")
+EQUIVALENT_EQUIPMENT_SUFFIXES = {
+    "控制单元": "控制设备",
+    "控制器": "控制设备",
+    "控制台": "控制设备",
+}
+GENERIC_MAIN_UNIT_NAMES = frozenset(
+    {
+        "主机",
+        "整机",
+        "本体",
+        "主设备",
+        "设备主机",
+        "仪器主机",
+        "产品主机",
+    }
+)
 
 LABEL_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "部件名称": ("部件名称", "产品名称", "样品名称", "名称", "器械名称", "品名"),
@@ -63,9 +89,18 @@ def is_required_empty(value: str | None) -> bool:
 def normalize_name(value: str | None) -> str:
     text = compact(value)
     text = re.sub(r"^(?:№|No\.?|编号)?\s*\d+[\s、:：.-]*", "", text, flags=re.IGNORECASE)
-    for word in ("正面", "背面", "侧面", "局部", "整体", *LABEL_WORDS, *PHOTO_WORDS):
+    removable_suffixes = sorted(
+        {"正面", "背面", "侧面", "局部", "整体", *LABEL_WORDS, *PHOTO_WORDS},
+        key=len,
+        reverse=True,
+    )
+    for word in removable_suffixes:
         if text.endswith(word) and len(text) > len(word):
             text = text[: -len(word)]
+    for suffix, canonical_suffix in EQUIVALENT_EQUIPMENT_SUFFIXES.items():
+        if text.endswith(suffix):
+            text = text[: -len(suffix)] + canonical_suffix
+            break
     return text
 
 
@@ -79,6 +114,39 @@ def match_name(left: str | None, right: str | None) -> str | None:
     if left_norm in right_norm or right_norm in left_norm:
         return "partial"
     return None
+
+
+def report_primary_sample_name(document: ReportDocument) -> str | None:
+    if document.first_page is not None:
+        value = field_value(document.first_page.sample_name)
+        if value and compact(value):
+            return value.strip()
+    for field in document.fields:
+        if compact(field.name) in {"样品名称", "产品名称", "器械名称"}:
+            value = field_value(field)
+            if value and compact(value):
+                return value.strip()
+    return None
+
+
+def component_name_aliases(document: ReportDocument, component: SampleComponent) -> tuple[str, ...]:
+    """Return content-derived aliases for generic main-unit component names."""
+
+    names: list[str] = []
+    component_name = (component.component_name or "").strip()
+    if component_name:
+        names.append(component_name)
+
+    if normalize_name(component_name) not in GENERIC_MAIN_UNIT_NAMES:
+        return tuple(names)
+
+    sample_name = report_primary_sample_name(document)
+    if not sample_name:
+        return tuple(names)
+    for candidate in (sample_name, f"{sample_name}主机"):
+        if compact(candidate) and candidate not in names:
+            names.append(candidate)
+    return tuple(names)
 
 
 def component_not_used(component: SampleComponent) -> bool:
@@ -172,7 +240,18 @@ def is_chinese_label(label: LabelOCRResult) -> bool:
 
 def select_label(document: ReportDocument) -> LabelOCRResult | None:
     chinese_labels = [label for label in document.labels if is_chinese_label(label)]
-    return chinese_labels[0] if chinese_labels else (document.labels[0] if document.labels else None)
+    candidates = chinese_labels or document.labels
+    if not candidates:
+        return None
+    sample_name = report_primary_sample_name(document)
+
+    def score(label: LabelOCRResult) -> tuple[int, int, int]:
+        name_match = match_name(sample_name, label_product_name(label)) if sample_name else None
+        name_score = 2 if name_match == "exact" else 1 if name_match == "partial" else 0
+        production_date_score = int(not is_no_value(get_label_value(label, "生产日期")))
+        return name_score, production_date_score, len(label.fields)
+
+    return max(candidates, key=score)
 
 
 def label_product_name(label: LabelOCRResult) -> str | None:
@@ -208,8 +287,14 @@ def component_field_value(component: SampleComponent, field_name: str) -> str | 
     return None
 
 
-def component_matches_label(component: SampleComponent, label: LabelOCRResult) -> bool:
-    if match_name(component.component_name, label_product_name(label)):
+def component_matches_label(
+    component: SampleComponent,
+    label: LabelOCRResult,
+    *,
+    name_aliases: Iterable[str] | None = None,
+) -> bool:
+    names = tuple(name_aliases or ()) or ((component.component_name or ""),)
+    if any(match_name(name, label_product_name(label)) for name in names):
         name_ok = True
     else:
         name_ok = False

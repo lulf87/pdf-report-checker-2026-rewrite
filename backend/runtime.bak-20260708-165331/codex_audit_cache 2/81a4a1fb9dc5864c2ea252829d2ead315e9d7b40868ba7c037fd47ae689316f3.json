@@ -1,0 +1,735 @@
+{
+  "cache_key": "81a4a1fb9dc5864c2ea252829d2ead315e9d7b40868ba7c037fd47ae689316f3",
+  "reviews": [
+    {
+      "review_id": "codex-review-codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-5-ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+      "request_id": "codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-5",
+      "task_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea",
+      "target": {
+        "target_id": "ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.6 的参数 射频消融仪 - 与心脏脉冲电场消融仪、导管接口单元CIU、灌注泵、控制器、三维导航通信 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 159 未稳定展开表格功能明细需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:159",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.6",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "medium",
+      "reasoning_summary": "PTR 2.6 表6列出该射频消融仪通信功能；report_inspection_group:159 的续页文本包含相同功能行，且 item 159 表级记录显示“符合”。rule_context 的 actual=null/candidate_actuals=[] 是结构化绑定失败，不支持保留该 unbound finding。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+        "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---与心脏脉冲电场消融仪-导管接口单元CIU-灌注泵-控制器-三维导航通信:unbound",
+        "ptr_clause:ptr-2.6",
+        "report_inspection_group:159",
+        "report_scope:inspection_items"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:20:29.117394Z",
+      "completed_at": "2026-07-06T06:20:29.117394Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 244.802955,
+        "exit_code": 0,
+        "stdout_size_bytes": 5756,
+        "stderr_size_bytes": 101646,
+        "output_size_bytes": 5755,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-5367df3f-03dd-4083-be1b-8c8b3cb49aea-batch-5",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.004402,
+          "evidence_package_size_bytes": 153530,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 6e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.00231,
+          "prompt_size_bytes": 32688,
+          "schema_prepare_seconds": 0.000417,
+          "codex_exec_seconds": 244.802955,
+          "result_validation_seconds": 8e-06
+        },
+        "cache_key": "81a4a1fb9dc5864c2ea252829d2ead315e9d7b40868ba7c037fd47ae689316f3"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-5-ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---参数显示与控制:unbound",
+      "request_id": "codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-5",
+      "task_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea",
+      "target": {
+        "target_id": "ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---参数显示与控制:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---参数显示与控制:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.6 的参数 射频消融仪 - 参数显示与控制 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 159 未稳定展开表格功能明细需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---参数显示与控制:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---参数显示与控制:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:159",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.6",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "medium",
+      "reasoning_summary": "PTR 2.6 表6列出“参数显示与控制”要求；report_inspection_group:159 的续页文本包含对应行“参数显示与控制，包括阻抗、流量、功率、时间、能量、温度和电流水平”，item 159 表级记录显示“符合”。unbound 候选与完整组证据不一致。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---参数显示与控制:unbound",
+        "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---参数显示与控制:unbound",
+        "ptr_clause:ptr-2.6",
+        "report_inspection_group:159",
+        "report_scope:inspection_items"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:20:29.117394Z",
+      "completed_at": "2026-07-06T06:20:29.117394Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 244.802955,
+        "exit_code": 0,
+        "stdout_size_bytes": 5756,
+        "stderr_size_bytes": 101646,
+        "output_size_bytes": 5755,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-5367df3f-03dd-4083-be1b-8c8b3cb49aea-batch-5",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.004402,
+          "evidence_package_size_bytes": 153530,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 6e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.00231,
+          "prompt_size_bytes": 32688,
+          "schema_prepare_seconds": 0.000417,
+          "codex_exec_seconds": 244.802955,
+          "result_validation_seconds": 8e-06
+        },
+        "cache_key": "81a4a1fb9dc5864c2ea252829d2ead315e9d7b40868ba7c037fd47ae689316f3"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-5-ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示能量输送状态:unbound",
+      "request_id": "codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-5",
+      "task_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea",
+      "target": {
+        "target_id": "ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示能量输送状态:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示能量输送状态:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.6 的参数 射频消融仪 - 显示能量输送状态 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 159 未稳定展开表格功能明细需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示能量输送状态:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示能量输送状态:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:159",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.6",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "medium",
+      "reasoning_summary": "PTR 2.6 表6列出“显示能量输送状态”；report_inspection_group:159 的续页完整文本包含该行，并处在 item 159 软件功能表内，表级结果为“符合”。因此 actual=null 的 unbound 初判不能成立。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示能量输送状态:unbound",
+        "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示能量输送状态:unbound",
+        "ptr_clause:ptr-2.6",
+        "report_inspection_group:159",
+        "report_scope:inspection_items"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:20:29.117394Z",
+      "completed_at": "2026-07-06T06:20:29.117394Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 244.802955,
+        "exit_code": 0,
+        "stdout_size_bytes": 5756,
+        "stderr_size_bytes": 101646,
+        "output_size_bytes": 5755,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-5367df3f-03dd-4083-be1b-8c8b3cb49aea-batch-5",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.004402,
+          "evidence_package_size_bytes": 153530,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 6e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.00231,
+          "prompt_size_bytes": 32688,
+          "schema_prepare_seconds": 0.000417,
+          "codex_exec_seconds": 244.802955,
+          "result_validation_seconds": 8e-06
+        },
+        "cache_key": "81a4a1fb9dc5864c2ea252829d2ead315e9d7b40868ba7c037fd47ae689316f3"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-5-ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示消融图:unbound",
+      "request_id": "codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-5",
+      "task_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea",
+      "target": {
+        "target_id": "ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示消融图:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示消融图:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.6 的参数 射频消融仪 - 显示消融图 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 159 未稳定展开表格功能明细需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示消融图:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示消融图:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:159",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.6",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "medium",
+      "reasoning_summary": "PTR 2.6 表6列出“显示消融图”；report_inspection_group:159 的续页文本也列出“显示消融图”，并属于 item 159 软件功能表，表级结果为“符合”。该证据反驳未能绑定到报告结果的候选。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示消融图:unbound",
+        "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---显示消融图:unbound",
+        "ptr_clause:ptr-2.6",
+        "report_inspection_group:159",
+        "report_scope:inspection_items"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:20:29.117394Z",
+      "completed_at": "2026-07-06T06:20:29.117394Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 244.802955,
+        "exit_code": 0,
+        "stdout_size_bytes": 5756,
+        "stderr_size_bytes": 101646,
+        "output_size_bytes": 5755,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-5367df3f-03dd-4083-be1b-8c8b3cb49aea-batch-5",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.004402,
+          "evidence_package_size_bytes": 153530,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 6e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.00231,
+          "prompt_size_bytes": 32688,
+          "schema_prepare_seconds": 0.000417,
+          "codex_exec_seconds": 244.802955,
+          "result_validation_seconds": 8e-06
+        },
+        "cache_key": "81a4a1fb9dc5864c2ea252829d2ead315e9d7b40868ba7c037fd47ae689316f3"
+      }
+    },
+    {
+      "review_id": "codex-review-codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-5-ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---预设选择:unbound",
+      "request_id": "codex-request-5367df3f-03dd-4083-be1b-8c8b3cb49aea-ptr-batch-5",
+      "task_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea",
+      "target": {
+        "target_id": "ptr_review:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---预设选择:unbound",
+        "target_type": "ptr_parameter",
+        "check_id": "PTR_TABLE",
+        "finding_id": "5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---预设选择:unbound",
+        "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+        "title": "PTR 条款 2.6 的参数 射频消融仪 - 预设选择 未完成报告结果结构化绑定，需要 Codex/人工复核完整检验项证据。报告序号 159 未稳定展开表格功能明细需复核。",
+        "summary": "规则初判 PTR_ATOMIC_RESULT_UNBOUND；check_id=PTR_TABLE；clause=2.6",
+        "evidence_refs": [
+          {
+            "ref_id": "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---预设选择:unbound",
+            "source_type": "finding",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---预设选择:unbound",
+            "source_type": "rule_context",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:declaration",
+            "source_type": "report_field",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:external_standard_ranges",
+            "source_type": "metadata",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_scope:inspection_items",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "ptr_clause:ptr-2.6",
+            "source_type": "ptr_clause",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          },
+          {
+            "ref_id": "report_inspection_group:159",
+            "source_type": "table",
+            "path": null,
+            "page_number": null,
+            "section": null,
+            "description": null,
+            "metadata": {}
+          }
+        ],
+        "metadata": {
+          "source": "ptr_compare_usecase",
+          "finding_code": "PTR_ATOMIC_RESULT_UNBOUND",
+          "severity": "warn",
+          "clause_number": "2.6",
+          "table_number": null,
+          "parameter_name": null
+        }
+      },
+      "status": "succeeded",
+      "verdict": "refute",
+      "confidence": "medium",
+      "reasoning_summary": "PTR 2.6 表6列出“预设选择”；report_inspection_group:159 的续页文本包含同名行，且 item 159 软件功能表级结果为“符合”。完整组证据足以反驳 actual=null 的 unbound 初判。",
+      "suggested_severity": null,
+      "suggested_finding": null,
+      "evidence_refs": [
+        "finding:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---预设选择:unbound",
+        "rule_context:5367df3f-03dd-4083-be1b-8c8b3cb49aea:PTR_ATOMIC:2.6:2.6:table6:射频消融仪---预设选择:unbound",
+        "ptr_clause:ptr-2.6",
+        "report_inspection_group:159",
+        "report_scope:inspection_items"
+      ],
+      "raw_output_path": "codex_review_output.json",
+      "error": null,
+      "created_at": "2026-07-06T06:20:29.117394Z",
+      "completed_at": "2026-07-06T06:20:29.117394Z",
+      "metadata": {
+        "field_comparisons": [],
+        "observed_label_fields": {
+          "batch_or_serial": null,
+          "component_name": null,
+          "expiration_date": null,
+          "model": null,
+          "production_date": null,
+          "serial_number": null
+        },
+        "visual_evidence_quality": "not_applicable",
+        "schema_version": "codex-review-v1",
+        "parser": "codex_review_output",
+        "codex_exec_seconds": 244.802955,
+        "exit_code": 0,
+        "stdout_size_bytes": 5756,
+        "stderr_size_bytes": 101646,
+        "output_size_bytes": 5755,
+        "image_count": 0,
+        "codex_package_profile": {
+          "package_id": "codex-ptr-5367df3f-03dd-4083-be1b-8c8b3cb49aea-batch-5",
+          "check_id": "PTR_TABLE",
+          "target_count": 5,
+          "evidence_write_seconds": 0.004402,
+          "evidence_package_size_bytes": 153530,
+          "externalized_text_bytes": 0,
+          "image_materialization_seconds": 1e-06,
+          "materialized_image_bytes": 0,
+          "image_items_count": 0,
+          "externalized_text_count": 0,
+          "materialized_image_count": 0,
+          "image_path_collection_seconds": 6e-06,
+          "image_count": 0,
+          "image_bytes": 0,
+          "prompt_build_seconds": 0.00231,
+          "prompt_size_bytes": 32688,
+          "schema_prepare_seconds": 0.000417,
+          "codex_exec_seconds": 244.802955,
+          "result_validation_seconds": 8e-06
+        },
+        "cache_key": "81a4a1fb9dc5864c2ea252829d2ead315e9d7b40868ba7c037fd47ae689316f3"
+      }
+    }
+  ]
+}
